@@ -140,6 +140,37 @@ S5 is durable project identity. Its authoritative representation belongs in vers
 
 Agents may propose S5 changes through a typed proposal channel. The act of proposing does not confer mutation authority.
 
+## Operational decomposition: prefer closed-loop vertical slices
+
+For feature work, VSM-Pi should generally prefer **thin vertical slices** over broad horizontal sweeps. A vertical slice crosses the minimum set of layers needed to produce an observable end-to-end behavior: for example, a stubbed UI wired to a mock endpoint before the full database, service, API, and UI layers are independently completed.
+
+This is not a claim that a vertical slice literally *is* an S1. It is a decomposition strategy that tends to produce a better S1 work packet because the operation can close a feedback loop sooner:
+
+```text
+intent -> thin end-to-end implementation -> observable result -> verification -> correction
+```
+
+A horizontal sweep instead tends to defer useful feedback:
+
+```text
+all data work -> all service work -> all API work -> all UI work -> integration -> first end-to-end result
+```
+
+The cybernetic advantage of the vertical form is **shorter feedback delay and lower unresolved variety**. Problems in interfaces, assumptions, sequencing, and architecture become visible while the implementation surface is still small. Horizontal decomposition can accumulate locally plausible changes across several layers before S3/S3* receives an integrated signal, increasing the amount of coordination and rework required when an assumption proves wrong.
+
+Planning should therefore prefer work units with:
+
+- an explicit observable outcome;
+- the thinnest end-to-end path that can demonstrate that outcome;
+- a deterministic or reviewable done signal where possible;
+- stubs/mocks at boundaries that are not yet implemented;
+- an early integration checkpoint before additional complexity is added;
+- residual uncertainty reported before the next layer of complexity compounds it.
+
+Horizontal work is not forbidden. Shared infrastructure, migrations, cross-cutting refactors, and enabling platform changes can be legitimate horizontal units. When used, their plan should state why an end-to-end slice is impractical and what integration proof will close the feedback loop.
+
+GSD already uses the word *slice* as a workflow unit; VSM-Pi should not assume every GSD slice is automatically vertical. The distinction should eventually become explicit planning metadata or a planning invariant rather than a naming convention.
+
 ## Channel semantics
 
 | Channel | Typical direction | Meaning |
