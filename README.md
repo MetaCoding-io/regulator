@@ -104,3 +104,16 @@ After `pnpm build`, run either focused suite with:
 pnpm --filter @metacoding/vsm-pi-protocol test
 pnpm --filter @metacoding/vsm-pi-core test
 ```
+
+## Pi extension (M0.2)
+
+After `pnpm build`, run `pnpm pi` from the project root to load the native Pi
+extension. It mechanically blocks operational `write` and `edit` calls to
+protected S5 artifacts and rejects unsafe paths. Ordinary project writes
+continue normally. Run `pnpm --filter @metacoding/vsm-pi-extension test` for the
+focused handler tests and a model-free smoke test with Pi's real loader.
+
+See [the extension guide](packages/pi-extension/README.md) for loading into
+another project, SDK compatibility, path rules, and the native-hook enforcement
+boundary. Shell/custom tools and execution engines that bypass that hook require
+separate enforcement.

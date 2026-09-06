@@ -11,10 +11,12 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm build && pnpm -r typecheck",
     "test": "pnpm build && pnpm -r test",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "pi": "pi -e ./packages/pi-extension/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "22.18.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "@mariozechner/pi-coding-agent": "0.73.1"
   }
 }
