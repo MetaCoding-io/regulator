@@ -21,6 +21,9 @@
     "@metacoding/vsm-pi-core": "workspace:*"
   },
   "peerDependencies": {
-    "@mariozechner/pi-coding-agent": "0.73.1"
+    "@earendil-works/pi-coding-agent": "0.85.1"
+  },
+  "engines": {
+    "node": ">=22.19.0"
   }
 }

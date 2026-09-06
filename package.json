@@ -5,7 +5,7 @@
   "type": "module",
   "packageManager": "pnpm@10.12.1",
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "build": "pnpm -r build",
@@ -17,6 +17,6 @@
   "devDependencies": {
     "@types/node": "22.18.0",
     "typescript": "5.9.2",
-    "@mariozechner/pi-coding-agent": "0.73.1"
+    "@earendil-works/pi-coding-agent": "0.85.1"
   }
 }

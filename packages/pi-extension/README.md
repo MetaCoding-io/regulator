@@ -9,7 +9,7 @@ is not implemented yet.
 
 ## Load from this repository
 
-From the **project root**, using Node >=22.18.0 and pnpm 10.12.1:
+From the **project root**, using Node >=22.19.0 and pnpm 10.12.1:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -32,21 +32,27 @@ working directories. Build the workspace before loading because the core
 package exports compiled JavaScript. The package's `pi.extensions` metadata
 also identifies the compiled entry for Pi package loading.
 
-Compatibility is pinned to `@mariozechner/pi-coding-agent` **0.73.1**, both as the
-host peer dependency and the repository development CLI. The newer renamed
-`@earendil-works/pi-coding-agent` release requires Node >=22.19.0, above this
-workspace's 22.18.0 baseline. This issue preserves that baseline; compatibility
-with other SDK versions or the renamed package is not claimed. Pi's own SDK
-brings its CLI dependencies; protocol and core still have no Pi dependency.
+Compatibility is pinned to the supported upstream
+`@earendil-works/pi-coding-agent` **0.85.1**, both as the host peer dependency and
+the repository development CLI. The repository engine and CI minimum are
+**Node 22.19.0**, matching that host's requirement. Pi's own SDK brings its CLI
+dependencies; protocol and core still have no Pi dependency.
+
+The generic adapter's event and path semantics are tested against this pinned
+host. GSD's independently versioned `@gsd/pi-coding-agent` is a separate host
+binding; its adapter must compile and test against GSD's actual supported API.
+No GSD compatibility is inferred from upstream Pi's version number.
 
 ## Path and authority contract
 
 - Absolute paths (including paths inside the project), Windows drive paths,
-  home expansion, and any `..` component are blocked. Use project-relative paths.
+  file URLs, home expansion, and any `..` component are blocked. Use
+  project-relative paths.
 - Pi's leading `@` and Unicode-space expansion is applied before checking.
   Slashes/backslashes and `.` components are normalized; accepted tool input is
   rewritten with a `./` prefix so execution uses the checked path without a
-  second leading-prefix expansion.
+  second leading-prefix expansion. A compatibility test compares the adapter
+  with the pinned host's real write-tool path preparation.
 - Existing symlink components, dangling symlinks, hard-linked files, non-regular
   targets, and inaccessible parents fail closed. This deliberately restricts
   writes through aliases, including aliases to ordinary files. Missing parents
@@ -100,7 +106,8 @@ checks ordinary calls and unrelated tools. Its SDK smoke test loads the built
 entry through `DefaultResourceLoader`, creates an in-memory Pi session, and
 invokes the real native `beforeToolCall` hook. It verifies block decisions for
 protected writes/edits and executes allowed calls with Pi's actual tools in a
-temporary project. It uses no credentials, live model, or persisted session.
+temporary project. It uses isolated temporary model/auth storage with network
+refresh disabled, no credentials or live model, and no persisted session.
 
 To see each test's result directly after building:
 

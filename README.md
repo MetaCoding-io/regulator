@@ -83,7 +83,7 @@ Very early research/prototype stage. The immediate goal is to create a small exe
 
 ## Development
 
-Use Node **>=22.18.0** and **pnpm 10.12.1** (pinned in `packageManager`).
+Use Node **>=22.19.0** and **pnpm 10.12.1** (pinned in `packageManager`).
 
 ```sh
 pnpm install
@@ -96,7 +96,7 @@ pnpm check
 Node's built-in runtime tests. Root commands build workspace dependencies in
 topological order so they work before any `dist/` files exist. Dependencies are
 pinned and `pnpm-lock.yaml` is committed; CI installs with `--frozen-lockfile`
-and runs `pnpm check` on Node 22.18.0 and 24 for pushes and pull requests.
+and runs `pnpm check` on Node 22.19.0 and 24 for pushes and pull requests.
 
 After `pnpm build`, run either focused suite with:
 

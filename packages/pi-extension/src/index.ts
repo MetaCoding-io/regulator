@@ -1,13 +1,13 @@
 import { lstat, realpath } from "node:fs/promises";
 import path from "node:path";
 import { authorizeWrite } from "@metacoding/vsm-pi-core";
-import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@mariozechner/pi-coding-agent";
+import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 
 function block(reason: string): ToolCallEventResult {
   return { block: true, reason: `VSM-Pi: ${reason}` };
 }
 
-/** Match Pi 0.73.1's @ prefix / Unicode-space expansion before authorization. */
+/** Match Pi 0.85.1's @ prefix / Unicode-space expansion before authorization. */
 function expandToolPath(input: string): string {
   return (input.startsWith("@") ? input.slice(1) : input)
     .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ")
@@ -59,8 +59,8 @@ export default function vsmPiExtension(pi: ExtensionAPI): void {
       return block("write/edit requires a non-empty project-relative file path without NUL bytes.");
     }
     const expanded = expandToolPath(input);
-    if ((expanded === "~" || expanded.startsWith("~/")) || expanded.split("/").includes("..")) {
-      return block("Use a project-relative file path without home expansion or parent traversal.");
+    if (expanded === "~" || expanded.startsWith("~/") || expanded.startsWith("file://") || expanded.split("/").includes("..")) {
+      return block("Use a project-relative file path without home expansion, file URLs, or parent traversal.");
     }
 
     // Operational authority is host-owned and fixed here. Tool arguments,

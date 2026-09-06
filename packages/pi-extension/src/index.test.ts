@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { link, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import test, { type TestContext } from "node:test";
 import { PROTECTED_S5_PATHS } from "@metacoding/vsm-pi-core";
 import {
-  AuthStorage, createAgentSession, DefaultResourceLoader, ModelRegistry, SessionManager, SettingsManager,
+  createAgentSession, createWriteTool, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
   type CustomToolCallEvent, type ExtensionAPI, type ExtensionContext, type ExtensionHandler, type ToolCallEvent, type ToolCallEventResult,
-} from "@mariozechner/pi-coding-agent";
+} from "@earendil-works/pi-coding-agent";
 import vsmPiExtension from "./index.js";
 
 type Handler = ExtensionHandler<ToolCallEvent, ToolCallEventResult>;
@@ -106,6 +106,40 @@ test("ordinary writes and edits pass with the checked normalized path", async (t
   }
 });
 
+test("path preparation remains compatible with the pinned host's real write tool", async (t) => {
+  const cwd = await fixture(t);
+  const handler = registeredHandler();
+  const destinations: string[] = [];
+  const hostWrite = createWriteTool(cwd, {
+    operations: {
+      mkdir: async () => {},
+      writeFile: async (destination) => { destinations.push(destination); },
+    },
+  });
+  for (const [input, expected] of [
+    ["@src/file.ts", "src/file.ts"],
+    ["src/new\u202Ffile.ts", "src/new file.ts"],
+    ["./src//./file.ts", "src/file.ts"],
+    ["@@literal.ts", "@literal.ts"],
+    ["./~literal.ts", "~literal.ts"],
+  ] as const) {
+    const event = toolCall("write", input);
+    destinations.length = 0;
+    await hostWrite.execute("raw-host", { path: input, content: "after" });
+    assert.equal(await handler(event, context(cwd)), undefined);
+    assert.ok(typeof event.input.path === "string");
+    await hostWrite.execute("guarded-host", { path: event.input.path, content: "after" });
+    assert.deepEqual(destinations, [path.join(cwd, expected), path.join(cwd, expected)]);
+  }
+  // Current Pi expands file URLs to absolute targets. The adapter must block
+  // that host-specific syntax, even when the URL points inside the project.
+  const url = pathToFileURL(path.join(cwd, "vsm/IDENTITY.md")).href;
+  destinations.length = 0;
+  await hostWrite.execute("raw-file-url", { path: url, content: "after" });
+  assert.deepEqual(destinations, [path.join(cwd, "vsm/IDENTITY.md")]);
+  assert.equal((await handler(toolCall("write", url), context(cwd)))?.block, true);
+});
+
 test("absolute, home, traversal, and malformed paths fail closed", async (t) => {
   const cwd = await fixture(t);
   const handler = registeredHandler();
@@ -114,6 +148,8 @@ test("absolute, home, traversal, and malformed paths fail closed", async (t) => 
       path.join(cwd, "src/file.ts"), "/tmp/outside", "C:\\repo\\file.ts", "C:relative.ts",
       "\\\\host\\share\\file.ts", "../file.ts", "src/../../file.ts", "src/../file.ts",
       "..\\file.ts", "~/file.ts", "@/tmp/file.ts", "@../file.ts", "@~/file.ts",
+      pathToFileURL(path.join(cwd, "vsm/IDENTITY.md")).href,
+      `@${pathToFileURL(path.join(cwd, "src/file.ts")).href}`, "file:///tmp/outside",
       "", ".", "./", "@", "file\0.ts", undefined, null, 42,
     ]) {
       const event = toolCall(tool, "placeholder");
@@ -169,10 +205,13 @@ test("Pi loads the built entry and native session hook blocks protected mutation
   const loaded = loader.getExtensions();
   assert.deepEqual(loaded.errors, []);
   assert.equal(loaded.extensions.length, 1);
-  const authStorage = AuthStorage.inMemory();
+  const modelRuntime = await ModelRuntime.create({
+    authPath: path.join(agentDir, "auth.json"), modelsPath: null,
+    modelsStorePath: path.join(agentDir, "models-cache.json"),
+    allowModelNetwork: false, refreshOnCreate: false,
+  });
   const { session } = await createAgentSession({
-    cwd, agentDir, settingsManager, authStorage,
-    modelRegistry: ModelRegistry.inMemory(authStorage),
+    cwd, agentDir, settingsManager, modelRuntime,
     sessionManager: SessionManager.inMemory(cwd), resourceLoader: loader,
     tools: ["write", "edit"],
   });
