@@ -4,6 +4,8 @@
 
 VSM-Pi augments Pi/GSD with explicit cybernetic control structures for agentic software development. It does **not** attempt to replace GSD's orchestration kernel. The initial design assumes GSD remains authoritative for lifecycle, task/slice/milestone state, attempts, verification, retries, recovery, and isolation.
 
+VSM-Pi does, however, maintain a distinct class of **regulatory state**: unresolved signals, audit findings, intelligence, policy proposals, required acknowledgements, routing obligations, and their dispositions. This state exists to ensure regulatory information is not lost between GSD units. It must not become a competing scheduler or duplicate GSD workflow state.
+
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 
 ## Core rule
@@ -184,20 +186,163 @@ GSD already uses the word *slice* as a workflow unit; VSM-Pi should not assume e
 
 A channel communicates information; it does not by itself grant authority to mutate S5.
 
-## Committed identity vs runtime evidence
+## Regulatory state and obligations
+
+VSM-Pi requires runtime state of its own, but this state is **regulatory rather than operational**.
+
+The ownership boundary is:
+
+```text
+GSD state                           VSM-Pi regulatory state
+---------                           -----------------------
+what unit runs next                what unresolved signals exist
+task/slice/milestone lifecycle     who must consume/acknowledge them
+attempts and retries               what evidence/findings remain open
+worktrees and execution state      what policy proposals/intelligence exist
+workflow recovery                  what must be resolved before a boundary
+```
+
+The rule is:
+
+> **GSD owns execution state. VSM-Pi owns regulatory obligations.**
+
+VSM-Pi must not derive or maintain a shadow copy of the GSD scheduler. Instead, it records information that GSD units must be able to consume before GSD decides whether and how to advance.
+
+### Regulatory-input lifecycle
+
+A regulatory record should have an explicit lifecycle rather than disappearing into an append-only log:
+
+```text
+emit -> route -> expose -> acknowledge -> resolve / escalate / supersede
+```
+
+Examples include uncertainty signals, audit findings, S4 intelligence, policy proposals, and eventually algedonic events. A record may be informational or may create an obligation for one or more VSM functions.
+
+A minimal conceptual record includes:
+
+```ts
+interface RegulatoryRecord {
+  id: string;
+  kind: "uncertainty" | "audit" | "intelligence" | "proposal" | "algedonic";
+  source: VsmSystem;
+  subject: string;
+  status: "open" | "acknowledged" | "resolved" | "escalated" | "superseded";
+  requiredConsumers: VsmSystem[];
+  acknowledgedBy: VsmSystem[];
+  scope?: {
+    milestone?: string;
+    slice?: string;
+    task?: string;
+    subsystem?: string;
+  };
+  mustResolveBefore?: "slice-complete" | "milestone-validation" | null;
+  evidence?: EvidenceRef[];
+  resolution?: {
+    action: string;
+    evidence?: EvidenceRef[];
+  };
+}
+```
+
+This shape is illustrative; protocol details should evolve through typed schemas rather than this document becoming an accidental wire contract.
+
+### Exposure to GSD units
+
+The GSD adapter should mechanically compose relevant open regulatory inputs into the context for an appropriate subsequent GSD unit. A planner, reassessment unit, audit unit, or research unit should not have to remember to scan an arbitrary trace file.
+
+Conceptually:
+
+```text
+GSD selects next unit
+        |
+        v
+VSM-Pi queries relevant open regulatory records
+        |
+        v
+GSD normal context + applicable S5 constraints + regulatory inputs
+        |
+        v
+unit runs
+        |
+        v
+acknowledgement / resolution / escalation events
+```
+
+The adapter should eventually be able to answer questions such as:
+
+- Which open S1 uncertainty signals are relevant to this slice?
+- Which S3* findings still require S3 disposition?
+- Which S4 intelligence items should influence the next planning step?
+- Which policy proposals are awaiting S5/human action?
+- Which obligations must be resolved before slice completion or milestone validation?
+
+Routing may be suggested by an agent, but required consumers and blocking boundaries should be validated by host-owned policy.
+
+### Graded obligations, not universal blocking
+
+An uncertainty signal is not automatically a failure. Regulatory records need graded handling.
+
+Examples:
+
+```text
+low-impact implementation uncertainty
+    -> record / acknowledge / continue
+
+high-impact architecture uncertainty
+    -> targeted S3* audit before milestone validation
+
+external dependency uncertainty
+    -> S4 research, then S3 disposition
+
+identity/policy ambiguity
+    -> proposal or escalation toward S5/human
+```
+
+This avoids both bad extremes: treating every uncertainty as a blocker, or treating uncertainty as telemetry nobody is required to consume.
+
+### Regulatory debt
+
+Open obligations constitute **regulatory debt**: information the metasystem knows it has not yet absorbed or resolved.
+
+This debt should eventually be visible by scope and severity. Its existence is not necessarily pathological; a viable system can knowingly defer low-risk questions. The dangerous state is invisible or unbounded regulatory debt, where GSD continues to produce work while unresolved architecture, environment, or identity questions accumulate without disposition.
+
+Repeated residual uncertainty is also feedback about the regulator itself. If plans repeatedly claim to have resolved a decision that S1 then has to rediscover under uncertainty, S3's planning/decomposition process is itself producing inadequate control information.
+
+### Persistence model
+
+The runtime representation should favor an append-only event history plus a derived current-state projection rather than mutable ad hoc files. For example:
+
+```text
+.gsd/vsm-runtime/
+├── events.jsonl        # durable runtime history: emitted/routed/acknowledged/resolved events
+├── state.json          # rebuildable projection of currently open regulatory records
+├── traces/
+└── cache/
+```
+
+The exact storage backend may change. The important invariants are:
+
+- regulatory history is traceable;
+- current open obligations are queryable without replaying prose;
+- projections are rebuildable from authoritative runtime events where practical;
+- GSD workflow state is referenced/correlated, not duplicated;
+- committed S5 identity remains separate from machine-written runtime regulatory state.
+
+## Committed identity vs runtime regulatory state
 
 ```text
 vsm/                        .gsd/vsm-runtime/
 ----                        -----------------
-WHAT THE SYSTEM IS          WHAT HAPPENED THIS RUN
+WHAT THE SYSTEM IS          WHAT THE METASYSTEM STILL KNOWS/OWES
 
 committed                   generated
-authoritative               evidentiary/replayable
+authoritative identity      regulatory/evidentiary state
 human-reviewed              machine-written
-S5 identity                 findings/traces/cache
+S5 policy/invariants        signals/findings/intelligence/obligations
+                            correlated to, but not duplicating, GSD state
 ```
 
-The exact runtime storage may evolve as integration with GSD deepens, but committed identity and ephemeral execution evidence must remain conceptually separate.
+The exact runtime storage may evolve as integration with GSD deepens, but committed identity, GSD workflow state, and VSM-Pi regulatory state must remain conceptually distinct.
 
 ## Mechanism hierarchy
 
@@ -222,6 +367,7 @@ In scope:
 - typed policy proposal;
 - typed audit finding;
 - typed S1 uncertainty signal;
+- append-only regulatory trace/event foundation;
 - deterministic gate interface;
 - Pi/GSD extension seam;
 - traceable decisions/findings/signals;
@@ -229,6 +375,8 @@ In scope:
 
 Out of scope:
 
+- complete regulatory router/obligation scheduler;
+- full regulatory-state projection/query service;
 - complete VSM recursion;
 - production-grade ontology extraction;
 - RDF/SHACL enforcement;
