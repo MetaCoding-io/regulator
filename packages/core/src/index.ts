@@ -37,6 +37,8 @@ function isUnsafeRepoRelativePath(input: string): boolean {
   const normalized = normalizeRepoPath(slashed);
   return (
     path.posix.isAbsolute(slashed) ||
+    path.win32.isAbsolute(input) ||
+    /^[a-z]:/i.test(slashed) ||
     normalized === ".." ||
     normalized.startsWith("../")
   );
