@@ -64,11 +64,38 @@ S1 profiles perform implementation work. Profiles should represent capability/co
 S1 may:
 
 - implement within the task's delegated scope;
-- emit operational signals;
+- emit operational signals, including residual uncertainty about implementation decisions;
 - propose changes to S5 identity/policy;
 - emit an algedonic signal when normal regulation is insufficient.
 
 S1 may **not** silently mutate protected S5 identity.
+
+#### Residual uncertainty is operational feedback
+
+Task completion must not collapse uncertain implementation choices into a falsely clean `done` signal. When an S1 unit makes a consequential choice under ambiguity, incomplete evidence, competing plausible designs, or an underspecified system model, it should report that residual uncertainty as structured operational feedback.
+
+> **S1 should report not only what it did, but where its model of the system became uncertain.**
+
+The useful signal is not a pseudo-precise probability. It is the decision and the regulatory information around it:
+
+- what decision was made;
+- why the choice was uncertain;
+- what alternatives were considered;
+- what evidence supported the choice;
+- what the consequence would be if the choice is wrong;
+- what follow-up or escalation seems appropriate.
+
+An uncertainty report is a subtype of the ordinary `signal` channel, not a new authority-bearing channel. S1 may recommend a route, but the receiving control function decides how it is handled. Typical routing includes:
+
+- local implementation uncertainty -> S3 for ordinary control;
+- interface/sequencing uncertainty -> S2/S3 coordination;
+- architectural or domain-model uncertainty -> S3 with possible S3* audit;
+- dependency/API/environment uncertainty -> S4 intelligence;
+- uncertainty about system purpose, policy, or identity -> proposal/escalation toward S5.
+
+Repeated uncertainty around the same subject is itself higher-level evidence. S4/S5 should be able to detect recurring clusters and treat them as signs that architecture, constraints, documentation, or the system representation are underspecified.
+
+Cybernetically, these reports preserve information about variety that S1 could not confidently absorb locally. A development system that receives outputs but discards residual uncertainty destroys information its regulator may need.
 
 ### S2 — Coordination
 
@@ -87,6 +114,8 @@ S3 is the operational controller. GSD already supplies much of this function thr
 
 VSM-Pi should feed S3 typed signals and audit findings rather than creating a competing controller.
 
+S3 should treat S1 uncertainty reports as routing information rather than self-certification. Low-consequence uncertainty may simply be recorded; consequential architectural uncertainty may trigger targeted S3* inspection, replanning, research, or human escalation.
+
 ### S3* — Independent audit
 
 S3* must be structurally separate from S1 self-certification. It has three intended layers:
@@ -95,13 +124,15 @@ S3* must be structurally separate from S1 self-certification. It has three inten
 2. semantic/domain checks;
 3. LLM-based judgment for residual architectural questions.
 
-A task can therefore be technically correct but architecturally non-conformant.
+A task can therefore be technically correct but architecturally non-conformant. S1 uncertainty signals are useful targeting information for S3*, but an S1 statement of confidence or uncertainty is never itself audit evidence.
 
 ### S4 — Intelligence
 
 S4 observes the future and environment: dependencies, platform changes, runtime behavior, security advisories, external APIs, user feedback, architecture options, and other signals that should affect future plans.
 
 S4 outputs intelligence. Intelligence does not automatically become policy.
+
+S4 may also aggregate uncertainty patterns across many S1 operations. Recurrent uncertainty in the same subsystem or concept can indicate a missing model, unstable external assumption, or architectural seam that deserves investigation and potentially an S5 proposal.
 
 ### S5 — Identity and policy
 
@@ -114,7 +145,7 @@ Agents may propose S5 changes through a typed proposal channel. The act of propo
 | Channel | Typical direction | Meaning |
 | --- | --- | --- |
 | `constraint` | S5 downward | Defines the permitted operational space |
-| `signal` | S1 upward | Ordinary operational feedback |
+| `signal` | S1 upward | Ordinary operational feedback, including residual uncertainty |
 | `audit` | S3* -> S3 | Independent evidence about conformance |
 | `intelligence` | S4 -> S3/S5 | Environment/future-facing observation |
 | `proposal` | S1/S3/S4 -> S5 | Requests a change to identity or policy |
@@ -159,9 +190,10 @@ In scope:
 - protected S5 paths;
 - typed policy proposal;
 - typed audit finding;
+- typed S1 uncertainty signal;
 - deterministic gate interface;
 - Pi/GSD extension seam;
-- traceable decisions/findings;
+- traceable decisions/findings/signals;
 - one drift-oriented fixture.
 
 Out of scope:
