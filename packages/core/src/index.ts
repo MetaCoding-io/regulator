@@ -24,20 +24,34 @@ export interface WriteDecision {
   reason?: string;
 }
 
+function slashify(input: string): string {
+  return input.replaceAll("\\", "/");
+}
+
 function normalizeRepoPath(input: string): string {
-  return input
-    .replaceAll("\\", "/")
-    .replace(/^\.\//, "")
-    .replace(/^\/+/, "");
+  return path.posix.normalize(slashify(input)).replace(/^\.\//, "");
+}
+
+function isUnsafeRepoRelativePath(input: string): boolean {
+  const slashed = slashify(input);
+  const normalized = normalizeRepoPath(slashed);
+  return (
+    path.posix.isAbsolute(slashed) ||
+    normalized === ".." ||
+    normalized.startsWith("../")
+  );
 }
 
 export function isProtectedS5Path(input: string): input is ProtectedS5Path {
+  if (isUnsafeRepoRelativePath(input)) return false;
   const normalized = normalizeRepoPath(input);
   return (PROTECTED_S5_PATHS as readonly string[]).includes(normalized);
 }
 
 /**
- * Decide whether a write should be allowed by the VSM control plane.
+ * Decide whether a repo-relative write should be allowed by the VSM control
+ * plane. Absolute and parent-traversing paths fail closed; the Pi/GSD adapter
+ * is responsible for converting tool inputs to a repo-relative path first.
  *
  * This function deliberately does not ask an LLM. Authority is mechanical.
  */
@@ -45,7 +59,15 @@ export function authorizeWrite(
   inputPath: string,
   authority: WriteAuthority = "operational",
 ): WriteDecision {
-  const normalizedPath = normalizeRepoPath(path.posix.normalize(normalizeRepoPath(inputPath)));
+  const normalizedPath = normalizeRepoPath(inputPath);
+
+  if (isUnsafeRepoRelativePath(inputPath)) {
+    return {
+      allowed: false,
+      normalizedPath,
+      reason: "Write authorization requires a path contained within the project root.",
+    };
+  }
 
   if (!isProtectedS5Path(normalizedPath)) {
     return { allowed: true, normalizedPath };
