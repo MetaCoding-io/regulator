@@ -1,0 +1,38 @@
+version: 1
+channels:
+  constraint:
+    authority: S5
+    destinations: [S4, S3, S2, S1]
+    purpose: define permitted operational space
+    mutates_s5: false
+
+  signal:
+    authority: S1
+    destinations: [S3]
+    purpose: ordinary operational feedback
+    mutates_s5: false
+
+  audit:
+    authority: S3*
+    destinations: [S3]
+    purpose: independent conformance evidence
+    mutates_s5: false
+
+  intelligence:
+    authority: S4
+    destinations: [S3, S5]
+    purpose: environment and future-facing observation
+    mutates_s5: false
+
+  proposal:
+    authority: [S1, S3, S4]
+    destinations: [S5]
+    purpose: request a change to identity or policy
+    mutates_s5: false
+
+  algedonic:
+    authority: [S1, S2, S3, S3*, S4]
+    destinations: [S5]
+    purpose: exceptional signal that may bypass normal reporting hierarchy
+    mutates_s5: false
+    severity: [blocking, critical]
