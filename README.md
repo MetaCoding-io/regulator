@@ -80,3 +80,27 @@ vsm/example/      Example committed S5 artifacts
 ## Status
 
 Very early research/prototype stage. The immediate goal is to create a small executable extension and prove that typed authority boundaries and independent architectural audit can augment GSD without forking its orchestration kernel.
+
+## Development
+
+Use Node **>=22.18.0** and **pnpm 10.12.1** (pinned in `packageManager`).
+
+```sh
+pnpm install
+pnpm typecheck
+pnpm test
+pnpm check
+```
+
+`pnpm check` runs the complete M0.1 surface: build, TypeScript checks, and
+Node's built-in runtime tests. Root commands build workspace dependencies in
+topological order so they work before any `dist/` files exist. Dependencies are
+pinned and `pnpm-lock.yaml` is committed; CI installs with `--frozen-lockfile`
+and runs `pnpm check` on Node 22.18.0 and 24 for pushes and pull requests.
+
+After `pnpm build`, run either focused suite with:
+
+```sh
+pnpm --filter @metacoding/vsm-pi-protocol test
+pnpm --filter @metacoding/vsm-pi-core test
+```
