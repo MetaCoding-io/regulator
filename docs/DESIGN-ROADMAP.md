@@ -58,7 +58,8 @@ Important distinctions:
 - required mechanism;
 - interested consumer;
 - origin scope vs visibility scope;
-- `mustExposeBy` vs `mustResolveBefore`.
+- `mustExposeBy` vs `mustResolveBefore`;
+- pre-execution (`task-dispatch`) vs post-execution/closeout boundaries.
 
 This is also where regulatory attenuation belongs so every low-value signal does not become mandatory bureaucracy.
 
@@ -81,9 +82,12 @@ DELEGATED   S1 may choose within stated bounds
 UNRESOLVED  S1 may not silently settle this choice
 ```
 
-A paired Operational Result Report records delegated choices, evidence, residual uncertainty, emergent decisions, and deviations against the exact immutable contract version.
+A paired Operational Result Report records delegated choices, evidence, residual uncertainty, emergent decisions, and deviations against the exact immutable execution binding.
 
-Reference: `OPERATIONAL-WORK-CONTRACT.md`.
+References:
+
+- `OPERATIONAL-WORK-CONTRACT.md`
+- `PLANNER-CONTRACT-COMPOSITION.md`
 
 ### A4. Functional projection + authority/capability — designed, implementation #5
 
@@ -98,13 +102,14 @@ GSD unit/mechanism
       -> VSM functional participation
       -> capabilities
       -> hook profiles
+      -> allowed VSM tool surface
 ```
 
 Membership may be many-to-many, but permissions are not a naive union. S3* independence and S5 authority require stronger provenance/authority conditions.
 
 Reference: `GSD-VSM-FUNCTIONAL-MAP.md`.
 
-### A5. Hook/process integration — design partly complete, implementation #5/#10/#11
+### A5. Hook/process integration — designed enough for M0, implementation #5/#10/#11
 
 Question: **Where does VSM regulation enter the GSD loop without creating another loop?**
 
@@ -113,14 +118,18 @@ Primary integration points:
 ```text
 plan/refine/replan
   -> regulatory + S5 context
-  -> author/validate work contracts
+  -> GSD planning calls remain canonical
+  -> capture structured planning provenance
+  -> atomically author/validate work-contract set
 
 execute-task
-  -> immutable task contract
-  -> S1-safe signal tools
+  -> task-dispatch boundary
+  -> immutable execution binding
+  -> S1-safe signal/result tools
   -> result + uncertainty
 
-complete-slice
+complete-task/slice
+  -> regulatory preflight
   -> unresolved obligations + audit evidence
   -> slice delivery feedback check
 
@@ -135,41 +144,52 @@ validate/complete milestone
 
 A future VSM reconciler is allowed only for concerns with no natural GSD clock edge (time/staleness, external events, aggregation, maintenance). It may derive regulatory state/signals but must not schedule development work.
 
+Reference: `PLANNER-CONTRACT-COMPOSITION.md` for the planning/execution seam.
+
 ---
 
-## B. Next design seam: planner-facing contract composition
+## B. Planner-facing contract composition — designed, implementation #5/#11
 
-Before implementing #11, define how contracts compose with GSD's existing planning surface.
+The open questions from the first contract design are now resolved.
 
-The preferred model is **co-authorship at planning time**, not scraping/reconstructing `PLAN.md` after the fact:
+### Design
+
+GSD's DB-backed planning tools remain the only plan write path:
 
 ```text
-GSD plan-slice / refine-slice / replan-slice
-        |
-        +-- normal GSD plan/requirement tools
-        |
-        +-- VSM contract authoring seam
-                |
-                +-- receives host-derived S3/S2 authority
-                +-- receives relevant S5/regulatory inputs
-                +-- validates Slice Delivery Contract
-                +-- validates Task Work Contracts
-                +-- persists immutable contract versions in VSM SQLite
+gsd_plan_slice
+  -> gsd_plan_task x N
+  -> GSD DB
 ```
 
-Questions to settle:
+VSM-Pi observes successful structured planning calls in the authorized GSD context, then the planner performs one atomic VSM-specific contract-set commit:
 
-1. Does one `vsm_define_slice_contract` call create the parent contract and task contracts atomically, or should parent/task contract authoring be separate tools?
-2. How are GSD task IDs correlated without VSM-Pi creating task state?
-3. What contract fields can be inferred safely from GSD plan calls vs must be explicit?
-4. At what point is a contract version considered bound to an execution attempt/context?
-5. What happens when GSD replans a task/slice before execution vs after partial execution?
-6. Which validation failures should block planning completion immediately and which should become regulatory obligations?
-7. How should contract validation reference existing GSD acceptance/verification criteria without duplicating them?
+```text
+GSD planning capture
+      +
+VSM-specific decision/feedback annotations
+      |
+      v
+vsm_commit_work_contracts
+      |
+      v
+VSM SQLite
+```
 
-Implementation principle:
+Key decisions:
 
-> **Use GSD planning as the workflow authority and VSM contract tools as typed regulatory/decision-allocation outputs of that planning process.**
+1. **Atomic parent + task contract set** for M0, not independent partial model writes.
+2. **GSD IDs are selectors validated against successful structured GSD planning calls**, not copied task state.
+3. **Infer mechanics; require regulatory judgment explicitly.** GSD scope/files/verify metadata can be captured; work shape, observable feedback and decision allocation must be explicit.
+4. **Commit immutable versions during planning; bind them at `execute-task` start** with a host-owned execution binding.
+5. **Replan creates successor versions.** Historical executions/results retain their original binding.
+6. **Deterministic invalidity rejects the contract commit; legitimate uncertainty becomes regulatory state.**
+7. **Reference GSD verification rather than duplicate it**, then add VSM-specific evidence where validity is broader.
+8. **Missing contract is a blocking regulatory obligation at `task-dispatch`**, not a VSM task/planning lifecycle state.
+9. **Guard GSD completion rather than replacing it.** A VSM preflight may deny `gsd_task_complete`; GSD still owns completion/recovery.
+10. **GSD auto-mode tool scoping is an explicit integration concern.** #5 must prove authorized VSM tools remain visible in intended units and do not leak into unauthorized units.
+
+Reference: `PLANNER-CONTRACT-COMPOSITION.md`.
 
 ---
 
@@ -273,19 +293,20 @@ Issue #12 tracks initial planner-quality/contract-drift diagnostics.
 The near-term sequence should remain deliberately narrow:
 
 ```text
-#3 / PR #9   generic native Pi authority seam
+#3 / PR #9   generic native Pi authority seam       DONE
       |
       v
 #4           typed model-facing signals/proposals/audit findings
       |
       v
-#5           GSD -> VSM functional projection, capabilities, hook seam
+#5           GSD -> VSM functional projection, capabilities,
+             hook + unit-aware VSM tool-surface seam
       |
       v
 #10          SQLite regulatory obligations + routing + boundaries
       |
       v
-#11          slice/task operational contracts + result pairing
+#11          slice/task operational contracts + execution/result binding
       |
       v
 #6           deterministic S3* architecture gate over that machinery
@@ -294,7 +315,11 @@ The near-term sequence should remain deliberately narrow:
 #7 / #12     drift experiment + diagnostics
 ```
 
+**Next implementation task after merged PR #9 is issue #4.**
+
 Design work may stay one step ahead of implementation, but should not add another orchestration kernel, planner database, or VSM persona fleet.
+
+The next architecture work after this M0 seam should be chosen from section C based on what implementation exposes; do not pre-emptively design all deferred systems before the control plane runs end to end.
 
 ---
 
@@ -310,3 +335,5 @@ Before accepting a new VSM-Pi feature, ask:
 6. Does the feature shorten/close a feedback loop, or add process without better observability?
 7. Does it preserve separation of duty, especially S1 vs S3* and ordinary GSD units vs S5?
 8. Can the regulator attenuate this variety, or will the feature create uncontrolled regulatory overhead?
+9. Is GSD still the only owner of workflow progression/task state?
+10. Is VSM-Pi extending the definition of valid operation rather than reimplementing the operation itself?
