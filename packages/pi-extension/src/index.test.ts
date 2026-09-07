@@ -27,6 +27,7 @@ function registeredHandler(): Handler {
   const handlers: Handler[] = [];
   // A strict mock: unexpected registration/API calls fail the test.
   const pi = {
+    registerTool() {},
     on(event: string, handler: Handler) {
       assert.equal(event, "tool_call");
       handlers.push(handler);
@@ -50,7 +51,7 @@ function context(cwd: string): ExtensionContext {
   return { cwd } as ExtensionContext;
 }
 
-test("registers only the native tool_call handler", () => {
+test("registers the native tool_call handler", () => {
   registeredHandler();
 });
 
@@ -64,7 +65,7 @@ test("blocks write and edit to every protected artifact and normalized aliases",
         event.input.authority = "s5-authority";
         const result = await handler(event, context(cwd));
         assert.equal(result?.block, true, `${tool}: ${alias}`);
-        assert.match(result?.reason ?? "", /proposal.*issue #4/i);
+        assert.match(result?.reason ?? "", /vsm_propose_policy_change/i);
       }
       assert.equal(await readFile(path.join(cwd, artifact), "utf8"), "identity");
     }

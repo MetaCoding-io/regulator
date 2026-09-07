@@ -1,0 +1,39 @@
+[
+  {
+    "tool": "vsm_propose_policy_change",
+    "authority": { "id": "example-s1", "capabilities": { "proposePolicyAs": "S1", "reportOperationalSignal": true } },
+    "payload": {
+      "subject": "Dependency boundary clarification",
+      "rationale": "The existing rule does not explain test-only dependencies.",
+      "requestedChange": "Clarify whether test-only adapters may depend on the host SDK.",
+      "reportedSeverity": "advisory",
+      "evidence": []
+    }
+  },
+  {
+    "tool": "vsm_report_audit_finding",
+    "authority": { "id": "example-independent-s3-star", "capabilities": { "reportIndependentAudit": true } },
+    "payload": {
+      "subject": "Architecture boundary fixture",
+      "reportedSeverity": "blocking",
+      "invariant": "INV-007",
+      "observation": "The fixture describes a forbidden host dependency in core.",
+      "evidence": [{ "class": "file", "ref": "fixture/core-example.ts", "observation": "Illustrative fixture reference, not a verified repository finding." }],
+      "suggestedAction": "Review the dependency direction."
+    }
+  },
+  {
+    "tool": "vsm_report_uncertainty",
+    "authority": { "id": "example-s1", "capabilities": { "reportOperationalSignal": true } },
+    "payload": {
+      "subject": "Cache invalidation choice",
+      "decision": "Use a short TTL while invalidation requirements are unclear.",
+      "reason": "The expected freshness bound is unspecified.",
+      "alternatives": ["Invalidate on each update", "Disable caching"],
+      "consequence": "Users could see stale state.",
+      "impact": "high",
+      "evidence": [],
+      "recommendedFollowUp": "clarification"
+    }
+  }
+]

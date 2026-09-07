@@ -12,7 +12,8 @@
     "typecheck": "pnpm build && pnpm -r typecheck",
     "test": "pnpm build && pnpm -r test",
     "check": "pnpm typecheck && pnpm test",
-    "pi": "pi -e ./packages/pi-extension/dist/index.js"
+    "pi": "pi -e ./packages/pi-extension/dist/index.js",
+    "smoke:reporting": "pnpm build && node scripts/reporting-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "22.18.0",

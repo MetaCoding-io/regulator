@@ -3,6 +3,9 @@ import path from "node:path";
 import { authorizeWrite } from "@metacoding/vsm-pi-core";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 
+import { registerReportingTools, type ReportingToolOptions } from "./reporting-tools.js";
+export type { HostReportingContext, ReportingToolOptions } from "./reporting-tools.js";
+
 function block(reason: string): ToolCallEventResult {
   return { block: true, reason: `VSM-Pi: ${reason}` };
 }
@@ -48,7 +51,7 @@ async function checkFilesystemPath(cwd: string, relativePath: string): Promise<v
 }
 
 /** Generic native Pi gate. Launch Pi from the project root (ctx.cwd). */
-export default function vsmPiExtension(pi: ExtensionAPI): void {
+function registerWriteGate(pi: ExtensionAPI): void {
   pi.on("tool_call", async (event, ctx) => {
     if (!isToolCallEventType("write", event) && !isToolCallEventType("edit", event)) return;
 
@@ -79,7 +82,7 @@ export default function vsmPiExtension(pi: ExtensionAPI): void {
       }
     }
     if (!decision.allowed) {
-      return block(`${decision.reason} The typed proposal tool is planned in issue #4 and is not available yet; request an explicit S5-authority workflow from the project owner.`);
+      return block(`${decision.reason} Use vsm_propose_policy_change in a host-authorized reporting context, or request an explicit S5-authority workflow from the project owner.`);
     }
     if (decision.normalizedPath === ".") return block("A file path is required, not the project root.");
 
@@ -95,3 +98,12 @@ export default function vsmPiExtension(pi: ExtensionAPI): void {
     return undefined;
   });
 }
+
+/** Explicit host binding; the default extension has no reporting grants. */
+export function createVsmPiExtension(options: ReportingToolOptions = {}): (pi: ExtensionAPI) => void {
+  return (pi) => {
+    registerWriteGate(pi);
+    registerReportingTools(pi, options);
+  };
+}
+export default createVsmPiExtension();

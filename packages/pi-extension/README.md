@@ -4,8 +4,8 @@ This package registers a typed `tool_call` handler for Pi's built-in `write` and
 `edit` tools. Every intercepted call uses `authorizeWrite(path, "operational")`
 from core before execution. There is no model-controlled authority flag and no
 S5 approval command. Protected writes return a block reason directing the agent
-to the project owner and the proposal mechanism planned in issue #4; that tool
-is not implemented yet.
+to `vsm_propose_policy_change` in a host-authorized reporting context, or to the
+project owner. A proposal never approves a write.
 
 ## Load from this repository
 
@@ -87,7 +87,7 @@ pnpm pi --tools read,write,edit
 The extension does not silently change the user's tool set. Cross-engine
 protection needs engine-supported interception or tool restrictions, and
 stronger filesystem isolation where required. No GSD lifecycle state,
-autonomous turns, proposal/audit tools, or S5 mutation workflow are added here.
+autonomous turns, or S5 mutation workflow are added here.
 
 ## Verification without a live model
 
@@ -114,3 +114,13 @@ To see each test's result directly after building:
 ```sh
 node packages/pi-extension/dist/index.test.js
 ```
+
+## Typed reporting tools (M0.3)
+
+The extension also registers `vsm_propose_policy_change`,
+`vsm_report_audit_finding`, and `vsm_report_uncertainty`. The default host context
+has no reporting grants. A trusted host may use `createVsmPiExtension()` to
+supply explicit capabilities through `resolveReportingContext`; no model payload
+can grant authority. Successful calls commit to the separate VSM SQLite store
+before returning receipts. See [the reporting guide](../../docs/REPORTING.md)
+for host setup, closed schemas, examples, persistence semantics, and verification.
