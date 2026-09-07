@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import fs, { existsSync, readFileSync } from "node:fs";
 import { link, mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -147,4 +148,29 @@ test("runtime path aliases and failed opens cannot redirect persistence", async 
   other.close();
   await link(path.join(outside, VSM_DATABASE_RELATIVE_PATH), path.join(cwd, VSM_DATABASE_RELATIVE_PATH));
   assert.throws(() => new RegulatoryEventStore(cwd), /unaliased/);
+});
+
+
+test("first-open tolerates another process creating directories before mkdir", async (t) => {
+  const cwd = await project(t);
+  const original = fs.mkdirSync;
+  let races = 0;
+  t.mock.method(fs, "mkdirSync", (filename: Parameters<typeof original>[0], options: Parameters<typeof original>[1]) => {
+    if (!existsSync(filename)) {
+      original(filename);
+      races++;
+    }
+    return original(filename, options);
+  });
+  syncBuiltinESMExports();
+  try {
+    const store = new RegulatoryEventStore(cwd);
+    try {
+      assert.equal(store.append(exampleEvent(0)).sequence, 1);
+      assert.equal(races, 2);
+    } finally { store.close(); }
+  } finally {
+    t.mock.restoreAll();
+    syncBuiltinESMExports();
+  }
 });

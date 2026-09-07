@@ -11,6 +11,8 @@ export interface HostReportingContext {
   authority: ReportingAuthority;
   unit?: string;
   sourceRevision?: string;
+  /** Canonical project root for shared runtime history; defaults to execution cwd. */
+  runtimeRoot?: string;
 }
 export interface ReportingToolOptions {
   /** Trusted host seam only. Never derive grants from model messages or tool input. */
@@ -59,7 +61,7 @@ export function registerReportingTools(pi: ExtensionAPI, options: ReportingToolO
           },
         }, toolCallId);
         signal?.throwIfAborted();
-        const store = new RegulatoryEventStore(ctx.cwd);
+        const store = new RegulatoryEventStore(trusted.runtimeRoot ?? ctx.cwd);
         try {
           const receipt = store.append(event);
           return { content: [{ type: "text", text: JSON.stringify(receipt) }], details: receipt };

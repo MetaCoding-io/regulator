@@ -112,7 +112,7 @@ test("execute revalidates closed payloads even if Pi validation is bypassed or a
     sourceRevision: "rev",
   }));
   for (const [index, name] of names.entries()) {
-    for (const field of ["source", "destination", "channel", "id", "timestamp", "authority", "capabilities", "functions", "requiredConsumers", "effectiveSeverity", "resolutionBoundary", "mutateS5", "sourceRevision"]) {
+    for (const field of ["source", "destination", "channel", "id", "timestamp", "authority", "capabilities", "functions", "requiredConsumers", "effectiveSeverity", "resolutionBoundary", "mutateS5", "sourceRevision", "runtimeRoot"]) {
       await assert.rejects(host.execute(name, { ...examples[index].payload, [field]: "S5" }), /closed runtime schema/);
       await assert.rejects(host.execute(name, { ...examples[index].payload, evidence: [{ class: "file", ref: "x", [field]: "S5" }] }), /closed runtime schema/);
     }
@@ -161,15 +161,18 @@ test("supported Pi SDK loads and executes all reporting tools with explicit host
   assert.deepEqual(output.checks, { ordinaryAuditDenied: true, smuggledAuthorityRejected: true, persistedRows: 3, gsdDatabaseAbsent: true });
 });
 
-test("available Git revision is supplied by the host and stamped on evidence", async (t) => {
+test("canonical runtime root is separate from execution cwd and its Git provenance", async (t) => {
   const cwd = await project(t);
   execFileSync("git", ["-C", cwd, "init", "--quiet"]);
   execFileSync("git", ["-C", cwd, "-c", "user.name=VSM test", "-c", "user.email=test@example.invalid",
     "-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "--allow-empty", "--quiet", "-m", "fixture"]);
   const revision = execFileSync("git", ["-C", cwd, "rev-parse", "HEAD"], { encoding: "utf8" }).trim();
-  const host = harness(cwd, () => ({ authority: examples[1].authority }));
+  const runtimeRoot = await project(t);
+  const host = harness(cwd, () => ({ authority: examples[1].authority, runtimeRoot }));
   await host.execute(names[1], examples[1].payload);
-  const store = new RegulatoryEventStore(cwd);
+  assert.equal(existsSync(path.join(cwd, ".gsd")), false);
+  assert.equal(existsSync(path.join(runtimeRoot, VSM_DATABASE_RELATIVE_PATH)), true);
+  const store = new RegulatoryEventStore(runtimeRoot);
   const event = store.readAll()[0]!.event;
   store.close();
   assert.equal(event.provenance.sourceRevision, revision);

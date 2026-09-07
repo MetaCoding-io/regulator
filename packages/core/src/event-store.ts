@@ -24,7 +24,7 @@ function databasePath(projectRoot: string): string {
   let directory = realpathSync(projectRoot);
   for (const component of [".gsd", "vsm-runtime"]) {
     directory = path.join(directory, component);
-    if (!inspectPath(directory)) mkdirSync(directory);
+    mkdirSync(directory, { recursive: true });
     const info = lstatSync(directory);
     if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("VSM runtime directories must not be aliases.");
   }

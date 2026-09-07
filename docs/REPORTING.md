@@ -213,3 +213,5 @@ message in its reopened SQLite event, and matching receipt. It asserts ordinary
 context audit denial and `source: "S5"` payload rejection before recording the
 three events. The temporary database is removed afterward. No live model,
 credentials, or real GSD database are used. The same smoke function runs in CI.
+
+The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project root for `.gsd/vsm-runtime/vsm.db`. It defaults to `ctx.cwd` for generic Pi. Git revision discovery continues to use execution `ctx.cwd` (or the explicit host `sourceRevision`), independently of the runtime root. Hosts running isolated units should bind the same canonical runtime root across contexts. Model payloads cannot select this root. Directory creation tolerates concurrent creators and retains post-create symlink checks.
