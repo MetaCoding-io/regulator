@@ -65,7 +65,7 @@ No GSD compatibility is inferred from upstream Pi's version number.
 ## Enforcement boundary
 
 This is a **native-engine `tool_call` preflight gate**, following Pi's
-[extension event contract](https://github.com/badlogic/pi-mono/blob/main/packages/coding-agent/docs/extensions.md#tool_call).
+[extension event contract](https://github.com/earendil-works/pi/blob/main/packages/coding-agent/docs/extensions.md#tool_call).
 It only protects calls routed through that hook to the standard local `write`
 and `edit` implementations. It does not sandbox the process or enforce S5
 policy across every engine or filesystem writer.
