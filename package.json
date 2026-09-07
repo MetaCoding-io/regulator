@@ -5,16 +5,18 @@
   "type": "module",
   "packageManager": "pnpm@10.12.1",
   "engines": {
-    "node": ">=22.18.0"
+    "node": ">=22.19.0"
   },
   "scripts": {
     "build": "pnpm -r build",
     "typecheck": "pnpm build && pnpm -r typecheck",
     "test": "pnpm build && pnpm -r test",
-    "check": "pnpm typecheck && pnpm test"
+    "check": "pnpm typecheck && pnpm test",
+    "pi": "pi -e ./packages/pi-extension/dist/index.js"
   },
   "devDependencies": {
     "@types/node": "22.18.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "@earendil-works/pi-coding-agent": "0.85.1"
   }
 }

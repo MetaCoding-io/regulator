@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node: [22.18.0, 24]
+        node: [22.19.0, 24]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
