@@ -86,3 +86,6 @@ export function authorizeWrite(
       "Direct mutation of committed S5 identity is not permitted from an operational context. Emit a typed policy proposal instead.",
   };
 }
+
+export { assertRegulatoryEvent, createRegulatoryEvent } from "./reporting.js";
+export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatoryEvent } from "./event-store.js";

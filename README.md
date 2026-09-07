@@ -92,7 +92,7 @@ pnpm test
 pnpm check
 ```
 
-`pnpm check` runs the complete M0.1 surface: build, TypeScript checks, and
+`pnpm check` runs the complete workspace verification surface: build, TypeScript checks, and
 Node's built-in runtime tests. Root commands build workspace dependencies in
 topological order so they work before any `dist/` files exist. Dependencies are
 pinned and `pnpm-lock.yaml` is committed; CI installs with `--frozen-lockfile`
@@ -117,3 +117,15 @@ See [the extension guide](packages/pi-extension/README.md) for loading into
 another project, SDK compatibility, path rules, and the native-hook enforcement
 boundary. Shell/custom tools and execution engines that bypass that hook require
 separate enforcement.
+
+## Typed reporting (M0.3)
+
+Three content-only tools record policy proposals, independent audit findings,
+and operational uncertainty signals. A trusted host supplies reporting grants;
+the default context is unprivileged. Successful calls append to the separate
+`.gsd/vsm-runtime/vsm.db` SQLite event store and return committed event receipts.
+The store never opens `.gsd/gsd.db` or mutates S5 artifacts.
+
+Run `pnpm smoke:reporting` for model-free examples using the real Pi SDK and a
+temporary SQLite database. See [the reporting guide](docs/REPORTING.md) for the
+host seam, payloads, internal messages, and replay/receipt examples.

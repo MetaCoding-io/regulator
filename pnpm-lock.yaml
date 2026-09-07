@@ -32,6 +32,9 @@ importers:
       '@metacoding/vsm-pi-core':
         specifier: workspace:*
         version: link:../core
+      '@metacoding/vsm-pi-protocol':
+        specifier: workspace:*
+        version: link:../protocol
 
   packages/protocol:
     dependencies:
