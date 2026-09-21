@@ -82,7 +82,8 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0 and 1 exist.
+  `pi -e` and tested without a model. Checkpoints 0–3 exist; Pi-free modules shared
+  between them so far are `trace.ts`, `conventions.ts` and `profiles.ts`.
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a

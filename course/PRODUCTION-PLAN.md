@@ -1,8 +1,8 @@
 # Production plan
 
-Status: **design under review; Phase 1 started.** Lessons 01 and 02 are written end to
-end with checkpoints 0 and 1, headless graders, and the seed of the fixture repository —
-the vertical slice the sequencing below calls for. This file exists so course production
+Status: **design under review; Phase 1 content complete.** Lessons 01–04 are written
+end to end with checkpoints 0–3, headless graders, and the seed of the fixture
+repository — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
 
@@ -17,8 +17,8 @@ Proves the *format* before scaling content.
 
 - fixture target repository (messy-by-design app, with its defects catalogued) —
   **seeded** (`course/lab/fixture/`);
-- checkpoints 0–3 and graders — **0 and 1 done**, under `pnpm check`;
-- written modules 01–04 and their failure drills — **01 and 02 done**;
+- checkpoints 0–3 and graders — **done**, under `pnpm check`;
+- written modules 01–04 and their failure drills — **done**;
 - one live pilot with 4–6 engineers, instrumented for confusion points.
 
 Exit criterion: pilot participants finish checkpoint 3 and can state, unprompted, why a
@@ -135,9 +135,10 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–02 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–04 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test, the ambiguous requirement and the migration
-   that must not be re-run.
-3. Lessons 03–04 with checkpoints 2–3, same vertical-slice discipline.
+   that must not be re-run — lesson 05's oscillation fixture is the next one needed.
+3. Lessons 05–06 with checkpoints 4–5 (leases and reintegration; work contracts), same
+   vertical-slice discipline. Checkpoint 4 needs a second fixture worktree; plan it.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

@@ -150,6 +150,8 @@ See [ASSESSMENT.md](ASSESSMENT.md).
 | --- | --- | --- |
 | [01 — The harness is the regulator](modules/01-the-harness-is-the-regulator.md) | 0: event log | [`lab/src/cp0-event-log.ts`](lab/src/cp0-event-log.ts) |
 | [02 — Anatomy of a turn](modules/02-anatomy-of-a-turn.md) | 1: typed trace + first gate | [`lab/src/cp1-trace.ts`](lab/src/cp1-trace.ts), [`lab/src/trace.ts`](lab/src/trace.ts) |
+| [03 — Tools as the variety interface](modules/03-tools-as-the-variety-interface.md) | 2: three typed tools with an error contract | [`lab/src/cp2-typed-tools.ts`](lab/src/cp2-typed-tools.ts), [`lab/src/conventions.ts`](lab/src/conventions.ts) |
+| [04 — Capability profiles and the advisory layer](modules/04-capability-profiles-and-the-advisory-layer.md) | 3: profiles as positive grants + advice | [`lab/src/cp3-profiles.ts`](lab/src/cp3-profiles.ts), [`lab/src/profiles.ts`](lab/src/profiles.ts) |
 
 The reference build lives in [`lab/`](lab/) as a workspace package
 (`@metacoding/vsm-pi-course-lab`): each checkpoint is a loadable Pi extension with
@@ -159,8 +161,8 @@ target project the failure drills run against.
 
 ## Status
 
-This directory is a **course design** with the first two lessons written end to end
-as a vertical slice, per the production plan. It specifies the
+This directory is a **course design** with the first four lessons written end to end
+as vertical slices, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
 production can start against a fixed target. Build sequencing, dependencies on VSM-Pi
 milestones, risks, and open decisions are tracked in
