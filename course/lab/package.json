@@ -1,0 +1,21 @@
+{
+  "name": "@metacoding/vsm-pi-course-lab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reference build for the Viable Agents course: `regulator`, one checkpoint per lesson.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && node --test dist/*.test.js",
+    "fixture:test": "cd fixture && node --test",
+    "cp0": "cd fixture && pi -e ../dist/cp0-event-log.js",
+    "cp1": "cd fixture && pi -e ../dist/cp1-trace.js"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "0.85.1"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

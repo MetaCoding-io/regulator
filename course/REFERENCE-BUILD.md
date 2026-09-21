@@ -70,20 +70,26 @@ call, and it is a teaching point that this is achievable.
 | 14 | M15 | Packaged pi package | Installs and runs one unit in a clean second repo |
 | 15 | Capstone | Viability case | Rubric in `ASSESSMENT.md` |
 
-Each checkpoint ships as a tagged commit in the course starter repo so a learner can join
-late, or restart from a known-good state, without losing the thread.
+The build lives in this repository at [`course/lab/`](lab/) as the workspace package
+`@metacoding/vsm-pi-course-lab`, one source file per checkpoint (`cp0-event-log.ts`,
+`cp1-trace.ts`, …) with headless tests beside them. Keeping each checkpoint as its own
+file rather than mutating one `regulator.ts` means a learner can diff checkpoint N
+against N−1 and see exactly what a lesson added, and can load any checkpoint into Pi
+without checking out history.
 
 ## What the course repo must ship
 
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
-- **Starter repo** with checkpoint tags, one branch per module, and a `main` that is
-  checkpoint 0.
+- **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
+  `pi -e` and tested without a model. Checkpoints 0 and 1 exist.
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a
   migration that must not be re-run. The fixture is where the failure drills live, so its
-  defects are curriculum, not accident.
+  defects are curriculum, not accident. `course/lab/fixture/` (slugkit) is the seed: a
+  README wrong in two places, two failing tests, and a vendored helper. The flaky test,
+  the ambiguous requirement and the migration are still to add.
 - **Oscillation fixture** — two coupled tests that can be alternately satisfied, for M05.
 - **Injection fixture** — a planted instruction in a source comment and another in a
   tool result, for M10. It must be realistic enough that an ungated agent sometimes

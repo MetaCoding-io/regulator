@@ -8,3 +8,6 @@ coverage/
 !.env.example
 .gsd/vsm-runtime/
 experiments/runs/
+
+# Course lab runtime output (lessons 01+)
+.regulator/

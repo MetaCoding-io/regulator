@@ -144,9 +144,23 @@ the authority, the evidence, and the failure mode it does not cover.
 
 See [ASSESSMENT.md](ASSESSMENT.md).
 
+## Lessons written so far
+
+| Lesson | Checkpoint | Lab code |
+| --- | --- | --- |
+| [01 — The harness is the regulator](modules/01-the-harness-is-the-regulator.md) | 0: event log | [`lab/src/cp0-event-log.ts`](lab/src/cp0-event-log.ts) |
+| [02 — Anatomy of a turn](modules/02-anatomy-of-a-turn.md) | 1: typed trace + first gate | [`lab/src/cp1-trace.ts`](lab/src/cp1-trace.ts), [`lab/src/trace.ts`](lab/src/trace.ts) |
+
+The reference build lives in [`lab/`](lab/) as a workspace package
+(`@metacoding/vsm-pi-course-lab`): each checkpoint is a loadable Pi extension with
+headless tests that run under `pnpm check`, so CI keeps every lesson's code honest
+against the pinned Pi version. [`lab/fixture/`](lab/fixture/) is the deliberately messy
+target project the failure drills run against.
+
 ## Status
 
-This directory is a **course design**, not yet a shipped course. It specifies the
+This directory is a **course design** with the first two lessons written end to end
+as a vertical slice, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
 production can start against a fixed target. Build sequencing, dependencies on VSM-Pi
 milestones, risks, and open decisions are tracked in
