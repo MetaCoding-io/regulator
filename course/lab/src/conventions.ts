@@ -91,14 +91,24 @@ export interface TestSummary {
   failures: string[];
 }
 
-/** Read Node's TAP output. Returns `undefined` when no summary was found, i.e. the tests did not run. */
+/**
+ * Read Node's test-runner output. Returns `undefined` when no summary was
+ * found, i.e. the tests did not run.
+ *
+ * Two formats are accepted, because the default reporter is not a stable fact:
+ * `tap` prints `# pass N` and `not ok N - name`; `spec` — the default on Node 24
+ * even when piped — prints `ℹ pass N` and `✖ name (duration)`. A harness that
+ * runs the tests itself should request `--test-reporter=tap`; one that runs a
+ * project's own `npm test` script gets whatever that script prints.
+ */
 export function parseNodeTestSummary(output: string): TestSummary | undefined {
-  const pass = /^# pass (\d+)$/m.exec(output);
-  const fail = /^# fail (\d+)$/m.exec(output);
+  const pass = /^(?:# |ℹ )pass (\d+)$/m.exec(output);
+  const fail = /^(?:# |ℹ )fail (\d+)$/m.exec(output);
   if (!pass || !fail) return undefined;
-  const failures: string[] = [];
-  for (const match of output.matchAll(/^not ok \d+ - (.+)$/gm)) failures.push(match[1]!.trim());
-  return { pass: Number(pass[1]), fail: Number(fail[1]), failures };
+  const failures = new Set<string>();
+  for (const match of output.matchAll(/^not ok \d+ - (.+)$/gm)) failures.add(match[1]!.trim());
+  for (const match of output.matchAll(/^✖ (.+?) \([\d.]+ms\)$/gm)) failures.add(match[1]!.trim());
+  return { pass: Number(pass[1]), fail: Number(fail[1]), failures: [...failures] };
 }
 
 /** Keep the tail of `text` within `maxChars`. Tool output is context the model has to pay for. */

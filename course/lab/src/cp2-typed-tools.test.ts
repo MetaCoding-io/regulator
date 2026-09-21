@@ -19,9 +19,12 @@ test("discoverConventions reports facts, not README claims", async (t) => {
   assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/slugify.js", "protected-untouched"]);
 });
 
-test("parseNodeTestSummary reads TAP and names failures; boundedTail keeps the end", () => {
+test("parseNodeTestSummary reads TAP and spec output and names failures; boundedTail keeps the end", () => {
   const tap = "TAP version 13\nok 1 - a\nnot ok 2 - b fails\nnot ok 3 - c fails\n# tests 3\n# pass 1\n# fail 2\n";
   assert.deepEqual(parseNodeTestSummary(tap), { pass: 1, fail: 2, failures: ["b fails", "c fails"] });
+  // Node 24's default `spec` reporter: failures appear inline and again under "failing tests".
+  const spec = "✔ a (1.2ms)\n✖ b fails (3.4ms)\n✖ c fails (0.5ms)\nℹ tests 3\nℹ pass 1\nℹ fail 2\n✖ failing tests:\n✖ b fails (3.4ms)\n✖ c fails (0.5ms)\n";
+  assert.deepEqual(parseNodeTestSummary(spec), { pass: 1, fail: 2, failures: ["b fails", "c fails"] });
   assert.equal(parseNodeTestSummary("Error: Cannot find module"), undefined);
   const bounded = boundedTail("x".repeat(100), 10);
   assert.equal(bounded.truncated, true);

@@ -191,10 +191,20 @@ export interface ProjectConventions {
 ```
 
 Notice what it does *not* do: read the README. The README's claims are the model's
-problem; the harness deals in what it can verify. `parseNodeTestSummary` reads Node's
-TAP output into `{ pass, fail, failures }` and returns `undefined` when there is no
+problem; the harness deals in what it can verify. `parseNodeTestSummary` reads the test
+runner's output into `{ pass, fail, failures }` and returns `undefined` when there is no
 summary — the signal that the tests did not run at all. `boundedTail` keeps the last N
 characters and says so.
+
+A field note on that parser, because it failed in CI while this lesson was being
+written. The first version read TAP (`# pass 2`, `not ok 3 - name`), which is what
+`node --test` printed when piped on Node 22. On Node 24 the default reporter is `spec`
+even when piped — `ℹ pass 2`, `✖ name (1.2ms)` — and `run_tests` started throwing
+"did not produce a test summary" on one CI matrix leg. The fix has two parts, and both
+are lessons: where the harness *owns* the argv it now pins `--test-reporter tap`,
+because a default is not a fact; and where it does not — a project's own `npm test`
+script prints whatever it prints — the parser accepts both formats. A tool that reports
+facts must not quietly depend on a default that changes under it.
 
 ### Three tools — [`course/lab/src/cp2-typed-tools.ts`](../lab/src/cp2-typed-tools.ts)
 
@@ -204,9 +214,9 @@ first in a new project; that is the tool's job: to be cheaper and more reliable 
 reading the README.
 
 **`run_tests`** — `{ filter?: string }`. Discovers the real test command, runs it in
-`ctx.cwd`, parses the summary, and returns *counts and failing test names* — plus a
-bounded tail of raw output only when something failed. Read the error contract in the
-code:
+`ctx.cwd` (pinning the reporter when the command is Node's own runner), parses the
+summary, and returns *counts and failing test names* — plus a bounded tail of raw output
+only when something failed. Read the error contract in the code:
 
 ```ts
 if (conventions.testCommand.length === 0) {

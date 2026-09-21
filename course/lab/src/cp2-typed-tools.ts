@@ -84,7 +84,11 @@ export function createTypedToolsExtension(options: TypedToolsOptions = {}): (pi:
           throw new Error("No test command discovered: no package.json scripts.test and no test/ directory.");
         }
         const argv = [...conventions.testCommand];
-        if (params.filter && argv[0] === "node" && argv.includes("--test")) argv.push("--test-name-pattern", params.filter);
+        if (argv[0] === "node" && argv.includes("--test")) {
+          // We own this argv, so pin the reporter: the default changed between Node versions.
+          argv.push("--test-reporter", "tap");
+          if (params.filter) argv.push("--test-name-pattern", params.filter);
+        }
         const result = await pi.exec(argv[0]!, argv.slice(1), execOptions(ctx.cwd, signal));
         if (result.killed) throw new Error(`Test command timed out after ${timeoutMs} ms: ${argv.join(" ")}`);
         const output = `${result.stdout}\n${result.stderr}`;
