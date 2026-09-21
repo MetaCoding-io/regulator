@@ -72,9 +72,9 @@ The same curriculum ships in three envelopes:
 
 | Envelope | Length | Format | Primary artifact |
 | --- | --- | --- | --- |
-| **Self-paced** | ~25–30 h | Repo + written modules + recorded walkthroughs + graded labs | `regulator` at checkpoint 15 |
+| **Self-paced** | ~40 h + capstone | Repo + written modules + recorded walkthroughs + graded labs | `regulator` at checkpoint 14 |
 | **Cohort** | 6 weeks | 2 × 90 min live sessions/week, labs between, design reviews, capstone crit | Capstone harness + viability case |
-| **Team intensive** | 2 days on-site/remote | Parts 0–4 condensed, labs on *the team's own repo* | A guardrail layer for the team's codebase |
+| **Team intensive** | 2 days on-site/remote | Modules 01, 02, 03, 09 and 10 only, labs on *the team's own repo* | A guardrail layer for the team's codebase |
 
 Every module is a fixed unit: **question → concept → Pi mechanism → build step → break
 it → field study → checkpoint.** The "break it" drill is not optional garnish; the
@@ -101,7 +101,13 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 | 15 | Packaging and operating | How does my team run this on Monday? | pi packages, SDK embed, RPC, CI/headless |
 | — | Capstone | Present a viability case for your harness | everything |
 
-Full module specs: [CURRICULUM.md](CURRICULUM.md).
+Full module specs: [CURRICULUM.md](CURRICULUM.md). Two reference documents sit
+alongside them: [GLOSSARY.md](GLOSSARY.md) maps each cybernetic term to its harness
+meaning and to where it already exists as mechanism in Pi, GSD-Pi or VSM-Pi, and ends
+with a *failure → diagnosis → mechanism* table; [FEATURE-MATRIX.md](FEATURE-MATRIX.md)
+lists every Pi documentation page and extension API area against the module that
+teaches it, so the "you learn the feature base anyway" claim is checkable rather than
+asserted.
 
 ## What the learner builds
 

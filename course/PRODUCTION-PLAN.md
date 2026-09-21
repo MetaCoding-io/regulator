@@ -27,7 +27,8 @@ The heart of the course and the hardest labs.
 
 - oscillation fixture; lease/liveness lab; contract + result report protocol;
 - budget guard and compaction lab; recovery router;
-- audit layer and the adversarial protected-path drill (six routes);
+- audit layer and the adversarial protected-path drill (six routes) and the injection
+  fixture;
 - `BOUNDARY.md` discipline established.
 
 Exit criterion: the adversarial graders pass against the reference solution *and* catch
@@ -80,7 +81,9 @@ upgrades as a maintenance unit with its own evidence:
   `@earendil-works/pi-coding-agent`;
 - pin the GSD-Pi commit referenced by every field study;
 - the graders are the upgrade test — if they pass on a new Pi version, the content
-  reference check is the only manual step left.
+  reference check is the only manual step left, and
+  [FEATURE-MATRIX.md](FEATURE-MATRIX.md) is the checklist for that step: walk the rows,
+  add one for any new documentation page before it is mentioned in a module.
 
 Content that names an exact API (`pi.setActiveTools`, `session_before_compact`) must be
 linked to the upstream doc section so drift is detectable by link-checking rather than by
@@ -112,6 +115,19 @@ a learner hitting it mid-lab.
    certificate or only for distinction.
 5. **Open-sourcing the graders.** They are adversarial harness tests and would be useful
    on their own; publishing them also publishes the labs' answers.
+
+## Deferred until production
+
+Two artifacts were identified in design review and deliberately not written yet,
+because both depend on pinned upstream commits that do not exist until the starter repo
+does:
+
+- **Field-study reading guide** — per module, the exact files in `open-gsd/gsd-pi` and
+  this repository that the field study reads, pinned to a commit. Without it the field
+  studies rot on the first upstream refactor.
+- **Portability appendix** — how `regulator`'s concepts map onto other harnesses'
+  hook systems, for learners whose team runs something other than Pi. Widens the
+  audience without changing the substrate.
 
 ## Immediate next actions
 

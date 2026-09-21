@@ -37,7 +37,10 @@ regulator/
     telemetry/       event store, trace writer, replay
     ext/             the Pi extension entry point wiring the above
     cli/             headless entry point for CI and evals
-  identity/          purpose, invariants, glossary, boundaries  (write-protected)
+  identity/          purpose, invariants, glossary, boundaries  (write-protected;
+                     seeded in M10 with INV-001, completed in M12)
+  memory/            operational memory: agent-writable, provenance + review-by date,
+                     never identity
   evals/             fixture tasks, arms, report generator
   BOUNDARY.md        enforcement boundary statement
 ```
@@ -54,14 +57,14 @@ call, and it is a teaching point that this is achievable.
 | 1 | M02 | Structured per-turn trace | Trace records validate against a schema; two-rule comparison table produced |
 | 2 | M03 | Three typed operational tools | Tools registered and unit-tested with no live model |
 | 3 | M04 | Capability profiles | Read-only profile provably cannot write |
-| 4 | M05 | Leases, checkpoints, thrash detector | Second concurrent session is refused; oscillation fixture trips detector |
+| 4 | M05 | Leases, checkpoints, thrash detector, reintegration | Second concurrent session is refused; oscillation fixture trips detector; seeded conflict surfaced, not auto-resolved |
 | 5 | M06 | Work contract + validated result report | Unresolved decision cannot be closed silently |
 | 6 | M07 | Budget guard + contract-preserving compaction | Ceiling halts a runaway unit; contract survives compaction (asserted) |
 | 7 | M08 | Recovery router with versioned policy | Attempt history immutable; cause→action recorded with policy version |
 | 8 | M09 | Independent audit layer | Closeout refused on missing/stale evidence regardless of agent claims |
-| 9 | M10 | Protected identity + proposal path | Alias/traversal/symlink cases blocked; `BOUNDARY.md` written |
+| 9 | M10 | Protected identity (seeded with INV-001) + proposal path + trust rule | Alias/traversal/symlink cases blocked; injection fixtures fail to move authority; `BOUNDARY.md` written |
 | 10 | M11 | Read-only intelligence subagent | Typed intelligence produced and routed, never auto-applied |
-| 11 | M12 | Durable identity set | One invariant enforced in both prose and code |
+| 11 | M12 | Complete identity set + operational memory store | One invariant enforced in both prose and code; memory entries carry provenance and expiry |
 | 12 | M13 | Algedonic escalation | Safe under headless timeout; disposition recorded |
 | 13 | M14 | Eval harness, two arms | Report committed with both arms and an interpretation |
 | 14 | M15 | Packaged pi package | Installs and runs one unit in a clean second repo |
@@ -82,6 +85,9 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   migration that must not be re-run. The fixture is where the failure drills live, so its
   defects are curriculum, not accident.
 - **Oscillation fixture** — two coupled tests that can be alternately satisfied, for M05.
+- **Injection fixture** — a planted instruction in a source comment and another in a
+  tool result, for M10. It must be realistic enough that an ungated agent sometimes
+  follows it; a drill nobody fails teaches nothing.
 - **Drift fixture** — a longitudinal scenario (a sequence of related tasks) whose
   architectural conformance can be measured after N units, for M12 and M14.
 - **Lab grader** — deterministic checks per checkpoint, runnable locally and in CI,
