@@ -71,11 +71,23 @@ packages/
   cli/            vsm init/check/status/trace
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
+course/           Design for the "Viable Agents" harness-building course
 docs/             Architecture and GSD/VSM mapping
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments
 vsm/example/      Example committed S5 artifacts
 ```
+
+## Course: Viable Agents
+
+`course/` holds the design for a course offering built on this research: instead of a
+feature-by-feature tour of Pi, learners build their own agent harness and acquire Pi's
+feature base as the answer to successive regulatory questions. GSD-Pi is used as the
+production field study; VSM-Pi supplies the typed control-plane reference.
+
+Start with [the course overview](course/README.md); module specifications are in
+[course/CURRICULUM.md](course/CURRICULUM.md). The course is designed, not yet produced —
+see [course/PRODUCTION-PLAN.md](course/PRODUCTION-PLAN.md).
 
 ## Status
 

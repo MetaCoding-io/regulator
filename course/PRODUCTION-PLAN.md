@@ -1,0 +1,123 @@
+# Production plan
+
+Status: **design accepted for review; nothing built yet.** This file exists so course
+production can start against a fixed target and so the dependencies on VSM-Pi's own
+milestones stay visible.
+
+## Sequencing
+
+Production is itself decomposed into thin vertical slices — each phase ends with
+something a real learner could run, not with a layer that is complete but unusable.
+
+### Phase 1 — Pilot spine (Parts 0–1, modules 01–04)
+
+Proves the *format* before scaling content.
+
+- fixture target repository (messy-by-design app, with its defects catalogued);
+- starter repo with checkpoints 0–3 and graders;
+- written modules 01–04 and their failure drills;
+- one live pilot with 4–6 engineers, instrumented for confusion points.
+
+Exit criterion: pilot participants finish checkpoint 3 and can state, unprompted, why a
+capability profile differs from a persona.
+
+### Phase 2 — Control and audit (Parts 2–4, modules 05–10)
+
+The heart of the course and the hardest labs.
+
+- oscillation fixture; lease/liveness lab; contract + result report protocol;
+- budget guard and compaction lab; recovery router;
+- audit layer and the adversarial protected-path drill (six routes);
+- `BOUNDARY.md` discipline established.
+
+Exit criterion: the adversarial graders pass against the reference solution *and* catch
+three deliberately weak learner-style implementations.
+
+### Phase 3 — Intelligence, identity, escalation (Part 5, modules 11–13)
+
+- subagent driver with its own budget; typed intelligence record;
+- identity set and the dual prose/code invariant;
+- escalation with interaction-kind timeout semantics, including headless behaviour.
+
+Exit criterion: headless run with a pending consent-class escalation terminates safely
+and records the reason.
+
+### Phase 4 — Proof and shipping (Part 6, modules 14–15, capstone)
+
+- drift fixture and the control/treatment eval harness;
+- packaging lab and the clean-second-repo portability drill;
+- capstone rubric calibration against at least three real submissions.
+
+Exit criterion: an eval report from the reference build that is honest about at least one
+fixture where the gated arm loses.
+
+## Dependencies on VSM-Pi
+
+The course quotes this repository as its worked typed-control reference. Where the
+repository is still design-only, the course must present it as design, not as shipped.
+
+| Course element | Depends on | Current repo state |
+| --- | --- | --- |
+| M06 contracts | `docs/OPERATIONAL-WORK-CONTRACT.md`, `docs/PLANNER-CONTRACT-COMPOSITION.md` | designed, implementation pending |
+| M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | designed, implementation pending |
+| M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
+| M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped |
+| M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
+| M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
+| M14 drift | longitudinal drift fixture | planned (M0) |
+
+Two-way benefit worth stating plainly: the course is also a forcing function for this
+repository. Teaching a mechanism exposes whether it is actually explicable, and every
+place the course has to say "this part is still prose" is a prioritisation signal for
+VSM-Pi's own roadmap.
+
+## Version pinning
+
+Pi and GSD-Pi both move quickly. The course pins exact versions per cohort and treats
+upgrades as a maintenance unit with its own evidence:
+
+- pin the Pi version in the starter repo's lockfile, as this repository pins
+  `@earendil-works/pi-coding-agent`;
+- pin the GSD-Pi commit referenced by every field study;
+- the graders are the upgrade test — if they pass on a new Pi version, the content
+  reference check is the only manual step left.
+
+Content that names an exact API (`pi.setActiveTools`, `session_before_compact`) must be
+linked to the upstream doc section so drift is detectable by link-checking rather than by
+a learner hitting it mid-lab.
+
+## Risks
+
+| Risk | Mitigation |
+| --- | --- |
+| **Cybernetics reads as decoration.** Learners hear "Beer" and expect vocabulary, not engineering. | Every concept is introduced by a failure they just watched happen. No module opens with theory. |
+| **Upstream API drift breaks labs.** | Version pinning + graders as upgrade tests + doc-section links. |
+| **Model cost per learner.** | Failure drills use small/cheap models where the failure is structural; transcript library covers budget-constrained learners; evals cap repetitions. |
+| **Reference build scope creep into a GSD clone.** | Explicit non-goals in `REFERENCE-BUILD.md`; the honest answer to "I want more" is to read GSD-Pi. |
+| **Learners over-regulate and stop shipping.** | M14 arms make over-regulation measurable; instructor notes call it out as a graded failure mode. |
+| **Course claims outrun the repo.** | Dependency table above; design-stage material is labelled as design in the content itself. |
+| **Provider access variance.** | Provider-agnostic labs; `StringEnum` and compatibility notes taught in M03; at least two providers validated per checkpoint. |
+
+## Open decisions
+
+1. **Does `regulator` live in this repository or a separate course repo?** Separate is
+   cleaner for learners (checkpoint tags, per-module branches) and keeps VSM-Pi's history
+   focused; a `course/` design directory here plus a `viable-agents-course` starter repo
+   is the current assumption.
+2. **Cohort size and instructor ratio.** The crit format (12 minutes adversarial per
+   participant) caps a cohort at roughly 12 with one instructor.
+3. **Is GSD-Pi a prerequisite or purely a field study?** Current assumption: field study
+   only. Learners are never required to install GSD to finish a lab.
+4. **Certification weight.** Whether the capstone crit is required for the base
+   certificate or only for distinction.
+5. **Open-sourcing the graders.** They are adversarial harness tests and would be useful
+   on their own; publishing them also publishes the labs' answers.
+
+## Immediate next actions
+
+1. Review and amend this design (owner: project maintainer).
+2. Build the fixture target repository — it gates every failure drill in the course.
+3. Write module 01–02 content end to end as a vertical slice, with graders, before any
+   further outlining.
+4. Run the Phase 1 pilot and record where learners got confused, as course-level
+   residual uncertainty.
