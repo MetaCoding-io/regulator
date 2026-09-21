@@ -67,13 +67,15 @@ paragraph.**
 
 Everything an extension can do, it does by subscribing to events, registering things
 (tools, commands, flags, shortcuts), or calling methods on `pi` and `ctx`. The events
-are the intervention points. Here they are for Pi 0.85.1, grouped by what they let you
+are the intervention points. Here they are for Pi 0.87.0, grouped by what they let you
 do.
 
-> The curriculum's module spec lists a few events from newer Pi releases
-> (`agent_before_settle`, `context_with_system`, `cache_warming_decision`). They are not
-> in 0.85.1's `ExtensionEvent` union and are not used in this lab. When the pin moves,
-> the feature matrix is the checklist.
+> The pin moved once while this lesson was being written, from 0.85.1 to 0.87.0. Three
+> events appeared (`agent_before_settle`, `context_with_system`,
+> `cache_warming_decision`) and `turn_end` went from observe-only to actionable. The lab
+> code needed a one-line type fix. That is what a harness dependency does: the
+> intervention points themselves shift under you, which is why the course pins a version
+> and why the feature matrix exists as the upgrade checklist.
 
 ### Startup and session
 
@@ -94,14 +96,18 @@ do.
 | `input` | The user's raw input, before expansion | intercept, transform, handle |
 | `before_agent_start` | Prompt and system prompt assembled, run about to begin | inject a message, modify system prompt |
 | `agent_start` / `agent_end` | The low-level run | observe |
+| `agent_before_settle` | The last actionable boundary: after retries and auto-compaction, before Pi stops or takes queued follow-ups | append entries; request one continuation |
 | `agent_settled` | Nothing more will run automatically | observe (notification-only) |
 
 ### One model response → one turn
 
 | Event | What it is | Can it act? |
 | --- | --- | --- |
-| `turn_start` / `turn_end` | Boundaries of one response plus its tool calls | observe |
+| `turn_start` | One model response is about to begin | observe |
+| `turn_end` | The response and its tool results have been persisted | append entries; request one continuation |
 | `context` | The messages about to go to the provider | modify |
+| `context_with_system` | The full transcript including the system prompt | modify |
+| `cache_warming_decision` | Pi is deciding whether to warm the prompt cache | decide (lesson 07) |
 | `before_provider_headers` / `before_provider_request` / `after_provider_response` | The HTTP boundary to the model | mutate headers, inspect/replace payload, read status |
 | `message_start` / `message_update` / `message_end` | User, assistant and tool-result messages; streaming updates | `message_end` can replace the message |
 | `model_select` / `thinking_level_select` | Model or reasoning changed | observe |
@@ -339,7 +345,7 @@ needs both.
 You have finished checkpoint 1 when:
 
 1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
-   loads the built extension into a real Pi 0.85.1 session and exercises the native
+   loads the built extension into a real Pi 0.87.0 session and exercises the native
    `tool_call` hook with no model and no credentials. Read that test; it is the pattern
    lesson 03 teaches for testing every gate you will ever write.
 2. `course/lab/fixture/.regulator/trace.ndjson` from a real run has one typed record
@@ -351,7 +357,7 @@ You have finished checkpoint 1 when:
 
 - This repository's [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md), INV-004: "deterministic
   facts should not depend on model agreement." One sentence; the whole lesson.
-- Pi docs at `v0.85.1`: `extensions.md`, sections "Events" through "ExtensionContext,"
+- Pi docs at `v0.87.0`: `extensions.md`, sections "Events" through "ExtensionContext,"
   and the `tool_call` and `tool_result` entries in particular.
 - `packages/coding-agent/examples/extensions/protected-paths.ts` and
   `permission-gate.ts` in `earendil-works/pi` — two upstream gates to compare against

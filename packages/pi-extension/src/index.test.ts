@@ -13,6 +13,10 @@ import vsmPiExtension from "./index.js";
 
 type Handler = ExtensionHandler<ToolCallEvent, ToolCallEventResult>;
 
+/** Pi 0.87.0 types a native tool call's `arguments` as a JSON object; the mock events carry a generic record. */
+type WriteOrEditArguments = { path: string; content?: string; edits?: { oldText: string; newText: string }[] };
+const asArguments = (input: Record<string, unknown>): WriteOrEditArguments => input as WriteOrEditArguments;
+
 async function fixture(t: TestContext): Promise<string> {
   const cwd = await mkdtemp(path.join(tmpdir(), "vsm-pi-extension-"));
   t.after(() => rm(cwd, { recursive: true, force: true }));
@@ -231,7 +235,7 @@ test("Pi loads the built entry and native session hook blocks protected mutation
     assert.ok(tool);
     // Invoke the actual native-engine interception seam with model-free input.
     const result = await session.agent.beforeToolCall({
-      toolCall: { type: "toolCall", id: event.toolCallId, name: toolName, arguments: event.input },
+      toolCall: { type: "toolCall", id: event.toolCallId, name: toolName, arguments: asArguments(event.input) },
       args: event.input, context: session.agent.state,
       assistantMessage,
     });
@@ -242,7 +246,7 @@ test("Pi loads the built entry and native session hook blocks protected mutation
     const ordinary = toolCall(toolName, "src/file.ts");
     if (toolName === "edit") ordinary.input.edits = [{ oldText: "after", newText: "edited" }];
     const allowed = await session.agent.beforeToolCall({
-      toolCall: { type: "toolCall", id: ordinary.toolCallId, name: toolName, arguments: ordinary.input },
+      toolCall: { type: "toolCall", id: ordinary.toolCallId, name: toolName, arguments: asArguments(ordinary.input) },
       args: ordinary.input, context: session.agent.state,
       assistantMessage,
     });

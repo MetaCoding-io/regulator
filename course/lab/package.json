@@ -13,7 +13,7 @@
     "cp1": "cd fixture && pi -e ../dist/cp1-trace.js"
   },
   "peerDependencies": {
-    "@earendil-works/pi-coding-agent": "0.85.1"
+    "@earendil-works/pi-coding-agent": "0.87.0"
   },
   "engines": {
     "node": ">=22.19.0"

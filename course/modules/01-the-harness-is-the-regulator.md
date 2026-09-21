@@ -98,15 +98,15 @@ in section 4 shows you exactly when the agent could have known.
 
 ## 3. Mechanism: Pi in twenty minutes
 
-The course pins Pi at **`@earendil-works/pi-coding-agent` 0.85.1**, the version this
+The course pins Pi at **`@earendil-works/pi-coding-agent` 0.87.0**, the version this
 repository already depends on. The upstream docs live at `packages/coding-agent/docs/`
-in `earendil-works/pi`; read them at the `v0.85.1` tag, not `main`, because the extension
+in `earendil-works/pi`; read them at the `v0.87.0` tag, not `main`, because the extension
 API moves and the lab code here is verified against the pin.
 
 Install and run:
 
 ```sh
-npm install -g @earendil-works/pi-coding-agent@0.85.1
+npm install -g @earendil-works/pi-coding-agent@0.87.0
 cd some-project
 pi
 ```
@@ -328,7 +328,7 @@ You have finished checkpoint 0 when:
   Variety." Short, and the source for everything in section 2.
 - Stafford Beer, *Brain of the Firm* (1972), chapter 2, on variety engineering — the
   origin of "attenuate and amplify" as design moves.
-- Pi docs at `v0.85.1`: `quickstart.md`, `usage.md`, `sessions.md`, and the first
+- Pi docs at `v0.87.0`: `quickstart.md`, `usage.md`, `sessions.md`, and the first
   hundred lines of `extensions.md`.
 - This repository's [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md), "Purpose" and
   "Core rule" — the same argument, made for a specific system.

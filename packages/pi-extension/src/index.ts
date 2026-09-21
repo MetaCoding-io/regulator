@@ -10,7 +10,7 @@ function block(reason: string): ToolCallEventResult {
   return { block: true, reason: `VSM-Pi: ${reason}` };
 }
 
-/** Match Pi 0.85.1's @ prefix / Unicode-space expansion before authorization. */
+/** Match Pi 0.87.0's @ prefix / Unicode-space expansion before authorization. */
 function expandToolPath(input: string): string {
   return (input.startsWith("@") ? input.slice(1) : input)
     .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, " ")

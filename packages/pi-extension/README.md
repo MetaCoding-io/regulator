@@ -33,7 +33,7 @@ package exports compiled JavaScript. The package's `pi.extensions` metadata
 also identifies the compiled entry for Pi package loading.
 
 Compatibility is pinned to the supported upstream
-`@earendil-works/pi-coding-agent` **0.85.1**, both as the host peer dependency and
+`@earendil-works/pi-coding-agent` **0.87.0**, both as the host peer dependency and
 the repository development CLI. The repository engine and CI minimum are
 **Node 22.19.0**, matching that host's requirement. Pi's own SDK brings its CLI
 dependencies; protocol and core still have no Pi dependency.

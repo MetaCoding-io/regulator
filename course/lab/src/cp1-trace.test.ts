@@ -106,7 +106,7 @@ test("extension writes a typed trace record per turn and blocks vendor writes", 
   assert.equal(second.usage, undefined);
 });
 
-test("Pi 0.85.1 loads the built checkpoint and its native tool_call hook refuses a vendor write without a model", async (t) => {
+test("Pi 0.87.0 loads the built checkpoint and its native tool_call hook refuses a vendor write without a model", async (t) => {
   const cwd = await projectDir(t);
   const agentDir = path.join(cwd, "agent-config");
   const settingsManager = SettingsManager.inMemory();
@@ -138,7 +138,9 @@ test("Pi 0.85.1 loads the built checkpoint and its native tool_call hook refuses
     usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0,
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } },
   };
-  const call = async (name: "write" | "edit", input: Record<string, unknown>) =>
+  // Pi types a tool call's `arguments` as a JSON object, so give the helper a JSON-shaped input.
+  type ToolInput = { path: string; content?: string; edits?: { oldText: string; newText: string }[] };
+  const call = async (name: "write" | "edit", input: ToolInput) =>
     session.agent.beforeToolCall!({
       toolCall: { type: "toolCall", id: `${name}-${input.path}`, name, arguments: input },
       args: input, context: session.agent.state, assistantMessage,
