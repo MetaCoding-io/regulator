@@ -87,7 +87,7 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 | 01 | The harness is the regulator | Why doesn't a good model plus a good prompt suffice? | CLI, TUI, sessions, `-e` |
 | 02 | Anatomy of a turn | Where exactly can I intervene? | Extension event lifecycle |
 | 03 | Tools as the variety interface | How does the agent act on the world, and how narrowly? | `registerTool`, typebox, truncation |
-| 04 | Capability profiles, not personas | How do I specialize work without roleplay? | `setActiveTools`, skills, AGENTS.md, scoped models |
+| 04 | Capability profiles and the advisory layer | How do I specialize work without roleplay, and what should prompts still carry? | `setActiveTools`, skills, AGENTS.md, scoped models |
 | 05 | Isolation, leases, anti-oscillation | What stops two operations from fighting? | project trust, bash hooks, sandbox/containers |
 | 06 | Work contracts | What am I actually authorizing this run to decide? | SDK runtime, custom tools, session entries |
 | 07 | Context as a regulated resource | What do I spend, and on what? | compaction hooks, `getContextUsage`, provider hooks |

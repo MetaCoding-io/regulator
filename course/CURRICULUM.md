@@ -165,7 +165,7 @@ tools and their host-supplied authorization grant.
 
 ---
 
-### M04 — Capability profiles, not personas
+### M04 — Capability profiles and the advisory layer
 
 **Question.** Specialization obviously helps. Why do "Architect / Coder / Reviewer"
 persona stacks disappoint, and what should replace them?
