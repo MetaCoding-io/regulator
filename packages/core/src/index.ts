@@ -97,10 +97,11 @@ export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type L
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";
 export { appendSignal, readSignals } from "./signals.js";
-export { EFFECTS_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
+export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
 export { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
 export {
   ATTEMPT_ACTIONS, TERMINAL_ACTIONS, causeFromError, classifyFailure, decideRecovery, hintFor, questionFor, routeBlockedUnit,
   type Classification, type DecideOptions, type Decided, type FailureContext, type RouteOptions,
 } from "./recovery.js";
 export { EffectJournal, effectKey, type EffectState } from "./effect-journal.js";
+export { AuditLog, type UnitAudit } from "./audit-log.js";

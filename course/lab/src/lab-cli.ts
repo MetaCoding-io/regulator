@@ -11,16 +11,22 @@
  *   node dist/lab-cli.js unit drive <contract.json>       the autoloop: run, route, and run again while the policy says so (lesson 08)
  *   node dist/lab-cli.js unit route <id>                  route one blocked unit and print the decision
  *   node dist/lab-cli.js effects                          the effect journal
+ *   node dist/lab-cli.js unit close <id>                  re-audit a blocked unit without an attempt and close it if the verdict is pass (lesson 09)
+ *   node dist/lab-cli.js unit accept <id> <criterion> --by <who> [--reject] [--note <text>]   a human disposition of a criterion no check can observe
+ *   node dist/lab-cli.js unit evidence <id>               replay the unit's audit log: evidence, verdicts, acceptances
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { EffectJournal, ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
-import { driveUnit, routeUnit, runUnit } from "./controller.js";
+import { randomUUID } from "node:crypto";
+import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
+import { AuditLog, EffectJournal, ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
 import { realExec } from "./exec.js";
 import { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { headRevision } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { loadWorkload } from "./workload.js";
@@ -32,7 +38,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | effects");
+  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects");
   process.exit(2);
 };
 
@@ -122,7 +128,36 @@ try {
     }
     for (const d of await store.listDecisions(unit.unitId)) console.log(`  decision after attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})`);
     const report = await store.getReport(unit.unitId, unit.contract.version);
-    console.log(report ? `  report: ${report.summary}` : "  report: none");
+    console.log(report ? `  report (attempt ${report.attempt}): ${report.summary}` : "  report: none");
+    const verdict = (await new AuditLog(process.cwd()).forUnit(unit.unitId)).verdicts.at(-1);
+    console.log(verdict ? `  audit: ${summarizeVerdict(verdict)}${verdict.reasons.length ? `\n    ${verdict.reasons.join("\n    ")}` : ""}` : "  audit: no verdict");
+  } else if (command === "unit" && sub === "close" && rest[0]) {
+    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload() });
+    if (outcome.status === "closed") console.log(`unit ${rest[0]}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
+    else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
+    else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
+  } else if (command === "unit" && sub === "accept" && rest[0] && rest[1]) {
+    const by = flag("by");
+    if (!by) usage();
+    const store = new ExecutionStore(process.cwd());
+    const unit = await store.getUnit(rest[0]);
+    if (!unit) throw new Error(`no unit "${rest[0]}"`);
+    const contract = await store.getContract(unit.unitId, unit.contract.version);
+    if (!contract?.expectedEvidence.some((e) => e.id === rest[1])) throw new Error(`"${rest[1]}" is not an evidence expectation of ${unit.contract.id} v${unit.contract.version}`);
+    const revision = await headRevision(realExec, path.join(process.cwd(), ".regulator", "worktrees", unit.unitId));
+    const note = flag("note");
+    const acceptance = {
+      id: randomUUID(), unitId: unit.unitId, contract: unit.contract, criterion: rest[1], revision,
+      disposition: rest.includes("--reject") ? "rejected" as const : "accepted" as const, by: by!, ...(note ? { note } : {}), at: new Date().toISOString(),
+    };
+    await new AuditLog(process.cwd()).appendAcceptance(acceptance);
+    console.log(`unit ${unit.unitId}: ${acceptance.criterion} ${acceptance.disposition} by ${acceptance.by} at revision ${revision.slice(0, 7)}; run \`regulator unit close ${unit.unitId}\` to re-audit`);
+  } else if (command === "unit" && sub === "evidence" && rest[0]) {
+    const audit = await new AuditLog(process.cwd()).forUnit(rest[0]);
+    if (!audit.evidence.length && !audit.verdicts.length && !audit.acceptances.length) console.log(`no audit entries for unit ${rest[0]}`);
+    for (const r of audit.evidence) console.log(`evidence   ${r.verdict.padEnd(12)} attempt ${r.attempt}  ${r.revision.slice(0, 7)}  ${r.check}  [${r.class} → ${r.criteria.join(", ") || "no criterion"}]  ${r.observation.split("\n")[0]}`);
+    for (const a of audit.acceptances) console.log(`acceptance ${a.disposition.padEnd(12)} ${a.criterion}  ${a.revision.slice(0, 7)}  by ${a.by}${a.note ? ` — ${a.note}` : ""}`);
+    for (const v of audit.verdicts) console.log(`verdict    ${v.verdict.padEnd(12)} attempt ${v.attempt}  ${summarizeVerdict(v)}  (${v.evidence.length} record(s) considered)${v.reasons.length ? `\n    ${v.reasons.join("\n    ")}` : ""}`);
   } else if (command === "unit" && sub === "status") {
     const statuses = await unitStatus(realExec, process.cwd());
     if (statuses.length === 0) console.log("no leases");

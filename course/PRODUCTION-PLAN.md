@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–08
-are written end to end with checkpoints 0–7, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–09
+are written end to end with checkpoints 0–8, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -34,8 +34,9 @@ The heart of the course and the hardest labs.
 - budget guard, model routing and contract-preserving compaction — **done** (lesson 07,
   checkpoint 6);
 - recovery router — **done** (lesson 08, checkpoint 7);
-- audit layer and the adversarial protected-path drill (six routes), the injection
-  fixture, and the secret-canary / egress fixture;
+- audit layer — **done** (lesson 09, checkpoint 8: the closeout gate over host-run
+  evidence); the adversarial protected-path drill (six routes), the injection fixture,
+  and the secret-canary / egress fixture remain for lesson 10;
 - durable-execution fixture for M08: a side-effecting tool, a harness kill between
   effect and record, restart and reconciliation — **done** (`notify_owner`, the effect
   journal and the crash test in checkpoint 7);
@@ -109,7 +110,7 @@ repository is still design-only, the course must present it as design, not as sh
 | M06 contracts | `docs/OPERATIONAL-WORK-CONTRACT.md`, `docs/PLANNER-CONTRACT-COMPOSITION.md` | designed, implementation pending |
 | M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | routing shipped (lesson 08); obligations pending (lesson 11) |
 | M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
-| M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped |
+| M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped; the closeout gate is the first regulator to emit one (lesson 09) |
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
 | M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
 | M14 drift | longitudinal drift fixture | planned (M0) |
@@ -181,11 +182,11 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–08 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–09 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 09 with checkpoint 8 (independent audit: harness-run verification producing
-   the `check-failure` cause, closeout refused on missing or stale evidence regardless of
-   the report's claims); the control room gains the evidence view with it.
+3. Lesson 10 with checkpoint 9 (authority boundaries: protected identity seeded with
+   INV-001, the proposal path, the trust rule; the six-route protected-path drill and the
+   injection fixture); the control room gains the assurance view with it.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

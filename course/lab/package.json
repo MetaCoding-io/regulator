@@ -19,9 +19,11 @@
     "cp5": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js",
     "cp6": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js",
     "cp7": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js",
+    "cp8": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js -e ../dist/cp8-evidence.js",
     "fixture:oscillation:test": "cd fixture-oscillation && node --test"
   },
   "dependencies": {
+    "@metacoding/vsm-pi-checks": "workspace:*",
     "@metacoding/vsm-pi-core": "workspace:*",
     "@metacoding/vsm-pi-protocol": "workspace:*",
     "typebox": "1.3.27"

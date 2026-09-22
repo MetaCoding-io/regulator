@@ -140,6 +140,8 @@ export const ResultReportSchema = Type.Object({
   contractId: NonEmpty,
   contractVersion: Type.Integer({ minimum: 1 }),
   unitId: NonEmpty,
+  /** The attempt that produced it (lesson 09): a new attempt is new work and writes its own report; a report is never revised. */
+  attempt: Type.Integer({ minimum: 1 }),
   reportedAt: NonEmpty,
   ...ReportFields,
 }, { additionalProperties: false });

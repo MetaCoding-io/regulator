@@ -58,8 +58,9 @@ test("contract extension: the contract becomes a typed entry and a prompt sectio
   assert.match((accepted.content[0] as { text: string }).text, /Report accepted for unit u1/);
   assert.equal(statuses.contract, "contract: tc-underscore v1 (reported)");
   assert.equal(entries[1]?.customType, REPORT_ENTRY_TYPE);
-  const onDisk = JSON.parse(await readFile(path.join(repo, UNITS_RELATIVE_DIR, "u1", "report.v1.json"), "utf8"));
+  const onDisk = JSON.parse(await readFile(path.join(repo, UNITS_RELATIVE_DIR, "u1", "report.v1.a1.json"), "utf8"));
   assert.equal(onDisk.contractId, "tc-underscore");
+  assert.equal(onDisk.attempt, 1, "the host binds the report to the attempt");
   assert.equal(onDisk.reportedAt, "2023-11-14T22:13:20.000Z", "the host stamps the report");
   await assert.rejects(run(goodReport), /already reported/);
 

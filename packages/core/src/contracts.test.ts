@@ -31,6 +31,7 @@ export function sampleReport(overrides: Partial<ResultReport> = {}): ResultRepor
     contractId: "tc-1",
     contractVersion: 1,
     unitId: "u1",
+    attempt: 1,
     reportedAt: "2026-09-22T00:10:00.000Z",
     summary: "Fixed the double-dash collapse; tests pass.",
     evidence: [{ class: "test", ref: "node --test", observation: "4 pass" }],
@@ -109,8 +110,11 @@ test("execution store: contract and report versions are immutable; attempts appe
   assert.deepEqual(await store.listAttempts("u1"), [attempt]);
 
   await store.writeReport(sampleReport());
-  await assert.rejects(store.writeReport(sampleReport({ summary: "a second opinion" })), /EEXIST/, "one report per contract version");
+  await assert.rejects(store.writeReport(sampleReport({ summary: "a second opinion" })), /EEXIST/, "one report per contract version and attempt");
   assert.equal((await store.getReport("u1", 1))?.summary, sampleReport().summary);
+  await store.writeReport(sampleReport({ attempt: 2, summary: "the second attempt's report" }));
+  assert.equal((await store.getReport("u1", 1))?.summary, "the second attempt's report", "no attempt named: the latest");
+  assert.equal((await store.getReport("u1", 1, 1))?.summary, sampleReport().summary);
   assert.equal(await store.getReport("u1", 2), undefined);
 
   const blocked = await store.setStatus("u1", "blocked", "reintegration conflict");

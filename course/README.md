@@ -158,6 +158,7 @@ See [ASSESSMENT.md](ASSESSMENT.md).
 | [06 — Work contracts: what you are actually authorizing](modules/06-work-contracts.md) | 5: typed work contract, result report tool with a gate, the first slice of the S3 loop, the first workload definition, `regulator status` | [`lab/src/cp5-contract.ts`](lab/src/cp5-contract.ts), [`lab/src/controller.ts`](lab/src/controller.ts), [`lab/src/dispatch-pi.ts`](lab/src/dispatch-pi.ts), [`lab/workload/`](lab/workload/), [`lab/contracts/`](lab/contracts/); contracts and execution store in [`packages/`](../packages/), read model in [`packages/cli`](../packages/cli) |
 | [07 — Context and budget as regulated resources](modules/07-context-and-budget-as-regulated-resources.md) | 6: policy (budgets + model routes), budget guard with halt and gate, contract-preserving compaction, model failover, attempt ceilings and re-dispatch | [`lab/src/cp6-budget.ts`](lab/src/cp6-budget.ts), [`lab/policies/`](lab/policies/), [`lab/src/dispatch-pi.ts`](lab/src/dispatch-pi.ts); meter and preserved block in [`packages/core/src/policy.ts`](../packages/core/src/policy.ts) |
 | [08 — Failure, recovery, and the retry lattice](modules/08-failure-recovery-and-the-retry-lattice.md) | 7: recovery router over blocked units under a versioned policy (retry, repair, replan, remediate, clarify, pause, abort, escalate), failure observations, the autoloop, the effect journal with reconciliation on restart | [`lab/src/cp7-recovery.ts`](lab/src/cp7-recovery.ts), [`lab/policies/recovery.json`](lab/policies/recovery.json), [`lab/src/controller.ts`](lab/src/controller.ts); router and journal in [`packages/core/src/recovery.ts`](../packages/core/src/recovery.ts), [`packages/core/src/effect-journal.ts`](../packages/core/src/effect-journal.ts) |
+| [09 — Evidence, not claims](modules/09-evidence-not-claims.md) | 8: the closeout gate — host-run checks bound to the revision, environment, attempt and criterion; technical verdict separate from human acceptance; audit findings; evidence provenance and the report preflight in the session | [`lab/src/cp8-evidence.ts`](lab/src/cp8-evidence.ts), [`lab/src/controller.ts`](lab/src/controller.ts); checks and verdict in [`packages/checks/`](../packages/checks/), audit log in [`packages/core/src/audit-log.ts`](../packages/core/src/audit-log.ts) |
 
 The reference build lives in [`lab/`](lab/) as a workspace package
 (`@metacoding/vsm-pi-course-lab`): each checkpoint is a loadable Pi extension with
@@ -167,7 +168,7 @@ target project the failure drills run against.
 
 ## Status
 
-This directory is a **course design** with the first eight lessons written end to end
+This directory is a **course design** with the first nine lessons written end to end
 as vertical slices, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
 production can start against a fixed target. Build sequencing, dependencies on VSM-Pi

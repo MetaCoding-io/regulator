@@ -5,9 +5,11 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.evidence-preflight.v1` | Evidence preflight | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
@@ -52,6 +54,45 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.
 - The wall-clock ceiling is measured from session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Closeout gate
+
+`reg.audit.closeout-gate.v1` · S3* · deterministic-gate · active · introduced in M09
+
+**Purpose.** Refuse to close a unit unless the harness's own evidence says its contract is met: after a valid result report, run the checks the workload names for the unit type with the orchestrator's process runner against the unit's committed revision, bind every result to the unit, attempt, contract, revision, environment and the criteria it speaks to, append it to the audit log, and derive the technical verdict from the evidence that is fresh for that revision — plus a human acceptance for each required criterion no check can observe. Missing, stale, failing or contradicted evidence blocks closeout; the report's claims satisfy nothing.
+
+**Absorbs.** `self-certified-completion` — The unit says the tests pass. Nothing ran them, or they ran three commits ago, or they ran and failed and the report says otherwise; the loop closes on the sentence.
+
+**Mechanism.** `src/controller.ts` at `auditUnit (after the report check, before reintegration)`, `closeUnit (re-audit without an attempt)`
+
+**Channels.** consumes `result report`, `workload unit-type checks`, `worktree at HEAD`, `human acceptance (audit log)` · emits `evidence record (audit log)`, `technical verdict (audit log)`, `audit-finding → S3 (closeout refused)`
+
+**Scope.** subjects unit, attempt, criterion · resources worktree, audit log
+
+**Cost.** One run of the unit type's checks per closeout — the project's own test suite and deterministic checks — with no model call. The same checks the unit already ran, run again by a runner the unit does not control: that duplication is the price of independence.
+
+**May.**
+- run the workload's checks against the committed revision
+- record evidence and a verdict
+- refuse closeout
+- emit an audit finding to S3
+
+**May not.**
+- accept a criterion a check cannot observe (a person does that, separately)
+- decide what happens to the blocked unit (the recovery router does)
+- read the report as evidence
+- run a check the workload does not name
+
+**Evidence.** `../../packages/checks/src/verify.test.ts`, `src/controller.test.ts`
+
+**Limitations.**
+- Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.
+- The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
+- Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
+- The audit log is one NDJSON file per instance beside the signal sink; it is not yet merged with the SQLite regulatory event store the reporting tools write.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -153,6 +194,41 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The idempotency key is the unit, the tool and the arguments; the same message sent on purpose twice is refused. Vary the message.
 - Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration (lesson 03), and nothing here can journal what it cannot name.
 - The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Evidence preflight
+
+`reg.control.evidence-preflight.v1` · S3 · deterministic-gate · active · introduced in M09
+
+**Purpose.** Stamp every run_tests and run_checks result with the revision it ran against and whether the tree was dirty, as a typed session entry and in the text the model sees; and block report_result before the report is written when it cites a test or command run that did not happen in this session, ran on another revision or a dirty tree, or did not pass. The cheap lie is refused where it is told.
+
+**Absorbs.** `claimed-evidence` — The report cites run_tests; run_tests never ran, or ran before the last edit, or ran and failed. Without a preflight the lie costs a full closeout audit to catch.
+
+**Mechanism.** `src/cp8-evidence.ts` at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)`
+
+**Channels.** consumes `tool_result`, `tool_call (report_result)` · emits `evidence-provenance entry (session)`
+
+**Scope.** subjects report, tool run · resources session
+
+**Cost.** Two git commands per stamped result and per preflight; a few dozen tokens of stamp per tool result; no model calls.
+
+**May.**
+- stamp a tool result
+- block a report_result call with the reason
+
+**May not.**
+- certify the evidence (the closeout gate does, independently)
+- rewrite what a tool reported
+- block anything but report_result
+
+**Evidence.** `src/cp8-evidence.test.ts`
+
+**Limitations.**
+- It trusts the session's own tool run: the session ran run_tests, and the session is what is being checked. Independence comes from the closeout gate, which reads nothing this extension records.
+- Only test and command claims are preflighted; file, runtime, semantic and model claims pass through to the closeout gate.
+- A run_tests call with a filter that passes counts as a passing run: the preflight sees the verdict, not the coverage.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -287,7 +363,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `../../packages/core/src/recovery.test.ts`, `src/controller.test.ts`
 
 **Limitations.**
-- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds, and check-failure is not yet produced because harness-run verification arrives in lesson 09.
+- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
 - Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).
 - Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.
 - Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered.

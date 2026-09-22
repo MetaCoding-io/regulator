@@ -1,31 +1,40 @@
 /**
- * The S3 loop (lesson 06, budgets added in lesson 07): contract → dispatch → close.
+ * The S3 loop: contract → dispatch → verify → route → close.
  *
  *   contract   check the contract; refuse dispatch if it cannot be honoured
  *   dispatch   record the unit, take the lease and worktree (lesson 05), run a
  *              session under the workload's profile and the policy's budget and
  *              model route for the unit type; a blocked unit may be re-dispatched
  *              under the same contract version while attempts remain
- *   close      read the result report the unit wrote — never the diff — check
- *              it against the exact contract version, reintegrate, release
+ *   verify     read the result report the unit wrote — never the diff — check
+ *              it against the exact contract version; then run the workload's
+ *              checks for the unit type with the harness's own runner against
+ *              the committed revision, record the evidence, and derive the
+ *              technical verdict (lesson 09). The report's claims satisfy nothing.
+ *   route      a blocked unit gets the recovery policy's action (lesson 08)
+ *   close      reintegrate, release
  *
- * Verify (harness-run checks) and route (the recovery lattice) are lessons
- * 08–09; where they would go, this loop records what happened and stops.
- * The loop is generic: nothing here knows the workload is software.
+ * The loop is generic: nothing here knows the workload is software; the
+ * checks it runs are the ones the workload names.
  *
  * Pi-free. The one Pi-shaped thing, running a session, is injected as a
  * `Dispatcher`, so the loop is tested without a model and driven with one.
  */
 import { randomUUID } from "node:crypto";
 import path from "node:path";
+import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  ATTEMPT_ACTIONS, ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, readSignals, routeBlockedUnit, routeFor,
+  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, readSignals, routeBlockedUnit, routeFor,
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
-import type { AlgedonicSignal, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, WorkContract, WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
+import type {
+  AlgedonicSignal, AuditFinding, EvidenceRecord, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, TechnicalVerdict, UnitType,
+  WorkContract, WorkloadDefinition,
+} from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
 import { abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
+import { headRevision, isClean } from "./worktree.js";
 
 export interface DispatchRequest {
   unitId: string;
@@ -64,7 +73,7 @@ export interface RunUnitOptions {
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
   | { status: "closed"; report: ResultReport; sha: string; signals: number }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string };
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
@@ -127,7 +136,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
 
   // close — from the report the unit wrote, never from the domain
   const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
-  const report = await store.getReport(contract.unitId, contract.version);
+  const report = await store.getReport(contract.unitId, contract.version, attemptNumber);
   const ledger = await store.getBudget(contract.unitId, attemptNumber);
   if (!report && ledger?.exhausted) {
     const detail = `${ledger.exhausted.dimension} ceiling crossed at ${ledger.exhausted.at} (${ledger.consumed.tokens} tokens, ${ledger.consumed.turns} turns)`;
@@ -146,7 +155,23 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     await store.setStatus(contract.unitId, "blocked", "the result report does not honour the contract");
     return { status: "blocked", reason: "invalid-report", problems: reportProblems };
   }
+  // verify — the harness's own checks against the committed revision; the report's claims satisfy nothing
+  const audit = await auditUnit(exec, { repo: options.repo, contract, unitType, report, attempt: attemptNumber, now });
+  if (audit.verdict.verdict !== "pass") {
+    // The attempt record carries the reasons: that is what the router's hint is built from.
+    const summary = summarizeVerdict(audit.verdict);
+    const detail = `${summary} — ${audit.verdict.reasons.join("; ")}`;
+    await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "check-failure", detail });
+    await store.setStatus(contract.unitId, "blocked", `audit refused closeout: ${summary}`);
+    return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
+  }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, now });
+}
+
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; now: () => number }): Promise<RunUnitOutcome> {
+  const { contract, report, now } = options;
+  const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
   const signals = await emitReportSignals(options.repo, contract, report, now);
 
@@ -157,6 +182,86 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
   await store.setStatus(contract.unitId, "closed");
   return { status: "closed", report, sha: finished.result.sha, signals };
+}
+
+export interface AuditOutcome {
+  verdict: TechnicalVerdict;
+  /** The records this audit produced (none when the worktree was dirty: nothing binds to a revision then). */
+  records: EvidenceRecord[];
+  revision: string;
+}
+
+/**
+ * verify — S3*'s deterministic layer, run by the orchestrator. Runs the
+ * checks the workload names for the unit type against the unit's worktree at
+ * its committed revision, appends every result to the audit log as evidence
+ * bound to that revision, and derives the technical verdict from all the
+ * evidence the log holds that is fresh for it — plus human acceptances for
+ * the criteria no check can observe. A dirty worktree is inconclusive by
+ * construction: evidence about an uncommitted tree binds to nothing.
+ *
+ * A verdict other than pass is also an audit finding on the audit channel,
+ * S3* → S3, so the read model shows it next to the unit.
+ */
+export async function auditUnit(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; report: ResultReport; attempt: number; now?: () => number }): Promise<AuditOutcome> {
+  const now = options.now ?? Date.now;
+  const { contract, report, unitType } = options;
+  const unitId = contract.unitId;
+  const worktree = path.join(options.repo, WORKTREES_RELATIVE_DIR, unitId);
+  const log = new AuditLog(options.repo);
+  const clean = await isClean(exec, worktree);
+  const revision = await headRevision(exec, worktree);
+  let records: EvidenceRecord[] = [];
+  if (clean) {
+    const results = await runHostChecks(exec, { cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref) });
+    records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
+    for (const record of records) await log.appendEvidence(record);
+  }
+  const held = await log.forUnit(unitId);
+  let verdict = technicalVerdict({ contract, report, records: held.evidence, acceptances: held.acceptances, unitId, attempt: options.attempt, revision, now });
+  if (!clean) verdict = { ...verdict, verdict: "inconclusive", reasons: [`the worktree has uncommitted changes: evidence cannot be bound to revision ${revision.slice(0, 7)}`, ...verdict.reasons] };
+  await log.appendVerdict(verdict);
+  if (verdict.verdict !== "pass") {
+    const finding: AuditFinding = {
+      id: verdict.id, timestamp: verdict.at, source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3",
+      severity: verdict.verdict === "fail" ? "blocking" : "advisory", subject: `unit ${unitId}: closeout refused (${verdict.verdict})`, unit: unitId,
+      invariant: "INV-003", observation: verdict.reasons.join("; ") || summarizeVerdict(verdict),
+      evidence: records.map((r) => ({ class: r.class, ref: r.check, observation: r.observation.split("\n")[0] ?? "", sourceRevision: revision })),
+      suggestedAction: verdict.verdict === "fail" ? "repair: the checks fail at the committed revision" : "produce the missing evidence, or a human accepts the criteria no check can observe, then `regulator unit close`",
+    };
+    await appendSignal(options.repo, finding);
+  }
+  return { verdict, records, revision };
+}
+
+/**
+ * close — re-audit a unit blocked at verification without spending an attempt,
+ * and close it if the verdict is now pass. This is how a unit proceeds after a
+ * human accepts a criterion no check can observe, or after evidence that was
+ * missing for an environmental reason can be produced. The attempt history is
+ * untouched: a re-audit is not an attempt.
+ */
+export async function closeUnit(exec: Exec, options: { repo: string; unitId: string; workload: WorkloadDefinition; now?: () => number }): Promise<RunUnitOutcome> {
+  const now = options.now ?? Date.now;
+  const store = new ExecutionStore(options.repo, now);
+  const unit = await store.getUnit(options.unitId);
+  if (!unit) throw new Error(`no unit "${options.unitId}"`);
+  const problems: ContractProblem[] = [];
+  if (unit.status !== "blocked") problems.push({ path: "status", message: `unit "${unit.unitId}" is ${unit.status}; only a blocked unit is re-audited` });
+  const contract = await store.getContract(unit.unitId, unit.contract.version);
+  const report = await store.getReport(unit.unitId, unit.contract.version, unit.attempts);
+  const unitType = unitTypeOf(options.workload, unit.unitType);
+  if (!contract) problems.push({ path: "contract", message: `contract ${unit.contract.id} v${unit.contract.version} is missing from the store` });
+  if (!report) problems.push({ path: "report", message: `attempt ${unit.attempts} wrote no report; there is nothing to audit` });
+  if (!unitType) problems.push({ path: "unitType", message: `"${unit.unitType}" is not a unit type of workload ${options.workload.name}` });
+  if (problems.length || !contract || !report || !unitType) return { status: "refused", problems };
+  const audit = await auditUnit(exec, { repo: options.repo, contract, unitType, report, attempt: unit.attempts, now });
+  if (audit.verdict.verdict !== "pass") {
+    const detail = summarizeVerdict(audit.verdict);
+    await store.setStatus(unit.unitId, "blocked", `audit refused closeout: ${detail}`);
+    return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
+  }
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, now });
 }
 
 /**

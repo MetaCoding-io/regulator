@@ -344,3 +344,7 @@ export {
   type EffectJournalEntry, type EffectStatus, type FailureCause, type FailureObservation, type RecoveryAction, type RecoveryDecision,
   type RecoveryPolicy, type RecoveryRule,
 } from "./recovery.js";
+export {
+  AuditEntrySchema, EvidenceEnvironmentSchema, EvidenceRecordSchema, HumanAcceptanceSchema, TechnicalVerdictSchema, VerdictSchema, isTechnicalVerdict,
+  type AuditEntry, type EvidenceEnvironment, type EvidenceRecord, type HumanAcceptance, type TechnicalVerdict, type Verdict,
+} from "./audit.js";

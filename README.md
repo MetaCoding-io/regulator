@@ -61,7 +61,7 @@ packages/
   protocol/       Typed VSM vocabulary and runtime schemas
   core/           Authority, routing, policy, and finding logic
   pi-extension/   Pi lifecycle integration
-  checks/         Deterministic S3* checks
+  checks/         Deterministic S3* checks: host-run verification bound to a revision, the technical verdict
   cli/            regulator status: the read model over a definition and an instance
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
