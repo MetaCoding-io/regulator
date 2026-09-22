@@ -87,17 +87,24 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–4 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–5 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
   its two profile declarations, the checkpoints, the registry CLI and the seed records.
-  Checkpoint 4 adds the lease store, thrash detector, worktree/reintegration and unit
-  lifecycle modules, and the `regulator` lab CLI (`fixture`, `unit start|finish|status`);
-  they stay in the lab until a second lesson depends on them.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and five
-  records live under `course/lab/registry/`; the control room is design only
-  ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
+  Checkpoint 4 added the worktree/reintegration and unit lifecycle modules and the
+  `regulator` lab CLI (`fixture`, `unit start|finish|status`); its lease store and thrash
+  detector were promoted to `packages/core` when checkpoint 5 and the `regulator status`
+  read model became their second and third consumers. Checkpoint 5 adds the contract and
+  result-report schemas, the workload and execution-record schemas (`protocol`), the
+  contract/report checks, the execution store and the signal sink (`core`), and in the lab
+  the first slice of the S3 loop (`controller.ts`), the Pi SDK dispatcher, the
+  `cp5-contract` extension, the software-development workload definition and two example
+  contracts. `packages/cli` ships `regulator status`, the read model the control room
+  will consume.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and eight
+  records live under `course/lab/registry/`; the control room is design only, but its
+  read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a

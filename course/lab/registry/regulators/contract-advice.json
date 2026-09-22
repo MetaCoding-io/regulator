@@ -1,0 +1,29 @@
+{
+  "id": "reg.control.contract-advice.v1",
+  "name": "Contract advice section",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Render the governing contract — fixed, delegated, unresolved, expected evidence, and the obligation to call report_result — as a system-prompt section, so the unit knows what freedom it has. This is advice: it changes what the model is told, not what it can do.",
+  "absorbs": {
+    "failureClass": "uninformed-unit",
+    "description": "The gates refuse a bad report, but a unit that never saw the allocation produces one by accident and burns an attempt learning the contract from refusals."
+  },
+  "mechanism": {
+    "level": "prompt",
+    "implementation": "src/cp5-contract.ts",
+    "enforcementPoints": ["before_agent_start"]
+  },
+  "channels": { "consumes": ["work contract (S3)"], "emits": [] },
+  "scope": { "subjects": ["unit"], "resources": ["system prompt"] },
+  "authority": {
+    "may": ["add a section to the system prompt"],
+    "mayNot": ["enforce anything; the result-report gate and the lease gate do"]
+  },
+  "evidence": { "tests": ["src/cp5-contract.test.ts"] },
+  "limitations": [
+    "Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.",
+    "The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M06"
+}

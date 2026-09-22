@@ -8,9 +8,10 @@
  * this module settles on its own.
  */
 import path from "node:path";
+import { WORKTREES_RELATIVE_DIR } from "@metacoding/vsm-pi-core";
 import type { Exec } from "./exec.js";
 
-export const WORKTREES_RELATIVE_DIR = path.join(".regulator", "worktrees");
+export { WORKTREES_RELATIVE_DIR } from "@metacoding/vsm-pi-core";
 
 async function git(exec: Exec, cwd: string, args: string[]): Promise<string> {
   const result = await exec("git", args, { cwd });

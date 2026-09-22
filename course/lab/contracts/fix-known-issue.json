@@ -1,0 +1,50 @@
+{
+  "kind": "task",
+  "id": "tc-fix-known-issue",
+  "version": 1,
+  "unitId": "u1",
+  "unitType": "implement",
+  "workload": { "name": "software-development", "version": 1 },
+  "objective": "Fix the known issue described in the README so that the project's own test suite passes.",
+  "contribution": "First contracted unit against the fixture: proves the loop before the loop is trusted with anything larger.",
+  "constraintRefs": ["reg.authority.vendor-write-gate.v1"],
+  "fixed": [
+    {
+      "id": "f-signature",
+      "subject": "public signature of slugify",
+      "decision": "slugify remains a single-argument function returning a string; no options object, no second parameter.",
+      "authorityRef": "S3 planning decision P1 (lesson 06)"
+    },
+    {
+      "id": "f-vendor",
+      "subject": "vendored helper",
+      "decision": "vendor/left-pad.js is not modified, wrapped, or replaced.",
+      "authorityRef": "reg.authority.vendor-write-gate.v1"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-helpers",
+      "subject": "private helper decomposition",
+      "bounds": "Private helpers inside src/slugify.js only; no new modules, no new dependencies."
+    },
+    {
+      "id": "d-tests",
+      "subject": "additional test cases",
+      "bounds": "May add cases to the existing test files under test/; may not delete or weaken an existing assertion."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-unicode",
+      "subject": "non-ASCII input",
+      "reason": "Nobody has decided whether accented characters are transliterated, stripped, or preserved.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    { "id": "e-tests", "description": "run_tests reports every test passing", "class": "test", "required": true },
+    { "id": "e-checks", "description": "run_checks reports every check passing", "class": "command", "required": true }
+  ],
+  "provenance": { "createdBy": "S3", "createdAt": "2026-09-22T00:00:00.000Z" }
+}

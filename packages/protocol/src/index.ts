@@ -26,23 +26,8 @@ export const SeveritySchema = Type.Union([
 ]);
 export type Severity = Static<typeof SeveritySchema>;
 
-export const EvidenceClassSchema = Type.Union([
-  Type.Literal("file"),
-  Type.Literal("command"),
-  Type.Literal("test"),
-  Type.Literal("runtime"),
-  Type.Literal("semantic"),
-  Type.Literal("model"),
-]);
-export type EvidenceClass = Static<typeof EvidenceClassSchema>;
-
-export const EvidenceRefSchema = Type.Object({
-  class: EvidenceClassSchema,
-  ref: Type.String({ minLength: 1 }),
-  observation: Type.Optional(Type.String()),
-  sourceRevision: Type.Optional(Type.String()),
-}, { additionalProperties: false });
-export type EvidenceRef = Static<typeof EvidenceRefSchema>;
+import { EvidenceClassSchema, EvidenceRefSchema } from "./evidence.js";
+export { EvidenceClassSchema, EvidenceRefSchema, type EvidenceClass, type EvidenceRef } from "./evidence.js";
 
 const EnvelopeFields = {
   id: Type.String({ minLength: 1 }),
@@ -339,3 +324,15 @@ export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord,
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
 export type { CapabilityProfile, ReasoningLevel } from "./profiles.js";
 export { MechanismLevelSchema, RegulatorRecordSchema, isRegulatorRecord, type MechanismLevel, type RegulatorRecord } from "./registry.js";
+export {
+  ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, FixedDecisionSchema,
+  ResultReportInputSchema, ResultReportSchema, UnresolvedDecisionSchema, UnresolvedHandlingSchema, UnresolvedOutcomeSchema,
+  WorkContractSchema, isResultReport, isWorkContract,
+  type Consequence, type DelegatedDecision, type EvidenceExpectation, type FixedDecision, type ResultReport, type ResultReportInput,
+  type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
+} from "./contracts.js";
+export { UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
+export {
+  AttemptOutcomeSchema, AttemptRecordSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema, isAttemptRecord, isLease, isUnitRecord,
+  type AttemptOutcome, type AttemptRecord, type Lease, type UnitRecord, type UnitStatus,
+} from "./execution.js";

@@ -1,0 +1,38 @@
+{
+  "kind": "task",
+  "id": "tc-underscore",
+  "version": 1,
+  "unitId": "u2",
+  "unitType": "implement",
+  "workload": { "name": "software-development", "version": 1 },
+  "objective": "Make every test pass whose requirement has been decided. Where two tests contradict each other because the requirement is undecided, do not decide it: preserve the current behaviour and report what you found.",
+  "constraintRefs": ["reg.authority.vendor-write-gate.v1"],
+  "fixed": [
+    {
+      "id": "f-signature",
+      "subject": "public signature of slugify",
+      "decision": "slugify remains a single-argument function returning a string.",
+      "authorityRef": "S3 planning decision P1 (lesson 06)"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-helpers",
+      "subject": "private helper decomposition",
+      "bounds": "Private helpers inside src/slugify.js only."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-underscore",
+      "subject": "underscore semantics",
+      "reason": "test/underscore-a.test.js says underscores in identifiers survive; test/underscore-b.test.js says an underscore is a separator. The owner of the requirement has not decided.",
+      "handling": "stub-boundary",
+      "obligationRef": "O-underscore"
+    }
+  ],
+  "expectedEvidence": [
+    { "id": "e-tests", "description": "run_tests output, including which test still fails and why", "class": "test", "required": true }
+  ],
+  "provenance": { "createdBy": "S3", "createdAt": "2026-09-22T00:00:00.000Z" }
+}

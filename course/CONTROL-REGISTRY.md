@@ -179,4 +179,7 @@ carry credentials.
   capstone's viability case is generated from the registry.
 
 Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
-lab CLI and two seed records exist and run under CI. The control room is design only.
+lab CLI and eight records exist and run under CI. The control room's read model exists as
+`regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
+profiles and policies still declared in code) and instance (units with contract, report
+and attempts; leases; unrouted signals). The pages are still design.

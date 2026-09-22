@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–05
-are written end to end with checkpoints 0–4, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–06
+are written end to end with checkpoints 0–5, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -29,7 +29,8 @@ capability profile differs from a persona.
 The heart of the course and the hardest labs.
 
 - oscillation fixture and lease/liveness lab — **done** (lesson 05, checkpoint 4);
-- contract + result report protocol;
+- contract + result report protocol, the first slice of the orchestrator loop and the
+  first workload definition — **done** (lesson 06, checkpoint 5);
 - budget guard and compaction lab; recovery router;
 - audit layer and the adversarial protected-path drill (six routes), the injection
   fixture, and the secret-canary / egress fixture;
@@ -176,10 +177,12 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–05 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–06 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 06 with checkpoint 5 (work contracts and the first workload definition), same
-   vertical-slice discipline; it is the first consumer of checkpoint 4's unit lifecycle.
-4. Run the Phase 1 pilot and record where learners got confused, as course-level
+3. The control room's first page (`packages/control-room`): a read-only view over
+   `regulator status --json` — definition topology, instances, and what each unit is
+   doing — grown one view per lesson from here.
+4. Lesson 07 with checkpoint 6 (budgets and contract-preserving compaction).
+5. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

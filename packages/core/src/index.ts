@@ -93,3 +93,8 @@ export { TOOL_EFFECTS, effectOf, isReadOnlyEffect, readOnlyViolations } from "./
 export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "./profiles.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
 export { checkRegistry, loadRegistry, renderRegistryMarkdown, type LoadedRegistry, type RegistryProblem } from "./registry.js";
+export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
+export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
+export { ExecutionStore } from "./execution-store.js";
+export { appendSignal, readSignals } from "./signals.js";
+export { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";

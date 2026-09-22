@@ -4,11 +4,43 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
+| `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
+
+## Contract advice section
+
+`reg.control.contract-advice.v1` · S3 · prompt · active · introduced in M06
+
+**Purpose.** Render the governing contract — fixed, delegated, unresolved, expected evidence, and the obligation to call report_result — as a system-prompt section, so the unit knows what freedom it has. This is advice: it changes what the model is told, not what it can do.
+
+**Absorbs.** `uninformed-unit` — The gates refuse a bad report, but a unit that never saw the allocation produces one by accident and burns an attempt learning the contract from refusals.
+
+**Mechanism.** `src/cp5-contract.ts` at `before_agent_start`
+
+**Channels.** consumes `work contract (S3)` · emits nothing
+
+**Scope.** subjects unit · resources system prompt
+
+**May.**
+- add a section to the system prompt
+
+**May not.**
+- enforce anything; the result-report gate and the lease gate do
+
+**Evidence.** `src/cp5-contract.test.ts`
+
+**Limitations.**
+- Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
+- The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
 
 ## Profile write grant
 
@@ -73,6 +105,40 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Result report gate
+
+`reg.control.result-report-gate.v1` · S3 · deterministic-gate · active · introduced in M06
+
+**Purpose.** Close a unit only from a result report that honours the exact contract version: every delegated choice reported, every unresolved decision preserved or surfaced (never settled), required evidence present, fixed-decision deviations referenced. Refuses the report at the tool and again at close; a unit with no report or an invalid one is blocked, not closed.
+
+**Absorbs.** `silent-closure` — A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript.
+
+**Mechanism.** `src/cp5-contract.ts` at `report_result (tool execute)`, `runUnit (close)`
+
+**Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
+
+**Scope.** subjects unit, contract · resources execution store
+
+**May.**
+- refuse a report with reasons
+- block a unit that ends without a valid report
+- record emergent decisions and deviations as typed signals for S3
+
+**May not.**
+- certify that the work is correct (verification and audit do that)
+- resolve an unresolved decision
+- decide what to do about a blocked unit (lesson 08)
+
+**Evidence.** `src/cp5-contract.test.ts`, `src/controller.test.ts`, `../../packages/core/src/contracts.test.ts`
+
+**Limitations.**
+- Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
+- A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
+- Emergent decisions below high consequence are recorded in the report only; nothing routes them yet.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Thrash detector
 
 `reg.coordination.thrash-detector.v1` · S2 · deterministic-gate · active · introduced in M05
@@ -95,7 +161,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - pause or replan the unit (S3 decides, lesson 08)
 - decide which of two fixes is right
 
-**Evidence.** `src/cp4-coordination.test.ts`, `src/coordination.test.ts`
+**Evidence.** `src/cp4-coordination.test.ts`, `../../packages/core/src/coordination.test.ts`
 
 **Limitations.**
 - Counts write and edit tool calls only; edits made through bash are invisible to it.
@@ -128,7 +194,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - resolve which unit should hold a contested resource
 - block read-only tools
 
-**Evidence.** `src/cp4-coordination.test.ts`, `src/coordination.test.ts`
+**Evidence.** `src/cp4-coordination.test.ts`, `../../packages/core/src/coordination.test.ts`
 
 **Limitations.**
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
@@ -164,3 +230,36 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Covers the write and edit tools; bash and custom tools bypass it (lessons 05 and 10).
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
+
+
+## Work contract gate
+
+`reg.control.work-contract-gate.v1` · S3 · deterministic-gate · active · introduced in M06
+
+**Purpose.** Refuse to dispatch a unit whose contract cannot be honoured: colliding decision ids, an unresolved decision that must be resolved before execution, a unit type the workload does not declare, or a workload the instance does not run. Dispatch happens only against a recorded, immutable contract version.
+
+**Absorbs.** `implicit-delegation` — A task description hands S1 every decision the planner did not think of; the unit settles them by omission and the choices disappear into the diff.
+
+**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (cp5-contract)`
+
+**Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
+
+**Scope.** subjects unit, contract · resources execution store
+
+**May.**
+- refuse dispatch
+- record the contract version that governs execution
+
+**May not.**
+- write or amend a contract (S3 planning does that; a change is a new version)
+- reclassify an unresolved decision as delegated
+- grant a unit any regulatory capability
+
+**Evidence.** `src/controller.test.ts`, `src/cp5-contract.test.ts`
+
+**Limitations.**
+- Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
+- Authority references on fixed decisions are strings; nothing verifies that the cited invariant or decision exists (lesson 12).
+- The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
