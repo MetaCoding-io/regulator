@@ -87,7 +87,7 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–5 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–6 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
@@ -101,8 +101,11 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   the first slice of the S3 loop (`controller.ts`), the Pi SDK dispatcher, the
   `cp5-contract` extension, the software-development workload definition and two example
   contracts. `packages/cli` ships `regulator status`, the read model the control room
-  will consume.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and eight
+  consumes. Checkpoint 6 adds the policy schema and the budget ledger (`protocol`), the
+  budget meter, policy resolution, model choice and the preserved-context block (`core`),
+  and in the lab the `cp6-budget` extension, the default policy, attempt ceilings with
+  re-dispatch in the loop, and model failover in the dispatcher.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and eleven
   records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner

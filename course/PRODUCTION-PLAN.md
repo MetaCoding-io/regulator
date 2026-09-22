@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–06
-are written end to end with checkpoints 0–5, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–07
+are written end to end with checkpoints 0–6, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -31,7 +31,9 @@ The heart of the course and the hardest labs.
 - oscillation fixture and lease/liveness lab — **done** (lesson 05, checkpoint 4);
 - contract + result report protocol, the first slice of the orchestrator loop and the
   first workload definition — **done** (lesson 06, checkpoint 5);
-- budget guard and compaction lab; recovery router;
+- budget guard, model routing and contract-preserving compaction — **done** (lesson 07,
+  checkpoint 6);
+- recovery router;
 - audit layer and the adversarial protected-path drill (six routes), the injection
   fixture, and the secret-canary / egress fixture;
 - durable-execution fixture for M08: a side-effecting tool, a harness kill between
@@ -178,10 +180,11 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–06 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–07 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 07 with checkpoint 6 (budgets and contract-preserving compaction); the control
-   room's live view gains budget consumed per unit with it.
+3. Lesson 08 with checkpoint 7 (the recovery router over blocked units: budget-exhausted,
+   no-report, invalid-report, conflict, oscillation; versioned policy; the durable-execution
+   fixture); the control room's live view gains routing decisions with it.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

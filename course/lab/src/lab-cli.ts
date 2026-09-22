@@ -6,18 +6,19 @@
  *   node dist/lab-cli.js unit finish <id>                 reintegrate, or surface the conflict
  *   node dist/lab-cli.js unit status                      leases and their liveness
  *   node dist/lab-cli.js contract check <file>            validate a work contract (lesson 06)
- *   node dist/lab-cli.js unit dispatch <contract.json>    run one unit through the S3 loop with a live Pi session
+ *   node dist/lab-cli.js unit dispatch <contract.json> [--policy <file>]   run one unit through the S3 loop with a live Pi session
  *   node dist/lab-cli.js unit show <id>                   the unit record, attempts and report from the execution store
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ExecutionStore } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
 import { runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
 import { realExec } from "./exec.js";
 import { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadWorkload } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -27,7 +28,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--quiet] | unit show <id>");
+  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit show <id>");
   process.exit(2);
 };
 
@@ -61,9 +62,11 @@ try {
   } else if (command === "unit" && sub === "dispatch" && rest[0]) {
     const contract = await loadContract(path.resolve(rest[0]));
     const workload = await loadWorkload();
+    const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
+    const policy = await loadPolicy(policyPath);
     const owner = `${userInfo().username}@${hostname()}`;
-    console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType})`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}`);
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
     } else if (outcome.status === "refused") {
@@ -80,7 +83,10 @@ try {
     const unit = await store.getUnit(rest[0]);
     if (!unit) throw new Error(`no unit "${rest[0]}" in ${store.dir}`);
     console.log(`${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${unit.reason ? `  — ${unit.reason}` : ""}`);
-    for (const attempt of await store.listAttempts(unit.unitId)) console.log(`  attempt ${attempt.attempt}: ${attempt.outcome}${attempt.detail ? ` — ${attempt.detail}` : ""}`);
+    for (const attempt of await store.listAttempts(unit.unitId)) {
+      const ledger = await store.getBudget(unit.unitId, attempt.attempt);
+      console.log(`  attempt ${attempt.attempt}: ${attempt.outcome}${attempt.detail ? ` — ${attempt.detail}` : ""}${ledger ? `\n    budget: ${summarizeLedger(ledger)}; models: ${ledger.models.join(" → ") || "—"}; compactions: ${ledger.compactions.length}` : ""}`);
+    }
     const report = await store.getReport(unit.unitId, unit.contract.version);
     console.log(report ? `  report: ${report.summary}` : "  report: none");
   } else if (command === "unit" && sub === "status") {

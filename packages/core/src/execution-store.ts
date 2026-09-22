@@ -6,6 +6,7 @@
  *   contract.v<N>.json     the contract version that governs execution; never overwritten
  *   report.v<N>.json       the result report against that version; never overwritten
  *   attempts.ndjson        one immutable record per attempt
+ *   budget.a<N>.json       the running ledger of attempt N (a counter: rewritten, never merged)
  *
  * Nothing here is regulatory state and nothing is inferred from the domain
  * (the repository): the orchestrator knows what it dispatched because it
@@ -14,8 +15,8 @@
 import { mkdir, readdir, readFile, appendFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  AttemptRecordSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
-  type AttemptRecord, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
+  AttemptRecordSchema, BudgetLedgerSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
+  type AttemptRecord, type BudgetLedger, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
 } from "@metacoding/vsm-pi-protocol";
 import { UNITS_RELATIVE_DIR } from "./paths.js";
 
@@ -150,6 +151,25 @@ export class ExecutionStore {
   async writeReport(report: ResultReport): Promise<void> {
     assertValid(ResultReportSchema, report, "result report");
     await writeNew(path.join(this.#unitDir(report.unitId), `report.v${report.contractVersion}.json`), report);
+  }
+
+  /** The budget guard rewrites the ledger as the attempt consumes; a counter, not a record. */
+  async writeBudget(ledger: BudgetLedger): Promise<void> {
+    assertValid(BudgetLedgerSchema, ledger, "budget ledger");
+    const dir = this.#unitDir(ledger.unitId);
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, `budget.a${ledger.attempt}.json`), `${JSON.stringify(ledger, null, 2)}\n`, "utf8");
+  }
+
+  async getBudget(unitId: string, attempt: number): Promise<BudgetLedger | undefined> {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(this.#unitDir(unitId), `budget.a${attempt}.json`), "utf8"));
+      assertValid(BudgetLedgerSchema, value, "budget ledger");
+      return value;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+      throw error;
+    }
   }
 
   async getReport(unitId: string, version: number): Promise<ResultReport | undefined> {

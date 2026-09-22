@@ -98,3 +98,4 @@ export { checkContract, checkResultReport, renderContractSection, type ContractP
 export { ExecutionStore } from "./execution-store.js";
 export { appendSignal, readSignals } from "./signals.js";
 export { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
+export { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";

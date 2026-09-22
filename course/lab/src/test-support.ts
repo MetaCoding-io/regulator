@@ -50,13 +50,22 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
 
 export { realExec } from "./exec.js";
 
-export function ctxFor(cwd: string) {
+export function ctxFor(cwd: string, options: { model?: { provider: string; id: string } } = {}) {
   const notices: { message: string; level: string }[] = [];
   const statuses: Record<string, string> = {};
+  const state = { aborts: 0 };
   return {
-    ctx: { cwd, ui: { notify: (message: string, level: string) => notices.push({ message, level }), setStatus: (key: string, value: string) => { statuses[key] = value; } } },
+    ctx: {
+      cwd,
+      ui: { notify: (message: string, level: string) => notices.push({ message, level }), setStatus: (key: string, value: string) => { statuses[key] = value; } },
+      abort: () => { state.aborts++; },
+      getContextUsage: () => ({ tokens: null, contextWindow: 200_000, percent: null }),
+      model: options.model,
+      modelRegistry: { complete: async () => { throw new Error("no model in tests"); } },
+    },
     notices,
     statuses,
+    state,
   };
 }
 

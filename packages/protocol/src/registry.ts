@@ -48,6 +48,10 @@ export const RegulatorRecordSchema = Type.Object(
     scope: Type.Optional(
       Type.Object({ subjects: Type.Array(Type.String({ minLength: 1 })), resources: Type.Array(Type.String({ minLength: 1 })) }, { additionalProperties: false }),
     ),
+    /** Lesson 07: what the regulator costs to run, stated so it can be weighed against what it absorbs. */
+    cost: Type.Optional(
+      Type.Object({ description: Type.String({ minLength: 1 }), measured: Type.Optional(Type.String({ minLength: 1 })) }, { additionalProperties: false }),
+    ),
     limitations: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
     ownership: Type.Object(
       { owner: Type.String({ minLength: 1 }), introduced: isoDate, reviewBy: isoDate },

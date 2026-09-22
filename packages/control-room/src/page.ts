@@ -58,7 +58,8 @@ const PAGE = String.raw`<!doctype html>
   .chip.closed, .chip.live, .chip.active { background: var(--ok); }
   .chip.blocked, .chip.expired, .chip.blocking, .chip.critical { background: var(--bad); }
   .chip.dispatched, .chip.info { background: var(--info); }
-  .chip.reported, .chip.advisory, .chip.proposed { background: var(--warn); }
+  .chip.reported, .chip.advisory, .chip.proposed, .chip.warning { background: var(--warn); }
+  .chip[class*="exhausted"] { background: var(--bad); }
   .chip.contracted, .chip.retired, .chip.prompt, .chip.type, .chip.deterministic-gate, .chip.typed-tool, .chip.model-judgment { background: var(--idle); }
   .problem { color: var(--bad); font-size: 12px; }
   .empty { color: var(--muted); font-style: italic; }
@@ -94,6 +95,11 @@ const PAGE = String.raw`<!doctype html>
   const FUNCTIONS = ["S5", "S4", "S3", "S3*", "S2", "S1"];
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const chip = (v) => '<span class="chip ' + esc(String(v).replace(/[^a-z0-9-]/gi, "-")) + '">' + esc(v) + "</span>";
+  const budgetCell = (b) => {
+    if (!b) return "—";
+    const pct = Math.min(999, Math.round((b.consumed.tokens / b.ceiling.tokens) * 100));
+    return "<span class='mono'>" + b.consumed.tokens + "/" + b.ceiling.tokens + " tok · " + b.consumed.turns + "/" + b.ceiling.turns + " turns</span>" + (b.exhausted ? " " + chip("exhausted: " + b.exhausted.dimension) : pct >= 80 ? " " + chip("warning") : "");
+  };
   const list = (items, f) => items && items.length ? "<ul>" + items.map((i) => "<li>" + f(i) + "</li>").join("") + "</ul>" : '<span class="empty">none</span>';
   let view = null, selected = fromHash(), timer = null, paused = false;
   function fromHash() {
@@ -144,6 +150,18 @@ const PAGE = String.raw`<!doctype html>
       for (const u of w.unitTypes) html += "<tr><td class='mono'>" + esc(u.name) + "</td><td class='mono'>" + esc(u.profile) + "</td><td class='mono'>" + esc(u.checks.join(", ") || "—") + "</td><td>" + (u.requiresContract ? "required" : "optional") + "</td></tr>";
       html += "</table>";
     }
+    html += "<h3>Policies</h3>";
+    if (!d.policies || !d.policies.length) html += "<p class='empty'>no policy declared: budgets and model routes are not part of this definition</p>";
+    for (const p of d.policies || []) {
+      html += "<p><b>" + esc(p.name) + "</b> v" + p.version + " — " + esc(p.description) + "</p><table><tr><th>unit type</th><th>tokens</th><th>cost</th><th>wall-clock</th><th>turns</th><th>attempts</th><th>models</th></tr>";
+      const types = ["default", ...new Set([...Object.keys(p.budgets.byUnitType || {}), ...Object.keys(p.models.byUnitType || {})])];
+      for (const t of types) {
+        const c = t === "default" ? p.budgets.default : Object.assign({}, p.budgets.default, (p.budgets.byUnitType || {})[t] || {});
+        const r = t === "default" ? p.models.default : (p.models.byUnitType || {})[t] || p.models.default;
+        html += "<tr><td class='mono'>" + esc(t) + "</td><td>" + c.tokens + "</td><td>" + (c.cost === undefined ? "—" : c.cost) + "</td><td>" + Math.round(c.wallClockMs / 60000) + " min</td><td>" + c.turns + "</td><td>" + c.attempts + "</td><td class='mono'>" + esc([r.primary, ...r.fallback].join(" → ")) + "</td></tr>";
+      }
+      html += "</table>";
+    }
     const problems = [...d.registry.problems.map((p) => p.file + ": " + p.message), ...d.problems];
     if (problems.length) html += "<h3>Problems</h3>" + list(problems, (p) => "<span class='problem'>" + esc(p) + "</span>");
     el.innerHTML = html;
@@ -156,13 +174,13 @@ const PAGE = String.raw`<!doctype html>
     if (!instances.length) html += "<p class='empty'>no instance directories were given</p>";
     instances.forEach((inst, i) => {
       html += "<h3 class='mono'>" + esc(inst.dir) + "</h3>";
-      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>report</th><th>reason</th></tr>";
-      if (!inst.units.length) html += "<tr><td colspan='8' class='empty'>no units</td></tr>";
+      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>report</th><th>reason</th></tr>";
+      if (!inst.units.length) html += "<tr><td colspan='9' class='empty'>no units</td></tr>";
       for (const u of inst.units) {
         const last = u.attemptRecords[u.attemptRecords.length - 1];
         const sel = selected && selected.kind === "unit" && selected.instance === i && selected.id === u.unit.unitId ? " selected" : "";
         html += "<tr class='row" + sel + "' data-inst='" + i + "' data-unit='" + esc(u.unit.unitId) + "'><td>" + chip(u.unit.status) + "</td><td class='mono'>" + esc(u.unit.unitId) + "</td><td class='mono'>" + esc(u.unit.unitType) + "</td>" +
-          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
+          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + budgetCell(u.budget) + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
       }
       html += "</table>";
       html += "<h3>Leases</h3><table><tr><th>state</th><th>unit</th><th>owner</th><th>branch</th><th>until</th></tr>";
@@ -203,8 +221,10 @@ const PAGE = String.raw`<!doctype html>
     const u = inst && inst.units.find((x) => x.unit.unitId === selected.id);
     if (!u) { el.innerHTML = "<section><h2>Inspector</h2><p class='empty'>unit no longer present</p></section>"; return; }
     const c = u.contract, rep = u.report;
+    const b = u.budget;
     let html = "<section><h2>Unit</h2><p><span class='mono'>" + esc(u.unit.unitId) + "</span> " + chip(u.unit.status) + " · " + esc(u.unit.unitType) + " · " + esc(u.unit.workload.name) + " v" + u.unit.workload.version + "</p>" +
       (u.unit.reason ? "<p class='problem'>" + esc(u.unit.reason) + "</p>" : "") +
+      (b ? "<dl><dt>budget (attempt " + b.attempt + ")</dt><dd>" + budgetCell(b) + "<br>cost " + b.consumed.cost.toFixed(4) + (b.ceiling.cost !== undefined ? " / " + b.ceiling.cost : "") + " · " + Math.round(b.consumed.wallClockMs / 1000) + "s / " + Math.round(b.ceiling.wallClockMs / 1000) + "s<br>models: <span class='mono'>" + esc(b.models.join(" → ") || "—") + "</span><br>compactions: " + (b.compactions.length ? b.compactions.map((c) => esc(c.reason) + (c.preserved ? " (contract carried)" : " (NOT carried)")).join(", ") : "none") + "</dd></dl>" : "") +
       "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd></dl></section>";
     html += "<section><h2>Contract " + (c ? "<span class='mono'>" + esc(c.id) + " v" + c.version + "</span>" : "") + "</h2>";
     if (!c) html += "<p class='empty'>contract file missing</p>";

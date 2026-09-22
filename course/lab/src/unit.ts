@@ -7,7 +7,7 @@
  * Lesson 06's orchestrator dispatches units through exactly these two steps.
  */
 import { randomUUID } from "node:crypto";
-import { cp, realpath } from "node:fs/promises";
+import { cp, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 import type { CoordinationSignal } from "@metacoding/vsm-pi-protocol";
 import { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding/vsm-pi-core";
@@ -65,6 +65,24 @@ export async function startUnit(exec: Exec, options: StartUnitOptions): Promise<
     await store.release(options.unitId);
     throw error;
   }
+}
+
+/**
+ * Take a blocked unit up again: renew its lease and reuse its worktree. The
+ * orchestrator calls this for a further attempt under the same contract
+ * version; it is not a restart, and nothing in the worktree is reset.
+ */
+export async function resumeUnit(exec: Exec, options: StartUnitOptions): Promise<StartedUnit> {
+  const repo = await assertBaseCheckout(exec, options.repo);
+  const base = await currentBranch(exec, repo);
+  const store = leaseStoreFor(repo, options.now);
+  const resource = path.join(repo, WORKTREES_RELATIVE_DIR, options.unitId);
+  const info = await stat(resource).catch(() => undefined);
+  if (!info?.isDirectory()) throw new Error(`unit "${options.unitId}" has no worktree to resume at ${resource}`);
+  const lease = await store.acquire({
+    unitId: options.unitId, owner: options.owner, resource, branch: unitBranch(options.unitId), ttlMs: options.ttlMs ?? DEFAULT_LEASE_TTL_MS,
+  });
+  return { worktree: { unitId: options.unitId, branch: unitBranch(options.unitId), path: resource }, lease, base };
 }
 
 export interface FinishUnitOptions {

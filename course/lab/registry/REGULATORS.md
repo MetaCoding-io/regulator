@@ -4,7 +4,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
+| `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
+| `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
+| `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
@@ -12,6 +15,43 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
+
+## Budget guard
+
+`reg.control.budget-guard.v1` · S3 · deterministic-gate · active · introduced in M07
+
+**Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.
+
+**Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
+
+**Mechanism.** `src/cp6-budget.ts` at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
+
+**Channels.** consumes `policy (budgets)`, `message_end usage`, `model_select` · emits `budget ledger (execution store)`
+
+**Scope.** subjects unit, attempt · resources tokens, cost, wall-clock, turns
+
+**Cost.** One ledger write per turn end; no model calls. Negligible next to the turns it meters.
+
+**May.**
+- halt the running attempt
+- refuse non-read-only tools once a ceiling is crossed
+- record the ledger
+
+**May not.**
+- raise a ceiling
+- decide what happens to a halted unit (lesson 08)
+- choose a model
+
+**Evidence.** `src/cp6-budget.test.ts`, `src/controller.test.ts`, `../../packages/core/src/policy.test.ts`
+
+**Limitations.**
+- Ceilings are checked at turn end and tool call, so the turn that crosses one completes; a single very large response is not cut off mid-stream.
+- Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.
+- The wall-clock ceiling is measured from session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
+- Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
 
 ## Contract advice section
 
@@ -38,6 +78,77 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Limitations.**
 - Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Contract-preserving compaction
+
+`reg.control.contract-preserving-compaction.v1` · S3 · model-judgment · active · introduced in M07
+
+**Purpose.** Replace the default compaction summary with a deterministic block — the contract's identity and allocation, the evidence gathered so far, the files touched — followed by a model summary of the conversation when one is available. What the loop needs to continue never depends on the summary being good.
+
+**Absorbs.** `compaction-amnesia` — After a threshold compaction the unit no longer knows which decisions were fixed, which were unresolved, or what it already proved; it re-does settled work or quietly violates a constraint the summary dropped.
+
+**Mechanism.** `src/cp6-budget.ts` at `session_before_compact`, `session_compact`, `session_compact_failed`
+
+**Channels.** consumes `work contract`, `budget ledger`, `compaction preparation (messages, file ops)` · emits `compaction entry`
+
+**Scope.** subjects unit, attempt · resources context window
+
+**Cost.** One summarization call per compaction on the session's model, bounded at 4096 output tokens; the deterministic block adds a few hundred tokens to every post-compaction context.
+
+**May.**
+- provide the compaction summary
+- record the compaction in the ledger
+
+**May not.**
+- cancel a compaction
+- change the contract
+- decide what is kept beyond the preserved block (Pi's cut point stands)
+
+**Evidence.** `src/cp6-budget.test.ts`, `../../packages/core/src/policy.test.ts`
+
+**Limitations.**
+- The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
+- Evidence pointers are the first line of run_tests and run_checks results; evidence gathered through bash is invisible to it.
+- The block is what compaction carries; the contract section in the system prompt (lesson 06) is regenerated every turn regardless. This regulator preserves progress, not the contract text.
+- Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Model router
+
+`reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
+
+**Purpose.** Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session. Nothing outside the route is ever tried, and every model an attempt ran on is in its ledger.
+
+**Absorbs.** `single-model-dependence` — A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why.
+
+**Mechanism.** `src/dispatch-pi.ts` at `piDispatcher (model choice, failover)`, `model_select (ledger)`
+
+**Channels.** consumes `policy (models)`, `model availability (ModelRuntime)` · emits `budget ledger models[]`
+
+**Scope.** subjects unit type · resources model, provider
+
+**Cost.** One availability lookup per dispatch; a failover repeats the unit's prompt on the fallback model, so a failed attempt can cost twice.
+
+**May.**
+- choose among the route's models by availability
+- fail over to the next declared model after a provider error
+
+**May not.**
+- use a model the route does not name
+- upgrade or downgrade on judgement of task difficulty
+- change the route
+
+**Evidence.** `../../packages/core/src/policy.test.ts`
+
+**Limitations.**
+- Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.
+- Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.
+- The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 

@@ -35,6 +35,12 @@ test("status: a definition and an instance are read from files only, and the vie
     unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: [], requiresContract: true }],
   }), "utf8");
   await writeFile(path.join(definition, "workload", "broken.json"), "{\"name\": 1}", "utf8");
+  await mkdir(path.join(definition, "policies"), { recursive: true });
+  await writeFile(path.join(definition, "policies", "default.json"), JSON.stringify({
+    name: "default", version: 1, description: "d",
+    budgets: { default: { tokens: 1000, wallClockMs: 60_000, turns: 5, attempts: 2 } },
+    models: { default: { primary: "anthropic/claude-sonnet-4-5", fallback: ["openai/gpt-5"] } },
+  }), "utf8");
 
   const instance = path.join(root, "instance");
   const clock = 5_000_000;
@@ -42,6 +48,10 @@ test("status: a definition and an instance are read from files only, and the vie
   await store.createUnit(contract);
   await store.setStatus("u1", "blocked", "no-report");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
+  await store.writeBudget({
+    unitId: "u1", attempt: 1, ceiling: { tokens: 1000, wallClockMs: 60_000, turns: 5 }, consumed: { tokens: 250, cost: 0, wallClockMs: 10, turns: 2 },
+    startedAt: "a", updatedAt: "b", models: ["anthropic/claude-sonnet-4-5"], compactions: [],
+  });
   const leases = new LeaseStore(path.join(instance, ".regulator", "leases"), () => clock);
   await leases.acquire({ unitId: "u1", owner: "alice", resource: "/w/u1", branch: "unit/u1", ttlMs: 1000 });
   await appendSignal(instance, {
@@ -50,8 +60,9 @@ test("status: a definition and an instance are read from files only, and the vie
   });
 
   const view = await readStatus({ definitionDir: definition, instanceDir: instance, now: () => clock });
-  assert.deepEqual(view.definition?.declared, ["registry", "workload"]);
-  assert.deepEqual(view.definition?.pending, ["profiles", "policies"]);
+  assert.deepEqual(view.definition?.declared, ["registry", "workload", "policies"]);
+  assert.deepEqual(view.definition?.pending, ["profiles"]);
+  assert.equal(view.definition?.policies[0]?.name, "default");
   assert.equal(view.definition?.registry.records.length, 1);
   assert.deepEqual(view.definition?.registry.problems, []);
   assert.equal(view.definition?.workloads.length, 1);
@@ -61,13 +72,15 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.equal(view.instance?.units[0]?.contract?.id, "tc-1");
   assert.equal(view.instance?.units[0]?.report, undefined);
   assert.equal(view.instance?.units[0]?.attemptRecords[0]?.outcome, "no-report");
+  assert.equal(view.instance?.units[0]?.budget?.consumed.tokens, 250);
   assert.deepEqual(view.instance?.leases.map((l) => [l.lease.unitId, l.live]), [["u1", true]]);
   assert.equal(view.instance?.signals[0]?.kind, "coordination-signal");
 
   const text = renderStatusText(view);
-  assert.match(text, /declared: registry, workload; pending: profiles, policies/);
+  assert.match(text, /declared: registry, workload, policies; pending: profiles/);
+  assert.match(text, /policy default v1: default 1000 tok, 5 turns, 2 attempts; models anthropic\/claude-sonnet-4-5 → openai\/gpt-5/);
   assert.match(text, /S3 {2}deterministic-gate {2}reg\.test\.gate\.v1/);
-  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}— no-report/);
+  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}— no-report/);
   assert.match(text, /live {4}u1 {2}alice/);
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 

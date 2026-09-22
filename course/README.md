@@ -90,7 +90,7 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 | 04 | Capability profiles and the advisory layer | How do I specialize work without roleplay, and what should prompts still carry? | `setActiveTools`, skills, AGENTS.md, scoped models |
 | 05 | Isolation, leases, and the anti-oscillation problem | What stops two operations from fighting? | `pi.exec`, worktrees, tool execution events, no-sandbox position |
 | 06 | Work contracts: what you are actually authorizing | What am I actually authorizing this run to decide? | SDK sessions as a driver, typed session entries, extension flags |
-| 07 | Context as a regulated resource | What do I spend, and on what? | compaction hooks, `getContextUsage`, provider hooks |
+| 07 | Context and budget as regulated resources | What do I spend, and on what? | compaction hooks, `ctx.abort`, `model_select`, `ModelRuntime` |
 | 08 | Failure, recovery, retry lattice | What happens on attempt two, and on attempt six? | `agent_end`, `agent_before_settle`, recovery routing |
 | 09 | Evidence, not claims | How do I know the work is done? | `tool_call`/`tool_result` hooks, host-run checks |
 | 10 | Authority boundaries | What must the agent never be able to change? | permission gates, protected paths, proposals |
@@ -156,6 +156,7 @@ See [ASSESSMENT.md](ASSESSMENT.md).
 | [04 — Capability profiles and the advisory layer](modules/04-capability-profiles-and-the-advisory-layer.md) | 3: profiles as positive grants + advice | [`lab/src/cp3-profiles.ts`](lab/src/cp3-profiles.ts), [`lab/src/profiles.ts`](lab/src/profiles.ts) |
 | [05 — Isolation, leases, and the anti-oscillation problem](modules/05-isolation-leases-and-anti-oscillation.md) | 4: leases with liveness, worktree isolation + reintegration, thrash detector, unit lifecycle CLI | [`lab/src/cp4-coordination.ts`](lab/src/cp4-coordination.ts), [`lab/src/coordination.ts`](lab/src/coordination.ts), [`lab/src/worktree.ts`](lab/src/worktree.ts), [`lab/src/unit.ts`](lab/src/unit.ts), [`lab/src/lab-cli.ts`](lab/src/lab-cli.ts); [`lab/fixture-oscillation/`](lab/fixture-oscillation/) |
 | [06 — Work contracts: what you are actually authorizing](modules/06-work-contracts.md) | 5: typed work contract, result report tool with a gate, the first slice of the S3 loop, the first workload definition, `regulator status` | [`lab/src/cp5-contract.ts`](lab/src/cp5-contract.ts), [`lab/src/controller.ts`](lab/src/controller.ts), [`lab/src/dispatch-pi.ts`](lab/src/dispatch-pi.ts), [`lab/workload/`](lab/workload/), [`lab/contracts/`](lab/contracts/); contracts and execution store in [`packages/`](../packages/), read model in [`packages/cli`](../packages/cli) |
+| [07 — Context and budget as regulated resources](modules/07-context-and-budget-as-regulated-resources.md) | 6: policy (budgets + model routes), budget guard with halt and gate, contract-preserving compaction, model failover, attempt ceilings and re-dispatch | [`lab/src/cp6-budget.ts`](lab/src/cp6-budget.ts), [`lab/policies/`](lab/policies/), [`lab/src/dispatch-pi.ts`](lab/src/dispatch-pi.ts); meter and preserved block in [`packages/core/src/policy.ts`](../packages/core/src/policy.ts) |
 
 The reference build lives in [`lab/`](lab/) as a workspace package
 (`@metacoding/vsm-pi-course-lab`): each checkpoint is a loadable Pi extension with
@@ -165,7 +166,7 @@ target project the failure drills run against.
 
 ## Status
 
-This directory is a **course design** with the first six lessons written end to end
+This directory is a **course design** with the first seven lessons written end to end
 as vertical slices, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
 production can start against a fixed target. Build sequencing, dependencies on VSM-Pi
