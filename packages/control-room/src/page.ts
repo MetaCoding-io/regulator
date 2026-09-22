@@ -60,7 +60,10 @@ const PAGE = String.raw`<!doctype html>
   .chip.dispatched, .chip.info { background: var(--info); }
   .chip.reported, .chip.advisory, .chip.proposed, .chip.warning { background: var(--warn); }
   .chip[class*="exhausted"] { background: var(--bad); }
-  .chip.contracted, .chip.retired, .chip.prompt, .chip.type, .chip.deterministic-gate, .chip.typed-tool, .chip.model-judgment { background: var(--idle); }
+  .chip.contracted, .chip.retired, .chip.prompt, .chip.type, .chip.deterministic-gate, .chip.typed-tool, .chip.model-judgment, .chip.pause, .chip.aborted { background: var(--idle); }
+  .chip.retry, .chip.repair { background: var(--info); }
+  .chip.replan, .chip.remediate, .chip.clarify { background: var(--warn); }
+  .chip.abort, .chip.escalate { background: var(--bad); }
   .problem { color: var(--bad); font-size: 12px; }
   .empty { color: var(--muted); font-style: italic; }
   aside { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow: auto; }
@@ -99,6 +102,11 @@ const PAGE = String.raw`<!doctype html>
     if (!b) return "—";
     const pct = Math.min(999, Math.round((b.consumed.tokens / b.ceiling.tokens) * 100));
     return "<span class='mono'>" + b.consumed.tokens + "/" + b.ceiling.tokens + " tok · " + b.consumed.turns + "/" + b.ceiling.turns + " turns</span>" + (b.exhausted ? " " + chip("exhausted: " + b.exhausted.dimension) : pct >= 80 ? " " + chip("warning") : "");
+  };
+  const routedCell = (ds) => {
+    if (!ds || !ds.length) return "—";
+    const d = ds[ds.length - 1];
+    return "<span class='mono'>" + esc(d.cause) + "</span> → " + chip(d.action) + (ds.length > 1 ? " <span class='banner'>(+" + (ds.length - 1) + ")</span>" : "");
   };
   const list = (items, f) => items && items.length ? "<ul>" + items.map((i) => "<li>" + f(i) + "</li>").join("") + "</ul>" : '<span class="empty">none</span>';
   let view = null, selected = fromHash(), timer = null, paused = false;
@@ -174,13 +182,13 @@ const PAGE = String.raw`<!doctype html>
     if (!instances.length) html += "<p class='empty'>no instance directories were given</p>";
     instances.forEach((inst, i) => {
       html += "<h3 class='mono'>" + esc(inst.dir) + "</h3>";
-      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>report</th><th>reason</th></tr>";
-      if (!inst.units.length) html += "<tr><td colspan='9' class='empty'>no units</td></tr>";
+      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>routed</th><th>report</th><th>reason</th></tr>";
+      if (!inst.units.length) html += "<tr><td colspan='10' class='empty'>no units</td></tr>";
       for (const u of inst.units) {
         const last = u.attemptRecords[u.attemptRecords.length - 1];
         const sel = selected && selected.kind === "unit" && selected.instance === i && selected.id === u.unit.unitId ? " selected" : "";
         html += "<tr class='row" + sel + "' data-inst='" + i + "' data-unit='" + esc(u.unit.unitId) + "'><td>" + chip(u.unit.status) + "</td><td class='mono'>" + esc(u.unit.unitId) + "</td><td class='mono'>" + esc(u.unit.unitType) + "</td>" +
-          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + budgetCell(u.budget) + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
+          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + budgetCell(u.budget) + "</td><td>" + routedCell(u.decisions) + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
       }
       html += "</table>";
       html += "<h3>Leases</h3><table><tr><th>state</th><th>unit</th><th>owner</th><th>branch</th><th>until</th></tr>";
@@ -225,7 +233,8 @@ const PAGE = String.raw`<!doctype html>
     let html = "<section><h2>Unit</h2><p><span class='mono'>" + esc(u.unit.unitId) + "</span> " + chip(u.unit.status) + " · " + esc(u.unit.unitType) + " · " + esc(u.unit.workload.name) + " v" + u.unit.workload.version + "</p>" +
       (u.unit.reason ? "<p class='problem'>" + esc(u.unit.reason) + "</p>" : "") +
       (b ? "<dl><dt>budget (attempt " + b.attempt + ")</dt><dd>" + budgetCell(b) + "<br>cost " + b.consumed.cost.toFixed(4) + (b.ceiling.cost !== undefined ? " / " + b.ceiling.cost : "") + " · " + Math.round(b.consumed.wallClockMs / 1000) + "s / " + Math.round(b.ceiling.wallClockMs / 1000) + "s<br>models: <span class='mono'>" + esc(b.models.join(" → ") || "—") + "</span><br>compactions: " + (b.compactions.length ? b.compactions.map((c) => esc(c.reason) + (c.preserved ? " (contract carried)" : " (NOT carried)")).join(", ") : "none") + "</dd></dl>" : "") +
-      "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd></dl></section>";
+      "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd>" +
+      "<dt>recovery decisions</dt><dd>" + list(u.decisions || [], (d) => "after attempt " + d.attempt + ": <span class='mono'>" + esc(d.cause) + "</span> (occurrence " + d.occurrence + ") → " + chip(d.action) + " under <span class='mono'>" + esc(d.policy.name) + " v" + d.policy.version + "</span><br><span class='banner'>" + esc(d.rationale) + "</span>" + (d.question ? "<br><b>question:</b> " + esc(d.question) : "") + (d.hint ? "<br><span class='banner'>hint: " + esc(d.hint) + "</span>" : "")) + "</dd></dl></section>";
     html += "<section><h2>Contract " + (c ? "<span class='mono'>" + esc(c.id) + " v" + c.version + "</span>" : "") + "</h2>";
     if (!c) html += "<p class='empty'>contract file missing</p>";
     else {

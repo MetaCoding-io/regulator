@@ -24,6 +24,8 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   run_checks: READ_ONLY,
   // Runs the project's test suite: whatever that suite does, this tool does.
   run_tests: { filesystem: "write", execution: "project-code", network: "unknown", sideEffects: "unknown" },
+  // Lesson 08: a message to the unit's owner, outside the repository. Cannot be unsent; journaled before it is sent.
+  notify_owner: { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" },
 };
 
 export function effectOf(toolName: string): ToolEffect | undefined {

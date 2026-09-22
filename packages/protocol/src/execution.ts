@@ -14,6 +14,8 @@ export const UnitStatusSchema = Type.Union([
   Type.Literal("reported"),
   Type.Literal("closed"),
   Type.Literal("blocked"),
+  /** Terminal: S3 gave up on this unit under policy. Its lease and worktree are gone; its history is not. */
+  Type.Literal("aborted"),
 ]);
 export type UnitStatus = Static<typeof UnitStatusSchema>;
 

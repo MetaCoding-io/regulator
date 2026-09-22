@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–07
-are written end to end with checkpoints 0–6, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–08
+are written end to end with checkpoints 0–7, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -33,11 +33,12 @@ The heart of the course and the hardest labs.
   first workload definition — **done** (lesson 06, checkpoint 5);
 - budget guard, model routing and contract-preserving compaction — **done** (lesson 07,
   checkpoint 6);
-- recovery router;
+- recovery router — **done** (lesson 08, checkpoint 7);
 - audit layer and the adversarial protected-path drill (six routes), the injection
   fixture, and the secret-canary / egress fixture;
 - durable-execution fixture for M08: a side-effecting tool, a harness kill between
-  effect and record, restart and reconciliation;
+  effect and record, restart and reconciliation — **done** (`notify_owner`, the effect
+  journal and the crash test in checkpoint 7);
 - OWASP ASI01–ASI10 / ACS crosswalk table for M10 and the rubric;
 - `BOUNDARY.md` discipline established.
 
@@ -106,7 +107,7 @@ repository is still design-only, the course must present it as design, not as sh
 | Course element | Depends on | Current repo state |
 | --- | --- | --- |
 | M06 contracts | `docs/OPERATIONAL-WORK-CONTRACT.md`, `docs/PLANNER-CONTRACT-COMPOSITION.md` | designed, implementation pending |
-| M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | designed, implementation pending |
+| M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | routing shipped (lesson 08); obligations pending (lesson 11) |
 | M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
 | M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped |
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
@@ -180,11 +181,11 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–07 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–08 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 08 with checkpoint 7 (the recovery router over blocked units: budget-exhausted,
-   no-report, invalid-report, conflict, oscillation; versioned policy; the durable-execution
-   fixture); the control room's live view gains routing decisions with it.
+3. Lesson 09 with checkpoint 8 (independent audit: harness-run verification producing
+   the `check-failure` cause, closeout refused on missing or stale evidence regardless of
+   the report's claims); the control room gains the evidence view with it.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

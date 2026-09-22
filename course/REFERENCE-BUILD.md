@@ -87,7 +87,7 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–6 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–7 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
@@ -104,8 +104,12 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   consumes. Checkpoint 6 adds the policy schema and the budget ledger (`protocol`), the
   budget meter, policy resolution, model choice and the preserved-context block (`core`),
   and in the lab the `cp6-budget` extension, the default policy, attempt ceilings with
-  re-dispatch in the loop, and model failover in the dispatcher.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and eleven
+  re-dispatch in the loop, and model failover in the dispatcher. Checkpoint 7 adds the
+  recovery vocabulary — causes, actions, policy, observations, decisions, effect journal
+  entries (`protocol`) — the router and the effect journal (`core`), and in the lab the
+  `cp7-recovery` extension (failure observer, `notify_owner`), the recovery policy, and
+  `routeUnit` / `driveUnit` in the loop.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and fourteen
   records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner

@@ -48,6 +48,10 @@ test("status: a definition and an instance are read from files only, and the vie
   await store.createUnit(contract);
   await store.setStatus("u1", "blocked", "no-report");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
+  await store.recordDecision({
+    id: "d1", unitId: "u1", attempt: 1, cause: "no-report", occurrence: 1, evidence: ["attempt 1: no-report"], action: "retry",
+    policy: { name: "recovery", version: 1 }, rationale: "r", decidedAt: "t", decidedBy: "S3",
+  });
   await store.writeBudget({
     unitId: "u1", attempt: 1, ceiling: { tokens: 1000, wallClockMs: 60_000, turns: 5 }, consumed: { tokens: 250, cost: 0, wallClockMs: 10, turns: 2 },
     startedAt: "a", updatedAt: "b", models: ["anthropic/claude-sonnet-4-5"], compactions: [],
@@ -73,6 +77,7 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.equal(view.instance?.units[0]?.report, undefined);
   assert.equal(view.instance?.units[0]?.attemptRecords[0]?.outcome, "no-report");
   assert.equal(view.instance?.units[0]?.budget?.consumed.tokens, 250);
+  assert.deepEqual(view.instance?.units[0]?.decisions.map((d) => d.action), ["retry"]);
   assert.deepEqual(view.instance?.leases.map((l) => [l.lease.unitId, l.live]), [["u1", true]]);
   assert.equal(view.instance?.signals[0]?.kind, "coordination-signal");
 
@@ -80,7 +85,7 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /declared: registry, workload, policies; pending: profiles/);
   assert.match(text, /policy default v1: default 1000 tok, 5 turns, 2 attempts; models anthropic\/claude-sonnet-4-5 → openai\/gpt-5/);
   assert.match(text, /S3 {2}deterministic-gate {2}reg\.test\.gate\.v1/);
-  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}— no-report/);
+  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}routed no-report→retry \(recovery v1\) {2}— no-report/);
   assert.match(text, /live {4}u1 {2}alice/);
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 

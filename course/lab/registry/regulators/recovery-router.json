@@ -1,0 +1,32 @@
+{
+  "id": "reg.control.recovery-router.v1",
+  "name": "Recovery router",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.",
+  "absorbs": {
+    "failureClass": "naive-retry",
+    "description": "A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/controller.ts",
+    "enforcementPoints": ["routeUnit (after a blocked outcome)", "driveUnit (the autoloop)"]
+  },
+  "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)"] },
+  "scope": { "subjects": ["unit", "attempt"], "resources": ["attempts", "lease", "worktree"] },
+  "cost": { "description": "No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them." },
+  "authority": {
+    "may": ["classify a failure", "select the policy's action", "re-dispatch with a hint", "abort a unit and release its claim", "escalate to S5"],
+    "mayNot": ["change the recovery policy", "issue a new contract version (replan is S3 planning, not routing)", "answer a clarification (that is the owner's)", "resolve an obligation on the unit's behalf"]
+  },
+  "evidence": { "tests": ["../../packages/core/src/recovery.test.ts", "src/controller.test.ts"] },
+  "limitations": [
+    "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds, and check-failure is not yet produced because harness-run verification arrives in lesson 09.",
+    "Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).",
+    "Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.",
+    "Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M08"
+}

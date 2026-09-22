@@ -7,18 +7,22 @@
  *   node dist/lab-cli.js unit status                      leases and their liveness
  *   node dist/lab-cli.js contract check <file>            validate a work contract (lesson 06)
  *   node dist/lab-cli.js unit dispatch <contract.json> [--policy <file>]   run one unit through the S3 loop with a live Pi session
- *   node dist/lab-cli.js unit show <id>                   the unit record, attempts and report from the execution store
+ *   node dist/lab-cli.js unit show <id>                   the unit record, attempts, decisions and report
+ *   node dist/lab-cli.js unit drive <contract.json>       the autoloop: run, route, and run again while the policy says so (lesson 08)
+ *   node dist/lab-cli.js unit route <id>                  route one blocked unit and print the decision
+ *   node dist/lab-cli.js effects                          the effect journal
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
-import { runUnit } from "./controller.js";
+import { EffectJournal, ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
 import { realExec } from "./exec.js";
 import { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
+import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { loadWorkload } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -28,7 +32,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit show <id>");
+  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | effects");
   process.exit(2);
 };
 
@@ -78,6 +82,35 @@ try {
       console.error(`unit ${contract.unitId}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}; see \`regulator unit show ${contract.unitId}\``);
       process.exit(1);
     }
+  } else if (command === "unit" && sub === "drive" && rest[0]) {
+    const contract = await loadContract(path.resolve(rest[0]));
+    const workload = await loadWorkload();
+    const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
+    const policy = await loadPolicy(policyPath);
+    const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
+    const owner = `${userInfo().username}@${hostname()}`;
+    console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}`);
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
+    if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
+    else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
+    else { console.error(`unit ${contract.unitId}: ${(await new ExecutionStore(process.cwd()).getUnit(contract.unitId))?.reason ?? final.reason}`); process.exit(1); }
+  } else if (command === "unit" && sub === "route" && rest[0]) {
+    const policy = await loadPolicy(path.resolve(flag("policy") ?? POLICY_PATH));
+    const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
+    const decision = await routeUnit(realExec, { repo: process.cwd(), unitId: rest[0], policy, recovery });
+    if (!decision) { console.log(`unit ${rest[0]} is not blocked; nothing to route`); }
+    else {
+      console.log(`unit ${rest[0]}: ${decision.cause} (occurrence ${decision.occurrence}) → ${decision.action} under ${decision.policy.name} v${decision.policy.version}`);
+      console.log(`  ${decision.rationale}`);
+      for (const e of decision.evidence) console.log(`  evidence: ${e}`);
+      if (decision.hint) console.log(`  hint for the next attempt: ${decision.hint}`);
+      if (decision.question) console.log(`  question: ${decision.question}`);
+    }
+  } else if (command === "effects") {
+    const states = await new EffectJournal(process.cwd()).states();
+    if (!states.length) console.log("no effects journaled");
+    for (const s of states) console.log(`${s.status.padEnd(9)} ${s.key}  ${s.tool}  ${s.unitId ?? "-"}  ${s.intendedAt}  ${s.description}${s.result ? ` — ${s.result}` : ""}`);
   } else if (command === "unit" && sub === "show" && rest[0]) {
     const store = new ExecutionStore(process.cwd());
     const unit = await store.getUnit(rest[0]);
@@ -87,6 +120,7 @@ try {
       const ledger = await store.getBudget(unit.unitId, attempt.attempt);
       console.log(`  attempt ${attempt.attempt}: ${attempt.outcome}${attempt.detail ? ` — ${attempt.detail}` : ""}${ledger ? `\n    budget: ${summarizeLedger(ledger)}; models: ${ledger.models.join(" → ") || "—"}; compactions: ${ledger.compactions.length}` : ""}`);
     }
+    for (const d of await store.listDecisions(unit.unitId)) console.log(`  decision after attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})`);
     const report = await store.getReport(unit.unitId, unit.contract.version);
     console.log(report ? `  report: ${report.summary}` : "  report: none");
   } else if (command === "unit" && sub === "status") {

@@ -18,7 +18,7 @@ import { chooseModels } from "@metacoding/vsm-pi-core";
 import type { Dispatcher } from "./controller.js";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js"].map((f) => path.join(dist, f));
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */
@@ -26,7 +26,7 @@ export interface PiDispatcherOptions {
 }
 
 export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
-  return async ({ worktree, unitId, contract, contractPath, profile, route, policyPath }) => {
+  return async ({ worktree, unitId, contract, contractPath, profile, route, policyPath, hint }) => {
     const agentDir = getAgentDir();
     const modelRuntime = await ModelRuntime.create();
     const available = (await modelRuntime.getAvailable()).map((m) => `${m.provider}/${m.id}`);
@@ -54,7 +54,7 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
             if (event.type === "message_update" && event.assistantMessageEvent.type === "text_delta") process.stdout.write(event.assistantMessageEvent.delta);
           });
         }
-        await session.prompt(contract.objective);
+        await session.prompt(hint ? `${contract.objective}\n\nFrom the orchestrator, about your previous attempt: ${hint}` : contract.objective);
         if (options.echo) process.stdout.write("\n");
         const last = [...session.messages].reverse().find((m) => m.role === "assistant");
         if (last && last.role === "assistant" && last.stopReason === "error") {

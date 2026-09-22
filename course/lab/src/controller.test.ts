@@ -205,3 +205,99 @@ test("budgets: a halted attempt is recorded as budget-exhausted; a blocked unit 
   assert.equal(replanned.status, "refused");
   assert.match(replanned.status === "refused" ? replanned.problems[0]?.message ?? "" : "", /a new contract version is a replan \(lesson 08\), not a retry/);
 });
+
+test("recovery: the autoloop retries a silent unit under the policy, repairs a refused report with a hint, and stops at the first decision it cannot apply", async (t) => {
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit } = await import("./controller.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const recovery = await loadRecoveryPolicy();
+  const base = await withPolicy();
+  const store = new ExecutionStore(repo);
+  const hints: Array<string | undefined> = [];
+  let calls = 0;
+  const { final, decisions } = await driveUnit(gitExec, {
+    ...base, repo, contract, workload, recovery, owner: "alice",
+    dispatcher: async (request) => {
+      calls++;
+      hints.push(request.hint);
+      if (calls === 1) return { sessionId: "s1" };                         // silent: no report
+      if (calls === 2) {
+        // A refused report never reaches the store (report_result throws); what the session leaves behind is the observation.
+        await store.recordObservation({ unitId: contract.unitId, attempt: 2, at: "2026-01-01T00:00:00.000Z", source: "tool", toolName: "report_result", cause: "invalid-report", message: "Report refused against tc-fix v1: unresolved: u-unicode is unresolved in the contract but has no outcome" });
+        return { sessionId: "s2" };
+      }
+      await writeFile(path.join(request.worktree, "src.txt"), "third\n");   // work, still no report
+      await gitExec("git", ["commit", "-qam", "third"], { cwd: request.worktree });
+      return { sessionId: "s3" };
+    },
+  });
+  assert.equal(calls, 3, "attempt ceiling for implement is 3");
+  assert.deepEqual(decisions.map((d) => [d.attempt, d.cause, d.action, d.occurrence]), [[1, "no-report", "retry", 1], [2, "invalid-report", "repair", 1], [3, "no-report", "escalate", 2]]);
+  assert.equal(hints[0], undefined);
+  assert.match(hints[1] ?? "", /ended without a report \(no-report\)/);
+  assert.match(hints[2] ?? "", /report_result was refused: attempt 2: no-report; .*tool report_result: invalid-report — Report refused .*u-unicode/);
+  assert.equal(final.status, "blocked");
+  const unit = await store.getUnit("u1");
+  assert.match(unit?.reason ?? "", /escalated to S5: no-report \(recovery v1\)/);
+  assert.equal(unit?.attempts, 3);
+  const signals = await readSignals(repo);
+  const algedonic = signals.find((s) => s.kind === "algedonic-signal");
+  assert.ok(algedonic, "policy exhausted: an algedonic signal to S5");
+  assert.equal((algedonic as { requiresHumanAttention: boolean }).requiresHumanAttention, true);
+  assert.match((algedonic as { observation: string }).observation, /policy is exhausted/);
+  assert.equal((await store.listDecisions("u1")).length, 3, "every decision is on disk, immutably");
+  assert.equal((await unitStatus(gitExec, repo)).length, 1, "an escalated unit keeps its claim until S5 decides");
+});
+
+test("recovery: oscillation routes to clarify with a question and stops; environment routes to remediate; abort releases the claim and the unit is aborted, not deleted", async (t) => {
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit, routeUnit } = await import("./controller.js");
+  const { appendSignal } = await import("@metacoding/vsm-pi-core");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const recovery = await loadRecoveryPolicy();
+  const base = await withPolicy();
+  const store = new ExecutionStore(repo);
+
+  // Oscillation: the unit ends silently after S2 signalled thrash.
+  const osc = await driveUnit(gitExec, {
+    ...base, repo, contract, workload, recovery, owner: "alice",
+    dispatcher: async () => {
+      await appendSignal(repo, { id: "s1", timestamp: "t", source: "S2", kind: "coordination-signal", channel: "signal", destination: "S3", severity: "advisory", subject: "src/slugify.js", unit: "u1", coordination: "oscillation", observation: "4 edits to src/slugify.js", evidence: [] });
+      return { sessionId: "s1" };
+    },
+  });
+  assert.equal(osc.decisions.length, 1);
+  assert.equal(osc.decisions[0]?.action, "clarify");
+  assert.match(osc.decisions[0]?.question ?? "", /Which behaviour is wanted\?/);
+  assert.match((await store.getUnit("u1"))?.reason ?? "", /awaiting clarify: oscillation/);
+  assert.equal((await store.getUnit("u1"))?.attempts, 1, "clarify spends no attempt");
+
+  // Environment, observed by the session: remediate, not retry.
+  const repo2 = await initRepo(t);
+  const store2 = new ExecutionStore(repo2);
+  const env = await driveUnit(gitExec, {
+    ...base, repo: repo2, contract, workload, recovery, owner: "alice",
+    dispatcher: async () => {
+      await store2.recordObservation({ unitId: "u1", attempt: 1, at: "t", source: "tool", toolName: "run_tests", cause: "environment", message: "Cannot find module 'left-pad'" });
+      return { sessionId: "s1" };
+    },
+  });
+  assert.deepEqual(env.decisions.map((d) => [d.cause, d.action]), [["environment", "remediate"]]);
+  assert.match((await store2.getUnit("u1"))?.reason ?? "", /awaiting remediate: environment/);
+
+  // Abort under a policy that says so: the claim is released, the record stays.
+  const abortive = { ...recovery, version: 2, rules: [{ cause: "no-report" as const, actions: ["abort" as const] }] };
+  const repo3 = await initRepo(t);
+  const store3 = new ExecutionStore(repo3);
+  const gone = await driveUnit(gitExec, { ...base, repo: repo3, contract, workload, recovery: abortive, owner: "alice", dispatcher: async () => ({}) });
+  assert.deepEqual(gone.decisions.map((d) => [d.action, d.policy.version]), [["abort", 2]]);
+  assert.equal((await store3.getUnit("u1"))?.status, "aborted");
+  assert.deepEqual(await unitStatus(gitExec, repo3), [], "lease released");
+  await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
+  assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
+  assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery }), undefined, "an aborted unit is not routed again");
+});
