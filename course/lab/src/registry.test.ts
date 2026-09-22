@@ -11,7 +11,13 @@ const registryDir = path.join(labRoot, "registry");
 test("the committed registry passes check: every record is well-formed, implemented, tested and bounded", async () => {
   const registry = await checkRegistry(registryDir, labRoot);
   assert.deepEqual(registry.problems, []);
-  assert.deepEqual(registry.records.map((r) => r.id).sort(), ["reg.authority.vendor-write-gate.v1", "reg.control.profile-write-grant.v1"]);
+  assert.deepEqual(registry.records.map((r) => r.id).sort(), [
+    "reg.authority.vendor-write-gate.v1",
+    "reg.control.profile-write-grant.v1",
+    "reg.coordination.reintegration.v1",
+    "reg.coordination.thrash-detector.v1",
+    "reg.coordination.unit-lease.v1",
+  ]);
 });
 
 test("REGULATORS.md is generated from the records and has not drifted", async () => {

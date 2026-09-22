@@ -103,6 +103,8 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
     lines.push(`**Purpose.** ${r.purpose.trim()}`, "");
     lines.push(`**Absorbs.** \`${r.absorbs.failureClass}\` — ${r.absorbs.description.trim()}`, "");
     lines.push(`**Mechanism.** \`${r.mechanism.implementation}\` at ${r.mechanism.enforcementPoints.map((p) => `\`${p}\``).join(", ") || "(none)"}`, "");
+    if (r.channels) lines.push(`**Channels.** consumes ${r.channels.consumes.map((c) => `\`${c}\``).join(", ") || "nothing"} · emits ${r.channels.emits.map((c) => `\`${c}\``).join(", ") || "nothing"}`, "");
+    if (r.scope) lines.push(`**Scope.** subjects ${r.scope.subjects.join(", ") || "—"} · resources ${r.scope.resources.join(", ") || "—"}`, "");
     if (r.authority) {
       lines.push("**May.**", ...r.authority.may.map((m) => `- ${m}`), "", "**May not.**", ...r.authority.mayNot.map((m) => `- ${m}`), "");
     }

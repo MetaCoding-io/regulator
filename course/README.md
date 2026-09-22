@@ -88,7 +88,7 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 | 02 | Anatomy of a turn | Where exactly can I intervene? | Extension event lifecycle |
 | 03 | Tools as the variety interface | How does the agent act on the world, and how narrowly? | `registerTool`, typebox, truncation |
 | 04 | Capability profiles and the advisory layer | How do I specialize work without roleplay, and what should prompts still carry? | `setActiveTools`, skills, AGENTS.md, scoped models |
-| 05 | Isolation, leases, anti-oscillation | What stops two operations from fighting? | project trust, bash hooks, sandbox/containers |
+| 05 | Isolation, leases, and the anti-oscillation problem | What stops two operations from fighting? | `pi.exec`, worktrees, tool execution events, no-sandbox position |
 | 06 | Work contracts | What am I actually authorizing this run to decide? | SDK runtime, custom tools, session entries |
 | 07 | Context as a regulated resource | What do I spend, and on what? | compaction hooks, `getContextUsage`, provider hooks |
 | 08 | Failure, recovery, retry lattice | What happens on attempt two, and on attempt six? | `agent_end`, `agent_before_settle`, recovery routing |
@@ -154,6 +154,7 @@ See [ASSESSMENT.md](ASSESSMENT.md).
 | [02 — Anatomy of a turn](modules/02-anatomy-of-a-turn.md) | 1: schema-validated trace + first gate + registry seed | [`lab/src/cp1-trace.ts`](lab/src/cp1-trace.ts), [`lab/registry/`](lab/registry/); trace and registry in [`packages/`](../packages/) |
 | [03 — Tools as the variety interface](modules/03-tools-as-the-variety-interface.md) | 2: three typed tools with error and effect contracts | [`lab/src/cp2-typed-tools.ts`](lab/src/cp2-typed-tools.ts), [`lab/src/conventions.ts`](lab/src/conventions.ts); effects in [`packages/core/src/effects.ts`](../packages/core/src/effects.ts) |
 | [04 — Capability profiles and the advisory layer](modules/04-capability-profiles-and-the-advisory-layer.md) | 3: profiles as positive grants + advice | [`lab/src/cp3-profiles.ts`](lab/src/cp3-profiles.ts), [`lab/src/profiles.ts`](lab/src/profiles.ts) |
+| [05 — Isolation, leases, and the anti-oscillation problem](modules/05-isolation-leases-and-anti-oscillation.md) | 4: leases with liveness, worktree isolation + reintegration, thrash detector, unit lifecycle CLI | [`lab/src/cp4-coordination.ts`](lab/src/cp4-coordination.ts), [`lab/src/coordination.ts`](lab/src/coordination.ts), [`lab/src/worktree.ts`](lab/src/worktree.ts), [`lab/src/unit.ts`](lab/src/unit.ts), [`lab/src/lab-cli.ts`](lab/src/lab-cli.ts); [`lab/fixture-oscillation/`](lab/fixture-oscillation/) |
 
 The reference build lives in [`lab/`](lab/) as a workspace package
 (`@metacoding/vsm-pi-course-lab`): each checkpoint is a loadable Pi extension with
@@ -163,7 +164,7 @@ target project the failure drills run against.
 
 ## Status
 
-This directory is a **course design** with the first four lessons written end to end
+This directory is a **course design** with the first five lessons written end to end
 as vertical slices, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
 production can start against a fixed target. Build sequencing, dependencies on VSM-Pi

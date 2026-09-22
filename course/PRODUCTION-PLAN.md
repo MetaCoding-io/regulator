@@ -1,8 +1,8 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete.** Lessons 01–04 are written
-end to end with checkpoints 0–3, headless graders, and the seed of the fixture
-repository — the vertical slices the sequencing below calls for. This file exists so course production
+Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–05
+are written end to end with checkpoints 0–4, headless graders, the seed of the fixture
+repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
 
@@ -28,7 +28,8 @@ capability profile differs from a persona.
 
 The heart of the course and the hardest labs.
 
-- oscillation fixture; lease/liveness lab; contract + result report protocol;
+- oscillation fixture and lease/liveness lab — **done** (lesson 05, checkpoint 4);
+- contract + result report protocol;
 - budget guard and compaction lab; recovery router;
 - audit layer and the adversarial protected-path drill (six routes), the injection
   fixture, and the secret-canary / egress fixture;
@@ -175,10 +176,12 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–04 for tone, length and lab friction (owner: project maintainer).
-2. Extend the fixture with the flaky test, the ambiguous requirement and the migration
-   that must not be re-run — lesson 05's oscillation fixture is the next one needed.
-3. Lessons 05–06 with checkpoints 4–5 (leases and reintegration; work contracts), same
-   vertical-slice discipline. Checkpoint 4 needs a second fixture worktree; plan it.
-4. Run the Phase 1 pilot and record where learners got confused, as course-level
+1. Review lessons 01–05 for tone, length and lab friction (owner: project maintainer).
+2. Extend the fixture with the flaky test and the migration that must not be re-run
+   (the ambiguous requirement now lives in the oscillation fixture).
+3. Lesson 06 with checkpoint 5 (work contracts and the first workload definition), same
+   vertical-slice discipline; it is the first consumer of checkpoint 4's unit lifecycle.
+4. Propose the S5 change that lesson 05 surfaced: `vsm/channels.yaml` lists `signal` as
+   S1-authored, and the coordination signal is authored by S2.
+5. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

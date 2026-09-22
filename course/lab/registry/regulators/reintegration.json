@@ -1,0 +1,30 @@
+{
+  "id": "reg.coordination.reintegration.v1",
+  "name": "Reintegration guard",
+  "status": "active",
+  "vsmFunction": "S2",
+  "purpose": "Merge a unit's branch back into the base only from a clean checkout on the base branch; on conflict, abort, leave the base exactly as found, and hand the conflicting paths to S3 as a coordination signal.",
+  "absorbs": {
+    "failureClass": "hidden-coupling",
+    "description": "Work done in isolation looks finished until it meets the base; a merge that auto-resolves, or that lands on a dirty checkout, hides the coupling instead of surfacing it."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/worktree.ts",
+    "enforcementPoints": ["regulator unit finish"]
+  },
+  "channels": { "consumes": ["unit branch", "base branch"], "emits": ["coordination-signal (conflict) → S3"] },
+  "scope": { "subjects": ["unit"], "resources": ["base branch", "worktree"] },
+  "authority": {
+    "may": ["refuse to merge into a dirty checkout or from the wrong branch", "abort a conflicting merge and record the conflicting paths", "remove the worktree and branch and release the lease after a clean merge"],
+    "mayNot": ["resolve a conflict", "rebase or rewrite history", "merge without a clean base"]
+  },
+  "evidence": { "tests": ["src/worktree.test.ts", "src/unit.test.ts"] },
+  "limitations": [
+    "Detects file-level conflicts only; two units can change disjoint files and still break each other (the S2 gap analysis's semantic-conflict case).",
+    "Merge commits only; no rebase, squash or fast-forward policy.",
+    "Nothing runs the checks after the merge yet; lesson 09 adds evidence at closeout."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M05"
+}
