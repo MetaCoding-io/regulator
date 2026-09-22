@@ -1,9 +1,11 @@
 /**
- * The S3 loop, first slice (lesson 06): contract → dispatch → close.
+ * The S3 loop (lesson 06, budgets added in lesson 07): contract → dispatch → close.
  *
  *   contract   check the contract; refuse dispatch if it cannot be honoured
  *   dispatch   record the unit, take the lease and worktree (lesson 05), run a
- *              session under the workload's profile for the unit type
+ *              session under the workload's profile and the policy's budget and
+ *              model route for the unit type; a blocked unit may be re-dispatched
+ *              under the same contract version while attempts remain
  *   close      read the result report the unit wrote — never the diff — check
  *              it against the exact contract version, reintegrate, release
  *
@@ -17,12 +19,12 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
-  ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, appendSignal, checkContract, checkResultReport,
+  ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, routeFor,
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
-import type { OperationalSignal, ResultReport, WorkContract, WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
+import type { ModelRoute, OperationalSignal, PolicyDefinition, ResultReport, WorkContract, WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
-import { finishUnit, startUnit } from "./unit.js";
+import { finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 
 export interface DispatchRequest {
@@ -33,6 +35,12 @@ export interface DispatchRequest {
   contractPath: string;
   /** The capability profile the workload declares for this unit type. */
   profile: string;
+  /** Which attempt this is, from the unit record. */
+  attempt: number;
+  /** The models the policy routes this unit type to, primary first. */
+  route: ModelRoute;
+  /** Absolute path of the policy file the session meters itself against. */
+  policyPath: string;
 }
 
 export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string }>;
@@ -41,6 +49,8 @@ export interface RunUnitOptions {
   repo: string;
   contract: WorkContract;
   workload: WorkloadDefinition;
+  policy: PolicyDefinition;
+  policyPath: string;
   dispatcher: Dispatcher;
   owner: string;
   now?: () => number;
@@ -50,12 +60,12 @@ export interface RunUnitOptions {
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
   | { status: "closed"; report: ResultReport; sha: string; signals: number }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string };
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
   const stamp = () => new Date(now()).toISOString();
-  const { contract, workload } = options;
+  const { contract, workload, policy } = options;
 
   // contract
   const problems = checkContract(contract);
@@ -64,15 +74,28 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
   const unitType = unitTypeOf(workload, contract.unitType);
   if (!unitType) problems.push({ path: "unitType", message: `"${contract.unitType}" is not a unit type of workload ${workload.name}` });
+  const ceiling = ceilingFor(policy, contract.unitType);
+  const store = new ExecutionStore(options.repo, now);
+  const existing = await store.getUnit(contract.unitId);
+  if (existing) {
+    // A further attempt: only for a blocked unit, under the same contract version, within the attempt ceiling.
+    if (existing.status !== "blocked") problems.push({ path: "unitId", message: `unit "${contract.unitId}" exists and is ${existing.status}` });
+    else if (existing.contract.id !== contract.id || existing.contract.version !== contract.version) {
+      problems.push({ path: "version", message: `unit "${contract.unitId}" runs under ${existing.contract.id} v${existing.contract.version}; a new contract version is a replan (lesson 08), not a retry` });
+    } else if (existing.attempts >= ceiling.attempts) {
+      problems.push({ path: "attempts", message: `unit "${contract.unitId}" has used its ${ceiling.attempts} attempt(s); S3 must decide something other than trying again` });
+    }
+  }
   if (problems.length || !unitType) return { status: "refused", problems };
 
   // dispatch
-  const store = new ExecutionStore(options.repo, now);
-  await store.createUnit(contract);
+  if (!existing) await store.createUnit(contract);
+  const attemptNumber = (existing?.attempts ?? 0) + 1;
   const contractPath = path.join(options.repo, UNITS_RELATIVE_DIR, contract.unitId, `contract.v${contract.version}.json`);
   let worktree: string;
   try {
-    const started = await startUnit(exec, {
+    const lifecycle = existing ? resumeUnit : startUnit;
+    const started = await lifecycle(exec, {
       repo: options.repo, unitId: contract.unitId, owner: options.owner, now,
       ...(options.ttlMs === undefined ? {} : { ttlMs: options.ttlMs }),
     });
@@ -86,7 +109,10 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   const startedAt = stamp();
   let sessionId: string | undefined;
   try {
-    ({ sessionId } = await options.dispatcher({ unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile }));
+    ({ sessionId } = await options.dispatcher({
+      unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile,
+      attempt: attemptNumber, route: routeFor(policy, contract.unitType), policyPath: options.policyPath,
+    }));
   } catch (error) {
     const detail = (error as Error).message;
     await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail });
@@ -97,6 +123,13 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   // close — from the report the unit wrote, never from the domain
   const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
   const report = await store.getReport(contract.unitId, contract.version);
+  const ledger = await store.getBudget(contract.unitId, attemptNumber);
+  if (!report && ledger?.exhausted) {
+    const detail = `${ledger.exhausted.dimension} ceiling crossed at ${ledger.exhausted.at} (${ledger.consumed.tokens} tokens, ${ledger.consumed.turns} turns)`;
+    await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "budget-exhausted", detail });
+    await store.setStatus(contract.unitId, "blocked", `budget exhausted: ${ledger.exhausted.dimension}`);
+    return { status: "blocked", reason: "budget-exhausted", detail };
+  }
   if (!report) {
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "no-report" });
     await store.setStatus(contract.unitId, "blocked", "the unit ended without calling report_result");

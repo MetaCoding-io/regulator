@@ -62,7 +62,8 @@ packages/
   core/           Authority, routing, policy, and finding logic
   pi-extension/   Pi lifecycle integration
   checks/         Deterministic S3* checks
-  cli/            vsm init/check/status/trace
+  cli/            regulator status: the read model over a definition and an instance
+  control-room/   Read-only page over the read model: topology, instances, unit inspector
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
 course/           The "Viable Agents" course; course/lab is the reference build

@@ -1,0 +1,24 @@
+{
+  "name": "@metacoding/vsm-pi-control-room",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The maintainer's read-only control room: one page over the `regulator status` read model \u2014 definition topology, running instances, and what each unit is doing.",
+  "bin": {
+    "regulator-control-room": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && node --test dist/*.test.js"
+  },
+  "dependencies": {
+    "@metacoding/vsm-pi-cli": "workspace:*",
+    "@metacoding/vsm-pi-core": "workspace:*",
+    "@metacoding/vsm-pi-protocol": "workspace:*"
+  }
+}

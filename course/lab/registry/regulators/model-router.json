@@ -1,0 +1,31 @@
+{
+  "id": "reg.control.model-router.v1",
+  "name": "Model router",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session. Nothing outside the route is ever tried, and every model an attempt ran on is in its ledger.",
+  "absorbs": {
+    "failureClass": "single-model-dependence",
+    "description": "A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/dispatch-pi.ts",
+    "enforcementPoints": ["piDispatcher (model choice, failover)", "model_select (ledger)"]
+  },
+  "channels": { "consumes": ["policy (models)", "model availability (ModelRuntime)"], "emits": ["budget ledger models[]"] },
+  "scope": { "subjects": ["unit type"], "resources": ["model", "provider"] },
+  "cost": { "description": "One availability lookup per dispatch; a failover repeats the unit's prompt on the fallback model, so a failed attempt can cost twice." },
+  "authority": {
+    "may": ["choose among the route's models by availability", "fail over to the next declared model after a provider error"],
+    "mayNot": ["use a model the route does not name", "upgrade or downgrade on judgement of task difficulty", "change the route"]
+  },
+  "evidence": { "tests": ["../../packages/core/src/policy.test.ts"] },
+  "limitations": [
+    "Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.",
+    "Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.",
+    "The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M07"
+}

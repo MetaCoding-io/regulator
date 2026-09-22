@@ -333,6 +333,8 @@ export {
 } from "./contracts.js";
 export { UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
-  AttemptOutcomeSchema, AttemptRecordSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema, isAttemptRecord, isLease, isUnitRecord,
-  type AttemptOutcome, type AttemptRecord, type Lease, type UnitRecord, type UnitStatus,
+  AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema,
+  isAttemptRecord, isLease, isUnitRecord,
+  type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus,
 } from "./execution.js";
+export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";

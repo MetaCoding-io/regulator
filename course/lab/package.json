@@ -17,6 +17,7 @@
     "registry:docs": "pnpm build && node dist/registry-cli.js docs --write",
     "regulator": "node dist/lab-cli.js",
     "cp5": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js",
+    "cp6": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js",
     "fixture:oscillation:test": "cd fixture-oscillation && node --test"
   },
   "dependencies": {
