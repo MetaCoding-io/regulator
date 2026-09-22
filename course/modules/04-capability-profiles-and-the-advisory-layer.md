@@ -201,10 +201,30 @@ export interface CapabilityProfile {
 }
 ```
 
-`research` reads, greps, and may run the tests — but has no `write`, `edit`, or `bash`,
-and `writablePaths` is empty. `implement` has the full working surface, may write under
-`src/` and `test/`, and carries four lines of advice. Read those four lines against the
-craft in section 2: each one is something no gate in this course could enforce.
+`research` reads, greps, runs the *static* checks — and has no `write`, `edit`, `bash`,
+or `run_tests`. That last exclusion is the lesson inside the lesson. An earlier draft
+granted `run_tests` to the research profile and called it read-only, on the grounds that
+the tool has a one-string schema and touches no file the model names. A reviewer pointed
+out that running `npm test` executes whatever the project's tests do — write, network,
+credentials — so the profile was read-only in name only. The fix is not a longer
+description; it is `isReadOnlyProfile()`, which consults the effect declarations from
+lesson 03 and returns true only if every granted tool is read-only on every axis and no
+direct writes are granted. A test asserts it, and asserts that adding `run_tests` would
+break it. Narrow schema, wide effect: a profile has to reason about the second.
+
+`implement` has the full working surface, may write under `src/` and `test/`, and
+carries four lines of advice. Read those four lines against the craft in section 2: each
+one is something no gate in this course could enforce. Read its `description` too: it
+says direct write and edit calls are limited, and that `bash` is granted and not
+path-gated. An earlier draft said the profile "cannot touch anything else," which was
+false — the `bash` leak you find in section 5 was already known. A profile's description
+is level 5, but it is still a claim, and a false claim in the advisory layer teaches the
+model that the advisory layer lies.
+
+What the profile does *not* bind yet: a model, and context files or skills. Those are
+real profile dimensions — the curriculum lists them — and they arrive when the course has
+taught what they mean: model routing with budgets and failover in lesson 07, durable
+context with identity in lesson 12. A checkpoint should claim what it implements.
 
 `isWritableUnder` is the positive-grant check — the same lexical normalization as
 checkpoint 1, but the question is inverted: *does the path start with something this
@@ -214,7 +234,18 @@ grants nothing.
 `renderProfileSection` turns the profile into the text the model sees. Read its second
 line: *"Writes elsewhere are refused by the harness, not by you."* That sentence is the
 whole relationship between levels 2 and 5 in one place. The model is told where the
-boundary is and told that it is not the model's job to hold it.
+boundary is and told that it is not the model's job to hold it. And when the profile
+grants `bash`, the section adds one more line: the shell is not path-gated, the writable
+paths bind you there too, and the harness cannot check it. That is level 5 doing the one
+job only level 5 can do — carrying a rule the gates cannot reach — and being honest that
+it is doing so.
+
+The profile gate has a registry card too:
+[`registry/regulators/profile-write-grant.json`](../lab/registry/regulators/profile-write-grant.json).
+This lesson adds `authority.may` and `authority.mayNot`. Read them and check each line
+against the code: the card claims the gate may set the tool surface and block ungranted
+writes, and may *not* select a profile without a user command, block shell commands, or
+grant a tool the host does not have.
 
 ### The extension — [`course/lab/src/cp3-profiles.ts`](../lab/src/cp3-profiles.ts)
 
@@ -344,11 +375,13 @@ You have finished checkpoint 3 when:
 
 1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
    loads checkpoints 2 and 3 together into a real Pi 0.87.0 session and shows the native
-   hook refusing a write outside the default profile's grant.
+   hook refusing a write outside the default profile's grant, and the test that
+   `research` is read-only by effect while `run_tests` would disqualify it.
 2. A real run shows the profile in the footer and the profile section in the system
    prompt; the research profile cannot write.
 3. `course/lab/fixture/AGENTS.md` exists and contains nothing a gate already enforces.
 4. Your lab notes hold the three drill records, including your own answer to drill 2.
+5. The profile gate's registry card passes `registry:check` with `authority` filled in.
 
 ## Further reading
 

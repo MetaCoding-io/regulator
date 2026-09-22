@@ -18,6 +18,15 @@ Each checkpoint has a grader that:
 A grader never asks the learner's agent whether it complied. Self-report is not evidence
 in the course either.
 
+**Status, stated plainly.** The tests that exist today under `course/lab/` are
+*reference-build tests*: they prove the shipped checkpoints behave. They are not yet the
+adversarial graders described above, which must reject a range of plausible weak
+learner implementations — prompt-only enforcement, a path check that misses `..`,
+evidence taken from self-report, a permissive fallback on unknown input, a read-only
+profile that grants a tool with an undeclared effect. Producing those requires a library
+of deliberately weak implementations per checkpoint; it is production work, tracked in
+[PRODUCTION-PLAN.md](PRODUCTION-PLAN.md).
+
 ## 2. Viability Review rubric (design work)
 
 Used for module design write-ups and for the capstone. Each row is scored
@@ -31,7 +40,7 @@ Used for module design write-ups and for the capstone. Each row is scored
 | **Mechanism level** | For each rule: is it enforced at the highest feasible level (type > gate > typed tool > judgment > prompt), with a reason when it is not? |
 | **Feedback delay** | How long between a wrong assumption and the signal that reveals it? What was done to shorten it? |
 | **Variety balance** | Where is incoming variety attenuated and regulatory variety amplified? Is the system over-regulated anywhere (cost without absorbed variety)? |
-| **Failure honesty** | Is the enforcement boundary documented? Are the routes that bypass each gate named? |
+| **Failure honesty** | Is the enforcement boundary documented? Are the routes that bypass each gate named? Do tool effect declarations match reality? Is the threat model crosswalked to OWASP ASI01–ASI10 rather than limited to injection and protected files? |
 | **Evidence** | Are claims about the harness supported by runs, traces, and an eval with a control arm? |
 | **Residual uncertainty** | Are open questions, unresolved decisions, and known weaknesses reported rather than smoothed over? |
 
@@ -53,8 +62,9 @@ fixture, with its eval report.
 
 1. system map (S1–S5 + S3\*, mechanism vs judgment per function);
 2. channel table (type, authority, destination, mutates-policy yes/no);
-3. mechanism ledger (rule → hierarchy level → why not higher);
-4. enforcement boundary statement;
+3. mechanism ledger (rule → hierarchy level → why not higher) — generated from the
+   registry, with every active regulator's ablation result and retirement condition;
+4. enforcement boundary statement — generated from registry `limitations`;
 5. evidence: control vs treatment, with interpretation including where regulation lost;
 6. residual uncertainty and what would resolve it.
 

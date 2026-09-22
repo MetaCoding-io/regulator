@@ -9,7 +9,7 @@ import {
   type ExtensionAPI,
 } from "@earendil-works/pi-coding-agent";
 import { createTraceExtension, isProtectedPath, TRACE_RELATIVE_PATH, VENDOR_BLOCK_REASON } from "./cp1-trace.js";
-import { TurnTracker } from "./trace.js";
+import { TraceWriter, TurnTracker, isTurnRecord } from "./trace.js";
 
 type Handler = (event: unknown, ctx: { cwd: string }) => unknown;
 
@@ -59,6 +59,26 @@ test("TurnTracker builds one record per turn from the event sequence", () => {
   assert.equal(record.usage?.totalTokens, 3);
   assert.deepEqual(record.toolCalls.map((c) => [c.toolName, c.blocked ?? false, c.endedAt! - c.startedAt]), [["read", false, 20], ["write", true, 0]]);
   assert.equal(tracker.endTurn(), undefined, "a second endTurn has nothing to close");
+});
+
+test("trace records are validated at runtime, not only typed: the writer refuses a malformed record", async (t) => {
+  const cwd = await projectDir(t);
+  const writer = new TraceWriter(path.join(cwd, "trace.ndjson"));
+  const good = { turnIndex: 0, startedAt: 1, endedAt: 2, durationMs: 1, toolCalls: [] };
+  assert.equal(isTurnRecord(good), true);
+  for (const bad of [
+    { ...good, turnIndex: -1 },
+    { ...good, durationMs: "1" },
+    { ...good, toolCalls: [{ toolCallId: "", toolName: "read", startedAt: 1 }] },
+    { ...good, extra: true },
+    { ...good, usage: { input: 1 } },
+  ]) {
+    assert.equal(isTurnRecord(bad), false, JSON.stringify(bad));
+    await assert.rejects(writer.append(bad as never), /malformed trace record/);
+  }
+  await assert.rejects(readFile(writer.filePath), /ENOENT/, "nothing was written");
+  await writer.append(good);
+  assert.equal((await readFile(writer.filePath, "utf8")).trim(), JSON.stringify(good));
 });
 
 test("extension writes a typed trace record per turn and blocks vendor writes", async (t) => {

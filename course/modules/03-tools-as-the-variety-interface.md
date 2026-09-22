@@ -79,6 +79,39 @@ stack trace when the runner was missing — is how tool failures poison the next
 turns. The model cannot tell whether to fix the code or fix the environment, so it
 guesses.
 
+### Schema versus effect
+
+One more distinction, and it is the one a reviewer of this course caught the reference
+build getting wrong. A tool's **schema** says what the model may *ask for*. Its
+**effect** says what *happens* when it runs. They are independent, and a narrow schema
+says nothing about a narrow effect.
+
+`run_tests({ filter?: string })` is the clearest case. One optional string. It runs the
+project's test suite — and a test suite can write files, open sockets, read environment
+variables, call out to services, or delete a database if that is what someone wrote.
+The tool's *effect surface* is the project's, not the schema's.
+
+So every tool in the lab declares an effect alongside its schema, in
+[`course/lab/src/effects.ts`](../lab/src/effects.ts):
+
+```ts
+export interface ToolEffect {
+  filesystem: "none" | "read" | "write";
+  execution: "none" | "project-code" | "arbitrary";
+  network: "none" | "unknown" | "open";
+  sideEffects: "none" | "reversible" | "irreversible" | "unknown";
+}
+```
+
+`read_conventions` is read-only on every axis. `run_checks` is too — `node --check`
+parses without executing, and `git status` reads. `run_tests` is
+`{ filesystem: "write", execution: "project-code", network: "unknown", sideEffects: "unknown" }`,
+and *unknown is not none*. Lesson 04 uses these declarations to decide what a read-only
+profile may contain; lesson 10 uses them to decide what needs a sandbox; lesson 13 uses
+`sideEffects: "irreversible"` to decide what needs a human's consent. The declaration is
+one line per tool, and it is the line that connects the whole course's authority story
+back to S1.
+
 ### Facts, not claims
 
 One more distinction you will build directly. The README in the fixture says the tests
@@ -235,6 +268,10 @@ whether or not tests passed. The tests in `cp2-typed-tools.test.ts` pin both sid
 **`run_checks`** — no parameters. Runs every check the project defines and returns one
 verdict per check: `ok  syntax:src/slugify.js`, `FAIL protected-untouched — M vendor/left-pad.js`.
 A check that could not start throws; a check that ran and failed is a verdict.
+
+Each of the three has an entry in `TOOL_EFFECTS`. Read them against the tools and ask,
+for each axis, whether you could have inferred it from the schema. You could not — which
+is the point.
 
 ### Run it
 

@@ -30,8 +30,11 @@ The heart of the course and the hardest labs.
 
 - oscillation fixture; lease/liveness lab; contract + result report protocol;
 - budget guard and compaction lab; recovery router;
-- audit layer and the adversarial protected-path drill (six routes) and the injection
-  fixture;
+- audit layer and the adversarial protected-path drill (six routes), the injection
+  fixture, and the secret-canary / egress fixture;
+- durable-execution fixture for M08: a side-effecting tool, a harness kill between
+  effect and record, restart and reconciliation;
+- OWASP ASI01–ASI10 / ACS crosswalk table for M10 and the rubric;
 - `BOUNDARY.md` discipline established.
 
 Exit criterion: the adversarial graders pass against the reference solution *and* catch
@@ -48,12 +51,47 @@ and records the reason.
 
 ### Phase 4 — Proof and shipping (Part 6, modules 14–15, capstone)
 
-- drift fixture and the control/treatment eval harness;
+- drift fixture and the control/treatment eval harness, with per-regulator ablation
+  arms, confidence intervals, environment fingerprints, and outcome *and* trajectory
+  graders;
+- OpenTelemetry GenAI span mapping for the event store, with redaction rules;
+- the control room: topology, live, assurance, lifecycle and replay views over
+  registry ∪ events ∪ eval results, read-only;
+- MCP / A2A / ACS portability appendix for M15, and the M03 MCP-export appendix;
+- **adversarial grader fixtures**: a library of deliberately weak implementations per
+  checkpoint that the graders must reject;
 - packaging lab and the clean-second-repo portability drill;
 - capstone rubric calibration against at least three real submissions.
 
 Exit criterion: an eval report from the reference build that is honest about at least one
 fixture where the gated arm loses.
+
+## Review findings incorporated (2026-09-22)
+
+An external design review of PR #17 produced six pre-merge findings and eight
+additions. Disposition:
+
+| Finding | Disposition |
+| --- | --- |
+| `research` profile granted `run_tests` and called itself read-only | **Fixed.** Effect declarations (`effects.ts`); `isReadOnlyProfile()` with a test; `run_tests` removed from research. Lessons 03–04 teach the correction. |
+| Checkpoint 1 claimed schema validation; records were only typed | **Fixed.** `TurnRecordSchema` (TypeBox) validated in `TraceWriter.append`; test that malformed records are refused. |
+| Curriculum promised profile fields the checkpoint did not bind | **Fixed.** Claim narrowed to what ships; model (M07) and context/skills (M12) named as the lessons that add them. |
+| Implement profile described as "cannot touch anything else" while granting `bash` | **Fixed.** Description and system-prompt section now say so. |
+| Graders in ASSESSMENT.md more ambitious than the tests | **Labelled.** Current tests are reference-build tests; adversarial graders are production work (below). |
+| 40 h estimate optimistic | **Labelled** a hypothesis; the pilot measures median/p90. |
+
+Additions accepted into the curriculum text: effect contracts (M03); durable execution
+and idempotency (M08); the expanded threat model with an OWASP ASI01–ASI10 / Agent
+Control Standard crosswalk (M10); a multi-agent decision rule and optional A2A mapping
+(M11); eval methodology, OpenTelemetry GenAI span mapping, and regulator ablation and
+retirement (M14); an MCP / A2A / ACS portability appendix (M15). The registry and
+control room ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)) are the review's structural
+proposal, adopted: the registry is implemented and seeded; the control room is design.
+
+Two things the review proposed that were *not* adopted as stated: a YAML registry (JSON
+was chosen to avoid a parser dependency and keep the schema closed; the choice is
+revisitable), and an immediate `regulator` binary (the CLI exists as `registry-cli.js`;
+packaging it is lesson 15's concern).
 
 ## Dependencies on VSM-Pi
 
@@ -69,6 +107,8 @@ repository is still design-only, the course must present it as design, not as sh
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
 | M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
 | M14 drift | longitudinal drift fixture | planned (M0) |
+| M02+ registry | `course/lab/src/registry.ts`, seed records | shipped (course lab) |
+| M14/M15 control room | [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6 | design only |
 
 Two-way benefit worth stating plainly: the course is also a forcing function for this
 repository. Teaching a mechanism exposes whether it is actually explicable, and every

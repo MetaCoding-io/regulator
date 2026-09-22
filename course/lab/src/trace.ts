@@ -4,38 +4,60 @@
  * This module has no Pi dependency on purpose. A trace is a claim about what
  * happened in a turn, and the shape of that claim should be readable without
  * knowing any harness API. Compare VSM-Pi's INV-007: protocol stays runtime-free.
+ *
+ * The shape is a runtime schema, not only a TypeScript type: the writer
+ * refuses a record that does not match it. A trace that can contain anything
+ * is not evidence of anything.
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
+import { Type, type Static } from "typebox";
+import { Value } from "typebox/value";
 
-export interface TokenUsage {
-  input: number;
-  output: number;
-  cacheRead: number;
-  cacheWrite: number;
-  totalTokens: number;
-  /** Total cost in the provider's currency, as Pi reports it. */
-  cost: number;
-}
+export const TokenUsageSchema = Type.Object(
+  {
+    input: Type.Integer({ minimum: 0 }),
+    output: Type.Integer({ minimum: 0 }),
+    cacheRead: Type.Integer({ minimum: 0 }),
+    cacheWrite: Type.Integer({ minimum: 0 }),
+    totalTokens: Type.Integer({ minimum: 0 }),
+    /** Total cost in the provider's currency, as Pi reports it. */
+    cost: Type.Number({ minimum: 0 }),
+  },
+  { additionalProperties: false },
+);
+export type TokenUsage = Static<typeof TokenUsageSchema>;
 
-export interface ToolCallRecord {
-  toolCallId: string;
-  toolName: string;
-  startedAt: number;
-  endedAt?: number;
-  isError?: boolean;
-  /** Set when a `tool_call` handler refused the call before it executed. */
-  blocked?: boolean;
-  reason?: string;
-}
+export const ToolCallRecordSchema = Type.Object(
+  {
+    toolCallId: Type.String({ minLength: 1 }),
+    toolName: Type.String({ minLength: 1 }),
+    startedAt: Type.Integer(),
+    endedAt: Type.Optional(Type.Integer()),
+    isError: Type.Optional(Type.Boolean()),
+    /** Set when a `tool_call` handler refused the call before it executed. */
+    blocked: Type.Optional(Type.Boolean()),
+    reason: Type.Optional(Type.String()),
+  },
+  { additionalProperties: false },
+);
+export type ToolCallRecord = Static<typeof ToolCallRecordSchema>;
 
-export interface TurnRecord {
-  turnIndex: number;
-  startedAt: number;
-  endedAt: number;
-  durationMs: number;
-  usage?: TokenUsage;
-  toolCalls: ToolCallRecord[];
+export const TurnRecordSchema = Type.Object(
+  {
+    turnIndex: Type.Integer({ minimum: 0 }),
+    startedAt: Type.Integer(),
+    endedAt: Type.Integer(),
+    durationMs: Type.Integer({ minimum: 0 }),
+    usage: Type.Optional(TokenUsageSchema),
+    toolCalls: Type.Array(ToolCallRecordSchema),
+  },
+  { additionalProperties: false },
+);
+export type TurnRecord = Static<typeof TurnRecordSchema>;
+
+export function isTurnRecord(value: unknown): value is TurnRecord {
+  return Value.Check(TurnRecordSchema, value);
 }
 
 /** Accumulates one turn's worth of events into a single `TurnRecord`. */
@@ -97,7 +119,7 @@ export class TurnTracker {
   }
 }
 
-/** Appends one JSON object per line. Creates the parent directory on first write. */
+/** Appends one JSON object per line. Validates first; creates the parent directory on first write. */
 export class TraceWriter {
   readonly filePath: string;
   #ready: Promise<void> | undefined;
@@ -107,6 +129,9 @@ export class TraceWriter {
   }
 
   async append(record: TurnRecord): Promise<void> {
+    if (!isTurnRecord(record)) {
+      throw new Error(`regulator: refusing to write a malformed trace record: ${JSON.stringify(record)}`);
+    }
     this.#ready ??= mkdir(path.dirname(this.filePath), { recursive: true }).then(() => undefined);
     await this.#ready;
     await appendFile(this.filePath, `${JSON.stringify(record)}\n`, "utf8");

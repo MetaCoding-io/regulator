@@ -41,8 +41,11 @@ regulator/
                      seeded in M10 with INV-001, completed in M12)
   memory/            operational memory: agent-writable, provenance + review-by date,
                      never identity
-  evals/             fixture tasks, arms, report generator
-  BOUNDARY.md        enforcement boundary statement
+  registry/          one typed JSON record per regulator (see CONTROL-REGISTRY.md);
+                     REGULATORS.md and TOPOLOGY.md generated from them, never edited
+  decisions/         ADRs for policy and architecture choices
+  evals/             fixture tasks, arms (including per-regulator ablation), report generator
+  BOUNDARY.md        enforcement boundary statement, generated from registry limitations
 ```
 
 `protocol/` has no Pi dependency — the same discipline VSM-Pi applies with INV-007. It
@@ -54,9 +57,9 @@ call, and it is a teaching point that this is achievable.
 | # | Module | Capability added | Passes when |
 | --- | --- | --- | --- |
 | 0 | M01 | Event logging extension | A full prompt→tool→result cycle is in `events.ndjson` |
-| 1 | M02 | Structured per-turn trace | Trace records validate against a schema; two-rule comparison table produced |
+| 1 | M02 | Structured per-turn trace + registry seed | Trace records validate against a runtime schema (malformed records refused); two-rule comparison table produced; first registry record passes `regulator check` |
 | 2 | M03 | Three typed operational tools | Tools registered and unit-tested with no live model |
-| 3 | M04 | Capability profiles | Read-only profile provably cannot write |
+| 3 | M04 | Capability profiles (tools, writable paths, thinking level, advice) | Research profile is read-only *by declared effect*, not just tool names; implement profile's description is honest about `bash` |
 | 4 | M05 | Leases, checkpoints, thrash detector, reintegration | Second concurrent session is refused; oscillation fixture trips detector; seeded conflict surfaced, not auto-resolved |
 | 5 | M06 | Work contract + validated result report | Unresolved decision cannot be closed silently |
 | 6 | M07 | Budget guard + contract-preserving compaction | Ceiling halts a runaway unit; contract survives compaction (asserted) |
@@ -83,7 +86,11 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
   `pi -e` and tested without a model. Checkpoints 0–3 exist; Pi-free modules shared
-  between them so far are `trace.ts`, `conventions.ts` and `profiles.ts`.
+  between them so far are `trace.ts`, `conventions.ts`, `effects.ts`, `profiles.ts` and
+  `registry.ts`.
+- **The regulator registry** — schema, `check`, docs generator and CLI exist under
+  `course/lab/registry/` with two seed records; the control room is design only
+  ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a

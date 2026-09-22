@@ -4,7 +4,8 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createProfilesExtension, PROFILE_SECTION_TAG } from "./cp3-profiles.js";
-import { isWritableUnder, PROFILES, renderProfileSection } from "./profiles.js";
+import { isReadOnlyProfile, isWritableUnder, PROFILES, renderProfileSection } from "./profiles.js";
+import { readOnlyViolations } from "./effects.js";
 import { ctxFor, fixtureCopy, mockPi } from "./test-support.js";
 
 test("isWritableUnder is a positive grant: only listed prefixes, fail-closed elsewhere", () => {
@@ -18,7 +19,19 @@ test("the profile section is advice, and says the refusal comes from the harness
   const section = renderProfileSection(PROFILES.implement);
   assert.match(section, /^Active capability profile: implement/);
   assert.match(section, /refused by the harness, not by you/);
+  assert.match(section, /bash is granted and is not path-gated/);
   assert.match(renderProfileSection(PROFILES.research), /read-only/);
+  assert.doesNotMatch(renderProfileSection(PROFILES.research), /bash is granted/);
+});
+
+test("read-only is a claim about effects, not schemas: research qualifies, and run_tests would break it", () => {
+  assert.equal(isReadOnlyProfile(PROFILES.research), true);
+  assert.equal(isReadOnlyProfile(PROFILES.implement), false);
+  // A one-string schema that runs the project's test suite is not a read-only tool.
+  assert.deepEqual(readOnlyViolations([...PROFILES.research.tools, "run_tests"]), ["run_tests"]);
+  // An undeclared effect is a violation too: a profile cannot promise what it has not declared.
+  assert.deepEqual(readOnlyViolations(["read", "mystery_tool"]), ["mystery_tool"]);
+  assert.deepEqual(readOnlyViolations(["read", "grep", "find", "ls", "read_conventions", "run_checks"]), []);
 });
 
 test("research profile: tool surface excludes write/edit/bash and writes are refused structurally", async (t) => {

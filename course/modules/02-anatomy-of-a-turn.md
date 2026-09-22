@@ -181,6 +181,16 @@ When you can read a trace record and understand what happened without opening th
 extension, you have separated the *claim* from the *mechanism that produced it*. That
 separation is what makes claims auditable later.
 
+Notice, too, that `TurnRecord` is not only a TypeScript type. It is a TypeBox schema —
+`TurnRecordSchema` — and the type is derived from it. `TraceWriter.append` checks every
+record against that schema and refuses one that does not match. Hold this against the
+hierarchy from section 2: a TypeScript interface is level 1, but only at compile time,
+and nothing at compile time can vouch for an object assembled at runtime from events.
+The trace is going to be evidence in lesson 09; evidence that can contain anything is
+evidence of nothing. So the claim gets level 2 as well. (An earlier draft of this lesson
+said the records "validate against a schema" when they were only typed. A reviewer
+caught it. That is the mechanism hierarchy applied to the course itself.)
+
 `TurnTracker` accumulates events into a record and `TraceWriter` appends it as one JSON
 line. Both take an injectable clock so the tests can assert on durations without
 sleeping.
@@ -220,6 +230,25 @@ protect against the file changing between this check and the write. Those are re
 and lesson 10 closes them; the hardened version is
 [`packages/pi-extension/README.md`](../../packages/pi-extension/README.md), "Path and
 authority contract." For now the point is a gate that exists at all.
+
+### The gate's identity card — [`course/lab/registry/`](../lab/registry/)
+
+You have just built a regulator. From here on, every regulator you build gets a record
+in the **registry** — a typed JSON card saying what failure it absorbs, at which level
+of the hierarchy, implemented where, evidenced by which tests, and — already — what it
+does not cover. Read [`registry/regulators/vendor-write-gate.json`](../lab/registry/regulators/vendor-write-gate.json)
+and then the generated [`registry/REGULATORS.md`](../lab/registry/REGULATORS.md). Then run:
+
+```sh
+pnpm --filter @metacoding/vsm-pi-course-lab registry:check
+```
+
+`regulator check` refuses a card whose implementation or tests do not exist, or a gate
+that states no limitation. `docs --check` refuses a `REGULATORS.md` that has drifted
+from the records. Both run under `pnpm check`, so a regulator cannot land with a stale
+card. Why this is a registry and not a folder of notes, and how the card grows with each
+lesson, is in [CONTROL-REGISTRY.md](../CONTROL-REGISTRY.md). For now: fill in
+`limitations` honestly. You will discover the first one in section 5.
 
 ### Run it
 
@@ -346,12 +375,15 @@ You have finished checkpoint 1 when:
 
 1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
    loads the built extension into a real Pi 0.87.0 session and exercises the native
-   `tool_call` hook with no model and no credentials. Read that test; it is the pattern
-   lesson 03 teaches for testing every gate you will ever write.
-2. `course/lab/fixture/.regulator/trace.ndjson` from a real run has one typed record
-   per turn with usage and tool calls, and at least one record with `"blocked": true`.
+   `tool_call` hook with no model and no credentials, and the test that a malformed
+   trace record is refused. Read the first; it is the pattern lesson 03 teaches for
+   testing every gate you will ever write.
+2. `course/lab/fixture/.regulator/trace.ndjson` from a real run has one schema-valid
+   record per turn with usage and tool calls, and at least one record with
+   `"blocked": true`.
 3. Your two-rule comparison table has at least three runs per condition and a note on
-   the `bash` leak.
+   the `bash` leak — and that leak is recorded under `limitations` in the gate's
+   registry card, which passes `registry:check`.
 
 ## Further reading
 

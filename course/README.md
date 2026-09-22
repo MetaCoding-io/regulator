@@ -72,7 +72,7 @@ The same curriculum ships in three envelopes:
 
 | Envelope | Length | Format | Primary artifact |
 | --- | --- | --- | --- |
-| **Self-paced** | ~40 h + capstone | Repo + written modules + recorded walkthroughs + graded labs | `regulator` at checkpoint 14 |
+| **Self-paced** | ~40 h + capstone (a hypothesis until the pilot measures it) | Repo + written modules + recorded walkthroughs + graded labs | `regulator` at checkpoint 14 |
 | **Cohort** | 6 weeks | 2 × 90 min live sessions/week, labs between, design reviews, capstone crit | Capstone harness + viability case |
 | **Team intensive** | 2 days on-site/remote | Modules 01, 02, 03, 09 and 10 only, labs on *the team's own repo* | A guardrail layer for the team's codebase |
 
@@ -107,7 +107,9 @@ meaning and to where it already exists as mechanism in Pi, GSD-Pi or VSM-Pi, and
 with a *failure → diagnosis → mechanism* table; [FEATURE-MATRIX.md](FEATURE-MATRIX.md)
 lists every Pi documentation page and extension API area against the module that
 teaches it, so the "you learn the feature base anyway" claim is checkable rather than
-asserted.
+asserted. [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) specifies the third thread: a typed,
+CI-checked record per regulator the learner builds, and the read-only control room that
+projects those records and the runtime evidence for the harness's maintainer.
 
 ## What the learner builds
 
@@ -149,8 +151,8 @@ See [ASSESSMENT.md](ASSESSMENT.md).
 | Lesson | Checkpoint | Lab code |
 | --- | --- | --- |
 | [01 — The harness is the regulator](modules/01-the-harness-is-the-regulator.md) | 0: event log | [`lab/src/cp0-event-log.ts`](lab/src/cp0-event-log.ts) |
-| [02 — Anatomy of a turn](modules/02-anatomy-of-a-turn.md) | 1: typed trace + first gate | [`lab/src/cp1-trace.ts`](lab/src/cp1-trace.ts), [`lab/src/trace.ts`](lab/src/trace.ts) |
-| [03 — Tools as the variety interface](modules/03-tools-as-the-variety-interface.md) | 2: three typed tools with an error contract | [`lab/src/cp2-typed-tools.ts`](lab/src/cp2-typed-tools.ts), [`lab/src/conventions.ts`](lab/src/conventions.ts) |
+| [02 — Anatomy of a turn](modules/02-anatomy-of-a-turn.md) | 1: schema-validated trace + first gate + registry seed | [`lab/src/cp1-trace.ts`](lab/src/cp1-trace.ts), [`lab/src/trace.ts`](lab/src/trace.ts), [`lab/registry/`](lab/registry/) |
+| [03 — Tools as the variety interface](modules/03-tools-as-the-variety-interface.md) | 2: three typed tools with error and effect contracts | [`lab/src/cp2-typed-tools.ts`](lab/src/cp2-typed-tools.ts), [`lab/src/conventions.ts`](lab/src/conventions.ts), [`lab/src/effects.ts`](lab/src/effects.ts) |
 | [04 — Capability profiles and the advisory layer](modules/04-capability-profiles-and-the-advisory-layer.md) | 3: profiles as positive grants + advice | [`lab/src/cp3-profiles.ts`](lab/src/cp3-profiles.ts), [`lab/src/profiles.ts`](lab/src/profiles.ts) |
 
 The reference build lives in [`lab/`](lab/) as a workspace package

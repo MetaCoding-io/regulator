@@ -43,7 +43,10 @@ learners to build themselves.
 | **Constraint** | S5's downward definition of the permitted operational space. | `constraint` channel; context files as advice, gates as enforcement. |
 | **Signal** | Ordinary upward operational feedback, including residual uncertainty. | VSM-Pi uncertainty signal tool. |
 | **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `docs/REGULATORY-STATE-AND-ROUTING.md` (M08, M11). |
-| **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/pi-extension/README.md`; `BOUNDARY.md` in the reference build. |
+| **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/pi-extension/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
+| **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `lab/src/effects.ts` (M03); read-only profiles are defined by effect (M04). |
+| **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `lab/registry/`; [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md). |
+| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `retirement.condition` (M14). |
 | **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
 | **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill (M10). |
 
@@ -103,6 +106,9 @@ gates nobody can explain.
 | "Tests pass" with no tests run | Self-report accepted as evidence | Host-owned, criterion-bound, fresh evidence | M09 |
 | Green CI, changed behaviour untested | Evidence not bound to the criterion | Criterion-bound evidence, not "CI is green" | M09 |
 | Agent edits an identity or policy file | Authority by role label, not mechanism | Protected paths, proposal-not-mutation | M10 |
+| A "read-only" profile still changes the world | Read-only judged by tool names, not effects | Effect contracts; `isReadOnlyProfile` | M03, M04 |
+| A gate nobody can explain, or justify keeping | Regulators accrete without records or review | Registry record; ablation arm; retirement condition | M02, M14 |
+| Restart repeats a side effect that already happened | No effect journal, no idempotency key | Journal before effect; reconcile on restart | M08 |
 | A comment in the repo redirects the agent | Data absorbed as control; trust boundary missing | Authority the content cannot reach; project trust | M10 |
 | Stale advisory rewrites working code | Intelligence auto-applied as policy | Typed intelligence → controller decision | M11 |
 | Advisory and sprint commitment collide, last-in wins | Unarbitrated S3–S4 homeostat | Policy-declared severity thresholds; obligation veto | M11, M12 |
