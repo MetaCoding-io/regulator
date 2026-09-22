@@ -23,7 +23,7 @@ if (command === "check") {
   console.log(`${registry.records.length} regulator(s), ${registry.problems.length} problem(s)`);
   const definition = await checkDefinition(labRoot);
   for (const problem of definition.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
-  console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)`);
+  console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)`);
   process.exit(registry.problems.length + definition.problems.length === 0 ? 0 : 1);
 } else if (command === "docs") {
   const outputs: Array<[string, string]> = [[docsPath, renderRegistryMarkdown(registry.records)], [boundaryPath, renderBoundaryMarkdown(registry.records)]];

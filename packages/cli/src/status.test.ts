@@ -52,6 +52,11 @@ test("status: a definition and an instance are read from files only, and the vie
     impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking",
   }), "utf8");
 
+  await writeFile(path.join(definition, "policies", "interaction.json"), JSON.stringify({
+    name: "interaction", version: 1, description: "d", timeoutsMs: { recap: 30_000, choice: 120_000, clarification: 300_000, consent: 300_000, uat: 600_000 },
+    attention: { blockingPerAttempt: 2 }, reminderAfterMs: 3_600_000, people: [{ name: "alice", resolveUpTo: "critical", acceptRisk: true, actAsS5: true }, { name: "bob", resolveUpTo: "blocking", acceptRisk: false, actAsS5: false }],
+  }), "utf8");
+
   const instance = path.join(root, "instance");
   const clock = 5_000_000;
   const store = new ExecutionStore(instance, () => clock);
@@ -81,6 +86,9 @@ test("status: a definition and an instance are read from files only, and the vie
   const owed = await ledger.openObligation({ subject: "unit u1: clarify (oscillation)", unit: "u1", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true, question: "Which behaviour is wanted?" });
   const done = await ledger.openObligation({ subject: "allow x", concern: "policy-proposal", sources: ["p1"], severity: "info", consumer: "S5", blocks: false });
   await ledger.resolve(done.id, { by: "alice", disposition: "rejected", rationale: "no" });
+  await ledger.deliver(owed.id, { by: "S3", channel: "outbox", target: "outbox" });
+  await ledger.requestInteraction({ id: "r1", kind: "consent", subject: "force-push", question: "May I?", action: "git push --force", severity: "blocking", unit: "u1", attempt: 1, obligationId: owed.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await ledger.answerInteraction({ requestId: "r1", outcome: "unavailable", by: "S1", channel: "none" });
 
   await new MemoryStore(instance, () => clock).record({ subject: "runner", note: "lacks docker", evidence: [], recordedBy: "alice", unit: "u1", reviewBy: new Date(clock + 86_400_000).toISOString() });
 
@@ -91,7 +99,8 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.deepEqual(view.instance?.memory.map((m) => [m.subject, m.status]), [["runner", "current"]]);
   assert.equal(view.definition?.recovery[0]?.name, "recovery");
   assert.equal(view.definition?.routing[0]?.name, "routing");
-  assert.deepEqual(view.definition?.problems.filter((p) => /recovery|routing/.test(p)), [], "the three policy shapes are all policies");
+  assert.equal(view.definition?.interaction[0]?.people.length, 2);
+  assert.deepEqual(view.definition?.problems.filter((p) => /recovery|routing|interaction/.test(p)), [], "the four policy shapes are all policies");
   assert.deepEqual(view.definition?.pending, []);
   assert.equal(view.definition?.policies[0]?.name, "default");
   assert.equal(view.definition?.registry.records.length, 1);
@@ -110,11 +119,14 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.equal(view.instance?.signals[0]?.kind, "coordination-signal", "unrouted: nothing has routed it yet");
   assert.deepEqual(view.instance?.obligations.map((o) => [o.consumer, o.status]), [["human", "open"], ["S5", "resolved"]]);
   assert.deepEqual(view.instance?.units[0]?.obligations.map((o) => o.id), [owed.id], "a unit's view carries what is owed on it");
+  assert.deepEqual(view.instance?.obligations[0]?.deliveries, [{ at: new Date(clock).toISOString(), channel: "outbox", reminder: false, target: "outbox" }]);
+  assert.deepEqual(view.instance?.interactions.map((x) => [x.request.kind, x.answers.map((a) => a.outcome)]), [["consent", ["unavailable"]]]);
 
   const text = renderStatusText(view);
   assert.match(text, /recovery recovery v1: 1 rule\(s\), fallback pause/);
   assert.match(text, /routing routing v1: coordination-signal≥advisory→S3; veto at blocking/);
-  assert.match(text, /obligations: 1 open of 2\n {4}open {8} human blocking veto {2}\w{8} {2}recovery-decision {2}unit u1: clarify \(oscillation\) {2}\(unit u1\) {2}Q: Which behaviour is wanted\?/);
+  assert.match(text, /interaction interaction v1: waits recap 30s, choice 120s, clarification 300s, consent 300s, uat 600s; 2 blocking interrupt\(s\) per attempt; remind after 60 min\n {4}alice: up to critical, may accept risk, may act as S5\n {4}bob: up to blocking\n/);
+  assert.match(text, /obligations: 1 open of 2\n {4}open {8} human blocking veto {2}\w{8} {2}recovery-decision {2}unit u1: clarify \(oscillation\) {2}\(unit u1\) {2}Q: Which behaviour is wanted\? {2}delivered ×1 \(outbox\)\n {2}interactions: 1 asked, 1 unanswered\n {4}consent {7}r1 {2}force-push {2}\(unit u1, attempt 1\) {2}via none {2}unavailable by S1\n/);
   assert.match(text, /declared: registry, workload, policies, profiles, identity; pending: $/m);
   assert.match(text, /profile implement: read, write; writes src\//);
   assert.match(text, /identity: INV-001\n/);
@@ -126,6 +138,6 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 
   const empty = await readStatus({ instanceDir: path.join(root, "nothing-here"), now: () => clock });
-  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [] });
+  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [], interactions: [] });
   assert.match(renderStatusText({ generatedAt: "t", definition: undefined, instance: undefined }), /nothing to show/);
 });

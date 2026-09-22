@@ -102,3 +102,65 @@ test("memory from the outside: `memory` lists current facts, `--all` shows expir
   assert.equal(r.code, 1);
   assert.match(r.stderr, /no memory entry "nope"/);
 });
+
+test("the algedonic path from the outside (lesson 13): `answer` records a person's answer as the disposition and refuses an option the question did not offer; `remind` delivers what is due; every `--by` is checked against the interaction policy's people before anything is written", async (t) => {
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  const consent = await ledger.openObligation({ subject: "consent: force-push", unit: "u1", concern: "interaction", sources: ["ask:1"], severity: "blocking", consumer: "human", blocks: true, question: "May I force-push?", openedBy: "S1" });
+  const choice = await ledger.openObligation({ subject: "choice: database", unit: "u1", concern: "interaction", sources: ["ask:2"], severity: "blocking", consumer: "human", blocks: true, question: "Which?", openedBy: "S1" });
+  const critical = await ledger.openObligation({ subject: "algedonic: secrets in the log", unit: "u1", concern: "algedonic-signal", sources: ["a1"], severity: "critical", consumer: "human", blocks: true, openedBy: "S1" });
+  const proposal = await ledger.openObligation({ subject: "rename src/", unit: "u1", concern: "policy-proposal", sources: ["p1"], severity: "advisory", consumer: "S5", blocks: false, openedBy: "S1" });
+  const request = (id: string, kind: "consent" | "choice", obligationId: string, options?: string[]) =>
+    ledger.requestInteraction({ id, kind, subject: "s", question: "q", ...(options ? { options } : {}), ...(kind === "consent" ? { action: "git push --force" } : {}), severity: "blocking", unit: "u1", attempt: 1, obligationId, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await request("r1", "consent", consent.id);
+  await request("r2", "choice", choice.id, ["sqlite", "postgres"]);
+
+  // Delivery on demand: never delivered counts as due; a second run within the interval delivers nothing.
+  let r = await regulator(repo, "remind");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^delivered open {9}human blocking veto {2}\w{8} {2}interaction {2}consent: force-push {2}\(unit u1\) {2}not delivered\n {6}question: May I force-push\?\ndelivered open[\s\S]*3 delivered\n$/, "owed to a person: the proposal owed to S5 is not delivered to a person");
+  r = await regulator(repo, "remind");
+  assert.equal(r.stdout, "0 delivered\n");
+  r = await regulator(repo, "obligations");
+  assert.match(r.stdout, /consent: force-push {2}\(unit u1\) {2}delivered ×1 \(outbox \d{4}-\d{2}-\d{2}T\d{2}:\d{2}\)/);
+
+  // Authority before anything is written.
+  r = await regulator(repo, "answer", consent.id.slice(0, 8), "--by", "mallory", "--answer", "yes");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /"mallory" is not a person the interaction policy \(interaction v1\) names; a name not listed may disposition nothing/);
+  r = await regulator(repo, "obligation", "resolve", critical.id.slice(0, 8), "--by", "bob", "--disposition", "fixed", "--rationale", "rotated");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may disposition up to blocking; this is critical/);
+  r = await regulator(repo, "obligation", "resolve", choice.id.slice(0, 8), "--by", "bob", "--disposition", "accepted-risk", "--rationale", "fine");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not accept risk/);
+  r = await regulator(repo, "identity", "reject", proposal.id.slice(0, 8), "--by", "bob", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await regulator(repo, "obligation", "ack", consent.id.slice(0, 8), "--by", "nobody");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /"nobody" is not a person/);
+  assert.deepEqual((await ledger.obligations()).map((o) => o.status), ["open", "open", "open", "open"], "nothing was written");
+
+  // The answer is the disposition. An option the question did not offer is refused; a consent that is not a yes is a rejection.
+  r = await regulator(repo, "answer", choice.id.slice(0, 8), "--by", "bob", "--answer", "mysql");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the question offers sqlite \| postgres; "mysql" is not one of them/);
+  r = await regulator(repo, "answer", choice.id.slice(0, 8), "--by", "bob", "--answer", "postgres");
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.stdout, "choice answered by bob (fixed): postgres; unit u1 may proceed if nothing else is owed on it, and the next attempt carries the answer\n");
+  r = await regulator(repo, "answer", consent.id.slice(0, 8), "--by", "alice", "--answer", "no, rebase");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^consent answered by alice \(rejected\): no, rebase;/);
+  r = await regulator(repo, "answer", consent.id.slice(0, 8), "--by", "alice", "--answer", "yes");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is resolved/);
+  r = await regulator(repo, "answer", critical.id.slice(0, 8), "--by", "alice", "--answer", "yes");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is algedonic-signal, not a question a unit asked; use `obligation resolve`/);
+  const states = await ledger.obligations();
+  assert.deepEqual(states.map((o) => [o.status, o.closedBy, o.disposition, o.rationale]), [["resolved", "alice", "rejected", "no, rebase"], ["resolved", "bob", "fixed", "postgres"], ["open", undefined, undefined, undefined], ["open", undefined, undefined, undefined]]);
+  assert.deepEqual((await ledger.interactions()).map((i) => i.answers.map((a) => [a.by, a.outcome, a.channel, a.answer])), [[["alice", "answered", "cli", "no, rebase"]], [["bob", "answered", "cli", "postgres"]]]);
+  r = await regulator(repo, "obligation", "resolve", critical.id.slice(0, 8), "--by", "alice", "--disposition", "accepted-risk", "--rationale", "rotated; the log is private");
+  assert.equal(r.code, 0, r.stderr);
+});

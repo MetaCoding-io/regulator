@@ -179,10 +179,10 @@ carry credentials.
   capstone's viability case is generated from the registry.
 
 Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
-lab CLI and twenty-eight records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
+lab CLI and thirty-two records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
 `regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
-policies declared as files since lesson 07; profiles and the identity set since lesson 12) and instance (units with
-contract, report, attempts, budget ledger, recovery decisions since lesson 08, the audit log — evidence, verdicts, acceptances — since lesson 09, and what is owed on the unit since lesson 11; leases; obligations by consumer with the veto marked; operational memory since lesson 12; unrouted signals). `packages/control-room` serves the first page over
+policies declared as files since lesson 07, the interaction policy with its people since lesson 13; profiles and the identity set since lesson 12) and instance (units with
+contract, report, attempts, budget ledger, recovery decisions since lesson 08, the audit log — evidence, verdicts, acceptances — since lesson 09, and what is owed on the unit since lesson 11; leases; obligations by consumer with the veto marked and, since lesson 13, what was delivered where; interactions — what units asked a person and what came back — since lesson 13; operational memory since lesson 12; unrouted signals). `packages/control-room` serves the first page over
 it: the design topology (regulators by function, with the channels each declares), the
 workloads, every instance's units, leases and unrouted signals, and an inspector that shows
 the whole record for a regulator or a unit. It is read-only by construction (every non-GET

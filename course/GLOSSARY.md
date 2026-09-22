@@ -73,9 +73,9 @@ learners to build themselves.
 | **Evidence** | An observation tied to a criterion, an attempt, a source revision and an environment, produced by the host, with freshness. | GSD Verification Evidence (M09). |
 | **Technical verdict** | Pass / fail / inconclusive derived mechanically from required evidence. | GSD (M09). |
 | **Human acceptance** | A person's disposition of a subjective check, separate from the technical verdict. | GSD Subjective UAT (M09, M13). |
-| **Interaction kind** | The contract for a human interaction: open, choice, clarification, recap, consent, subjective UAT. Determines whether an answer is required and whether work pauses. | GSD (M13). |
-| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent. | GSD (M13). |
-| **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. | GSD (M13). |
+| **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts` (M13). |
+| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `course/lab/src/cp12-algedonic.ts` (M13). |
+| **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
 | **Identity** | What the system is. Committed, reviewed, S5. | `vsm/` (M12). |
 | **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). |
 | **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.gsd/vsm-runtime/vsm.db` (M09, M14). |

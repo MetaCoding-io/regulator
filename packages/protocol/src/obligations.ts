@@ -62,6 +62,8 @@ export const ConcernSchema = Type.Union([
   Type.Literal("algedonic-signal"),
   Type.Literal("uncertainty-signal"),
   Type.Literal("recovery-decision"),
+  /** A question a unit asked a person under an interaction contract (lesson 13). */
+  Type.Literal("interaction"),
 ]);
 export type Concern = Static<typeof ConcernSchema>;
 
@@ -97,6 +99,12 @@ export const ObligationEventSchema = Type.Union([
   Type.Object({ type: Type.Literal("obligation-superseded"), ...EventBase, obligationId: NonEmpty, successor: NonEmpty, rationale: NonEmpty }, { additionalProperties: false }),
   /** A message routed as trace only: recorded, cited, and deliberately not an obligation. */
   Type.Object({ type: Type.Literal("message-noted"), ...EventBase, message: NonEmpty, reason: NonEmpty }, { additionalProperties: false }),
+  /** The obligation was put in front of its consumer (lesson 13): where, and whether it was a reminder. */
+  Type.Object({
+    type: Type.Literal("obligation-delivered"), ...EventBase, obligationId: NonEmpty,
+    channel: Type.Union([Type.Literal("outbox"), Type.Literal("tui"), Type.Literal("rpc"), Type.Literal("cli")]),
+    reminder: Type.Boolean(), target: Type.Optional(NonEmpty),
+  }, { additionalProperties: false }),
 ]);
 export type ObligationEvent = Static<typeof ObligationEventSchema>;
 
@@ -109,6 +117,8 @@ export interface ObligationState extends Obligation {
   successor?: string;
   closedAt?: string;
   closedBy?: string;
+  /** Every delivery to the consumer, oldest first. */
+  deliveries: Array<{ at: string; channel: "outbox" | "tui" | "rpc" | "cli"; reminder: boolean; target?: string }>;
   history: ObligationEvent[];
 }
 

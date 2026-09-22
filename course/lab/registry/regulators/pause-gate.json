@@ -1,0 +1,31 @@
+{
+  "id": "reg.algedonic.pause-gate.v1",
+  "name": "Pause gate",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Make 'work waits for an answer' a mechanism in two places. In the session: once a blocking question (choice, clarification, consent, uat) went unanswered, the `tool_call` gate refuses every tool whose declared effect is not read-only except `report_result`, and `agent_before_settle` records the pause and ends the turn. In the loop: after the session, an open blocking interaction obligation on the unit records the attempt as `paused`, holds the unit as blocked awaiting a person, and the recovery router says nothing about it — no retry, no repair, no attempt spent; `runUnit` refuses re-dispatch through the progression veto until a person answers, and the next attempt carries the answer as its hint.",
+  "absorbs": {
+    "failureClass": "waiting-in-name-only",
+    "description": "The tool told the model the question had no answer, and the model, with the tools still live, did the thing anyway — or the orchestrator, seeing an attempt with no close, retried the unit and it asked again, and again."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp12-algedonic.ts",
+    "enforcementPoints": ["tool_call (paused → block unless read-only effect or report_result)", "agent_before_settle (regulator:paused entry, continue: false)", "runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)", "routeUnit (no decision while paused)", "progression veto (re-dispatch refused until dispositioned)"]
+  },
+  "channels": { "consumes": ["the session's own unanswered question", "obligation ledger (open blocking interaction on the unit)"], "emits": ["tool_call block", "regulator:paused (session entry)", "attempt record (paused)", "unit status blocked: paused"] },
+  "scope": { "subjects": ["execution", "interaction"], "resources": ["the session's tools", ".regulator/units/"] },
+  "cost": { "description": "None until a question goes unanswered; then the rest of the session is read-only and the unit waits as long as the person does." },
+  "authority": {
+    "may": ["refuse tools with an effect for the rest of a paused session", "end the turn", "record the attempt as paused and hold the unit"],
+    "mayNot": ["decide the question", "spend an attempt on the wait", "route the unit through the recovery policy", "release the unit without a disposition on the obligation"]
+  },
+  "evidence": { "tests": ["src/cp12-algedonic.test.ts", "src/controller.test.ts"] },
+  "limitations": [
+    "The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.",
+    "The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.",
+    "A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M13"
+}

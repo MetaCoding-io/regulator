@@ -12,9 +12,13 @@ test("the committed registry passes check: every record is well-formed, implemen
   const registry = await checkRegistry(registryDir, labRoot);
   assert.deepEqual(registry.problems, []);
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
+    "reg.algedonic.delivery.v1",
+    "reg.algedonic.interaction-contract.v1",
+    "reg.algedonic.pause-gate.v1",
     "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",
     "reg.audit.identity-untouched-check.v1",
+    "reg.authority.disposition-authority.v1",
     "reg.authority.identity-write-gate.v1",
     "reg.authority.project-trust-rule.v1",
     "reg.authority.proposal-intake.v1",
@@ -50,6 +54,7 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.profiles.map((p) => p.name), ["implement", "intelligence", "research"]);
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
+  assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);
 });
 
 test("REGULATORS.md is generated from the records and has not drifted", async () => {

@@ -10,6 +10,7 @@ import { loadContract } from "./cp5-contract.js";
 import { gitExec, initRepo } from "./git-support.js";
 import { unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
+import { loadInteractionPolicy } from "./interaction-policy.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
 import { loadWorkload } from "./workload.js";
 
@@ -18,7 +19,8 @@ const contractFile = path.join(LAB_ROOT, "contracts", "fix-known-issue.json");
 const policyP = loadPolicy();
 const routingP = loadRoutingPolicy();
 const regulatorsP = loadRegistry(path.join(LAB_ROOT, "registry")).then((r) => r.records.map((x) => x.id));
-const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH, routing: await routingP, regulators: await regulatorsP });
+const interactionP = loadInteractionPolicy();
+const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH, routing: await routingP, interaction: await interactionP, regulators: await regulatorsP });
 
 function reportFor(contract: WorkContract, overrides: Partial<ResultReport> = {}): ResultReport {
   return {
@@ -302,7 +304,7 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   assert.deepEqual(await unitStatus(gitExec, repo3), [], "lease released");
   await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
   assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
-  assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery, routing: base.routing }), undefined, "an aborted unit is not routed again");
+  assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction }), undefined, "an aborted unit is not routed again");
 });
 
 test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
@@ -373,7 +375,7 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   // Commit inside the worktree, as the unit should have; re-audit without an attempt.
   const worktree = path.join(repo, ".regulator", "worktrees", "u1");
   await gitExec("git", ["commit", "-qam", "commit the work"], { cwd: worktree });
-  const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
+  const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(waiting.status, "blocked");
   assert.equal(waiting.status === "blocked" ? waiting.verdict?.verdict : "", "inconclusive");
   assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.awaitingAcceptance : [], ["e-wording"]);
@@ -382,16 +384,16 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
 
   const revision = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: worktree })).stdout.trim();
   await new AuditLog(repo).appendAcceptance({ id: "a1", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision: "0000000", disposition: "accepted", by: "alice", at: "t" });
-  assert.equal((await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing })).status, "blocked", "an acceptance at another revision is a memory");
+  assert.equal((await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction })).status, "blocked", "an acceptance at another revision is a memory");
   await new AuditLog(repo).appendAcceptance({ id: "a2", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision, disposition: "accepted", by: "alice", note: "clear", at: "t" });
-  const closed = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
+  const closed = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(closed.status, "closed");
   assert.equal((await store.getUnit("u1"))?.attempts, 1, "a re-audit is not an attempt");
   assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["check-failure"], "the attempt history is immutable; the audit log says what changed");
   const audit = await new AuditLog(repo).forUnit("u1");
   assert.deepEqual(audit.verdicts.map((v) => v.verdict), ["inconclusive", "inconclusive", "inconclusive", "pass"]);
   assert.equal(await readFile(path.join(repo, "src.txt"), "utf8"), "uncommitted\n");
-  const again = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
+  const again = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(again.status, "refused");
   assert.match(again.status === "refused" ? again.problems[0]?.message ?? "" : "", /is closed; only a blocked unit is re-audited/);
 });
@@ -539,4 +541,76 @@ test("identity in code (lesson 12): a fixed decision must cite an authority that
   assert.equal(await readFile(path.join(repo, "regulator", "identity", "INVARIANTS.md"), "utf8").then((s) => s.includes("editable")), false, "nothing reintegrated");
   const owed = (await new ObligationLedger(repo).open("u1")).filter((o) => o.concern === "audit-finding");
   assert.deepEqual(owed.map((o) => [o.severity, o.blocks]), [["blocking", true]], "the closeout finding names INV-001; the routing floor keeps it at blocking");
+});
+
+test("algedonic (lesson 13): a unit that asked a person and got no answer is recorded as paused, not routed and not retried; what is owed to a person is delivered to the outbox once; `answer` is the person's disposition and the next attempt carries it as the hint", async (t) => {
+  const { EffectJournal, ObligationLedger } = await import("@metacoding/vsm-pi-core");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit, routeUnit } = await import("./controller.js");
+  const { deliverPending, remindDue } = await import("./deliver.js");
+  const { OUTBOX_RELATIVE_PATH } = await import("./cp7-recovery.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const recovery = await loadRecoveryPolicy();
+  const base = await withPolicy();
+  let clock = Date.parse("2026-09-22T12:00:00.000Z");
+  const now = () => clock;
+  const store = new ExecutionStore(repo, now);
+  const ledger = new ObligationLedger(repo, now);
+  const hints: Array<string | undefined> = [];
+
+  // The unit asks for consent headlessly (what checkpoint 12 does in the session) and reports what it has.
+  const driven = await driveUnit(gitExec, {
+    ...base, repo, contract, workload, recovery, owner: "alice", now,
+    dispatcher: async (request) => {
+      hints.push(request.hint);
+      const o = await ledger.openObligation({ subject: "consent: force-push", unit: "u1", concern: "interaction", sources: ["ask:1"], severity: "blocking", consumer: "human", blocks: true, question: "The branch diverged; may I force-push?", openedBy: "S1" });
+      await ledger.requestInteraction({ id: "r1", kind: "consent", subject: "force-push", question: "The branch diverged; may I force-push?", action: "git push --force", severity: "blocking", unit: "u1", attempt: request.attempt, obligationId: o.id, evidence: [], raisedBy: "S1", raisedAt: new Date(clock).toISOString(), timeoutMs: 1000, channel: "none" }, "S1");
+      await ledger.answerInteraction({ requestId: "r1", outcome: "unavailable", by: "S1", channel: "none" });
+      await store.writeReport(reportFor(contract, { attempt: request.attempt, summary: "paused on consent" }));
+      return { sessionId: `s${request.attempt}` };
+    },
+  });
+  assert.equal(driven.final.status, "blocked");
+  assert.equal(driven.final.status === "blocked" && driven.final.reason, "paused");
+  assert.match(driven.final.status === "blocked" ? driven.final.detail ?? "" : "", /^consent: force-push — The branch diverged; may I force-push\? \(obligation [0-9a-f]{8}\)$/);
+  assert.deepEqual(driven.decisions, [], "the recovery policy has nothing to say while a person is asked: no retry, no repair, no attempt spent on it");
+  const unit = await store.getUnit("u1");
+  assert.equal(unit?.status, "blocked");
+  assert.match(unit?.reason ?? "", /^paused: awaiting a person — consent: force-push/);
+  assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["paused"]);
+  assert.equal(await routeUnit(gitExec, { repo, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction, now }), undefined, "not routed while the question is open");
+
+  // Delivered once, through the effect journal, to the same outbox notify_owner uses; recorded on the obligation.
+  const owed = (await ledger.open("u1")).find((o) => o.concern === "interaction")!;
+  const outbox = await readFile(path.join(repo, OUTBOX_RELATIVE_PATH), "utf8");
+  assert.match(outbox, new RegExp(`^deliver:${owed.id}:0 2026-09-22T12:00:00\\.000Z u1 blocking veto interaction on u1: consent: force-push — The branch diverged; may I force-push\\? \\(answer with \`regulator answer ${owed.id.slice(0, 8)}\` or \`regulator obligation resolve ${owed.id.slice(0, 8)}\`\\)\\n$`));
+  assert.deepEqual(owed.deliveries, [{ at: "2026-09-22T12:00:00.000Z", channel: "outbox", reminder: false, target: "outbox" }]);
+  assert.deepEqual(await deliverPending(repo, { policy: base.interaction, now }), [], "nothing pending is delivered twice");
+  assert.deepEqual(await remindDue(repo, { policy: base.interaction, now }), [], "not yet due");
+  clock += base.interaction.reminderAfterMs;
+  const reminded = await remindDue(repo, { policy: base.interaction, now });
+  assert.deepEqual(reminded.map((d) => [d.obligation.id, d.reminder]), [[owed.id, true]]);
+  assert.match(await readFile(path.join(repo, OUTBOX_RELATIVE_PATH), "utf8"), /\ndeliver:[0-9a-f-]+:1 2026-09-22T13:00:00\.000Z u1 REMINDER: blocking veto interaction/);
+  assert.deepEqual((await new EffectJournal(repo, now).states()).filter((e) => e.tool === "deliver").map((e) => e.status), ["committed", "committed"]);
+  assert.equal((await ledger.get(owed.id))?.status, "open", "delivered twice; still not answered");
+
+  // The veto holds re-dispatch; a person's answer releases it and reaches the next attempt.
+  const refused = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", now, dispatcher: async () => ({}) });
+  assert.equal(refused.status, "refused");
+  assert.match(refused.status === "refused" ? refused.problems[0]?.message ?? "" : "", /\(human, blocking, interaction\) is open on unit "u1": consent: force-push; it must be dispositioned before dispatch/);
+  clock += 1000;
+  await ledger.answerInteraction({ requestId: "r1", outcome: "answered", answer: "no, rebase instead", by: "alice", channel: "cli" });
+  await ledger.resolve(owed.id, { by: "alice", disposition: "rejected", rationale: "no, rebase instead" });
+  const resumed = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", now, dispatcher: async (request) => {
+    hints.push(request.hint);
+    await writeFile(path.join(request.worktree, "src", "index.js"), "export const answer = 42;\n");
+    await gitExec("git", ["commit", "-qam", "rebased, as told"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract, { attempt: request.attempt, summary: "done without the force-push" }));
+    return { sessionId: "s2" };
+  } });
+  assert.equal(resumed.status, "closed", JSON.stringify(resumed));
+  assert.deepEqual(hints, [undefined, "Your question (consent: force-push: The branch diverged; may I force-push?) was answered by alice — rejected: no, rebase instead. Do not perform what was refused."]);
+  assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["paused", "reported"]);
 });

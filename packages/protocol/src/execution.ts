@@ -40,6 +40,8 @@ export const AttemptOutcomeSchema = Type.Union([
   Type.Literal("budget-exhausted"),
   /** The report was valid but host-run verification refused closeout (lesson 09). */
   Type.Literal("check-failure"),
+  /** The session asked a person and no answer came (lesson 13): the unit waits on the obligation, and nothing is routed. */
+  Type.Literal("paused"),
   Type.Literal("error"),
 ]);
 export type AttemptOutcome = Static<typeof AttemptOutcomeSchema>;

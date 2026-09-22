@@ -50,14 +50,26 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
 
 export { realExec } from "./exec.js";
 
-export function ctxFor(cwd: string, options: { model?: { provider: string; id: string } } = {}) {
+export interface Dialogs {
+  confirm?: (title: string, message: string, opts?: { timeout?: number }) => Promise<boolean>;
+  select?: (title: string, options: string[], opts?: { timeout?: number }) => Promise<string | undefined>;
+  input?: (title: string, placeholder?: string, opts?: { timeout?: number }) => Promise<string | undefined>;
+}
+
+export function ctxFor(cwd: string, options: { model?: { provider: string; id: string }; hasUI?: boolean; mode?: string; dialogs?: Dialogs } = {}) {
   const notices: { message: string; level: string }[] = [];
   const statuses: Record<string, string> = {};
   const state = { aborts: 0 };
+  const noDialog = async () => { throw new Error("no dialog in this test"); };
   return {
     ctx: {
       cwd,
-      ui: { notify: (message: string, level: string) => notices.push({ message, level }), setStatus: (key: string, value: string) => { statuses[key] = value; } },
+      hasUI: options.hasUI ?? false,
+      mode: options.mode ?? (options.hasUI ? "tui" : "print"),
+      ui: {
+        notify: (message: string, level: string) => notices.push({ message, level }), setStatus: (key: string, value: string) => { statuses[key] = value; },
+        confirm: options.dialogs?.confirm ?? noDialog, select: options.dialogs?.select ?? noDialog, input: options.dialogs?.input ?? noDialog,
+      },
       abort: () => { state.aborts++; },
       getContextUsage: () => ({ tokens: null, contextWindow: 200_000, percent: null }),
       model: options.model,

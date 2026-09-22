@@ -1,7 +1,17 @@
 {
   "name": "intelligence",
   "description": "Read and report intelligence (lesson 11). No write, edit or shell, and no execution of project code. Not read-only by declared effect: report_intelligence and report_result write — to the instance's regulatory log and execution store, never to the repository.",
-  "tools": ["read", "grep", "find", "ls", "read_conventions", "run_checks", "report_intelligence", "report_result"],
+  "tools": [
+    "read",
+    "grep",
+    "find",
+    "ls",
+    "read_conventions",
+    "run_checks",
+    "report_intelligence",
+    "report_result",
+    "ask_human"
+  ],
   "writablePaths": [],
   "thinkingLevel": "medium",
   "advice": [

@@ -129,10 +129,12 @@ const PAGE = String.raw`<!doctype html>
     if (!open.length) return "—";
     return open.map((o) => chip(o.consumer) + (o.blocks ? " " + chip("veto") : "")).join(" ");
   };
+  const deliveredCell = (o) => o.deliveries && o.deliveries.length ? "×" + o.deliveries.length + " " + chip(o.deliveries[o.deliveries.length - 1].channel) + (o.deliveries.some((d) => d.reminder) ? " " + chip("reminded") : "") : (o.consumer === "human" && isOwed(o) ? chip("not delivered") : "—");
   const obligationLine = (o) => chip(o.status) + " " + chip(o.consumer) + " " + chip(o.severity) + (o.blocks && isOwed(o) ? " " + chip("veto") : "") + " <span class='mono'>" + esc(o.id.slice(0, 8)) + "</span> <span class='mono'>" + esc(o.concern) + "</span> " + esc(o.subject) +
     (o.question ? "<br><b>question:</b> " + esc(o.question) : "") +
     (o.disposition ? "<br><span class='banner'>" + esc(o.disposition) + " by " + esc(o.closedBy) + " — " + esc(o.rationale) + "</span>" : o.successor ? "<br><span class='banner'>" + esc(o.status) + " by " + esc(o.closedBy) + " → " + esc(o.successor.slice(0, 8)) + " — " + esc(o.rationale) + "</span>" : "") +
-    (o.acknowledgedBy && o.acknowledgedBy.length ? "<br><span class='banner'>acknowledged by " + esc(o.acknowledgedBy.join(", ")) + "</span>" : "");
+    (o.acknowledgedBy && o.acknowledgedBy.length ? "<br><span class='banner'>acknowledged by " + esc(o.acknowledgedBy.join(", ")) + "</span>" : "") +
+    (o.deliveries && o.deliveries.length ? "<br><span class='banner'>delivered ×" + o.deliveries.length + " (" + esc(o.deliveries[o.deliveries.length - 1].channel) + " " + esc(o.deliveries[o.deliveries.length - 1].at) + ")</span>" : "");
   let view = null, selected = fromHash(), timer = null, paused = false;
   function fromHash() {
     const h = location.hash.slice(1);
@@ -218,6 +220,14 @@ const PAGE = String.raw`<!doctype html>
       for (const r of p.rules) html += "<tr><td class='mono'>" + esc(r.kind) + "</td><td>" + chip(r.minSeverity) + "</td><td>" + chip(r.consumer) + "</td></tr>";
       html += "</table><p class='banner'>veto at " + chip(p.blocksAtOrAbove) + " · a unit waits on " + Object.entries(p.recovery).map(([a, c]) => esc(a) + " → " + esc(c)).join(", ") + " · uncertainty impact → " + Object.entries(p.impactSeverity).map(([i, s]) => esc(i) + " → " + esc(s)).join(", ") + "</p>";
     }
+    for (const p of d.interaction || []) {
+      html += "<h3>Interaction policy</h3><p><b>" + esc(p.name) + "</b> v" + p.version + " — " + esc(p.description) + "</p>";
+      html += "<p class='banner'>waits " + Object.entries(p.timeoutsMs).map(([k, ms]) => esc(k) + " " + Math.round(ms / 1000) + "s").join(", ") + " · " + p.attention.blockingPerAttempt + " blocking interrupt(s) per attempt · remind after " + Math.round(p.reminderAfterMs / 60000) + " min · only a recap continues without an answer (fixed by the protocol, not by this policy)</p>";
+      html += "<table><tr><th>person</th><th>may disposition up to</th><th>accept risk</th><th>act as S5</th></tr>";
+      for (const person of p.people) html += "<tr><td>" + esc(person.name) + "</td><td>" + chip(person.resolveUpTo) + "</td><td>" + (person.acceptRisk ? "yes" : "—") + "</td><td>" + (person.actAsS5 ? "yes" : "—") + "</td></tr>";
+      if (!p.people.length) html += "<tr><td colspan='4' class='empty'>nobody: nothing owed to a person can be dispositioned</td></tr>";
+      html += "</table>";
+    }
     const problems = [...d.registry.problems.map((p) => p.file + ": " + p.message), ...d.problems];
     if (problems.length) html += "<h3>Problems</h3>" + list(problems, (p) => "<span class='problem'>" + esc(p) + "</span>");
     el.innerHTML = html;
@@ -245,9 +255,17 @@ const PAGE = String.raw`<!doctype html>
       html += "</table>";
       const obligations = inst.obligations || [];
       const owed = obligations.filter(isOwed);
-      html += "<h3>Obligations — what is owed, to whom, and what it holds</h3><table><tr><th>status</th><th>owed to</th><th>severity</th><th>veto</th><th>id</th><th>concern</th><th>subject</th><th>unit</th><th>opened</th></tr>";
-      if (!owed.length) html += "<tr><td colspan='9' class='empty'>nothing open" + (obligations.length ? " · " + obligations.length + " dispositioned (see a unit's inspector)" : "") + "</td></tr>";
-      for (const o of owed) html += "<tr><td>" + chip(o.status) + "</td><td>" + chip(o.consumer) + "</td><td>" + chip(o.severity) + "</td><td>" + (o.blocks ? chip("veto") : "—") + "</td><td class='mono'>" + esc(o.id.slice(0, 8)) + "</td><td class='mono'>" + esc(o.concern) + "</td><td>" + esc(o.subject) + (o.question ? "<br><span class='banner'>Q: " + esc(o.question) + "</span>" : "") + "</td><td class='mono'>" + esc(o.unit || "") + "</td><td class='mono'>" + esc(o.openedAt) + "</td></tr>";
+      html += "<h3>Obligations — what is owed, to whom, and what it holds</h3><table><tr><th>status</th><th>owed to</th><th>severity</th><th>veto</th><th>id</th><th>concern</th><th>subject</th><th>unit</th><th>opened</th><th>delivered</th></tr>";
+      if (!owed.length) html += "<tr><td colspan='10' class='empty'>nothing open" + (obligations.length ? " · " + obligations.length + " dispositioned (see a unit's inspector)" : "") + "</td></tr>";
+      for (const o of owed) html += "<tr><td>" + chip(o.status) + "</td><td>" + chip(o.consumer) + "</td><td>" + chip(o.severity) + "</td><td>" + (o.blocks ? chip("veto") : "—") + "</td><td class='mono'>" + esc(o.id.slice(0, 8)) + "</td><td class='mono'>" + esc(o.concern) + "</td><td>" + esc(o.subject) + (o.question ? "<br><span class='banner'>Q: " + esc(o.question) + "</span>" : "") + "</td><td class='mono'>" + esc(o.unit || "") + "</td><td class='mono'>" + esc(o.openedAt) + "</td><td>" + deliveredCell(o) + "</td></tr>";
+      html += "</table>";
+      const interactions = inst.interactions || [];
+      html += "<h3>Interactions — what units asked a person, and what came back</h3><table><tr><th>kind</th><th>id</th><th>subject</th><th>question</th><th>unit</th><th>attempt</th><th>asked via</th><th>outcome</th><th>obligation</th></tr>";
+      if (!interactions.length) html += "<tr><td colspan='9' class='empty'>nothing asked</td></tr>";
+      for (const x of interactions) {
+        const last = x.answers[x.answers.length - 1];
+        html += "<tr><td>" + chip(x.request.kind) + "</td><td class='mono'>" + esc(x.request.id.slice(0, 8)) + "</td><td>" + esc(x.request.subject) + "</td><td>" + esc(x.request.question) + (x.request.action ? "<br><span class='banner'>a yes authorizes: " + esc(x.request.action) + "</span>" : "") + (x.request.options ? "<br><span class='banner'>" + x.request.options.map(esc).join(" | ") + "</span>" : "") + "</td><td class='mono'>" + esc(x.request.unit || "") + "</td><td>" + (x.request.attempt || "—") + "</td><td>" + chip(x.request.channel) + "</td><td>" + (last ? chip(last.outcome) + " " + esc(last.by) + (last.answer ? ": " + esc(last.answer) : "") : chip("pending")) + "</td><td class='mono'>" + esc(x.request.obligationId.slice(0, 8)) + "</td></tr>";
+      }
       html += "</table>";
       const memory = inst.memory || [];
       html += "<h3>Operational memory — facts with provenance and an expiry; not identity</h3><table><tr><th>status</th><th>id</th><th>subject</th><th>note</th><th>by</th><th>unit</th><th>review by</th></tr>";

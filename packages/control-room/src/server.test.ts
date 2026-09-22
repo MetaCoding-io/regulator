@@ -82,6 +82,7 @@ test("the server serves the page and the JSON view, refuses writes, and knows no
   assert.match(html, /read-only/);
   assert.match(html, /fetch\("\/api\/status"/);
   assert.doesNotMatch(html, /method:\s*"POST"/, "the page never writes");
+  assert.match(html, /Interaction policy[\s\S]*Interactions — what units asked a person, and what came back/, "the algedonic view (lesson 13)");
 
   const status = await fetch(`${base}/api/status`);
   assert.equal(status.status, 200);

@@ -14,7 +14,7 @@ export { ExecutionStore } from "./execution-store.js";
 export { appendEntry, appendSignal, isMessage, readEntries, readSignals } from "./signals.js";
 export {
   ObligationLedger, dispositionByDecision, effectiveSeverity, foldObligations, isOpen, progressionVeto, routeMessages, unroutedMessages,
-  type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
+  type InteractionState, type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
 } from "./obligations.js";
 export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
 export { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
@@ -28,3 +28,4 @@ export { checkFilesystemPath, expandToolPath, isUnderProtectedPath, prepareWrite
 export { IDENTITY_FILES, checkAuthorityRefs, parseInvariants, readIdentity, renderIdentitySection, type AuthorityContext, type AuthorityProblem, type IdentityFile, type IdentitySet, type Invariant } from "./identity.js";
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
+export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
