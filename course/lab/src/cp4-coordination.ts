@@ -24,16 +24,30 @@ import { realpath } from "node:fs/promises";
 import type { ExtensionAPI, ExtensionContext, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 import type { CoordinationSignal } from "@metacoding/vsm-pi-protocol";
 import { isReadOnlyEffect, TOOL_EFFECTS } from "@metacoding/vsm-pi-core";
+import { readFile } from "node:fs/promises";
+import { PolicyDefinitionSchema, assertValid } from "@metacoding/vsm-pi-protocol";
 import { LeaseStore, ThrashDetector, type Lease, type ThrashSignal } from "./coordination.js";
 import type { Exec } from "./exec.js";
+import { POLICY_PATH } from "./policy.js";
 import { appendSignal, DEFAULT_LEASE_TTL_MS, leaseStoreFor } from "./unit.js";
 import { baseRoot, checkpoint } from "./worktree.js";
 
 export interface CoordinationExtensionOptions {
   now?: () => number;
   ttlMs?: number;
-  /** Edits to one file, within one unit, before an oscillation signal is raised. */
+  /** Edits to one file, within one unit, before an oscillation signal is raised. Overrides the policy's `coordination.oscillationThreshold` (lesson 12). */
   threshold?: number;
+}
+
+/** The declared threshold: the policy's, from `--policy` / REGULATOR_POLICY / the definition's default; 4 if the policy declares none. */
+export async function oscillationThreshold(policyPath: string): Promise<number> {
+  try {
+    const value: unknown = JSON.parse(await readFile(policyPath, "utf8"));
+    assertValid(PolicyDefinitionSchema, value, "policy");
+    return value.coordination?.oscillationThreshold ?? 4;
+  } catch {
+    return 4;
+  }
 }
 
 export function createCoordinationExtension(options: CoordinationExtensionOptions = {}): (pi: ExtensionAPI) => void {
@@ -125,7 +139,9 @@ export function createCoordinationExtension(options: CoordinationExtensionOption
       initialized = true;
       const flag = pi.getFlag("unit");
       unitId = (typeof flag === "string" && flag) || process.env.REGULATOR_UNIT || "";
-      detector = new ThrashDetector({ unitId: unitId || "no-unit", now, ...(options.threshold ? { threshold: options.threshold } : {}) });
+      const policyFlag = pi.getFlag("policy");
+      const threshold = options.threshold ?? await oscillationThreshold((typeof policyFlag === "string" && policyFlag) || process.env.REGULATOR_POLICY || POLICY_PATH);
+      detector = new ThrashDetector({ unitId: unitId || "no-unit", now, threshold });
       if (!unitId) {
         ctx.ui.setStatus("unit", "unit: none (writes refused)");
         return;

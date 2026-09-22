@@ -13,7 +13,7 @@
       "id": "f-read-only",
       "subject": "the repository",
       "decision": "Nothing in the repository is changed; the answer is a claim with evidence, not a fix.",
-      "authorityRef": "workload unit type research (software-development v1)"
+      "authorityRef": "INV-003"
     }
   ],
   "delegated": [

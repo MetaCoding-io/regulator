@@ -23,7 +23,7 @@
   "limitations": [
     "Counts write and edit tool calls only; edits made through bash are invisible to it.",
     "Memory is per session: a unit resumed in a new session starts counting from zero.",
-    "The threshold is a constant, not a policy; lesson 07 makes it a budget."
+    "The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "introducedIn": "M05"

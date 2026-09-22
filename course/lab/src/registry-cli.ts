@@ -1,13 +1,14 @@
 /**
- * `regulator check` and `regulator docs` for the lab's registry.
+ * `regulator check` and `regulator docs` for the lab's definition.
  *
- *   node dist/registry-cli.js check          validate records, exit 1 on problems
+ *   node dist/registry-cli.js check          validate the registry records and the rest of the definition
+ *                                            (profiles, workload, policies, identity; lesson 12), exit 1 on problems
  *   node dist/registry-cli.js docs [--write]  render REGULATORS.md and BOUNDARY.md (to stdout, or in place)
  */
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
+import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
@@ -20,7 +21,10 @@ const registry = await checkRegistry(registryDir, labRoot);
 if (command === "check") {
   for (const problem of registry.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
   console.log(`${registry.records.length} regulator(s), ${registry.problems.length} problem(s)`);
-  process.exit(registry.problems.length === 0 ? 0 : 1);
+  const definition = await checkDefinition(labRoot);
+  for (const problem of definition.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
+  console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)`);
+  process.exit(registry.problems.length + definition.problems.length === 0 ? 0 : 1);
 } else if (command === "docs") {
   const outputs: Array<[string, string]> = [[docsPath, renderRegistryMarkdown(registry.records)], [boundaryPath, renderBoundaryMarkdown(registry.records)]];
   if (flags.includes("--write")) {

@@ -14,15 +14,18 @@ test("the committed registry passes check: every record is well-formed, implemen
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
     "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",
+    "reg.audit.identity-untouched-check.v1",
     "reg.authority.identity-write-gate.v1",
     "reg.authority.project-trust-rule.v1",
     "reg.authority.proposal-intake.v1",
+    "reg.authority.s5-decision.v1",
     "reg.authority.vendor-write-gate.v1",
     "reg.control.budget-guard.v1",
     "reg.control.contract-advice.v1",
     "reg.control.contract-preserving-compaction.v1",
     "reg.control.evidence-preflight.v1",
     "reg.control.failure-observer.v1",
+    "reg.control.memory-store.v1",
     "reg.control.model-router.v1",
     "reg.control.obligation-router.v1",
     "reg.control.profile-write-grant.v1",
@@ -34,8 +37,19 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.coordination.reintegration.v1",
     "reg.coordination.thrash-detector.v1",
     "reg.coordination.unit-lease.v1",
+    "reg.identity.definition-check.v1",
+    "reg.identity.identity-context.v1",
     "reg.intelligence.intelligence-intake.v1",
   ]);
+});
+
+test("the committed definition passes the definition check: profiles, workload, policies and identity validate and resolve", async () => {
+  const { checkDefinition } = await import("@metacoding/vsm-pi-core");
+  const definition = await checkDefinition(labRoot);
+  assert.deepEqual(definition.problems, []);
+  assert.deepEqual(definition.profiles.map((p) => p.name), ["implement", "intelligence", "research"]);
+  assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
+  assert.equal(definition.routing[0]?.floors?.length, 1);
 });
 
 test("REGULATORS.md is generated from the records and has not drifted", async () => {

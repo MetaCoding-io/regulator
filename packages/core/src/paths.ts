@@ -15,3 +15,5 @@ export const TRACE_RELATIVE_PATH = path.join(REGULATOR_DIR, "trace.ndjson");
 export const EFFECTS_RELATIVE_PATH = path.join(REGULATOR_DIR, "effects.ndjson");
 /** Regulatory state from S3*: evidence records, technical verdicts, human acceptances. Append-only. */
 export const AUDIT_RELATIVE_PATH = path.join(REGULATOR_DIR, "audit.ndjson");
+/** Operational memory (lesson 12): S3's facts about the environment, with provenance and expiry. Append-only. Not identity. */
+export const MEMORY_RELATIVE_PATH = path.join(REGULATOR_DIR, "memory.ndjson");

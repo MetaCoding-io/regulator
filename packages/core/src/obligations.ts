@@ -180,10 +180,21 @@ export class ObligationLedger {
   }
 }
 
-/** The severity the router acts on. An uncertainty's reported impact is a claim; the policy maps it. */
+/**
+ * The severity the router acts on. An uncertainty's reported impact is a
+ * claim; the policy maps it. A policy floor (lesson 12) raises a message that
+ * names what the floor names — an invariant, a protected path — to at least
+ * the floor's severity, whatever the emitter claimed.
+ */
 export function effectiveSeverity(message: VsmMessage, policy: RoutingPolicy): Severity {
-  if (message.kind === "uncertainty-signal") return policy.impactSeverity[message.impact];
-  return message.severity;
+  let severity: Severity = message.kind === "uncertainty-signal" ? policy.impactSeverity[message.impact] : message.severity;
+  // What the message says — subject, observation, rationale — not the invariant a finding cites as its authority:
+  // a closeout refusal under INV-003 applies the invariant; it is not about it.
+  const text = `${message.subject}\n${"observation" in message ? message.observation : ""}\n${"rationale" in message ? message.rationale : ""}`;
+  for (const floor of policy.floors ?? []) {
+    if (new RegExp(floor.pattern).test(text) && !severityAtLeast(severity, floor.severity)) severity = floor.severity;
+  }
+  return severity;
 }
 
 export interface RouteMessagesOptions {

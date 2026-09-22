@@ -47,6 +47,11 @@ export const PolicyDefinitionSchema = Type.Object({
     default: ModelRouteSchema,
     byUnitType: Type.Optional(Type.Record(Type.String(), ModelRouteSchema)),
   }, { additionalProperties: false }),
+  /** S2's declared numbers (lesson 12): what counts as oscillation. */
+  coordination: Type.Optional(Type.Object({
+    /** Edits to one file within one unit before the thrash detector signals. */
+    oscillationThreshold: Type.Integer({ minimum: 2 }),
+  }, { additionalProperties: false })),
 }, { additionalProperties: false });
 export type PolicyDefinition = Static<typeof PolicyDefinitionSchema>;
 

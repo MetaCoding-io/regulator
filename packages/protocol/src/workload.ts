@@ -10,6 +10,9 @@ import { Value } from "typebox/value";
 
 const NonEmpty = Type.String({ minLength: 1 });
 
+/** The host-run checks a unit type may name (lesson 09; `identity-untouched` since lesson 12). */
+export const HOST_CHECK_NAMES = ["run_tests", "run_checks", "identity-untouched"] as const;
+
 export const UnitTypeSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: NonEmpty,

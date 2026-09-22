@@ -4,7 +4,8 @@
  * `/api/status`, and nothing it renders is derived from the repository:
  *
  *   Definition   the registry as a topology (S5 → S1 columns, one card per
- *                regulator, declared channels on each card) and the workloads
+ *                regulator, declared channels on each card), the workloads,
+ *                the profiles, the policies and the identity set (lesson 12)
  *   Instances    units, leases, obligations (what is owed, to whom, and what it
  *                holds) and unrouted signals per instance
  *   Inspector    the whole record for a regulator or a unit — the record, not
@@ -67,7 +68,9 @@ const PAGE = String.raw`<!doctype html>
   .chip.abort, .chip.escalate { background: var(--bad); }
   .chip.open, .chip.human { background: var(--warn); }
   .chip.acknowledged, .chip.S3, .chip.S5, .chip.S4, .chip.S2, .chip.S1, .chip.S3- { background: var(--info); }
-  .chip.resolved, .chip.superseded { background: var(--idle); }
+  .chip.resolved, .chip.superseded, .chip.retracted { background: var(--idle); }
+  .chip.current { background: var(--ok); }
+  .chip.expired { background: var(--warn); }
   .chip.escalated { background: var(--bad); }
   .chip.veto { background: var(--bad); }
   .problem { color: var(--bad); font-size: 12px; }
@@ -179,6 +182,20 @@ const PAGE = String.raw`<!doctype html>
       for (const u of w.unitTypes) html += "<tr><td class='mono'>" + esc(u.name) + "</td><td class='mono'>" + esc(u.profile) + "</td><td class='mono'>" + esc(u.checks.join(", ") || "—") + "</td><td>" + (u.requiresContract ? "required" : "optional") + "</td></tr>";
       html += "</table>";
     }
+    html += "<h3>Profiles — positive grants over declared effects</h3>";
+    if (!d.profiles || !d.profiles.length) html += "<p class='empty'>no profiles declared</p>";
+    else {
+      html += "<table><tr><th>profile</th><th>tools</th><th>writable</th><th>thinking</th></tr>";
+      for (const p of d.profiles) html += "<tr><td class='mono'>" + esc(p.name) + "</td><td class='mono'>" + esc(p.tools.join(", ")) + "</td><td class='mono'>" + esc(p.writablePaths.join(", ") || "—") + "</td><td>" + esc(p.thinkingLevel || "—") + "</td></tr>";
+      html += "</table>";
+    }
+    html += "<h3>Identity — committed, write-protected, proposed against</h3>";
+    if (!d.identity) html += "<p class='empty'>no identity read</p>";
+    else {
+      html += "<p class='banner'>" + esc(Object.keys(d.identity.files || {}).join(", ") || "no files") + (d.identity.problems && d.identity.problems.length ? " · " + d.identity.problems.length + " problem(s)" : "") + "</p>";
+      html += list(d.identity.invariants || [], (i) => "<span class='k'>" + esc(i.id) + "</span> <b>" + esc(i.title) + "</b><br><span class='banner'>" + esc((i.text || "").split("\n")[0]) + "</span>");
+      if (d.identity.problems && d.identity.problems.length) html += list(d.identity.problems, (p) => "<span class='problem'>" + esc(p) + "</span>");
+    }
     html += "<h3>Policies</h3>";
     if (!d.policies || !d.policies.length) html += "<p class='empty'>no policy declared: budgets and model routes are not part of this definition</p>";
     for (const p of d.policies || []) {
@@ -231,6 +248,11 @@ const PAGE = String.raw`<!doctype html>
       html += "<h3>Obligations — what is owed, to whom, and what it holds</h3><table><tr><th>status</th><th>owed to</th><th>severity</th><th>veto</th><th>id</th><th>concern</th><th>subject</th><th>unit</th><th>opened</th></tr>";
       if (!owed.length) html += "<tr><td colspan='9' class='empty'>nothing open" + (obligations.length ? " · " + obligations.length + " dispositioned (see a unit's inspector)" : "") + "</td></tr>";
       for (const o of owed) html += "<tr><td>" + chip(o.status) + "</td><td>" + chip(o.consumer) + "</td><td>" + chip(o.severity) + "</td><td>" + (o.blocks ? chip("veto") : "—") + "</td><td class='mono'>" + esc(o.id.slice(0, 8)) + "</td><td class='mono'>" + esc(o.concern) + "</td><td>" + esc(o.subject) + (o.question ? "<br><span class='banner'>Q: " + esc(o.question) + "</span>" : "") + "</td><td class='mono'>" + esc(o.unit || "") + "</td><td class='mono'>" + esc(o.openedAt) + "</td></tr>";
+      html += "</table>";
+      const memory = inst.memory || [];
+      html += "<h3>Operational memory — facts with provenance and an expiry; not identity</h3><table><tr><th>status</th><th>id</th><th>subject</th><th>note</th><th>by</th><th>unit</th><th>review by</th></tr>";
+      if (!memory.length) html += "<tr><td colspan='7' class='empty'>nothing recorded</td></tr>";
+      for (const m of memory) html += "<tr><td>" + chip(m.status) + "</td><td class='mono'>" + esc(m.id.slice(0, 8)) + "</td><td>" + esc(m.subject) + "</td><td>" + esc(m.note) + (m.retraction ? "<br><span class='banner'>retracted by " + esc(m.retraction.by) + " — " + esc(m.retraction.reason) + "</span>" : "") + "</td><td>" + esc(m.recordedBy) + "</td><td class='mono'>" + esc(m.unit || "") + "</td><td class='mono'>" + esc(m.reviewBy.slice(0, 10)) + "</td></tr>";
       html += "</table>";
       html += "<h3>Unrouted signals — recorded, not yet routed</h3><table><tr><th>kind</th><th>severity</th><th>route</th><th>subject</th><th>unit</th><th>observation</th></tr>";
       if (!inst.signals.length) html += "<tr><td colspan='6' class='empty'>none</td></tr>";

@@ -12,7 +12,7 @@
       "id": "f-signature",
       "subject": "public signature of slugify",
       "decision": "slugify remains a single-argument function returning a string.",
-      "authorityRef": "S3 planning decision P1 (lesson 06)"
+      "authorityRef": "human:course-lab (S3 planning decision P1, lesson 06)"
     }
   ],
   "delegated": [

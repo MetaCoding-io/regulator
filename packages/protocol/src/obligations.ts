@@ -39,6 +39,8 @@ export const DispositionSchema = Type.Union([
   Type.Literal("fixed"),
   Type.Literal("verified"),
   Type.Literal("rejected"),
+  /** Accepted into identity or policy by an explicit S5-authority path (lesson 12). */
+  Type.Literal("accepted"),
   Type.Literal("research-requested"),
   Type.Literal("audit-requested"),
   Type.Literal("policy-clarification-requested"),
@@ -152,6 +154,14 @@ export const RoutingPolicySchema = Type.Object({
   }, { additionalProperties: false }),
   /** An open obligation at or above this severity, naming a unit, vetoes that unit's dispatch and close. */
   blocksAtOrAbove: SeveritySchema,
+  /** Severity floors by subject (lesson 12): a message whose subject or observation matches is raised to at least this severity. */
+  floors: Type.Optional(Type.Array(Type.Object({
+    /** A regular expression tested against the message's subject and observation. */
+    pattern: NonEmpty,
+    severity: SeveritySchema,
+    /** Why: typically the invariant the pattern names. */
+    reason: NonEmpty,
+  }, { additionalProperties: false }))),
 }, { additionalProperties: false });
 export type RoutingPolicy = Static<typeof RoutingPolicySchema>;
 

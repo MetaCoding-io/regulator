@@ -131,3 +131,35 @@ test("human acceptance is separate from the technical verdict: a semantic criter
   assert.equal(rejected.verdict, "fail");
   assert.match(rejected.reasons[0] ?? "", /rejected by alice: too terse/);
 });
+
+test("identity-untouched (lesson 12): INV-001 in code — a change under a protected prefix anywhere on the unit's branch fails, committed or not, whatever the working tree says; without a base ref it is inconclusive", async (t) => {
+  const { cwd } = await project(t);
+  await mkdir(path.join(cwd, "regulator", "identity"), { recursive: true });
+  await writeFile(path.join(cwd, "regulator", "identity", "INVARIANTS.md"), "## INV-001 — x\n\ns\n");
+  await git(cwd, "add", "-A");
+  await git(cwd, "commit", "--quiet", "-m", "identity");
+  await git(cwd, "checkout", "--quiet", "-b", "unit/u1");
+  const protectedPaths = ["regulator/identity/", "vendor/"];
+  const run = async (base?: string) => (await runHostChecks(realExec, { cwd, checks: ["identity-untouched"], protectedPaths, ...(base === undefined ? {} : { base }) }))[0]!;
+  assert.equal((await run()).verdict, "inconclusive");
+  assert.equal((await run("main")).verdict, "pass");
+  assert.match((await run("main")).observation, /no change under regulator\/identity\/, vendor\/ since main/);
+
+  // The route the bash watch cannot see: edit and commit in one command. The tree is clean; the branch is not.
+  await writeFile(path.join(cwd, "regulator", "identity", "INVARIANTS.md"), "## INV-001 — relaxed\n\ns\n");
+  await git(cwd, "commit", "--quiet", "-am", "relax the invariant");
+  assert.equal(await git(cwd, "status", "--porcelain"), "", "git status sees nothing");
+  const failed = await run("main");
+  assert.equal(failed.verdict, "fail");
+  assert.equal(failed.class, "command");
+  assert.match(failed.observation, /^protected paths changed on the branch \(INV-001\): regulator\/identity\/INVARIANTS\.md$/);
+  assert.deepEqual(failed.command, ["git", "diff", "--name-only", "main...HEAD", "--", "regulator/identity/", "vendor/"]);
+
+  // A change under src/ on the same branch is not the identity's business.
+  await git(cwd, "checkout", "--quiet", "main");
+  await git(cwd, "checkout", "--quiet", "-b", "unit/u2");
+  await writeFile(path.join(cwd, "src", "a.js"), "export const a = 2;\n");
+  await git(cwd, "commit", "--quiet", "-am", "work");
+  assert.equal((await run("main")).verdict, "pass");
+  assert.equal((await runHostChecks(realExec, { cwd, checks: ["identity-untouched"], base: "main", protectedPaths: [] }))[0]?.observation, "no protected prefixes declared");
+});

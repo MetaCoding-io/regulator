@@ -1,0 +1,11 @@
+{
+  "name": "research",
+  "description": "Read and report. No write, edit or shell tools, and no execution of project code: every granted tool has a declared read-only effect.",
+  "tools": ["read", "grep", "find", "ls", "read_conventions", "run_checks"],
+  "writablePaths": [],
+  "thinkingLevel": "medium",
+  "advice": [
+    "You are in the research profile: you can read the project and run its static checks, but not change it or run its code.",
+    "Report what you find with file paths and line numbers. If asked to change something, say what you would change and why; do not attempt it."
+  ]
+}

@@ -32,6 +32,8 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   report_result: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
   // Lesson 11: records typed intelligence in the regulatory log. Advice to S3; it never applies anything.
   report_intelligence: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  // Lesson 12: appends a fact with provenance and an expiry to the operational memory store. Never identity.
+  remember: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
 };
 
 export function effectOf(toolName: string): ToolEffect | undefined {

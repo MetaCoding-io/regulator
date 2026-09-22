@@ -20,20 +20,27 @@
  *   node dist/lab-cli.js obligation resolve <id> --by <who> --disposition <d> --rationale <text>
  *   node dist/lab-cli.js obligation escalate <id> --by <who> --to <consumer> --rationale <text>
  *   node dist/lab-cli.js signals route                    route every unrouted message under the routing policy (for sessions run by hand)
+ *   node dist/lab-cli.js memory [--all]                   operational memory: current facts (lesson 12); --all includes expired and retracted
+ *   node dist/lab-cli.js memory retract <id> --by <who> --reason <text>
+ *   node dist/lab-cli.js identity accept <obligation> --by <who> --file <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --from <path> --rationale <text>
+ *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
+ *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
+ *   node dist/lab-cli.js identity reject <obligation> --by <who> --rationale <text>
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
-import { AuditLog, EffectJournal, ExecutionStore, ObligationLedger, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { readFile, writeFile } from "node:fs/promises";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
 import { ConsumerSchema, DispositionSchema, assertValid, type ObligationState } from "@metacoding/vsm-pi-protocol";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
 import { realExec } from "./exec.js";
-import { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
-import { headRevision } from "./worktree.js";
+import { IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
@@ -46,10 +53,11 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text>");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
+const regulatorsP = async () => (await loadRegistry(path.join(labRoot, "registry"))).records.map((r) => r.id);
 
 function describe(o: ObligationState): string {
   return `${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto " : "     "} ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `\n      question: ${o.question}` : ""}${o.disposition ? `\n      ${o.disposition} by ${o.closedBy}: ${o.rationale}` : o.successor ? `\n      ${o.status} by ${o.closedBy} → ${o.successor.slice(0, 8)}: ${o.rationale}` : ""}`;
@@ -96,7 +104,7 @@ try {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
@@ -117,7 +125,7 @@ try {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
@@ -230,6 +238,57 @@ try {
       assertValid(ConsumerSchema, to, `consumer (one of ${ConsumerSchema.anyOf.map((c) => ("const" in c ? c.const : c.anyOf?.map((x) => x.const).join(", "))).join(", ")})`);
       const successor = await ledger.escalate(o.id, { by: by!, to, rationale: rationale! });
       console.log(`obligation ${o.id.slice(0, 8)} escalated by ${by} to ${to}: successor ${successor.id.slice(0, 8)} is now what is owed`);
+    }
+  } else if (command === "memory" && sub === "retract" && rest[0]) {
+    const by = flag("by");
+    const reason = flag("reason");
+    if (!by || !reason) usage();
+    const store = new MemoryStore(process.cwd());
+    const match = (await store.states()).filter((s) => s.id === rest[0] || s.id.startsWith(rest[0]!));
+    if (match.length !== 1) throw new Error(match.length ? `"${rest[0]}" matches ${match.length} entries` : `no memory entry "${rest[0]}"`);
+    await store.retract(match[0]!.id, by!, reason!);
+    console.log(`memory ${match[0]!.id.slice(0, 8)} retracted by ${by}: ${reason}`);
+  } else if (command === "memory") {
+    const states = await new MemoryStore(process.cwd()).states();
+    const shown = sub === "--all" || rest.includes("--all") ? states : states.filter((s) => s.status === "current");
+    if (!shown.length) console.log(states.length ? "nothing current; --all shows expired and retracted entries" : "no memory recorded");
+    for (const s of shown) console.log(`${s.status.padEnd(9)} ${s.id.slice(0, 8)}  ${s.subject}: ${s.note}  (by ${s.recordedBy}${s.unit ? ` in ${s.unit}` : ""}${s.revision ? ` @${s.revision.slice(0, 7)}` : ""}, ${s.recordedAt.slice(0, 10)} → review ${s.reviewBy.slice(0, 10)})${s.retraction ? `\n          retracted by ${s.retraction.by}: ${s.retraction.reason}` : ""}`);
+    console.log(`${shown.length} shown of ${states.length}`);
+  } else if (command === "identity" && (sub === "accept" || sub === "reject") && rest[0]) {
+    // The S5 decision path (INV-002): the only writer of an identity file, run by a person, citing the obligation it decides.
+    const by = flag("by");
+    const rationale = flag("rationale");
+    if (!by || !rationale) usage();
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, rest[0]);
+    if (o.concern !== "policy-proposal" || o.consumer !== "S5") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.concern} owed to ${o.consumer}; \`identity accept|reject\` decides proposals owed to S5`);
+    if (sub === "reject") {
+      await ledger.resolve(o.id, { by: by!, disposition: "rejected", rationale: rationale! });
+      console.log(`proposal ${o.id.slice(0, 8)} rejected by ${by} (S5): ${rationale}; identity unchanged`);
+    } else {
+      const file = flag("file");
+      const from = flag("from");
+      if (!file || !from || !(IDENTITY_FILES as readonly string[]).includes(file)) { console.error(`--file must be one of ${IDENTITY_FILES.join(", ")}`); usage(); }
+      const repo = process.cwd();
+      if (!(await isClean(realExec, repo))) throw new Error("the base checkout has uncommitted changes; an identity decision is committed on its own");
+      const target = path.posix.join(IDENTITY_RELATIVE_DIR, file!);
+      const decision = authorizeWrite(target, "s5-authority");
+      if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+      const content = await readFile(path.resolve(from!), "utf8");
+      await writeFile(path.join(repo, target), content, "utf8");
+      const identity = await readIdentity(path.join(repo, IDENTITY_RELATIVE_DIR));
+      if (identity.problems.length) {
+        const r = await realExec("git", ["checkout", "--", target], { cwd: repo });
+        throw new Error(`the proposed ${file} leaves the identity set invalid (${identity.problems.join("; ")}); reverted${r.code === 0 ? "" : " (revert failed)"}`);
+      }
+      const branch = await currentBranch(realExec, repo);
+      for (const args of [["add", "--", target], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: ${sub} proposal ${o.id.slice(0, 8)} into ${target}\n\nDecided by ${by} under S5 authority. Obligation ${o.id}.\n${rationale}`]]) {
+        const r = await realExec("git", args, { cwd: repo });
+        if (r.code !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr.trim()}`);
+      }
+      const sha = await headRevision(realExec, repo);
+      await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.` });
+      console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted`);
     }
   } else if (command === "signals" && sub === "route") {
     const routed = await routeMessages(new ObligationLedger(process.cwd()), { policy: await routingP() });

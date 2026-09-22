@@ -39,6 +39,9 @@ export interface RunHostChecksOptions {
   checks: readonly string[];
   /** Files a report cites as evidence: each becomes a `file:` check against HEAD. */
   fileRefs?: readonly string[];
+  /** For `identity-untouched` (lesson 12): the base ref the unit branched from, and the prefixes nothing may have changed. */
+  base?: string;
+  protectedPaths?: readonly string[];
   conventions?: ProjectConventions;
   timeoutMs?: number;
   maxObservationChars?: number;
@@ -85,6 +88,26 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
         const raw = check.okWhen === "stdout-empty" && result.code === 0 ? result.stdout : `${result.stderr}\n${result.stdout}`;
         results.push({ check: `run_checks:${check.name}`, class: "command", verdict: ok ? "pass" : "fail", command: check.argv, observation: ok ? `exit ${result.code}` : boundedTail(raw.trim() || `exit ${result.code}`, max).text });
       }
+    } else if (name === "identity-untouched") {
+      // INV-001 in code: nothing under a protected prefix differs between the base and the unit's HEAD — committed or not,
+      // by any route. The bash watch (lesson 10) restores the working tree; this reads the branch.
+      const prefixes = options.protectedPaths ?? conventions.protectedPaths;
+      if (!options.base) {
+        results.push({ check: name, class: "command", verdict: "inconclusive", observation: "no base ref given: the branch cannot be compared" });
+        continue;
+      }
+      if (!prefixes.length) {
+        results.push({ check: name, class: "command", verdict: "pass", observation: "no protected prefixes declared" });
+        continue;
+      }
+      const argv = ["git", "diff", "--name-only", `${options.base}...HEAD`, "--", ...prefixes];
+      const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
+      if (result.code !== 0) {
+        results.push({ check: name, class: "command", verdict: "inconclusive", command: argv, observation: `git diff failed (exit ${result.code}): ${boundedTail(result.stderr.trim(), max).text}` });
+        continue;
+      }
+      const changed = result.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
+      results.push({ check: name, class: "command", verdict: changed.length ? "fail" : "pass", command: argv, observation: changed.length ? `protected paths changed on the branch (INV-001): ${changed.join(", ")}` : `no change under ${prefixes.join(", ")} since ${options.base}` });
     } else {
       results.push({ check: name, class: "command", verdict: "inconclusive", observation: `no host check named "${name}"` });
     }

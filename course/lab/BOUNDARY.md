@@ -38,6 +38,16 @@ Not covered:
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations, lesson 11); neither is merged with the SQLite regulatory event store the reporting tools write.
 
+## Definition check (`reg.identity.definition-check.v1`)
+
+Enforced at `regulator check (checkDefinition, under pnpm check)` in `src/registry-cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
+- It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
+- The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
 Enforced at `notify_owner (execute: begin/commit)`, `session_start (reconcile)` in `src/cp7-recovery.ts`; S2, deterministic-gate.
@@ -69,6 +79,16 @@ Not covered:
 - Only errors the tool layer reports as errors are observed: a test that fails is not an error, and a bash command that exits non-zero without the tool flagging it is invisible.
 - The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened.
 
+## Identity-untouched check (`reg.audit.identity-untouched-check.v1`)
+
+Enforced at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
+- The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
+- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
+
 ## Identity write gate (`reg.authority.identity-write-gate.v1`)
 
 Enforced at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)` in `src/cp9-authority.ts`; S5, deterministic-gate.
@@ -91,6 +111,16 @@ Not covered:
 - Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
+## Operational memory store (`reg.control.memory-store.v1`)
+
+Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `src/cp11-identity.ts`; S3, typed-tool.
+
+Not covered:
+
+- A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
+- Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.
+- Retraction is trusted by name (`--by`), like every disposition in the lab (docs/DEBT.md row 20).
+
 ## Model router (`reg.control.model-router.v1`)
 
 Enforced at `piDispatcher (model choice, failover)`, `model_select (ledger)` in `src/dispatch-pi.ts`; S3, deterministic-gate.
@@ -109,7 +139,7 @@ Not covered:
 
 - Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
 - A consumer is a name in the policy (S3, S5, human). Nothing delivers an obligation to a person or reminds them; the read model and the control room expose what is owed, and lesson 13's algedonic channel is the delivery mechanism for the ones that cannot wait.
-- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy. A message that names a protected invariant is not raised above its severity by that fact; policy floors by subject are lesson 12's.
+- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
 - The CLI trusts `--by`: a resolution records who claimed to resolve it. Authority over dispositions (who may accept a risk at what severity) is not checked, and no dialog asks anyone (lesson 13).
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
@@ -139,7 +169,7 @@ Enforced at `definitionResourceLoader (extensionsOverride, no project skills/pro
 Not covered:
 
 - Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.
-- Context files (AGENTS.md, CLAUDE.md) and project settings are still read: Pi 0.87.0 loads context files regardless of trust, and the dispatcher does not yet substitute an in-memory settings manager, so a project's .pi/settings.json can still shape the session (compaction thresholds, for example).
+- Since lesson 12 the loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.
 - The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.
 - The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves.
 
@@ -149,7 +179,7 @@ Enforced at `propose_policy_change (tool execute)` in `src/cp9-authority.ts`; S5
 
 Not covered:
 
-- A proposal is routed into an obligation owed to S5 (lesson 11) and shown by the read model; nothing delivers it to a person, and the S5 decision itself — accepting the proposal into identity — has no workflow yet (lesson 12).
+- A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; nothing delivers the obligation to that person (lesson 13), and the proposal's requestedChange is text a person turns into a file by hand.
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
@@ -184,6 +214,16 @@ Not covered:
 - A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
 - Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
 
+## S5 decision path (`reg.authority.s5-decision.v1`)
+
+Enforced at `identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)`, `identity reject (ledger.resolve rejected)` in `src/lab-cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- Who may act as S5 is not checked: `--by` is a name (docs/DEBT.md row 20). The record is honest about who claimed the authority; the claim itself is trusted until lesson 13's interaction contracts.
+- The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
+- It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to course/lab/identity/ by hand.
+
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
 
 Enforced at `tool_execution_end` in `src/cp4-coordination.ts`; S2, deterministic-gate.
@@ -192,7 +232,7 @@ Not covered:
 
 - Counts write and edit tool calls only; edits made through bash are invisible to it.
 - Memory is per session: a unit resumed in a new session starts counting from zero.
-- The threshold is a constant, not a policy; lesson 07 makes it a budget.
+- The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
 
 ## Unit lease gate (`reg.coordination.unit-lease.v1`)
 
@@ -220,7 +260,7 @@ Enforced at `runUnit (before createUnit)`, `session_start (cp5-contract)` in `sr
 Not covered:
 
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
-- Authority references on fixed decisions are strings; nothing verifies that the cited invariant or decision exists (lesson 12).
+- Authority references on fixed decisions resolve since lesson 12 — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 ## Advice and judgment
@@ -229,3 +269,4 @@ These regulators do not enforce; they inform. A rule that only they carry is not
 
 - Contract advice section (`reg.control.contract-advice.v1`, prompt): Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - Contract-preserving compaction (`reg.control.contract-preserving-compaction.v1`, model-judgment): The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
+- Identity context (`reg.identity.identity-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.

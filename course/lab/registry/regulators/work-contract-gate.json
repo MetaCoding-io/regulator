@@ -22,7 +22,7 @@
   "evidence": { "tests": ["src/controller.test.ts", "src/cp5-contract.test.ts"] },
   "limitations": [
     "Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.",
-    "Authority references on fixed decisions are strings; nothing verifies that the cited invariant or decision exists (lesson 12).",
+    "Authority references on fixed decisions resolve since lesson 12 — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).",
     "The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
