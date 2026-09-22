@@ -59,5 +59,7 @@
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
+  "ablation": {"switch": "extension:cp9-authority", "note": "Shares checkpoint 9 with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal."},
+  "retirement": {"condition": "Retire when proposals arrive by another typed path (an S3 or S4 proposer) and units stop raising them."},
   "introducedIn": "M10"
 }

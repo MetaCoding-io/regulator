@@ -28,5 +28,7 @@
     "The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations, lesson 11); neither is merged with the SQLite regulatory event store the reporting tools write."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "none", "note": "The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature)."},
+  "retirement": {"condition": "Never: independent verification is INV-003. Individual checks retire under their own conditions."},
   "introducedIn": "M09"
 }

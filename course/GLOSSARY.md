@@ -46,7 +46,7 @@ learners to build themselves.
 | **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/pi-extension/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
 | **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). |
 | **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `lab/registry/`; [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md). |
-| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `retirement.condition` (M14). |
+| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). |
 | **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
 | **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill (M10). |
 
@@ -78,9 +78,11 @@ learners to build themselves.
 | **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
 | **Identity** | What the system is. Committed, reviewed, S5. | `vsm/` (M12). |
 | **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). |
-| **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.gsd/vsm-runtime/vsm.db` (M09, M14). |
+| **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.regulator/*.ndjson`, projected as OpenTelemetry GenAI spans by `regulator spans` (M09, M14). |
 | **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | VSM-Pi drift fixture (M12, M14). |
-| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | Pi `evals` package pattern (M14). |
+| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | `course/lab/evals/drift.json`: arms change only what the definition declares (M14). |
+| **Outcome grader / trajectory grader** | An outcome grader reads the resulting environment and never the transcript; a trajectory grader reads the records of how it got there. Both are needed. | `course/lab/src/graders.ts` (M14). |
+| **Behaviour-bound check** | A criterion observed by content: an evidence expectation carries a check the host runs, and the record binds to that criterion alone. | `export-signature` (M14). |
 
 ## 5. Diagnostic table — from observed failure to mechanism
 

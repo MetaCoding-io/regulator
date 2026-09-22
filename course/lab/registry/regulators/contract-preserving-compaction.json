@@ -28,5 +28,7 @@
     "Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp6-budget", "note": "Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried."},
+  "retirement": {"condition": "No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction."},
   "introducedIn": "M07"
 }

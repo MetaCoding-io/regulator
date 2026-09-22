@@ -31,7 +31,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "profiles/implement.json: declares profile \"implementer\"; the file name must match",
     "profiles/research.json: says read-only but grants run_tests, whose effects are not read-only",
     "workload/sd.json: unit type \"implement\" runs under profile \"implement\", which is not declared under profiles/",
-    "workload/sd.json: unit type \"implement\" names check \"lint\", which the host does not run (known: run_tests, run_checks, identity-untouched)",
+    "workload/sd.json: unit type \"implement\" names check \"lint\", which the host does not run (known: run_tests, run_checks, identity-untouched, export-signature)",
     "workload/sd.json: unit type \"plan\" runs under profile \"nope\", which is not declared under profiles/",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
     "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",

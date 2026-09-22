@@ -30,6 +30,7 @@ async function fixture(t: TestContext) {
     mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: ["tool_call"] },
     evidence: { tests: ["src/gate.test.ts"] }, limitations: ["l"],
     ownership: { owner: "o", introduced: "2026-09-22", reviewBy: "2026-12-01" },
+    ablation: { switch: "extension:gate", note: "n" }, retirement: { condition: "c" },
   }), "utf8");
   await writeFile(path.join(definition, "workload", "sd.json"), JSON.stringify({
     name: "software-development", version: 1, description: "d",
@@ -83,6 +84,7 @@ test("the server serves the page and the JSON view, refuses writes, and knows no
   assert.match(html, /fetch\("\/api\/status"/);
   assert.doesNotMatch(html, /method:\s*"POST"/, "the page never writes");
   assert.match(html, /Interaction policy[\s\S]*Interactions — what units asked a person, and what came back/, "the algedonic view (lesson 13)");
+  assert.match(html, /Assurance — what the evals say[\s\S]*Lifecycle — review, ablation, retirement/, "the assurance and lifecycle views (lesson 14)");
 
   const status = await fetch(`${base}/api/status`);
   assert.equal(status.status, 200);

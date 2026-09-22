@@ -228,6 +228,37 @@ const PAGE = String.raw`<!doctype html>
       if (!p.people.length) html += "<tr><td colspan='4' class='empty'>nobody: nothing owed to a person can be dispositioned</td></tr>";
       html += "</table>";
     }
+    html += "<h3>Assurance — what the evals say</h3>";
+    if (!(d.evals || []).length) html += "<p class='empty'>no eval suite declared under evals/</p>";
+    for (const s of d.evals || []) {
+      html += "<p><b>" + esc(s.name) + "</b> v" + s.version + " — " + esc(s.description) + "</p><p class='banner'>" + s.tasks.length + " task(s) in order · " + s.repetitions + " repetition(s) · baseline " + esc(s.baseline) + " · pre-registered: " + s.metrics.map(esc).join(", ") + "</p>";
+      html += "<table><tr><th>arm</th><th>checks</th><th>extensions</th><th>ablates</th></tr>";
+      for (const a of s.arms) html += "<tr><td class='mono'>" + esc(a.name) + "</td><td class='mono'>" + a.checks.map(esc).join(", ") + "</td><td>" + a.extensions.length + "</td><td class='mono'>" + (a.ablates ? esc(a.ablates) + " <span class='banner'>(" + esc(a.switch || "") + ")</span>" : "—") + "</td></tr>";
+      html += "</table>";
+    }
+    if (!(d.reports || []).length) html += "<p class='empty'>no committed report under evals/reports/: the arms above have not been run, or the run was not kept</p>";
+    for (const r of d.reports || []) {
+      const fp = r.fingerprint;
+      const metrics = Object.keys((r.arms[0] || { metrics: {} }).metrics);
+      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators</p>";
+      html += "<table><tr><th>metric</th>" + r.arms.map((a) => "<th>" + esc(a.arm) + " (n=" + a.runs + ")</th>").join("") + "</tr>";
+      for (const m of metrics) {
+        html += "<tr><td class='mono'>" + esc(m) + "</td>" + r.arms.map((a) => {
+          const s = a.metrics[m];
+          if (!s || s.n === 0) return "<td>—</td>";
+          const sep = (r.lifts || []).find((l) => l.arm === a.arm && l.metric === m);
+          const f = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+          return "<td>" + f(s.mean) + (s.n > 1 ? " <span class='banner'>[" + f(s.ci95[0]) + ", " + f(s.ci95[1]) + "]</span>" : "") + (sep ? " " + chip(sep.separated ? "separates" : "overlaps") : "") + "</td>";
+        }).join("") + "</tr>";
+      }
+      html += "</table><p><b>Interpretation</b> (" + esc(r.interpretedBy) + "): " + esc(r.interpretation) + "</p>";
+    }
+    html += "<h3>Lifecycle — review, ablation, retirement</h3><table><tr><th>regulator</th><th>review by</th><th>ablation</th><th>covered by</th><th>retire when</th></tr>";
+    for (const l of d.lifecycle || []) {
+      html += "<tr><td><span data-reg='" + esc(l.id) + "' class='mono' style='cursor:pointer'>" + esc(l.id) + "</span></td><td class='mono'>" + esc(l.reviewBy) + (l.overdueDays > 0 ? " " + chip("overdue " + l.overdueDays + "d") : "") + "</td><td class='mono'>" + (l.ablation ? esc(l.ablation.switch) : chip("missing")) + "</td><td>" + (l.reportedIn.length ? l.reportedIn.map(esc).join("; ") : l.ablatedIn.length ? "suite " + l.ablatedIn.map(esc).join(", ") + " (no report)" : (l.ablation && l.ablation.switch !== "none" ? chip("no arm") : "—")) + "</td><td>" + esc(l.retirement || "") + "</td></tr>";
+    }
+    if (!(d.lifecycle || []).length) html += "<tr><td colspan='5' class='empty'>no active regulators</td></tr>";
+    html += "</table>";
     const problems = [...d.registry.problems.map((p) => p.file + ": " + p.message), ...d.problems];
     if (problems.length) html += "<h3>Problems</h3>" + list(problems, (p) => "<span class='problem'>" + esc(p) + "</span>");
     el.innerHTML = html;
@@ -288,7 +319,9 @@ const PAGE = String.raw`<!doctype html>
       const r = view.definition && view.definition.registry.records.find((x) => x.id === selected.id);
       if (!r) { el.innerHTML = "<section><h2>Inspector</h2><p class='empty'>record no longer present</p></section>"; return; }
       const a = r.authority || { may: [], mayNot: [] };
+      const life = ((view.definition && view.definition.lifecycle) || []).find((l) => l.id === r.id);
       el.innerHTML = "<section><h2>Regulator</h2><p><b>" + esc(r.name) + "</b><br><span class='mono'>" + esc(r.id) + "</span></p>" +
+        (life ? "<p class='banner'>review by " + esc(life.reviewBy) + (life.overdueDays > 0 ? " (overdue " + life.overdueDays + "d)" : "") + " · ablation " + esc(life.ablation ? life.ablation.switch : "missing") + (life.ablation ? " — " + esc(life.ablation.note) : "") + " · retire when: " + esc(life.retirement || "unstated") + "</p>" : "") +
         "<p>" + esc(r.vsmFunction) + " " + chip(r.mechanism.level) + " " + chip(r.status) + (r.introducedIn ? " " + chip(r.introducedIn) : "") + "</p><dl>" +
         "<dt>purpose</dt><dd>" + esc(r.purpose) + "</dd>" +
         "<dt>absorbs</dt><dd><b>" + esc(r.absorbs.failureClass) + "</b> — " + esc(r.absorbs.description) + "</dd>" +

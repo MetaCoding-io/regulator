@@ -8,6 +8,7 @@ import { promisify } from "node:util";
 import { MemoryStore, ObligationLedger, appendSignal, routeMessages } from "@metacoding/vsm-pi-core";
 import { gitExec, initRepo } from "./git-support.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
+import { LAB_ROOT } from "./workload.js";
 
 const run = promisify(execFile);
 const CLI = fileURLToPath(new URL("./lab-cli.js", import.meta.url));
@@ -163,4 +164,52 @@ test("the algedonic path from the outside (lesson 13): `answer` records a person
   assert.deepEqual((await ledger.interactions()).map((i) => i.answers.map((a) => [a.by, a.outcome, a.channel, a.answer])), [[["alice", "answered", "cli", "no, rebase"]], [["bob", "answered", "cli", "postgres"]]]);
   r = await regulator(repo, "obligation", "resolve", critical.id.slice(0, 8), "--by", "alice", "--disposition", "accepted-risk", "--rationale", "rotated; the log is private");
   assert.equal(r.code, 0, r.stderr);
+});
+
+test("assurance from the outside (lesson 14): `spans` projects the instance's records as redacted GenAI spans, `review --due` lists what the registry owes a review, and `eval` runs a suite headlessly with a scripted unit and writes a report a person still has to interpret", async (t) => {
+  const repo = await initRepo(t);
+  await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n").catch(async () => { const { mkdir } = await import("node:fs/promises"); await mkdir(path.join(repo, ".regulator"), { recursive: true }); await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n"); });
+  const ledger = new ObligationLedger(repo);
+  await appendSignal(repo, { id: "f1", timestamp: "2026-09-22T12:00:00.000Z", source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking", subject: "unit u1: closeout refused (fail)", unit: "u1", observation: "token hunter2hunter2 in output", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const { ExecutionStore } = await import("@metacoding/vsm-pi-core");
+  const store = new ExecutionStore(repo);
+  await store.createUnit({ kind: "task", id: "tc-1", version: 1, unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" } });
+  await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-09-22T12:00:01.000Z", endedAt: "2026-09-22T12:00:05.000Z", outcome: "check-failure", detail: "see hunter2hunter2" });
+  let r = await regulator(repo, "spans");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /unit u1 {26,} unset/);
+  assert.match(r.stdout, /invoke_agent implement[^\n]*\[redacted\]/);
+  assert.match(r.stdout, /2 span\(s\), 1 trace\(s\)/);
+  r = await regulator(repo, "spans", "--json");
+  const spans = r.stdout.trim().split("\n").map((l) => JSON.parse(l) as { name: string; attributes: Record<string, unknown>; events: Array<{ name: string }> });
+  assert.equal(spans.length, 2);
+  assert.doesNotMatch(r.stdout, /hunter2hunter2/, "the canary never leaves the instance");
+  assert.equal(spans[1]!.attributes.detail, "see [REDACTED]");
+  assert.deepEqual(spans[0]!.events.map((e) => e.name), ["audit-finding", "obligation-opened"]);
+
+  r = await regulator(repo, "review");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /reg\.audit\.behaviour-check\.v1 {2}ablation check:export-signature {2}retire when: Never as a mechanism/);
+  assert.match(r.stdout, /\n36 record\(s\)\n$/);
+  r = await regulator(repo, "review", "--due");
+  assert.match(r.stdout, /^0 record\(s\) overdue or due within 0 day\(s\)\n$/, "nothing is overdue at the lesson's date");
+  r = await regulator(repo, "review", "--due", "--within", "3650");
+  assert.match(r.stdout, /36 record\(s\) overdue or due within 3650 day\(s\)/);
+
+  const out = path.join(repo, "eval-report.json");
+  r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 2 of 36 regulators\n/);
+  assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
+  assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
+  assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
+  assert.match(r.stdout, /report written to .*eval-report\.json\n$/);
+  const report = JSON.parse(await readFile(out, "utf8")) as { interpretation: string; interpretedBy: string; fingerprint: { dispatcher: string } };
+  assert.equal(report.interpretedBy, "nobody yet", "a report the CLI wrote without an interpretation file says so");
+  assert.match(report.interpretation, /not yet interpreted by a person/);
+  assert.equal(report.fingerprint.dispatcher, "scripted:reference");
+  r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "nope");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /no scripted behaviour "nope"/);
 });

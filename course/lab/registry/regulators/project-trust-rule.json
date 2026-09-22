@@ -64,5 +64,7 @@
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
+  "ablation": {"switch": "loop:definition-loader", "note": "The dispatcher's loader would have to load the project's extensions, skills and context files; not ablatable without a code change. The injection fixture is the suite."},
+  "retirement": {"condition": "Never: a target repository is data. Retire only with a sandbox that makes loading project code harmless."},
   "introducedIn": "M10"
 }

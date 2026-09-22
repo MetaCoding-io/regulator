@@ -291,7 +291,7 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
     const protectedPaths = [IDENTITY_RELATIVE_DIR, ...conventions.protectedPaths.filter((p) => p !== IDENTITY_RELATIVE_DIR)];
     const results = await runHostChecks(exec, {
       cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
-      base: await currentBranch(exec, options.repo), protectedPaths, conventions,
+      base: await currentBranch(exec, options.repo), protectedPaths, conventions, expectations: contract.expectedEvidence,
     });
     records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
     for (const record of records) await log.appendEvidence(record);

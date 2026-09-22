@@ -27,5 +27,7 @@
     "The veto names the unit id. Intelligence that affects a unit not yet contracted holds it once it exists; intelligence that affects a file, a dependency or a workload has no unit to hold and is an obligation for S3 to read."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:progression-veto", "note": "The veto is the loop's check on open obligations at dispatch and close; not ablatable by the harness."},
+  "retirement": {"condition": "Never: a blocking obligation that does not block is a note."},
   "introducedIn": "M11"
 }

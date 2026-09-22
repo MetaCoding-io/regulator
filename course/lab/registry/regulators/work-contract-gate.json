@@ -26,5 +26,7 @@
     "The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:check-contract", "note": "The contract check runs before anything is claimed; not ablatable by the harness. An unsound contract with no gate is dispatched as written."},
+  "retirement": {"condition": "Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect."},
   "introducedIn": "M06"
 }

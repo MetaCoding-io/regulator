@@ -28,5 +28,7 @@
     "One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp10-intelligence", "note": "A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on."},
+  "retirement": {"condition": "Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read."},
   "introducedIn": "M11"
 }

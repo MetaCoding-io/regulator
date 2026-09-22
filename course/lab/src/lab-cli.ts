@@ -28,6 +28,10 @@
  *   node dist/lab-cli.js identity reject <obligation> --by <who> --rationale <text>
  *   node dist/lab-cli.js answer <obligation> --by <who> --answer <text>   answer a question a unit asked (lesson 13): recorded as the person's disposition; the next attempt carries it
  *   node dist/lab-cli.js remind                            deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
+ *   node dist/lab-cli.js eval <suite.json> [--behaviour <reference|drifter|sloppy>] [--arm <name>]... [--reps <n>] [--out <file>]
+ *                                 [--interpretation <file>] [--by <who>] [--keep]   run the suite (lesson 14): scripted units headlessly, or live units through the Pi dispatcher
+ *   node dist/lab-cli.js spans [--json]                    the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
+ *   node dist/lab-cli.js review [--due] [--within <days>]  the registry's review dates; --due lists what is overdue or due within the window
  *
  * Every `--by` is checked against the interaction policy's people: a name not listed may disposition nothing, and what a
  * listed person may do (severity, accepted-risk, S5) is declared there. The name itself is asserted, not authenticated.
@@ -37,14 +41,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
-import { readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
 import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding/vsm-pi-protocol";
 import { deliverPending, remindDue } from "./deliver.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
+import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
+import { CHECKPOINT_EXTENSIONS, piDispatcher } from "./dispatch-pi.js";
+import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
-import { piDispatcher } from "./dispatch-pi.js";
 import { realExec } from "./exec.js";
 import { IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
@@ -60,7 +66,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -329,6 +335,50 @@ try {
     await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli" });
     await ledger.resolve(o.id, { by, disposition, rationale: answer! });
     console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
+  } else if (command === "eval" && sub) {
+    // Evidence about the regulators (lesson 14). A behaviour names a scripted unit; without one the Pi dispatcher runs live units under each arm's extensions.
+    const suite = await loadSuite(path.resolve(sub));
+    const behaviour = flag("behaviour");
+    if (behaviour !== undefined && !isBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy)`);
+    const arms = rest.flatMap((a, i) => (a === "--arm" && rest[i + 1] ? [rest[i + 1]!] : []));
+    const reps = flag("reps") ? Number(flag("reps")) : undefined;
+    const interpretationFile = flag("interpretation");
+    const interpretation = interpretationFile ? (await readFile(path.resolve(interpretationFile), "utf8")).trim() : `Run by \`regulator eval\` with ${behaviour ? `the scripted ${behaviour} unit` : "live units"}; not yet interpreted by a person.`;
+    const coverage = ablationCoverage(suite, (await loadRegistry(path.join(labRoot, "registry"))).records.map((r) => r.id));
+    if (coverage.unknown.length) throw new Error(`suite ablates ${coverage.unknown.join(", ")}, which the registry does not declare`);
+    console.log(`suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s), ${arms.length ? arms.join(", ") : suite.arms.map((a) => a.name).join(", ")} × ${reps ?? suite.repetitions} repetition(s); ${behaviour ? `scripted ${behaviour}` : "live"}; ablation arms cover ${coverage.covered.length} of ${coverage.covered.length + coverage.uncovered.length} regulators`);
+    const dist = path.join(labRoot, "dist");
+    const report = await runSuite(realExec, {
+      suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
+      dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => piDispatcher({ echo: false, extensionPaths: arm.extensions.map((e) => path.join(dist, `${e}.js`)).filter((p) => CHECKPOINT_EXTENSIONS.includes(p)) }),
+      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
+      interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : "nobody yet"), keepInstances: rest.includes("--keep"),
+      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
+    });
+    for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s)}`).join("; ")}`);
+    for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
+    const out = flag("out");
+    if (out) {
+      await mkdir(path.dirname(path.resolve(out)), { recursive: true });
+      await writeFile(path.resolve(out), `${JSON.stringify(report, null, 2)}\n`, "utf8");
+      console.log(`report written to ${path.resolve(out)}${path.resolve(out).startsWith(REPORTS_DIR) ? " (committed reports are checked by `regulator check`)" : ""}`);
+    }
+  } else if (command === "spans") {
+    const { projectSpans } = await import("@metacoding/vsm-pi-core");
+    const spans = await projectSpans(process.cwd());
+    if (rest.includes("--json") || sub === "--json") for (const s of spans) console.log(JSON.stringify(s));
+    else {
+      for (const s of spans) console.log(`${s.startTime.slice(0, 19)}  ${s.parentSpanId ? "  " : ""}${s.name.padEnd(36)} ${s.status.padEnd(6)} ${s.attributes["vsm.regulator.id"] ?? ""}${s.attributes["vsm.redacted"] === true ? "  [redacted]" : ""}`);
+      console.log(`${spans.length} span(s), ${new Set(spans.map((s) => s.traceId)).size} trace(s)`);
+    }
+  } else if (command === "review") {
+    const { reviewDue } = await import("@metacoding/vsm-pi-core");
+    const { records } = await loadRegistry(path.join(labRoot, "registry"));
+    const today = new Date().toISOString().slice(0, 10);
+    const within = flag("within") ? Number(flag("within")) : 0;
+    const due = rest.includes("--due") || sub === "--due" ? reviewDue(records, today, within) : records.filter((r) => r.status === "active").map((r) => ({ record: r, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((Date.parse(today) - Date.parse(r.ownership.reviewBy)) / 86_400_000) }));
+    for (const d of due) console.log(`${d.overdueDays > 0 ? `overdue ${d.overdueDays}d` : `due in ${-d.overdueDays}d`}`.padEnd(16) + `  ${d.reviewBy}  ${d.record.id}  ablation ${d.record.ablation?.switch ?? "—"}  retire when: ${d.record.retirement?.condition ?? "—"}`);
+    console.log(`${due.length} record(s)${rest.includes("--due") || sub === "--due" ? ` overdue or due within ${within} day(s)` : ""}`);
   } else if (command === "remind") {
     const delivered = await remindDue(process.cwd(), { policy: await interactionP() });
     for (const d of delivered) console.log(`${d.reminder ? "reminded " : "delivered"} ${describe(d.obligation)}`);

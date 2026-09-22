@@ -1,4 +1,4 @@
-# Drift scenario (recorded in lesson 12, run in lesson 14)
+# Drift scenario (recorded in lesson 12, run in lesson 14 as `evals/drift.json`)
 
 A longitudinal fixture for the eval harness: a sequence of related units against the
 `slugkit` fixture whose *architectural conformance* can be measured after N units, so the
@@ -37,8 +37,16 @@ For each arm, after all six units:
 ## The two arms
 
 - **Control**: checkpoints 2–8 (tools, profiles, leases, contract, budget, recovery,
-  evidence), no identity rendered, no `identity-untouched` check, no memory tool.
-- **Treatment**: checkpoints 2–11.
+  evidence), the test suite as the only closeout check, no identity rendered, no memory
+  tool.
+- **Treatment**: checkpoints 2–12 with the full check list — `run_checks`, `run_tests`,
+  `identity-untouched`, `export-signature`.
+- **Ablation arms** (lesson 14): the treatment minus one check each — `no-identity-check`
+  and `no-behaviour-check` — so a regulator's contribution is its own row.
+
+The committed reports under `evals/reports/` ran the suite with three scripted
+learner-style units (reference, drifter, sloppy) and say so in their fingerprint; a live
+run with a model is lesson 14's drill 2, and its report is the one that counts.
 
 The honest result is the one lesson 14's plan asks for: at least one row where the
 gated arm loses (slower, costlier, or refusing a unit a person would have allowed), and

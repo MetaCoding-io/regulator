@@ -5,6 +5,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
 | `reg.algedonic.delivery.v1` | Algedonic delivery | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.behaviour-check.v1` | Behaviour check (export-signature) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.canary-watch.v1` | Canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
@@ -13,6 +14,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.identity.definition-check.v1` | Definition check | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.disposition-authority.v1` | Disposition authority | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
+| `reg.assurance.eval-harness.v1` | Eval harness and graders | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.evidence-preflight.v1` | Evidence preflight | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.identity.identity-context.v1` | Identity context | S5 | prompt | active | 2026-12-01 |
@@ -29,9 +31,11 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.proposal-intake.v1` | Proposal intake | S5 | typed-tool | active | 2026-12-01 |
 | `reg.control.recovery-router.v1` | Recovery router | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.identity.regulator-lifecycle.v1` | Regulator lifecycle | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.s5-decision.v1` | S5 decision path | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.assurance.span-projection.v1` | Span projection (OpenTelemetry GenAI) | S3* | type | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | active | 2026-12-01 |
@@ -72,6 +76,49 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `loop:deliver-pending` — Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only.
+
+**Retirement condition.** Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before.
+
+
+## Behaviour check (export-signature)
+
+`reg.audit.behaviour-check.v1` · S3* · deterministic-gate · active · introduced in M14
+
+**Purpose.** Observe a criterion by content, not by class. An evidence expectation may carry a check — `export-signature` names a module, an export and the parameter count it must keep — and at closeout the host imports the module in its own process at the unit's HEAD and reads the function. The record binds to that one criterion, so a passing suite that never exercises the behaviour cannot satisfy it, and a runtime-class criterion with host evidence no longer waits for a person: acceptance is asked only where no probe exists. The drift scenario's signature is the first behaviour-bound check; the mechanism is any expectation's to carry.
+
+**Absorbs.** `evidence-by-class` — The contract fixed slugify's signature; the unit added a second parameter with a default; every test still passed; the verdict was pass, because test-class evidence satisfied a test-class criterion and nothing looked at the export.
+
+**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)`, `bindEvidence (criterion binding)`, `technicalVerdict (host evidence before acceptance for runtime criteria)`
+
+**Channels.** consumes `contract expectations that carry a check`, `the worktree at HEAD` · emits `evidence record (class runtime, bound to the criterion)`
+
+**Scope.** subjects evidence · resources the unit's worktree
+
+**Cost.** One child process per carrying expectation at every closeout; no model calls.
+
+**May.**
+- import a module of the unit's tree at HEAD and read an export
+- bind the result to the criterion that asked
+
+**May not.**
+- satisfy a criterion by class
+- read source text instead of running it
+- observe anything an expectation did not declare
+
+**Evidence.** `../../packages/checks/src/verify.test.ts`, `src/evals.test.ts`
+
+**Limitations.**
+- One kind of check exists: an export's declared parameter count. Return types, thrown errors and behaviour under input are not observed; `Function.length` stops at the first defaulted parameter, so a defaulted second argument passes as a one-argument signature.
+- The probe imports the module: import-time side effects run in the host's process tree, at HEAD, once per closeout. A module that cannot be imported is inconclusive, never a pass.
+- A criterion that carries no check is still bound by class, as before. Content binding is opt-in per expectation, and the drift contracts are the only ones that opt in so far.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `check:export-signature` — The drift suite's no-behaviour-check arm drops the check from every unit type and the signature criterion from the contract: the signature is a fixed decision in prose only.
+
+**Retirement condition.** Never as a mechanism; the export-signature kind retires when no contract in a quarter of runs carries it, and a richer behaviour check (a runtime probe over inputs) has replaced it.
+
 
 ## Budget guard
 
@@ -109,6 +156,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp6-budget` — The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries.
+
+**Retirement condition.** No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models.
+
 
 ## Canary watch
 
@@ -142,6 +193,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - By the time message_end records a leak the text has left the process: the finding is evidence of exposure, not prevention. Network egress is not watched at all; the lesson names it as the boundary a container provides.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it.
+
+**Retirement condition.** No canary reaches a tool result or the model's text in the injection fixture across three model versions with the watch off.
 
 
 ## Closeout gate
@@ -182,6 +237,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `none` — The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature).
+
+**Retirement condition.** Never: independent verification is INV-003. Individual checks retire under their own conditions.
+
 
 ## Contract advice section
 
@@ -210,6 +269,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp5-contract` — Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all.
+
+**Retirement condition.** Retire the advice when a contract-aware model needs no rendered section: units under three model versions report every delegated decision without it, with the gate still on.
 
 
 ## Contract-preserving compaction
@@ -247,6 +310,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp6-budget` — Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried.
+
+**Retirement condition.** No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction.
+
 
 ## Definition check
 
@@ -282,6 +349,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `none` — A check on the definition, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against.
+
+**Retirement condition.** Never: a declared control plane is checked as a whole or it is assembled.
+
 
 ## Disposition authority
 
@@ -316,6 +387,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `policy:interaction.people` — A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything.
+
+**Retirement condition.** Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts.
 
 
 ## Effect journal
@@ -353,6 +428,52 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp7-recovery` — Shares checkpoint 7 with the failure observer; delivery (lesson 13) uses the same journal from the loop and is not ablated with the extension.
+
+**Retirement condition.** No side-effecting tool is invoked twice for one intention across the recovery drills and three model versions with the journal off — which is to say never, because a restart is not a model behaviour.
+
+
+## Eval harness and graders
+
+`reg.assurance.eval-harness.v1` · S3* · deterministic-gate · active · introduced in M14
+
+**Purpose.** Evidence about the regulators: lesson 09 one recursion level up. A suite declares the fixture, the tasks in order, the arms (which checkpoint extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose) and trajectory graders (the records: refusals, retries, escalations, invariant violations), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.
+
+**Absorbs.** `regulation-without-evidence` — Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves.
+
+**Mechanism.** `src/evals.ts` at `runSuite (one instance per arm × repetition, the tasks through driveUnit)`, `contractForArm / workloadForArm (an arm changes only what the definition declares)`, `graders.ts (outcome and trajectory graders, no judge model)`, `checkDefinition (suites and committed reports validate; ablation arms name their switch)`
+
+**Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
+
+**Scope.** subjects evidence, regulators · resources temporary instances under the OS temp directory, evals/reports/
+
+**Cost.** One full loop per task per arm per repetition: minutes for a scripted run of the drift suite, hours and model spend for a live one.
+
+**May.**
+- run the loop under a declared arm in a throwaway instance
+- grade the outcome and the records
+- summarize and stamp
+
+**May not.**
+- change the loop, a policy or a card
+- retire a regulator (a person does, on the record)
+- conclude: the interpretation is a person's
+- grade with a model
+
+**Evidence.** `src/evals.test.ts`, `../../packages/core/src/evals.test.ts`
+
+**Limitations.**
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement.
+- The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
+- Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
+- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — The harness is the ablation mechanism; an arm without it is no evidence at all.
+
+**Retirement condition.** Never: a control system that cannot measure itself only grows. Individual graders retire when the drift they measure has not appeared in a quarter of live runs.
+
 
 ## Evidence preflight
 
@@ -388,6 +509,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp8-evidence` — A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost.
+
+**Retirement condition.** Reports under three model versions cite only evidence the session produced, with the preflight off, and the closeout gate's contradicted count stays at zero.
+
 
 ## Failure observer
 
@@ -421,6 +546,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp7-recovery` — Shares checkpoint 7 with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures.
+
+**Retirement condition.** The router's decisions in the recovery drills match the observer's causes for three model versions when the observer is off, because the orchestrator's records alone name them.
 
 
 ## Identity context
@@ -457,6 +586,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp11-identity` — Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement.
+
+**Retirement condition.** Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone.
+
 
 ## Identity-untouched check
 
@@ -490,6 +623,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `check:identity-untouched` — The drift suite's no-identity-check arm: the check is dropped from every unit type's list; the write gate and the bash watch still run in a live session.
+
+**Retirement condition.** No protected path changes on any unit branch across three model versions and the drift suite with the check off — the session gates alone hold the line — measured by the boundary grader.
 
 
 ## Identity write gate
@@ -529,6 +666,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
+
+**Retirement condition.** No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable.
+
 
 ## Intelligence intake
 
@@ -565,6 +706,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp10-intelligence` — A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on.
+
+**Retirement condition.** Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read.
 
 
 ## Interaction contract (ask_human)
@@ -604,6 +749,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp12-algedonic` — Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows.
+
+**Retirement condition.** Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads.
+
 
 ## Operational memory store
 
@@ -640,6 +789,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp11-identity` — Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead.
+
+**Retirement condition.** The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact.
+
 
 ## Model router
 
@@ -674,6 +827,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `policy:models.fallback` — An empty fallback list is the ablation; the harness does not throw policy switches, and failover needs a live dispatcher.
+
+**Retirement condition.** No primary-model failure in a quarter of live runs, or a provider-side retry that makes the fallback redundant.
 
 
 ## Obligation router
@@ -715,6 +872,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `loop:route-messages` — Routing is a step of the loop; not ablatable by the harness. An arm without it leaves every message unrouted and nothing holds a unit.
+
+**Retirement condition.** Never: an obligation is how a consequential signal stays visible until absorbed. Individual routing rules retire when a message kind is never raised.
+
 
 ## Pause gate
 
@@ -752,6 +913,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `extension:cp12-algedonic` — Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence.
+
+**Retirement condition.** Never while a question can go unanswered: the gate is the meaning of 'waits'.
+
 
 ## Profile write grant
 
@@ -780,6 +945,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Lexical path check only, as for the vendor write gate.
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
+
+**Ablation.** `extension:cp3-profiles` — A live arm without checkpoint 3 lets a unit write anywhere its tools reach; the closeout checks catch protected prefixes only, and the boundary grader counts the rest.
+
+**Retirement condition.** The boundary grader stays at zero across three model versions and the drift suite with the grant off: units write under src/ and test/ because the contract says so.
 
 
 ## Progression veto
@@ -818,6 +987,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `loop:progression-veto` — The veto is the loop's check on open obligations at dispatch and close; not ablatable by the harness.
+
+**Retirement condition.** Never: a blocking obligation that does not block is a note.
+
 
 ## Project trust rule
 
@@ -854,6 +1027,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `loop:definition-loader` — The dispatcher's loader would have to load the project's extensions, skills and context files; not ablatable without a code change. The injection fixture is the suite.
+
+**Retirement condition.** Never: a target repository is data. Retire only with a sandbox that makes loading project code harmless.
+
 
 ## Proposal intake
 
@@ -887,6 +1064,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal.
+
+**Retirement condition.** Retire when proposals arrive by another typed path (an S3 or S4 proposer) and units stop raising them.
 
 
 ## Recovery router
@@ -928,6 +1109,50 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `policy:recovery.rules` — A policy whose every rule is escalate is the ablation: every blocked unit goes to a person. The harness does not throw policy switches.
+
+**Retirement condition.** Never as a mechanism; individual rules retire when a cause is not seen in a quarter of runs.
+
+
+## Regulator lifecycle
+
+`reg.identity.regulator-lifecycle.v1` · S5 · deterministic-gate · active · introduced in M14
+
+**Purpose.** Every regulator was added to absorb a failure a particular model produced on a particular day, and models change. Every active record now carries an ablation switch — the arm that turns it off, or `none` with the reason the harness cannot — and a retirement condition, or `regulator check` refuses it. `regulator review --due` lists what is overdue for review by the date each record carries; the read model and the control room's lifecycle view show, per record, the switch, whether a committed eval report covers it, and the condition under which it may go. Retiring a regulator is a recorded decision: the record's status becomes `retired` and it keeps its history.
+
+**Absorbs.** `control-system-that-only-grows` — A workaround for one model's habit, still costing latency and attention on every run three model versions later, because nothing ever asked whether the habit persisted and nobody owned the question.
+
+**Mechanism.** `../../packages/core/src/registry.ts` at `checkRegistry (active record without ablation or retirement is a problem)`, `reviewDue`, `regulator review --due (CLI)`, `the lifecycle view (read model, control room)`
+
+**Channels.** consumes `registry records`, `eval suites and committed reports` · emits `registry problems`, `the lifecycle view`
+
+**Scope.** subjects registry · resources registry/regulators/, evals/
+
+**Cost.** Two fields per record and a date check; the eval runs that pay a retirement condition are the harness's cost.
+
+**May.**
+- refuse a record without a switch or a condition
+- list what is due
+- show what an eval covers
+
+**May not.**
+- retire anything
+- run an ablation
+- change a review date
+
+**Evidence.** `../../packages/core/src/control-plane.test.ts`, `src/lab-cli.test.ts`, `src/registry.test.ts`
+
+**Limitations.**
+- A retirement condition is prose; nothing checks that a committed report satisfies it. The lifecycle view shows coverage (an ablation arm exists for the record), not satisfaction; a person reads the report against the condition.
+- Review dates are checked on demand, not scheduled: `regulator review --due` runs when someone runs it, and nothing under CI fails on an overdue record (docs/DEBT.md row 32).
+- Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — A check on the registry; there is no run it participates in.
+
+**Retirement condition.** Never: the record that decides retirement cannot retire before the last regulator does.
+
 
 ## Reintegration guard
 
@@ -962,6 +1187,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `none` — The merge is the loop's close step; an arm without it never lands work. Conflict handling is exercised by the coordination drills, not ablated.
+
+**Retirement condition.** Never: reintegration is how domain output reaches the base. The conflict-signal path retires when two units cannot share a base.
+
 
 ## Result report gate
 
@@ -995,6 +1224,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp5-contract` — Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report.
+
+**Retirement condition.** Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them.
 
 
 ## S5 decision path
@@ -1033,6 +1266,52 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `none` — A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand.
+
+**Retirement condition.** Never: INV-002 names it as the only writer. Retire with the proposal path, not before.
+
+
+## Span projection (OpenTelemetry GenAI)
+
+`reg.assurance.span-projection.v1` · S3* · type · active · introduced in M14
+
+**Purpose.** One read of every append-only record an instance keeps — units, attempts, budgets, evidence, verdicts, decisions, effects, obligations, interactions, memory — as OpenTelemetry GenAI spans (`invoke_agent` per attempt, `execute_tool` for checks, effects and deliveries, `chat` for what the budget ledger knows of the model calls), correlated by `vsm.unit.id`, `vsm.attempt`, `vsm.evidence.id`, `vsm.obligation.id`, `vsm.regulator.id` and the policy version, so a tracing backend joins runtime events to registry records without a vendor adapter. Every string attribute passes redaction — the instance's canaries and credential shapes — before it leaves the store, and a span that had something redacted says so. The transcript is never projected.
+
+**Absorbs.** `evidence-nobody-can-join` — Six NDJSON logs and a SQLite store, each honest on its own, and no way to ask which regulator fired on which attempt of which unit without reading them all by hand — or a way that shipped the API key in the tool output.
+
+**Mechanism.** `../../packages/core/src/spans.ts` at `projectSpans (schema-validated SpanRecord per record; redact on every string attribute)`, `reportSpans (one span per eval run)`, `regulator spans (CLI)`
+
+**Channels.** consumes `.regulator/units/`, `audit.ndjson`, `signals.ndjson`, `effects.ndjson`, `memory.ndjson`, `.regulator/canaries` · emits `span records (NDJSON)`
+
+**Scope.** subjects evidence, execution, obligation · resources the instance's .regulator/
+
+**Cost.** A full read of the instance's logs per projection; no model calls, nothing written.
+
+**May.**
+- read every store
+- redact
+- emit spans
+
+**May not.**
+- read the transcript
+- write to any store
+- emit an attribute that failed redaction
+- invent a correlation the records do not carry
+
+**Evidence.** `../../packages/core/src/spans.test.ts`, `src/lab-cli.test.ts`
+
+**Limitations.**
+- Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.
+- Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.
+- The SQLite regulatory event store the reporting tools write (`.gsd/vsm-runtime/vsm.db`) is not projected: it is the Pi extension's store, not the lab instance's, and its path still carries a GSD-era name (docs/DEBT.md row 31).
+- Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — A read model over the stores; switching it off changes no run.
+
+**Retirement condition.** Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate.
+
 
 ## Thrash detector
 
@@ -1064,6 +1343,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `extension:cp4-coordination` — Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later.
+
+**Retirement condition.** No oscillation in the oscillation fixture across three model versions with the detector off: the models stop alternating on their own, or the ceiling catches it at acceptable cost.
 
 
 ## Unit lease gate
@@ -1098,6 +1381,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
+**Ablation.** `loop:lease` — Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm.
+
+**Retirement condition.** Never while two sessions can target one worktree.
+
 
 ## Vendor write gate
 
@@ -1125,6 +1412,10 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Covers the write and edit tools; bash and custom tools bypass it. Checkpoint 9 adds the bash snapshot-and-restore for protected paths.
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
+
+**Ablation.** `extension:cp1-trace` — Checkpoint 1's gate; superseded in a live session by checkpoint 9's preflight, which the same arm carries. The closeout check catches vendor/ at the revision without either.
+
+**Retirement condition.** Already superseded: retire when checkpoint 9 is the minimum an arm loads, keeping the record as history.
 
 
 ## Work contract gate
@@ -1158,3 +1449,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `loop:check-contract` — The contract check runs before anything is claimed; not ablatable by the harness. An unsound contract with no gate is dispatched as written.
+
+**Retirement condition.** Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect.

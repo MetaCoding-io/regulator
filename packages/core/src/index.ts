@@ -7,7 +7,7 @@ export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatory
 export { TOOL_EFFECTS, effectOf, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
 export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "./profiles.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
-export { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, type LoadedRegistry, type RegistryProblem } from "./registry.js";
+export { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";
@@ -29,3 +29,5 @@ export { IDENTITY_FILES, checkAuthorityRefs, parseInvariants, readIdentity, rend
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
+export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
+export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, type Attributes, type ProjectSpansOptions, type RedactionRules } from "./spans.js";

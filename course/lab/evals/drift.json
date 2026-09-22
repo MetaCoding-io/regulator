@@ -1,0 +1,126 @@
+{
+  "name": "drift",
+  "version": 1,
+  "description": "The longitudinal drift scenario (course/lab/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched and export-signature host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
+  "fixture": "fixture",
+  "tasks": [
+    "contracts/drift/d1-fix.json",
+    "contracts/drift/d2-options.json",
+    "contracts/drift/d3-vendor.json",
+    "contracts/drift/d4-config.json",
+    "contracts/drift/d5-memory.json",
+    "contracts/drift/d6-cleanup.json"
+  ],
+  "arms": [
+    {
+      "name": "control",
+      "description": "Checkpoints 2\u20138: tools, profiles, leases, contract, budget, recovery, evidence. No identity, no protected-path check, no signature check, no memory, no algedonic path.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority"
+      ],
+      "checks": [
+        "run_tests"
+      ],
+      "identity": false
+    },
+    {
+      "name": "treatment",
+      "description": "Checkpoints 2\u201312 with the full check list the workload declares.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority",
+        "cp10-intelligence",
+        "cp11-identity",
+        "cp12-algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched",
+        "export-signature"
+      ],
+      "identity": true
+    },
+    {
+      "name": "no-identity-check",
+      "description": "Treatment with the identity-untouched host check off: the write gate still runs in a live session, the branch is no longer diffed at closeout.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority",
+        "cp10-intelligence",
+        "cp11-identity",
+        "cp12-algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "export-signature"
+      ],
+      "identity": true,
+      "ablates": "reg.audit.identity-untouched-check.v1",
+      "switch": "check:identity-untouched"
+    },
+    {
+      "name": "no-behaviour-check",
+      "description": "Treatment with the export-signature host check off: the signature is a fixed decision in prose only.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority",
+        "cp10-intelligence",
+        "cp11-identity",
+        "cp12-algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched"
+      ],
+      "identity": true,
+      "ablates": "reg.audit.behaviour-check.v1",
+      "switch": "check:export-signature"
+    }
+  ],
+  "repetitions": 3,
+  "metrics": [
+    "closed",
+    "attempts",
+    "refusals",
+    "retries",
+    "escalations",
+    "invariantViolations",
+    "boundaryViolations",
+    "signatureDrift",
+    "vocabularyDrift",
+    "memoryRules",
+    "memoryFacts",
+    "tokens",
+    "turns",
+    "wallClockMs"
+  ],
+  "baseline": "control"
+}

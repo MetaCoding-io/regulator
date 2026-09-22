@@ -81,8 +81,28 @@ export async function checkRegistry(registryDir: string, root: string): Promise<
     if (record.mechanism.level === "deterministic-gate" && !record.limitations?.length) {
       loaded.problems.push({ file, message: "a gate must state at least one limitation (its enforcement boundary)" });
     }
+    // Lesson 14: a regulator that cannot be switched off cannot be shown to help, and one with no retirement condition only grows.
+    if (record.status === "active" && !record.ablation) loaded.problems.push({ file, message: "active regulator names no ablation switch (`none` is allowed, with a note saying why)" });
+    if (record.status === "active" && !record.retirement) loaded.problems.push({ file, message: "active regulator states no retirement condition" });
   }
   return loaded;
+}
+
+export interface ReviewDue {
+  record: RegulatorRecord;
+  reviewBy: string;
+  /** Days overdue (positive) or until due (negative). */
+  overdueDays: number;
+}
+
+/** Active records whose review date has passed, or will within `withinDays`, at `today` (ISO date). */
+export function reviewDue(records: readonly RegulatorRecord[], today: string, withinDays = 0): ReviewDue[] {
+  const now = Date.parse(today);
+  return records
+    .filter((r) => r.status === "active")
+    .map((r) => ({ record: r, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((now - Date.parse(r.ownership.reviewBy)) / 86_400_000) }))
+    .filter((d) => d.overdueDays >= -withinDays)
+    .sort((a, b) => b.overdueDays - a.overdueDays);
 }
 
 /** Human-readable view, generated so it can never drift from the records. */
@@ -112,6 +132,7 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
     lines.push(`**Evidence.** ${r.evidence.tests.map((t) => `\`${t}\``).join(", ") || "(none)"}${r.evidence.lastVerifiedRevision ? ` · last verified at \`${r.evidence.lastVerifiedRevision}\`` : ""}`, "");
     if (r.limitations?.length) lines.push("**Limitations.**", ...r.limitations.map((l) => `- ${l}`), "");
     lines.push(`**Ownership.** ${r.ownership.owner} · introduced ${r.ownership.introduced} · review by ${r.ownership.reviewBy}`, "");
+    if (r.ablation) lines.push(`**Ablation.** \`${r.ablation.switch}\` — ${r.ablation.note.trim()}`, "");
     if (r.retirement) lines.push(`**Retirement condition.** ${r.retirement.condition.trim()}`, "");
   }
   return `${lines.join("\n").trimEnd()}\n`;

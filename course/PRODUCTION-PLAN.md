@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 done.** Lessons 01–13
-are written end to end with checkpoints 0–12, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 done, Phase 4 begun.** Lessons 01–14
+are written end to end with checkpoints 0–13, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -74,10 +74,14 @@ once).
 
 - drift fixture and the control/treatment eval harness, with per-regulator ablation
   arms, confidence intervals, environment fingerprints, and outcome *and* trajectory
-  graders;
-- OpenTelemetry GenAI span mapping for the event store, with redaction rules;
+  graders — **done** (lesson 14, checkpoint 13: the drift suite with four arms, three
+  scripted learner-style units, five outcome graders and the trajectory counts, Student's
+  t intervals, three committed reports with interpretations; the live run is a drill);
+- OpenTelemetry GenAI span mapping for the event store, with redaction rules — **done**
+  (lesson 14: `projectSpans` over every instance store, `regulator spans`);
 - the control room: topology, live, assurance, lifecycle and replay views over
-  registry ∪ events ∪ eval results, read-only;
+  registry ∪ events ∪ eval results, read-only — topology, live, assurance and
+  lifecycle **done**; replay is lesson 15's;
 - MCP / A2A / ACS portability appendix for M15, and the M03 MCP-export appendix;
 - **adversarial grader fixtures**: a library of deliberately weak implementations per
   checkpoint that the graders must reject;
@@ -85,7 +89,9 @@ once).
 - capstone rubric calibration against at least three real submissions.
 
 Exit criterion: an eval report from the reference build that is honest about at least one
-fixture where the gated arm loses.
+fixture where the gated arm loses. — **met** (the drifter report: the treatment arm closes none of six
+units against the control arm's six, at three attempts each; the sloppy report: prose and
+vocabulary drift identical in both arms).
 
 ## Review findings incorporated (2026-09-22)
 
@@ -200,9 +206,9 @@ does:
 1. Review lessons 01–10 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 14 with checkpoint 13 (observability and evals: the drift scenario run under
-   both arms with outcome and trajectory graders, the event store with the OTel span
-   mapping, and the first behaviour-bound check); the control room gains the evidence
-   view.
+3. Lesson 15 with checkpoint 14 (packaging and operating: the definition as a pi package
+   that installs and runs one unit in a clean second repository, the release path for
+   identity decisions, the operating appendix — a watcher over the outbox, review dates
+   under CI, the replay view); then the capstone rubric.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

@@ -9,8 +9,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type CapabilityProfile, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
@@ -29,6 +29,9 @@ export interface CheckedDefinition {
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
   identity: IdentitySet;
+  /** Eval suites under evals/ and committed reports under evals/reports/ (lesson 14). */
+  evals: EvalSuite[];
+  reports: EvalReport[];
   problems: DefinitionProblem[];
 }
 
@@ -41,7 +44,7 @@ async function jsonFiles(dir: string): Promise<string[]> {
 }
 
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), problems: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
@@ -106,5 +109,40 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   if (!out.routing.length) problem("policies/", "no routing policy declared");
   if (!out.interaction.length) problem("policies/", "no interaction policy declared: nothing says how long to wait for a person or who may answer");
   for (const p of out.identity.problems) problem("identity/", p);
+
+  // Evals (lesson 14): a suite is part of the declaration — its tasks must exist, its baseline must be an arm, its checks must be
+  // ones the host runs, and an ablation arm must say which switch it throws. A committed report must validate, or it is a rumour.
+  for (const file of await jsonFiles(path.join(dir, "evals"))) {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(dir, "evals", file), "utf8"));
+      assertValid(EvalSuiteSchema, value, `eval suite ${file}`);
+      out.evals.push(value);
+      if (!value.arms.some((a) => a.name === value.baseline)) problem(`evals/${file}`, `baseline "${value.baseline}" is not an arm`);
+      const names = new Set<string>();
+      for (const arm of value.arms) {
+        if (names.has(arm.name)) problem(`evals/${file}`, `arm "${arm.name}" is declared twice`);
+        names.add(arm.name);
+        for (const check of arm.checks) if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`evals/${file}`, `arm "${arm.name}" names check "${check}", which the host does not run`);
+        if (arm.ablates && !arm.switch) problem(`evals/${file}`, `arm "${arm.name}" ablates ${arm.ablates} but names no switch`);
+        if (arm.switch?.startsWith("check:") && arm.checks.includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
+      }
+      for (const task of value.tasks) {
+        try { await readFile(path.join(dir, task)); } catch { problem(`evals/${file}`, `task "${task}" does not exist`); }
+      }
+      try { await readdir(path.join(dir, value.fixture)); } catch { problem(`evals/${file}`, `fixture "${value.fixture}" does not exist`); }
+    } catch (error) {
+      problem(`evals/${file}`, (error as Error).message);
+    }
+  }
+  for (const file of await jsonFiles(path.join(dir, "evals", "reports"))) {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(dir, "evals", "reports", file), "utf8"));
+      assertValid(EvalReportSchema, value, `eval report ${file}`);
+      out.reports.push(value);
+      if (!out.evals.some((s) => s.name === value.suite.name)) problem(`evals/reports/${file}`, `reports on suite "${value.suite.name}", which evals/ does not declare`);
+    } catch (error) {
+      problem(`evals/reports/${file}`, (error as Error).message);
+    }
+  }
   return out;
 }

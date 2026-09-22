@@ -27,5 +27,7 @@
     "The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "policy:models.fallback", "note": "An empty fallback list is the ablation; the harness does not throw policy switches, and failover needs a live dispatcher."},
+  "retirement": {"condition": "No primary-model failure in a quarter of live runs, or a provider-side retry that makes the fallback redundant."},
   "introducedIn": "M07"
 }

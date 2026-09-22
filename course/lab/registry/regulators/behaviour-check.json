@@ -1,0 +1,33 @@
+{
+  "id": "reg.audit.behaviour-check.v1",
+  "name": "Behaviour check (export-signature)",
+  "status": "active",
+  "vsmFunction": "S3*",
+  "purpose": "Observe a criterion by content, not by class. An evidence expectation may carry a check — `export-signature` names a module, an export and the parameter count it must keep — and at closeout the host imports the module in its own process at the unit's HEAD and reads the function. The record binds to that one criterion, so a passing suite that never exercises the behaviour cannot satisfy it, and a runtime-class criterion with host evidence no longer waits for a person: acceptance is asked only where no probe exists. The drift scenario's signature is the first behaviour-bound check; the mechanism is any expectation's to carry.",
+  "absorbs": {
+    "failureClass": "evidence-by-class",
+    "description": "The contract fixed slugify's signature; the unit added a second parameter with a default; every test still passed; the verdict was pass, because test-class evidence satisfied a test-class criterion and nothing looked at the export."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "../../packages/checks/src/verify.ts",
+    "enforcementPoints": ["runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)", "bindEvidence (criterion binding)", "technicalVerdict (host evidence before acceptance for runtime criteria)"]
+  },
+  "channels": { "consumes": ["contract expectations that carry a check", "the worktree at HEAD"], "emits": ["evidence record (class runtime, bound to the criterion)"] },
+  "scope": { "subjects": ["evidence"], "resources": ["the unit's worktree"] },
+  "cost": { "description": "One child process per carrying expectation at every closeout; no model calls." },
+  "authority": {
+    "may": ["import a module of the unit's tree at HEAD and read an export", "bind the result to the criterion that asked"],
+    "mayNot": ["satisfy a criterion by class", "read source text instead of running it", "observe anything an expectation did not declare"]
+  },
+  "evidence": { "tests": ["../../packages/checks/src/verify.test.ts", "src/evals.test.ts"] },
+  "limitations": [
+    "One kind of check exists: an export's declared parameter count. Return types, thrown errors and behaviour under input are not observed; `Function.length` stops at the first defaulted parameter, so a defaulted second argument passes as a one-argument signature.",
+    "The probe imports the module: import-time side effects run in the host's process tree, at HEAD, once per closeout. A module that cannot be imported is inconclusive, never a pass.",
+    "A criterion that carries no check is still bound by class, as before. Content binding is opt-in per expectation, and the drift contracts are the only ones that opt in so far."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "check:export-signature", "note": "The drift suite's no-behaviour-check arm drops the check from every unit type and the signature criterion from the contract: the signature is a fixed decision in prose only." },
+  "retirement": { "condition": "Never as a mechanism; the export-signature kind retires when no contract in a quarter of runs carries it, and a richer behaviour check (a runtime probe over inputs) has replaced it." },
+  "introducedIn": "M14"
+}

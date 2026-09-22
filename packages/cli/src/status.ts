@@ -13,12 +13,12 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, readIdentity, summarizeLedger,
+  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, readIdentity, summarizeLedger,
   type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type UnitAudit,
 } from "@metacoding/vsm-pi-core";
 import {
-  CapabilityProfileSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
@@ -35,10 +35,28 @@ export interface DefinitionView {
   profiles: CapabilityProfile[];
   /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
   identity: IdentitySet;
+  /** Eval suites and committed reports (lesson 14): the assurance view's source. */
+  evals: EvalSuite[];
+  reports: EvalReport[];
+  /** Per active regulator: when it is due for review, how it is ablated, whether a committed report covers that, and when it may retire (lesson 14). */
+  lifecycle: LifecycleRow[];
   problems: string[];
   /** Which parts of the definition are declared as files, and which are absent. */
   declared: Array<"registry" | "workload" | "policies" | "profiles" | "identity">;
   pending: Array<"profiles" | "policies" | "identity">;
+}
+
+export interface LifecycleRow {
+  id: string;
+  name: string;
+  reviewBy: string;
+  /** Days past the review date at the view's generation time; negative when still ahead. */
+  overdueDays: number;
+  ablation: { switch: string; note: string } | undefined;
+  retirement: string | undefined;
+  /** Suites with an arm that ablates this regulator, and committed reports that ran such an arm. */
+  ablatedIn: string[];
+  reportedIn: string[];
 }
 
 export interface UnitView {
@@ -82,7 +100,7 @@ export interface ReadStatusOptions {
   now?: () => number;
 }
 
-export async function readDefinition(dir: string): Promise<DefinitionView> {
+export async function readDefinition(dir: string, now: () => number = Date.now): Promise<DefinitionView> {
   const registry = await checkRegistry(path.join(dir, "registry"), dir);
   const problems: string[] = [];
   const workloads: WorkloadDefinition[] = [];
@@ -142,6 +160,36 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
   }
   const identity = await readIdentity(path.join(dir, "identity"));
   for (const p of identity.problems) problems.push(`identity/: ${p}`);
+  const evals: EvalSuite[] = [];
+  const reports: EvalReport[] = [];
+  for (const file of await jsonFilesIn(path.join(dir, "evals"))) {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(dir, "evals", file), "utf8"));
+      assertValid(EvalSuiteSchema, value, `eval suite ${file}`);
+      evals.push(value);
+    } catch (error) {
+      problems.push(`evals/${file}: ${(error as Error).message}`);
+    }
+  }
+  for (const file of await jsonFilesIn(path.join(dir, "evals", "reports"))) {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(dir, "evals", "reports", file), "utf8"));
+      assertValid(EvalReportSchema, value, `eval report ${file}`);
+      reports.push(value);
+    } catch (error) {
+      problems.push(`evals/reports/${file}: ${(error as Error).message}`);
+    }
+  }
+  const today = now();
+  const lifecycle: LifecycleRow[] = registry.records.filter((r) => r.status === "active").map((r) => {
+    const ablatedIn = evals.filter((s) => s.arms.some((a) => a.ablates === r.id)).map((s) => s.name);
+    const arms = new Set(evals.flatMap((s) => s.arms.filter((a) => a.ablates === r.id).map((a) => `${s.name}:${a.name}`)));
+    return {
+      id: r.id, name: r.name, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((today - Date.parse(r.ownership.reviewBy)) / 86_400_000),
+      ablation: r.ablation, retirement: r.retirement?.condition, ablatedIn,
+      reportedIn: reports.filter((rep) => rep.arms.some((a) => arms.has(`${rep.suite.name}:${a.arm}`))).map((rep) => `${rep.suite.name} v${rep.suite.version} (${rep.fingerprint.dispatcher})`),
+    };
+  });
   const declared: DefinitionView["declared"] = ["registry"];
   const pending: DefinitionView["pending"] = [];
   if (workloads.length) declared.push("workload");
@@ -158,10 +206,21 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
     interaction,
     profiles,
     identity,
+    evals,
+    reports,
+    lifecycle,
     problems,
     declared,
     pending,
   };
+}
+
+async function jsonFilesIn(dir: string): Promise<string[]> {
+  try {
+    return (await readdir(dir)).filter((f) => f.endsWith(".json")).sort();
+  } catch {
+    return [];
+  }
 }
 
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
@@ -191,7 +250,7 @@ export async function readStatus(options: ReadStatusOptions): Promise<StatusView
   const now = options.now ?? Date.now;
   return {
     generatedAt: new Date(now()).toISOString(),
-    definition: options.definitionDir ? await readDefinition(path.resolve(options.definitionDir)) : undefined,
+    definition: options.definitionDir ? await readDefinition(path.resolve(options.definitionDir), now) : undefined,
     instance: options.instanceDir ? await readInstance(path.resolve(options.instanceDir), now) : undefined,
   };
 }
@@ -219,6 +278,14 @@ export function renderStatusText(view: StatusView): string {
       lines.push(`  interaction ${policy.name} v${policy.version}: waits ${Object.entries(policy.timeoutsMs).map(([k, ms]) => `${k} ${Math.round(ms / 1000)}s`).join(", ")}; ${policy.attention.blockingPerAttempt} blocking interrupt(s) per attempt; remind after ${Math.round(policy.reminderAfterMs / 60_000)} min`);
       for (const p of policy.people) lines.push(`    ${p.name}: up to ${p.resolveUpTo}${p.acceptRisk ? ", may accept risk" : ""}${p.actAsS5 ? ", may act as S5" : ""}`);
     }
+    for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
+    for (const r of d.reports) {
+      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}`);
+      for (const a of r.arms) lines.push(`    ${a.arm.padEnd(20)} n=${a.runs}  ${["closed", "refusals", "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules"].filter((m) => a.metrics[m]).map((m) => `${m} ${formatSummary(a.metrics[m]!, 2)}`).join("  ")}`);
+    }
+    const overdue = d.lifecycle.filter((l) => l.overdueDays > 0);
+    lines.push(`  lifecycle: ${d.lifecycle.length} active regulator(s), ${overdue.length} overdue for review, ${d.lifecycle.filter((l) => l.ablatedIn.length).length} with an ablation arm, ${d.lifecycle.filter((l) => l.reportedIn.length).length} with a committed ablation report`);
+    for (const l of overdue) lines.push(`    overdue ${l.overdueDays}d  ${l.id}  (review by ${l.reviewBy})`);
     for (const problem of [...d.registry.problems.map((p) => `${p.file}: ${p.message}`), ...d.problems]) lines.push(`  ! ${problem}`);
   }
   if (view.instance) {

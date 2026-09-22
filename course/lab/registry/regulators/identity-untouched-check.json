@@ -27,5 +27,7 @@
     "It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "check:identity-untouched", "note": "The drift suite's no-identity-check arm: the check is dropped from every unit type's list; the write gate and the bash watch still run in a live session."},
+  "retirement": {"condition": "No protected path changes on any unit branch across three model versions and the drift suite with the check off — the session gates alone hold the line — measured by the boundary grader."},
   "introducedIn": "M12"
 }

@@ -27,5 +27,7 @@
     "The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "policy:interaction.people", "note": "A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything."},
+  "retirement": {"condition": "Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts."},
   "introducedIn": "M13"
 }

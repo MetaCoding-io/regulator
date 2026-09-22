@@ -25,5 +25,7 @@
     "Covers the write and edit tools; bash and custom tools bypass it. Checkpoint 9 adds the bash snapshot-and-restore for protected paths."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-21", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp1-trace", "note": "Checkpoint 1's gate; superseded in a live session by checkpoint 9's preflight, which the same arm carries. The closeout check catches vendor/ at the revision without either."},
+  "retirement": {"condition": "Already superseded: retire when checkpoint 9 is the minimum an arm loads, keeping the record as history."},
   "introducedIn": "M02"
 }

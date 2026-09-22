@@ -12,7 +12,7 @@
     },
     {
       "name": "research",
-      "description": "Answer one question about the environment — a dependency, a platform, an advisory, the project's own runtime behaviour — and report typed intelligence for S3. Read-only over the domain: its result is advice, never a commit and never a policy.",
+      "description": "Answer one question about the environment \u2014 a dependency, a platform, an advisory, the project's own runtime behaviour \u2014 and report typed intelligence for S3. Read-only over the domain: its result is advice, never a commit and never a policy.",
       "profile": "intelligence",
       "checks": [],
       "requiresContract": true
@@ -21,21 +21,35 @@
       "name": "implement",
       "description": "Change source and tests under a work contract, in an isolated worktree, and report the result.",
       "profile": "implement",
-      "checks": ["run_checks", "run_tests", "identity-untouched"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched",
+        "export-signature"
+      ],
       "requiresContract": true
     },
     {
       "name": "verify",
       "description": "Independently examine a unit's output against its contract and the project's invariants. Read-only.",
       "profile": "research",
-      "checks": ["run_checks", "run_tests", "identity-untouched"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched",
+        "export-signature"
+      ],
       "requiresContract": true
     },
     {
       "name": "integrate",
       "description": "Reintegrate a unit's branch into the base and resolve what the harness refused to resolve on its own.",
       "profile": "implement",
-      "checks": ["run_tests", "identity-untouched"],
+      "checks": [
+        "run_tests",
+        "identity-untouched",
+        "export-signature"
+      ],
       "requiresContract": true
     },
     {
