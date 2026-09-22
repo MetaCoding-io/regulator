@@ -1,5 +1,11 @@
 # S2 Coordination Gap Analysis
 
+> **Status (2026-09-22): design record.** Written while VSM-Pi was scoped as a regulation
+> layer on GSD-Pi. VSM-Pi now provides its own orchestrator
+> ([DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) §0); where this document says "GSD unit",
+> "GSD remains the scheduler", or "GSD owns execution state", read "the orchestrator".
+> The mechanisms described are unchanged and are built through the course.
+
 ## Status
 
 Design analysis. This asks what coordination function GSD already performs, what remains weak from a VSM/System 2 perspective, and what VSM-Pi should add without inventing an `S2Agent` or duplicating GSD's scheduler.

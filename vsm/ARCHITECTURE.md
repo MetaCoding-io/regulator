@@ -2,18 +2,18 @@
 
 ## System boundary
 
-VSM-Pi augments Pi/GSD through supported extension and integration seams. GSD remains authoritative for its workflow lifecycle unless an explicit architectural decision changes that boundary.
+VSM-Pi is a coding-agent harness on Pi with its own orchestrator and an explicit control plane. It integrates with Pi only through supported extension and SDK seams. The orchestrator is the sole authority over execution state; regulators are the sole authority over regulatory state (INV-005). GSD-Pi is comparison material in the course, not a dependency.
 
 ## Primary components
 
 - `packages/protocol` — channel vocabulary, schemas, typed messages.
 - `packages/core` — authority and policy logic independent of a particular agent runtime.
 - `packages/pi-extension` — Pi lifecycle/tool interception.
-- `packages/gsd-extension` — GSD-aware phase/unit integration.
 - `packages/checks` — deterministic S3* architectural/domain checks.
 - `packages/cli` — operator-facing inspection and setup.
+- `course/lab` — the reference build (`regulator`); its Pi-free modules promote into `protocol`/`core` as they stabilize.
 - `vsm/` — committed S5 identity and policy.
-- `.gsd/vsm-runtime/` — generated runtime evidence when GSD integration is active.
+- `.gsd/vsm-runtime/` — generated runtime evidence (path name retained from the earlier scope; a rename is a code change, not a policy change).
 
 ## Dependency direction
 
@@ -27,12 +27,12 @@ protocol
 checks
  ^
  |
-pi-extension <--- gsd-extension
+pi-extension <--- course/lab (reference build)
 
-cli may depend on protocol/core/checks, but core must not depend on Pi or GSD.
+cli may depend on protocol/core/checks, but core must not depend on Pi.
 ```
 
-Runtime-specific adapters may depend on `core` and `protocol`. `protocol` and `core` must remain usable without Pi/GSD.
+Runtime-specific adapters may depend on `core` and `protocol`. `protocol` and `core` must remain usable without Pi.
 
 ## Authority boundary
 
@@ -44,4 +44,4 @@ An S1 executor's assertion of correctness is not audit evidence. Blocking archit
 
 ## Integration rule
 
-Prefer supported Pi/GSD TypeScript extension APIs and workflow hooks over patching internal runtime code. If an upstream kernel change becomes necessary, document the missing primitive and attempt an upstreamable change before maintaining a long-lived fork.
+Prefer supported Pi TypeScript extension and SDK APIs over patching internal runtime code. If an upstream Pi change becomes necessary, document the missing primitive and attempt an upstreamable change before maintaining a long-lived fork. Pin the Pi version; an upgrade is a change with evidence.

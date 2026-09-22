@@ -6,13 +6,82 @@ This document keeps the architectural workstreams explicit so implementation wor
 
 The stable stack boundary is:
 
-> **Pi executes. GSD orchestrates. VSM-Pi regulates. S5 defines identity.**
+> **Pi executes. VSM-Pi orchestrates and regulates. S5 defines identity.**
 
 And the state boundary is:
 
-> **GSD owns execution state. VSM-Pi owns regulatory obligations and operational-contract history.**
+> **The orchestrator owns execution state. Regulators own regulatory state. Neither infers the other, and neither infers from domain output.**
 
-VSM-Pi should not become a second GSD scheduler. It projects VSM functions onto trusted GSD units/mechanisms, derives capabilities/hooks from that projection, maintains regulatory memory, defines bounded operational contracts, and evaluates regulatory/architectural boundaries.
+---
+
+## 0. Decision, 2026-09-22 — VSM-Pi provides its own orchestrator
+
+Until this date the project was scoped as a regulation layer *on* GSD-Pi: GSD would own
+the workflow kernel and VSM-Pi would project VSM functions onto its units. That scope is
+retired. Reasons, recorded so they can be re-examined:
+
+- GSD-Pi is mid-cutover to a database-authoritative lifecycle (its ADR-046); an adapter
+  written now is written twice.
+- OpenGSD is fanning out (gsd-path, gsd-workbench), narrowing the "what GSD is missing"
+  framing each quarter.
+- The course lab demonstrated that the regulation layer needs *an* orchestrator, not
+  GSD's: four checkpoints of gates, effects, profiles, trace and registry run on bare Pi.
+- The research question — does regulation slow architectural drift? — is cleaner as
+  *our orchestrator with regulators ablated vs. enabled* than as GSD vs. GSD+VSM-Pi.
+
+**What VSM-Pi is now.** The production form of `regulator`, the harness the course
+builds. It provides its own orchestrator. GSD-Pi remains in the course as comparison
+material; there is no GSD adapter and `packages/` has no GSD dependency.
+
+**Definition and instance.** The control plane is declared, not assembled. An *instance*
+runs from a *definition*:
+
+```text
+definition = regulator registry      what regulates, at which level, evidenced how, bounded how
+           + capability profiles     positive grants over declared tool effects
+           + policies                budgets, consent rules, autonomy mode, thresholds
+           + workload                unit types, checks, S4 triggers, plan grammar
+```
+
+The definition is versioned and checked (`regulator check`, SHACL later if warranted);
+changing it is an S5 act. Instance state is the orchestrator's execution store plus the
+regulatory event store, and an instance can be rehydrated from those alone.
+
+**The orchestrator, sized.** It is the S3 loop and nothing more:
+
+```text
+contract → dispatch (Pi SDK) → verify (harness-run) → route (recovery lattice) → close
+```
+
+with leases (with a liveness story), budgets, and attempts as immutable records. It is
+generic over workloads. What made GSD heavy — seven fixed phases, milestone lifecycles,
+UAT, projections — is *workload*, and lives in a workload definition, not in the loop.
+
+**The software-development autoloop is the first workload definition**, and the one the
+course builds against its fixture repository: unit types `plan`, `implement`, `verify`,
+`integrate`, `close`; checks from `read_conventions`; S4 triggers (issue labelled, CI
+red, dependency advisory); consent on the irreversible (deploy, force-push, history
+rewrite). A second workload later is a second definition, not a fork of the loop. The
+"build my own GSD" ambition is satisfied by *declaring* one.
+
+**Where the old workstreams went.** Nothing is lost; each has a lesson:
+
+| Roadmap item | Built in |
+| --- | --- |
+| A3 Operational Work Contract | M06 |
+| A1/A2 Obligations, routing; C7 attenuation | M08, M11, M13 |
+| A4 Functional projection, capabilities, separation of duty | M04 (onto our units), M09 |
+| A5 Hook/process integration | M02–M03 (done) |
+| C1 S2 coverage | M05 |
+| C2 S4 operating model | M11 |
+| C3/C4 Machine-readable architecture, code facts | M09/M12 (RDF/SHACL still deferred) |
+| C5 Human/S5 governance | M12–M13 |
+| C8 Evaluation and economics | M14 |
+| M0 protected S5 paths, typed reporting, event store | shipped; taught in M10 |
+
+Section D's implementation sequence below is superseded by the course sequence
+(`course/CURRICULUM.md`). Sections A–C remain as the design record; where they say
+"GSD unit" read "orchestrator unit".
 
 ---
 
@@ -290,7 +359,8 @@ Issue #12 tracks initial planner-quality/contract-drift diagnostics.
 
 ## D. Implementation sequence
 
-The near-term sequence should remain deliberately narrow:
+*Superseded on 2026-09-22 by the course sequence; kept as the record of the GSD-hosted
+plan.* The near-term sequence was:
 
 ```text
 #3 / PR #9   generic native Pi authority seam       DONE

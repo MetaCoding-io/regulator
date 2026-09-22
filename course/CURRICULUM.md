@@ -8,7 +8,7 @@ CONCEPT       the cybernetic idea that names the problem
 MECHANISM     the Pi feature(s) that implement an answer
 BUILD         the step added to the learner's harness (regulator)
 BREAK IT      a deliberate failure drill that proves the mechanism matters
-FIELD STUDY   how GSD-Pi and/or VSM-Pi solve this at production scale
+FIELD STUDY   how GSD-Pi (the comparison) and VSM-Pi's packages solve this in production
 CHECKPOINT    what must exist and pass before moving on
 ```
 

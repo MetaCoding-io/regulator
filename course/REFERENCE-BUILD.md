@@ -73,9 +73,11 @@ call, and it is a teaching point that this is achievable.
 | 14 | M15 | Packaged pi package | Installs and runs one unit in a clean second repo |
 | 15 | Capstone | Viability case | Rubric in `ASSESSMENT.md` |
 
-The build lives in this repository at [`course/lab/`](lab/) as the workspace package
+`regulator` is not a teaching copy of VSM-Pi; it *is* VSM-Pi's reference build. It
+lives in this repository at [`course/lab/`](lab/) as the workspace package
 `@metacoding/vsm-pi-course-lab`, one source file per checkpoint (`cp0-event-log.ts`,
-`cp1-trace.ts`, …) with headless tests beside them. Keeping each checkpoint as its own
+`cp1-trace.ts`, …) with headless tests beside them. A checkpoint's Pi-free modules move
+into `packages/` once two lessons depend on them, and the lab imports them from there. Keeping each checkpoint as its own
 file rather than mutating one `regulator.ts` means a learner can diff checkpoint N
 against N−1 and see exactly what a lesson added, and can load any checkpoint into Pi
 without checking out history.
@@ -115,12 +117,18 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 ## Deliberate non-goals for the build
 
-The reference build is not a GSD competitor and should not accumulate:
+The orchestrator stays the size of the S3 loop. The reference build should not
+accumulate:
 
-- a scheduler that outgrows a single dispatch loop;
-- persistence beyond an append-only event store plus small typed records;
-- a plugin ecosystem, a web UI, or multi-repo orchestration;
+- a scheduler that outgrows a single dispatch loop with leases and budgets;
+- workload-specific phases coded into the loop — the software-development autoloop is a
+  *workload definition*, and a second workload is a second definition, not a fork;
+- persistence beyond the orchestrator's execution store, the append-only event store,
+  and the registry;
+- a plugin ecosystem, a web UI beyond the read-only control room, or multi-repo
+  orchestration;
 - RDF/SHACL, ontology extraction, or full VSM recursion beyond the single subagent case.
 
-When a learner wants those, the honest answer the course gives is: that is what GSD-Pi
-already is — go read it, or extend it, rather than rebuilding it in a teaching repo.
+GSD-Pi is the standing comparison for each of these: a system that chose a fixed
+workflow and a larger kernel. Read it to see what the loop would become if it grew, then
+keep the loop small.

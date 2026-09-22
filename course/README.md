@@ -130,11 +130,11 @@ Staging, checkpoints and starter-kit requirements: [REFERENCE-BUILD.md](REFERENC
 | Repo | Role in the course |
 | --- | --- |
 | **Pi** (`earendil-works/pi`) | The substrate. Every build step uses documented Pi APIs — no forks, no monkey-patching. |
-| **GSD-Pi** (`open-gsd/gsd-pi`) | The field study. A production harness with lifecycle, worktrees, leases, attempts, recovery, verification evidence, and human-interaction contracts. Each module reads the part of GSD that solves that module's problem at scale. |
-| **VSM-Pi** (this repo) | The theory made mechanical. Channels, invariants, functional projection, operational work contracts, regulatory obligations, protected S5 paths — the course's worked reference for *typed* control. |
+| **VSM-Pi** (this repo) | The product. `regulator`, the harness learners build, *is* VSM-Pi's reference build; its checkpoints promote into `packages/` as they stabilize. Channels, invariants, effects, profiles, the registry, contracts and obligations are the course's own material, not a reference to something else. |
+| **GSD-Pi** (`open-gsd/gsd-pi`) | The comparison. A production harness that answered the same regulatory questions differently — lifecycle, worktrees, leases, attempts, recovery, verification evidence, human-interaction contracts. Each module reads the part of GSD that solves that module's problem, so learners see what their own answer is standing beside. |
 
-The course never asks a learner to adopt VSM-Pi. It asks them to understand the
-regulatory question well enough to accept, reject, or redesign any specific answer —
+The course never asks a learner to adopt VSM-Pi's answers. It asks them to understand
+the regulatory question well enough to accept, reject, or redesign any specific answer —
 including ours.
 
 ## Assessment
