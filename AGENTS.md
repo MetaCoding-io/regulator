@@ -98,4 +98,5 @@ Confirm:
 3. The orchestrator remains the only execution authority; regulators do not schedule.
 4. S5 mutation boundaries remain explicit.
 5. Tests/typechecks were run and results are reported.
-6. The final response lists files changed and exact verification commands.
+6. Every new registry limitation that names a later lesson, a milestone or "not yet" has a row in `docs/DEBT.md`; a change that pays a row strikes it.
+7. The final response lists files changed and exact verification commands.

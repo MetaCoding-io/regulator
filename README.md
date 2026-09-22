@@ -67,7 +67,7 @@ packages/
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
 course/           The "Viable Agents" course; course/lab is the reference build
-docs/             Architecture, roadmap, and design notes
+docs/             Architecture, roadmap, design notes, and DEBT.md (what the build owes, and where it is paid)
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments
 vsm/example/      Example committed S5 artifacts
