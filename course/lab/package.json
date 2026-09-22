@@ -21,6 +21,7 @@
     "cp7": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js",
     "cp8": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js -e ../dist/cp8-evidence.js",
     "cp9": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js -e ../dist/cp8-evidence.js -e ../dist/cp9-authority.js",
+    "cp10": "cd fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js -e ../dist/cp4-coordination.js -e ../dist/cp5-contract.js -e ../dist/cp6-budget.js -e ../dist/cp7-recovery.js -e ../dist/cp8-evidence.js -e ../dist/cp9-authority.js -e ../dist/cp10-intelligence.js",
     "fixture:injection:test": "cd fixture-injection && node --test",
     "fixture:oscillation:test": "cd fixture-oscillation && node --test"
   },

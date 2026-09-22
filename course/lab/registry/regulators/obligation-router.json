@@ -1,0 +1,32 @@
+{
+  "id": "reg.control.obligation-router.v1",
+  "name": "Obligation router",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Route every message the instance records — findings, proposals, coordination and operational signals, uncertainty, intelligence, escalations — under the versioned routing policy: at or above the policy's line for its kind it opens an obligation for the named consumer (S3, S5 or a person) with the router's effective severity; below it, or with no rule, it is noted with the reason and stays trace. Recovery decisions the loop cannot apply open the obligation the unit waits on, and S3's own decision dispositions what S3 was routed. State is the fold of appended events: open → acknowledged → resolved | escalated | superseded, terminal records never reopen, an escalation always has a successor.",
+  "absorbs": {
+    "failureClass": "signal-into-a-log",
+    "description": "A recovery decision, a proposal, an escalation or a finding is recorded and then nothing: nobody is named as owing a response, nothing reminds anyone, and the unit either waits forever or is quietly moved on."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/controller.ts",
+    "enforcementPoints": ["runUnit (after the session, after the audit, after the report's signals)", "closeUnit (after the audit)", "routeUnit (before and after the recovery decision)", "regulator signals route"]
+  },
+  "channels": { "consumes": ["every message kind (regulatory log)", "recovery decision", "routing policy"], "emits": ["obligation-opened / -acknowledged / -resolved / -escalated / -superseded (regulatory log)", "message-noted (regulatory log)"] },
+  "scope": { "subjects": ["message", "obligation", "unit"], "resources": [".regulator/signals.ndjson"] },
+  "cost": { "description": "No model calls. One appended event per routed message and per transition; the log is re-folded on every read, which is linear in its length." },
+  "authority": {
+    "may": ["open an obligation for a consumer the policy names", "note a message as trace with the reason", "derive effective severity from the policy, never from the emitter's claim", "resolve or escalate an S3 obligation by S3's own recovery decision"],
+    "mayNot": ["resolve an obligation owed to S5 or a person", "perform what an obligation asks", "reopen a terminal record", "escalate without a successor", "change the routing policy"]
+  },
+  "evidence": { "tests": ["../../packages/core/src/obligations.test.ts", "src/controller.test.ts"] },
+  "limitations": [
+    "Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.",
+    "A consumer is a name in the policy (S3, S5, human). Nothing delivers an obligation to a person or reminds them; the read model and the control room expose what is owed, and lesson 13's algedonic channel is the delivery mechanism for the ones that cannot wait.",
+    "Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy. A message that names a protected invariant is not raised above its severity by that fact; policy floors by subject are lesson 12's.",
+    "The CLI trusts `--by`: a resolution records who claimed to resolve it. Authority over dispositions (who may accept a risk at what severity) is not checked, and no dialog asks anyone (lesson 13)."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M11"
+}

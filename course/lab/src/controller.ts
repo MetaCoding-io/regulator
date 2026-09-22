@@ -11,8 +11,17 @@
  *              checks for the unit type with the harness's own runner against
  *              the committed revision, record the evidence, and derive the
  *              technical verdict (lesson 09). The report's claims satisfy nothing.
- *   route      a blocked unit gets the recovery policy's action (lesson 08)
+ *   route      a blocked unit gets the recovery policy's action (lesson 08);
+ *              every message the instance recorded meanwhile is routed under
+ *              the routing policy into an obligation for a named consumer or
+ *              noted as trace (lesson 11), and the decision dispositions what
+ *              S3 was routed — or opens the obligation the unit now waits on
  *   close      reintegrate, release
+ *
+ * The veto (lesson 11): an open obligation at or above the routing policy's
+ * blocking line, naming the unit, refuses its dispatch and its close. Nothing
+ * in the loop resolves one; a consumer does, outside it, and the loop reads
+ * the disposition.
  *
  * The loop is generic: nothing here knows the workload is software; the
  * checks it runs are the ones the workload names.
@@ -24,12 +33,13 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, readSignals, routeBlockedUnit, routeFor,
+  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport,
+  dispositionByDecision, progressionVeto, readSignals, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
 import type {
-  AlgedonicSignal, AuditFinding, EvidenceRecord, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, TechnicalVerdict, UnitType,
-  WorkContract, WorkloadDefinition,
+  AlgedonicSignal, AuditFinding, EvidenceRecord, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy, TechnicalVerdict,
+  UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
 import { abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
@@ -62,12 +72,22 @@ export interface RunUnitOptions {
   workload: WorkloadDefinition;
   policy: PolicyDefinition;
   policyPath: string;
+  /** Which messages become obligations, for whom, and what vetoes progression (lesson 11). */
+  routing: RoutingPolicy;
   dispatcher: Dispatcher;
   owner: string;
   now?: () => number;
   ttlMs?: number;
   /** Carried into the dispatch request: the router's hint for this attempt. */
   hint?: string;
+}
+
+/** The problems the veto raises: one per open blocking obligation on the unit. */
+async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dispatch" | "close"): Promise<ContractProblem[]> {
+  return (await progressionVeto(ledger, unitId)).map((o) => ({
+    path: "obligations",
+    message: `obligation ${o.id.slice(0, 8)} (${o.consumer}, ${o.severity}, ${o.concern}) is open on unit "${unitId}": ${o.subject}; it must be dispositioned before ${step} (\`regulator obligation resolve\`)`,
+  }));
 }
 
 export type RunUnitOutcome =
@@ -89,6 +109,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   if (!unitType) problems.push({ path: "unitType", message: `"${contract.unitType}" is not a unit type of workload ${workload.name}` });
   const ceiling = ceilingFor(policy, contract.unitType);
   const store = new ExecutionStore(options.repo, now);
+  const ledger = new ObligationLedger(options.repo, now);
   const existing = await store.getUnit(contract.unitId);
   if (existing) {
     // A further attempt: only for a blocked unit, under the same contract version, within the attempt ceiling.
@@ -99,11 +120,20 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
       problems.push({ path: "attempts", message: `unit "${contract.unitId}" has used its ${ceiling.attempts} attempt(s); S3 must decide something other than trying again` });
     }
   }
+  // The veto: what is owed on the unit is settled outside the loop before the loop moves it.
+  problems.push(...(await vetoProblems(ledger, contract.unitId, "dispatch")));
   if (problems.length || !unitType) return { status: "refused", problems };
 
   // dispatch
   if (!existing) await store.createUnit(contract);
   const attemptNumber = (existing?.attempts ?? 0) + 1;
+  // A re-dispatch after a person answered what the unit waited on carries the answer.
+  let hint = options.hint;
+  if (existing && hint === undefined) {
+    const lastEnded = (await store.listAttempts(contract.unitId)).at(-1)?.endedAt ?? "";
+    const answered = (await ledger.obligations()).filter((o) => o.unit === contract.unitId && o.concern === "recovery-decision" && o.status === "resolved" && (o.closedAt ?? "") > lastEnded).at(-1);
+    if (answered?.rationale) hint = `Obligation ${answered.id.slice(0, 8)} on this unit (${answered.subject}) was resolved by ${answered.closedBy} as ${answered.disposition}: ${answered.rationale}`;
+  }
   const contractPath = path.join(options.repo, UNITS_RELATIVE_DIR, contract.unitId, `contract.v${contract.version}.json`);
   let worktree: string;
   try {
@@ -125,7 +155,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     ({ sessionId } = await options.dispatcher({
       unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile,
       attempt: attemptNumber, route: routeFor(policy, contract.unitType), policyPath: options.policyPath,
-      ...(options.hint === undefined ? {} : { hint: options.hint }),
+      ...(hint === undefined ? {} : { hint }),
     }));
   } catch (error) {
     const detail = (error as Error).message;
@@ -133,15 +163,17 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     await store.setStatus(contract.unitId, "blocked", `dispatch error: ${detail}`);
     return { status: "blocked", reason: "dispatch-error", detail };
   }
+  // What the session recorded — proposals, findings, coordination signals, intelligence — is routed now, not left in the log.
+  await routeMessages(ledger, { policy: options.routing, now });
 
   // close — from the report the unit wrote, never from the domain
   const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
   const report = await store.getReport(contract.unitId, contract.version, attemptNumber);
-  const ledger = await store.getBudget(contract.unitId, attemptNumber);
-  if (!report && ledger?.exhausted) {
-    const detail = `${ledger.exhausted.dimension} ceiling crossed at ${ledger.exhausted.at} (${ledger.consumed.tokens} tokens, ${ledger.consumed.turns} turns)`;
+  const budget = await store.getBudget(contract.unitId, attemptNumber);
+  if (!report && budget?.exhausted) {
+    const detail = `${budget.exhausted.dimension} ceiling crossed at ${budget.exhausted.at} (${budget.consumed.tokens} tokens, ${budget.consumed.turns} turns)`;
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "budget-exhausted", detail });
-    await store.setStatus(contract.unitId, "blocked", `budget exhausted: ${ledger.exhausted.dimension}`);
+    await store.setStatus(contract.unitId, "blocked", `budget exhausted: ${budget.exhausted.dimension}`);
     return { status: "blocked", reason: "budget-exhausted", detail };
   }
   if (!report) {
@@ -163,17 +195,19 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     const detail = `${summary} — ${audit.verdict.reasons.join("; ")}`;
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "check-failure", detail });
     await store.setStatus(contract.unitId, "blocked", `audit refused closeout: ${summary}`);
+    await routeMessages(ledger, { policy: options.routing, now });
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, now });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; now: () => number }): Promise<RunUnitOutcome> {
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; routing: RoutingPolicy; now: () => number }): Promise<RunUnitOutcome> {
   const { contract, report, now } = options;
   const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
   const signals = await emitReportSignals(options.repo, contract, report, now);
+  await routeMessages(new ObligationLedger(options.repo, now), { policy: options.routing, now });
 
   const finished = await finishUnit(exec, { repo: options.repo, unitId: contract.unitId, now });
   if (!finished.result.merged) {
@@ -241,12 +275,13 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
  * missing for an environmental reason can be produced. The attempt history is
  * untouched: a re-audit is not an attempt.
  */
-export async function closeUnit(exec: Exec, options: { repo: string; unitId: string; workload: WorkloadDefinition; now?: () => number }): Promise<RunUnitOutcome> {
+export async function closeUnit(exec: Exec, options: { repo: string; unitId: string; workload: WorkloadDefinition; routing: RoutingPolicy; now?: () => number }): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
   const store = new ExecutionStore(options.repo, now);
+  const ledger = new ObligationLedger(options.repo, now);
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
-  const problems: ContractProblem[] = [];
+  const problems: ContractProblem[] = await vetoProblems(ledger, options.unitId, "close");
   if (unit.status !== "blocked") problems.push({ path: "status", message: `unit "${unit.unitId}" is ${unit.status}; only a blocked unit is re-audited` });
   const contract = await store.getContract(unit.unitId, unit.contract.version);
   const report = await store.getReport(unit.unitId, unit.contract.version, unit.attempts);
@@ -259,34 +294,43 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
   if (audit.verdict.verdict !== "pass") {
     const detail = summarizeVerdict(audit.verdict);
     await store.setStatus(unit.unitId, "blocked", `audit refused closeout: ${detail}`);
+    await routeMessages(ledger, { policy: options.routing, now });
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, now });
 }
+
+const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;
+const CONSEQUENCE_IMPACT = { low: "low", medium: "medium", high: "high" } as const;
 
 /**
  * What the report says that planning did not allocate becomes regulatory
- * information for S3: an emergent decision whose consequence is high, and
- * every deviation. Lesson 08 routes these; until then they are recorded.
+ * information for S3: every emergent decision, every deviation, and every
+ * residual uncertainty. Since lesson 11 all of it is routed: the routing
+ * policy decides what opens an obligation and what is noted as trace, so
+ * nothing is left in the report alone.
  */
 async function emitReportSignals(repo: string, contract: WorkContract, report: ResultReport, now: () => number): Promise<number> {
-  const signals: OperationalSignal[] = [];
-  const base = {
-    source: "S1" as const, kind: "operational-signal" as const, channel: "signal" as const, destination: "S3" as const,
-    unit: contract.unitId, timestamp: new Date(now()).toISOString(),
-  };
+  const signals: Array<OperationalSignal | UncertaintySignal> = [];
+  const base = { source: "S1" as const, channel: "signal" as const, destination: "S3" as const, unit: contract.unitId, timestamp: new Date(now()).toISOString() };
   for (const decision of report.emergentDecisions) {
-    if (decision.consequenceIfWrong !== "high") continue;
     signals.push({
-      ...base, id: randomUUID(), severity: "advisory", subject: `${contract.id} v${contract.version}: emergent decision`,
-      observation: `${decision.subject}: ${decision.choiceOrQuestion} (not allocated by the contract; consequence if wrong: high)`,
+      ...base, kind: "operational-signal", id: randomUUID(), severity: CONSEQUENCE_SEVERITY[decision.consequenceIfWrong], subject: `${contract.id} v${contract.version}: emergent decision — ${decision.subject}`,
+      observation: `${decision.subject}: ${decision.choiceOrQuestion} (not allocated by the contract; consequence if wrong: ${decision.consequenceIfWrong})`,
       evidence: report.evidence,
     });
   }
   for (const deviation of report.deviations) {
     signals.push({
-      ...base, id: randomUUID(), severity: "blocking", subject: `${contract.id} v${contract.version}: ${deviation.kind} deviation${deviation.ref ? ` (${deviation.ref})` : ""}`,
+      ...base, kind: "operational-signal", id: randomUUID(), severity: "blocking", subject: `${contract.id} v${contract.version}: ${deviation.kind} deviation${deviation.ref ? ` (${deviation.ref})` : ""}`,
       observation: deviation.description, evidence: report.evidence,
+    });
+  }
+  for (const doubt of report.residualUncertainty) {
+    signals.push({
+      ...base, kind: "uncertainty-signal", id: randomUUID(), subject: `${contract.id} v${contract.version}: residual uncertainty — ${doubt.subject}`,
+      decision: "left as reported", reason: doubt.reason, alternatives: [], consequence: `consequence if wrong: ${doubt.consequenceIfWrong}`,
+      impact: CONSEQUENCE_IMPACT[doubt.consequenceIfWrong], evidence: report.evidence,
     });
   }
   for (const signal of signals) await appendSignal(repo, signal);
@@ -302,17 +346,25 @@ async function emitReportSignals(repo: string, contract: WorkContract, report: R
  *   escalate   an algedonic signal to S5 with the evidence; the unit stays blocked
  *   others     recorded; retry/repair are applied by `driveUnit`, replan/
  *              remediate/clarify/pause wait for a decision from outside the loop
+ *
+ * Then the decision dispositions what S3 was routed for the unit (lesson 11):
+ * retry, repair and abort resolve its open S3 obligations; a waiting action
+ * opens the obligation the unit now waits on, for the consumer the routing
+ * policy names, and escalates the S3 ones to it.
  */
-export async function routeUnit(exec: Exec, options: { repo: string; unitId: string; policy: PolicyDefinition; recovery: RecoveryPolicy; now?: () => number }): Promise<RecoveryDecision | undefined> {
+export async function routeUnit(exec: Exec, options: { repo: string; unitId: string; policy: PolicyDefinition; recovery: RecoveryPolicy; routing: RoutingPolicy; now?: () => number }): Promise<RecoveryDecision | undefined> {
   const now = options.now ?? Date.now;
   const store = new ExecutionStore(options.repo, now);
+  const ledger = new ObligationLedger(options.repo, now);
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
+  await routeMessages(ledger, { policy: options.routing, now });
   const decision = await routeBlockedUnit(store, {
     policy: options.recovery, unitId: options.unitId, attemptCeiling: ceilingFor(options.policy, unit.unitType).attempts,
     signals: await readSignals(options.repo), now,
   });
   if (!decision) return undefined;
+  const cites: string[] = [];
   if (decision.action === "abort") {
     await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
     await store.setStatus(options.unitId, "aborted", `aborted under ${decision.policy.name} v${decision.policy.version}: ${decision.cause}`);
@@ -325,10 +377,12 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
       requiresHumanAttention: true,
     };
     await appendSignal(options.repo, signal);
+    cites.push(signal.id);
     await store.setStatus(options.unitId, "blocked", `escalated to S5: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
   } else if (!ATTEMPT_ACTIONS.has(decision.action)) {
     await store.setStatus(options.unitId, "blocked", `awaiting ${decision.action}: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
   }
+  await dispositionByDecision(ledger, decision, options.routing, { cites });
   return decision;
 }
 
@@ -352,7 +406,7 @@ export async function driveUnit(exec: Exec, options: DriveUnitOptions): Promise<
   for (;;) {
     const outcome = await runUnit(exec, { ...options, ...(hint === undefined ? {} : { hint }) });
     if (outcome.status !== "blocked") return { final: outcome, decisions };
-    const decision = await routeUnit(exec, { repo: options.repo, unitId: options.contract.unitId, policy: options.policy, recovery: options.recovery, ...(options.now ? { now: options.now } : {}) });
+    const decision = await routeUnit(exec, { repo: options.repo, unitId: options.contract.unitId, policy: options.policy, recovery: options.recovery, routing: options.routing, ...(options.now ? { now: options.now } : {}) });
     if (!decision) return { final: outcome, decisions };
     decisions.push(decision);
     if (!ATTEMPT_ACTIONS.has(decision.action)) return { final: outcome, decisions };

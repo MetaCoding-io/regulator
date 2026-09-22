@@ -13,7 +13,7 @@
     "implementation": "src/controller.ts",
     "enforcementPoints": ["routeUnit (after a blocked outcome)", "driveUnit (the autoloop)"]
   },
-  "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)"] },
+  "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)", "obligation for the waiting action (via the obligation router)"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["attempts", "lease", "worktree"] },
   "cost": { "description": "No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them." },
   "authority": {
@@ -23,9 +23,9 @@
   "evidence": { "tests": ["../../packages/core/src/recovery.test.ts", "src/controller.test.ts"] },
   "limitations": [
     "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.",
-    "Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).",
-    "Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.",
-    "Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered."
+    "Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names (lesson 11); nothing in the loop performs them, and a person who resolves the obligation is trusted by name.",
+    "Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.",
+    "Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11); it is exposed by the read model and the control room, not delivered to anyone (lesson 13)."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "introducedIn": "M08"

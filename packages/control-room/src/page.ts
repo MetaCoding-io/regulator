@@ -5,7 +5,8 @@
  *
  *   Definition   the registry as a topology (S5 → S1 columns, one card per
  *                regulator, declared channels on each card) and the workloads
- *   Instances    units, leases and unrouted signals per instance
+ *   Instances    units, leases, obligations (what is owed, to whom, and what it
+ *                holds) and unrouted signals per instance
  *   Inspector    the whole record for a regulator or a unit — the record, not
  *                a summary of it
  */
@@ -64,6 +65,11 @@ const PAGE = String.raw`<!doctype html>
   .chip.retry, .chip.repair { background: var(--info); }
   .chip.replan, .chip.remediate, .chip.clarify { background: var(--warn); }
   .chip.abort, .chip.escalate { background: var(--bad); }
+  .chip.open, .chip.human { background: var(--warn); }
+  .chip.acknowledged, .chip.S3, .chip.S5, .chip.S4, .chip.S2, .chip.S1, .chip.S3- { background: var(--info); }
+  .chip.resolved, .chip.superseded { background: var(--idle); }
+  .chip.escalated { background: var(--bad); }
+  .chip.veto { background: var(--bad); }
   .problem { color: var(--bad); font-size: 12px; }
   .empty { color: var(--muted); font-style: italic; }
   aside { position: sticky; top: 64px; align-self: start; max-height: calc(100vh - 80px); overflow: auto; }
@@ -114,6 +120,16 @@ const PAGE = String.raw`<!doctype html>
     return chip(v.verdict) + " <span class='mono'>@" + esc(v.revision.slice(0, 7)) + "</span>" + (v.verdict === "pass" ? "" : " <span class='banner'>" + esc([v.failed.length && "failed " + v.failed.join(", "), v.contradicted.length && "contradicted " + v.contradicted.join(", "), v.missing.length && "missing " + v.missing.join(", "), v.stale.length && "stale " + v.stale.join(", "), v.awaitingAcceptance.length && "awaiting " + v.awaitingAcceptance.join(", ")].filter(Boolean).join("; ")) + "</span>");
   };
   const list = (items, f) => items && items.length ? "<ul>" + items.map((i) => "<li>" + f(i) + "</li>").join("") + "</ul>" : '<span class="empty">none</span>';
+  const isOwed = (o) => o.status === "open" || o.status === "acknowledged";
+  const owedCell = (os) => {
+    const open = (os || []).filter(isOwed);
+    if (!open.length) return "—";
+    return open.map((o) => chip(o.consumer) + (o.blocks ? " " + chip("veto") : "")).join(" ");
+  };
+  const obligationLine = (o) => chip(o.status) + " " + chip(o.consumer) + " " + chip(o.severity) + (o.blocks && isOwed(o) ? " " + chip("veto") : "") + " <span class='mono'>" + esc(o.id.slice(0, 8)) + "</span> <span class='mono'>" + esc(o.concern) + "</span> " + esc(o.subject) +
+    (o.question ? "<br><b>question:</b> " + esc(o.question) : "") +
+    (o.disposition ? "<br><span class='banner'>" + esc(o.disposition) + " by " + esc(o.closedBy) + " — " + esc(o.rationale) + "</span>" : o.successor ? "<br><span class='banner'>" + esc(o.status) + " by " + esc(o.closedBy) + " → " + esc(o.successor.slice(0, 8)) + " — " + esc(o.rationale) + "</span>" : "") +
+    (o.acknowledgedBy && o.acknowledgedBy.length ? "<br><span class='banner'>acknowledged by " + esc(o.acknowledgedBy.join(", ")) + "</span>" : "");
   let view = null, selected = fromHash(), timer = null, paused = false;
   function fromHash() {
     const h = location.hash.slice(1);
@@ -175,6 +191,16 @@ const PAGE = String.raw`<!doctype html>
       }
       html += "</table>";
     }
+    for (const p of d.recovery || []) {
+      html += "<h3>Recovery policy</h3><p><b>" + esc(p.name) + "</b> v" + p.version + " — " + esc(p.description) + "</p><table><tr><th>cause</th><th>actions by occurrence</th></tr>";
+      for (const r of p.rules) html += "<tr><td class='mono'>" + esc(r.cause) + "</td><td>" + r.actions.map(chip).join(" → ") + "</td></tr>";
+      html += "<tr><td class='mono'>(fallback)</td><td>" + p.fallback.map(chip).join(" → ") + "</td></tr></table>";
+    }
+    for (const p of d.routing || []) {
+      html += "<h3>Routing policy</h3><p><b>" + esc(p.name) + "</b> v" + p.version + " — " + esc(p.description) + "</p><table><tr><th>message kind</th><th>opens an obligation at</th><th>owed to</th></tr>";
+      for (const r of p.rules) html += "<tr><td class='mono'>" + esc(r.kind) + "</td><td>" + chip(r.minSeverity) + "</td><td>" + chip(r.consumer) + "</td></tr>";
+      html += "</table><p class='banner'>veto at " + chip(p.blocksAtOrAbove) + " · a unit waits on " + Object.entries(p.recovery).map(([a, c]) => esc(a) + " → " + esc(c)).join(", ") + " · uncertainty impact → " + Object.entries(p.impactSeverity).map(([i, s]) => esc(i) + " → " + esc(s)).join(", ") + "</p>";
+    }
     const problems = [...d.registry.problems.map((p) => p.file + ": " + p.message), ...d.problems];
     if (problems.length) html += "<h3>Problems</h3>" + list(problems, (p) => "<span class='problem'>" + esc(p) + "</span>");
     el.innerHTML = html;
@@ -187,8 +213,8 @@ const PAGE = String.raw`<!doctype html>
     if (!instances.length) html += "<p class='empty'>no instance directories were given</p>";
     instances.forEach((inst, i) => {
       html += "<h3 class='mono'>" + esc(inst.dir) + "</h3>";
-      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>routed</th><th>audit</th><th>report</th><th>reason</th></tr>";
-      if (!inst.units.length) html += "<tr><td colspan='11' class='empty'>no units</td></tr>";
+      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>routed</th><th>audit</th><th>owed</th><th>report</th><th>reason</th></tr>";
+      if (!inst.units.length) html += "<tr><td colspan='12' class='empty'>no units</td></tr>";
       for (const u of inst.units) {
         const last = u.attemptRecords[u.attemptRecords.length - 1];
         const sel = selected && selected.kind === "unit" && selected.instance === i && selected.id === u.unit.unitId ? " selected" : "";
@@ -200,7 +226,13 @@ const PAGE = String.raw`<!doctype html>
       if (!inst.leases.length) html += "<tr><td colspan='5' class='empty'>no leases</td></tr>";
       for (const l of inst.leases) html += "<tr><td>" + chip(l.live ? "live" : "expired") + "</td><td class='mono'>" + esc(l.lease.unitId) + "</td><td>" + esc(l.lease.owner) + "</td><td class='mono'>" + esc(l.lease.branch) + "</td><td class='mono'>" + new Date(l.lease.expiresAt).toISOString() + "</td></tr>";
       html += "</table>";
-      html += "<h3>Unrouted signals</h3><table><tr><th>kind</th><th>severity</th><th>route</th><th>subject</th><th>unit</th><th>observation</th></tr>";
+      const obligations = inst.obligations || [];
+      const owed = obligations.filter(isOwed);
+      html += "<h3>Obligations — what is owed, to whom, and what it holds</h3><table><tr><th>status</th><th>owed to</th><th>severity</th><th>veto</th><th>id</th><th>concern</th><th>subject</th><th>unit</th><th>opened</th></tr>";
+      if (!owed.length) html += "<tr><td colspan='9' class='empty'>nothing open" + (obligations.length ? " · " + obligations.length + " dispositioned (see a unit's inspector)" : "") + "</td></tr>";
+      for (const o of owed) html += "<tr><td>" + chip(o.status) + "</td><td>" + chip(o.consumer) + "</td><td>" + chip(o.severity) + "</td><td>" + (o.blocks ? chip("veto") : "—") + "</td><td class='mono'>" + esc(o.id.slice(0, 8)) + "</td><td class='mono'>" + esc(o.concern) + "</td><td>" + esc(o.subject) + (o.question ? "<br><span class='banner'>Q: " + esc(o.question) + "</span>" : "") + "</td><td class='mono'>" + esc(o.unit || "") + "</td><td class='mono'>" + esc(o.openedAt) + "</td></tr>";
+      html += "</table>";
+      html += "<h3>Unrouted signals — recorded, not yet routed</h3><table><tr><th>kind</th><th>severity</th><th>route</th><th>subject</th><th>unit</th><th>observation</th></tr>";
       if (!inst.signals.length) html += "<tr><td colspan='6' class='empty'>none</td></tr>";
       for (const s of inst.signals) html += "<tr><td class='mono'>" + esc(s.kind) + "</td><td>" + (s.severity ? chip(s.severity) : "—") + "</td><td class='mono'>" + esc(s.source) + "→" + esc(s.destination) + "</td><td>" + esc(s.subject) + "</td><td class='mono'>" + esc(s.unit || "") + "</td><td>" + esc(s.observation || s.rationale || s.reason || "") + "</td></tr>";
       html += "</table>";
@@ -240,6 +272,7 @@ const PAGE = String.raw`<!doctype html>
       (b ? "<dl><dt>budget (attempt " + b.attempt + ")</dt><dd>" + budgetCell(b) + "<br>cost " + b.consumed.cost.toFixed(4) + (b.ceiling.cost !== undefined ? " / " + b.ceiling.cost : "") + " · " + Math.round(b.consumed.wallClockMs / 1000) + "s / " + Math.round(b.ceiling.wallClockMs / 1000) + "s<br>models: <span class='mono'>" + esc(b.models.join(" → ") || "—") + "</span><br>compactions: " + (b.compactions.length ? b.compactions.map((c) => esc(c.reason) + (c.preserved ? " (contract carried)" : " (NOT carried)")).join(", ") : "none") + "</dd></dl>" : "") +
       "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd>" +
       "<dt>recovery decisions</dt><dd>" + list(u.decisions || [], (d) => "after attempt " + d.attempt + ": <span class='mono'>" + esc(d.cause) + "</span> (occurrence " + d.occurrence + ") → " + chip(d.action) + " under <span class='mono'>" + esc(d.policy.name) + " v" + d.policy.version + "</span><br><span class='banner'>" + esc(d.rationale) + "</span>" + (d.question ? "<br><b>question:</b> " + esc(d.question) : "") + (d.hint ? "<br><span class='banner'>hint: " + esc(d.hint) + "</span>" : "")) + "</dd></dl></section>";
+    html += "<section><h2>Obligations</h2><p class='banner'>what is owed on this unit; an open one at or above the policy's line holds the unit</p>" + list(u.obligations || [], obligationLine) + "</section>";
     const audit = u.audit || { evidence: [], verdicts: [], acceptances: [] };
     html += "<section><h2>Audit (S3*)</h2><p class='banner'>host-run evidence bound to a revision; the report's claims satisfy nothing</p><dl>" +
       "<dt>verdicts</dt><dd>" + list(audit.verdicts, (v) => "attempt " + v.attempt + ": " + verdictCell({ verdicts: [v] }) + " · " + v.evidence.length + " record(s) considered · " + esc(v.at) + (v.reasons.length ? "<br><span class='problem'>" + v.reasons.map(esc).join("<br>") + "</span>" : "")) + "</dd>" +

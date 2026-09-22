@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { ExecutionStore, LeaseStore, appendSignal } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, LeaseStore, ObligationLedger, appendSignal } from "@metacoding/vsm-pi-core";
 import type { WorkContract } from "@metacoding/vsm-pi-protocol";
 import { createControlRoomServer, readControlRoom } from "./server.js";
 
@@ -46,6 +46,7 @@ async function fixture(t: TestContext) {
     id: "s1", timestamp: "t", source: "S2", kind: "coordination-signal", channel: "signal", destination: "S3",
     severity: "advisory", subject: "src/a.js", unit: "u2", coordination: "oscillation", observation: "4 edits", evidence: [],
   });
+  await new ObligationLedger(b, () => clock).openObligation({ subject: "unit u2: clarify (oscillation)", unit: "u2", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true });
   return { definition, a, b, clock };
 }
 
@@ -57,6 +58,7 @@ test("readControlRoom projects one definition and any number of instances, from 
   assert.deepEqual(view.instances[0]?.units.map((u) => [u.unit.unitId, u.unit.status]), [["u1", "closed"]]);
   assert.deepEqual(view.instances[1]?.leases.map((l) => [l.lease.unitId, l.live]), [["u2", true]]);
   assert.equal(view.instances[1]?.signals[0]?.kind, "coordination-signal");
+  assert.deepEqual(view.instances[1]?.obligations.map((o) => [o.consumer, o.status, o.blocks]), [["human", "open", true]]);
   const none = await readControlRoom({ instanceDirs: [], now: () => clock });
   assert.equal(none.definition, undefined);
   assert.deepEqual(none.instances, []);

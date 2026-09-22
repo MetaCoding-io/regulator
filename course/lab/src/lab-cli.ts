@@ -7,20 +7,27 @@
  *   node dist/lab-cli.js unit status                      leases and their liveness
  *   node dist/lab-cli.js contract check <file>            validate a work contract (lesson 06)
  *   node dist/lab-cli.js unit dispatch <contract.json> [--policy <file>]   run one unit through the S3 loop with a live Pi session
- *   node dist/lab-cli.js unit show <id>                   the unit record, attempts, decisions and report
+ *   node dist/lab-cli.js unit show <id>                   the unit record, attempts, decisions, report and obligations
  *   node dist/lab-cli.js unit drive <contract.json>       the autoloop: run, route, and run again while the policy says so (lesson 08)
  *   node dist/lab-cli.js unit route <id>                  route one blocked unit and print the decision
  *   node dist/lab-cli.js effects                          the effect journal
  *   node dist/lab-cli.js unit close <id>                  re-audit a blocked unit without an attempt and close it if the verdict is pass (lesson 09)
  *   node dist/lab-cli.js unit accept <id> <criterion> --by <who> [--reject] [--note <text>]   a human disposition of a criterion no check can observe
  *   node dist/lab-cli.js unit evidence <id>               replay the unit's audit log: evidence, verdicts, acceptances
+ *   node dist/lab-cli.js obligations [--all]              what is owed and to whom (lesson 11); --all includes closed ones
+ *   node dist/lab-cli.js obligation show <id>             one obligation with its history (id or unique prefix)
+ *   node dist/lab-cli.js obligation ack <id> --by <who> [--note <text>]
+ *   node dist/lab-cli.js obligation resolve <id> --by <who> --disposition <d> --rationale <text>
+ *   node dist/lab-cli.js obligation escalate <id> --by <who> --to <consumer> --rationale <text>
+ *   node dist/lab-cli.js signals route                    route every unrouted message under the routing policy (for sessions run by hand)
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
-import { AuditLog, EffectJournal, ExecutionStore, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { AuditLog, EffectJournal, ExecutionStore, ObligationLedger, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { ConsumerSchema, DispositionSchema, assertValid, type ObligationState } from "@metacoding/vsm-pi-protocol";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
@@ -29,6 +36,7 @@ import { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
 import { headRevision } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
+import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
 import { loadWorkload } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
@@ -38,9 +46,20 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route");
   process.exit(2);
 };
+const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
+
+function describe(o: ObligationState): string {
+  return `${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto " : "     "} ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `\n      question: ${o.question}` : ""}${o.disposition ? `\n      ${o.disposition} by ${o.closedBy}: ${o.rationale}` : o.successor ? `\n      ${o.status} by ${o.closedBy} → ${o.successor.slice(0, 8)}: ${o.rationale}` : ""}`;
+}
+
+async function findObligation(ledger: ObligationLedger, ref: string): Promise<ObligationState> {
+  const matches = (await ledger.obligations()).filter((o) => o.id === ref || o.id.startsWith(ref));
+  if (matches.length === 1) return matches[0]!;
+  throw new Error(matches.length ? `"${ref}" matches ${matches.length} obligations; give more of the id` : `no obligation "${ref}"`);
+}
 
 try {
   if (command === "fixture" && sub) {
@@ -74,11 +93,12 @@ try {
     const workload = await loadWorkload();
     const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
     const policy = await loadPolicy(policyPath);
+    const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
-    console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     if (outcome.status === "closed") {
-      console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
+      console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
       for (const problem of outcome.problems) console.error(`✖ ${problem.path}: ${problem.message}`);
       console.error(`unit ${contract.unitId}: contract refused; nothing was dispatched`);
@@ -94,17 +114,22 @@ try {
     const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
     const policy = await loadPolicy(policyPath);
     const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
+    const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
-    console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
-    else { console.error(`unit ${contract.unitId}: ${(await new ExecutionStore(process.cwd()).getUnit(contract.unitId))?.reason ?? final.reason}`); process.exit(1); }
+    else {
+      console.error(`unit ${contract.unitId}: ${(await new ExecutionStore(process.cwd()).getUnit(contract.unitId))?.reason ?? final.reason}`);
+      for (const o of await new ObligationLedger(process.cwd()).open(contract.unitId)) console.error(`  owed: ${describe(o)}`);
+      process.exit(1);
+    }
   } else if (command === "unit" && sub === "route" && rest[0]) {
     const policy = await loadPolicy(path.resolve(flag("policy") ?? POLICY_PATH));
     const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
-    const decision = await routeUnit(realExec, { repo: process.cwd(), unitId: rest[0], policy, recovery });
+    const decision = await routeUnit(realExec, { repo: process.cwd(), unitId: rest[0], policy, recovery, routing: await routingP() });
     if (!decision) { console.log(`unit ${rest[0]} is not blocked; nothing to route`); }
     else {
       console.log(`unit ${rest[0]}: ${decision.cause} (occurrence ${decision.occurrence}) → ${decision.action} under ${decision.policy.name} v${decision.policy.version}`);
@@ -112,6 +137,7 @@ try {
       for (const e of decision.evidence) console.log(`  evidence: ${e}`);
       if (decision.hint) console.log(`  hint for the next attempt: ${decision.hint}`);
       if (decision.question) console.log(`  question: ${decision.question}`);
+      for (const o of await new ObligationLedger(process.cwd()).open(rest[0])) console.log(`  owed: ${describe(o)}`);
     }
   } else if (command === "effects") {
     const states = await new EffectJournal(process.cwd()).states();
@@ -131,8 +157,11 @@ try {
     console.log(report ? `  report (attempt ${report.attempt}): ${report.summary}` : "  report: none");
     const verdict = (await new AuditLog(process.cwd()).forUnit(unit.unitId)).verdicts.at(-1);
     console.log(verdict ? `  audit: ${summarizeVerdict(verdict)}${verdict.reasons.length ? `\n    ${verdict.reasons.join("\n    ")}` : ""}` : "  audit: no verdict");
+    const owed = (await new ObligationLedger(process.cwd()).obligations()).filter((o) => o.unit === unit.unitId);
+    console.log(owed.length ? `  obligations:` : "  obligations: none");
+    for (const o of owed) console.log(`    ${describe(o)}`);
   } else if (command === "unit" && sub === "close" && rest[0]) {
-    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload() });
+    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload(), routing: await routingP() });
     if (outcome.status === "closed") console.log(`unit ${rest[0]}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
@@ -164,6 +193,49 @@ try {
     for (const { lease, live } of statuses) {
       console.log(`${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  ${lease.branch}  until ${new Date(lease.expiresAt).toISOString()}`);
     }
+  } else if (command === "obligations") {
+    const ledger = new ObligationLedger(process.cwd());
+    const all = await ledger.obligations();
+    const shown = sub === "--all" || rest.includes("--all") ? all : all.filter((o) => o.status === "open" || o.status === "acknowledged");
+    const unrouted = await ledger.unrouted();
+    if (!shown.length) console.log(all.length ? "nothing open; --all shows what was dispositioned" : "no obligations");
+    for (const o of shown) console.log(describe(o));
+    console.log(`${shown.length} shown of ${all.length}; ${unrouted.length} unrouted message(s)${unrouted.length ? " — run `regulator signals route`" : ""}`);
+  } else if (command === "obligation" && sub === "show" && rest[0]) {
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, rest[0]);
+    console.log(describe(o));
+    console.log(`  id ${o.id}; opened ${o.openedAt} by ${o.openedBy}; sources ${o.sources.join(", ")}`);
+    for (const h of o.history) console.log(`  ${h.at}  ${h.type.replace("obligation-", "")}  by ${h.by}${"note" in h && h.note ? ` — ${h.note}` : ""}${"rationale" in h ? ` — ${h.rationale}` : ""}${"successor" in h ? ` → ${h.successor}` : ""}`);
+  } else if (command === "obligation" && (sub === "ack" || sub === "resolve" || sub === "escalate") && rest[0]) {
+    const by = flag("by");
+    if (!by) usage();
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, rest[0]);
+    if (sub === "ack") {
+      const note = flag("note");
+      await ledger.acknowledge(o.id, by!, note);
+      console.log(`obligation ${o.id.slice(0, 8)} acknowledged by ${by}: received, not resolved`);
+    } else if (sub === "resolve") {
+      const disposition = flag("disposition");
+      const rationale = flag("rationale");
+      if (!disposition || !rationale) usage();
+      assertValid(DispositionSchema, disposition, `disposition (one of ${DispositionSchema.anyOf.map((d) => d.const).join(", ")})`);
+      await ledger.resolve(o.id, { by: by!, disposition, rationale: rationale! });
+      console.log(`obligation ${o.id.slice(0, 8)} resolved by ${by} as ${disposition}${o.unit && o.blocks ? `; unit ${o.unit} may proceed if nothing else is owed on it` : ""}`);
+    } else {
+      const to = flag("to");
+      const rationale = flag("rationale");
+      if (!to || !rationale) usage();
+      assertValid(ConsumerSchema, to, `consumer (one of ${ConsumerSchema.anyOf.map((c) => ("const" in c ? c.const : c.anyOf?.map((x) => x.const).join(", "))).join(", ")})`);
+      const successor = await ledger.escalate(o.id, { by: by!, to, rationale: rationale! });
+      console.log(`obligation ${o.id.slice(0, 8)} escalated by ${by} to ${to}: successor ${successor.id.slice(0, 8)} is now what is owed`);
+    }
+  } else if (command === "signals" && sub === "route") {
+    const routed = await routeMessages(new ObligationLedger(process.cwd()), { policy: await routingP() });
+    for (const o of routed.opened) console.log(`opened  ${describe(o as ObligationState & { status: "open" })}`);
+    for (const n of routed.noted) console.log(`noted   ${n.message.kind}  ${n.message.subject}: ${n.reason}`);
+    console.log(`${routed.opened.length} obligation(s) opened, ${routed.noted.length} message(s) noted`);
   } else {
     usage();
   }

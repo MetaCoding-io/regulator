@@ -1,0 +1,31 @@
+{
+  "kind": "task",
+  "id": "tc-research-vendored-helper",
+  "version": 1,
+  "unitId": "r1",
+  "unitType": "research",
+  "workload": { "name": "software-development", "version": 1 },
+  "objective": "Find out whether the vendored helper vendor/left-pad.js is the published left-pad 1.3.0 or a modified copy, and whether anything under src/ depends on the modification. Report what you find with report_intelligence, naming unit u1 (the known-issue fix) as affected if the copy is modified, then close the contract with report_result.",
+  "contribution": "The first research unit: S4 intelligence produced under its own budget and tool surface, routed to S3 as advice and never applied.",
+  "constraintRefs": ["reg.authority.vendor-write-gate.v1"],
+  "fixed": [
+    {
+      "id": "f-read-only",
+      "subject": "the repository",
+      "decision": "Nothing in the repository is changed; the answer is a claim with evidence, not a fix.",
+      "authorityRef": "workload unit type research (software-development v1)"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-scope",
+      "subject": "how much of the vendored file to compare",
+      "bounds": "Read as much of vendor/ and src/ as the question needs; do not run project code."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    { "id": "e-sources", "description": "the files the claim rests on exist at the committed revision", "class": "file", "required": true }
+  ],
+  "provenance": { "createdBy": "S3", "createdAt": "2026-09-22T00:00:00.000Z" }
+}

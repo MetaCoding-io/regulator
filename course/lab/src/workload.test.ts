@@ -6,9 +6,11 @@ import { loadWorkload, unitTypeOf } from "./workload.js";
 test("the committed workload definition validates and only names profiles the lab declares", async () => {
   const workload = await loadWorkload();
   assert.equal(workload.name, "software-development");
-  assert.deepEqual(workload.unitTypes.map((t) => t.name), ["plan", "implement", "verify", "integrate", "close"]);
+  assert.deepEqual(workload.unitTypes.map((t) => t.name), ["plan", "research", "implement", "verify", "integrate", "close"]);
   for (const type of workload.unitTypes) assert.ok(isProfileName(type.profile), `${type.name} runs under an undeclared profile "${type.profile}"`);
   assert.equal(unitTypeOf(workload, "implement")?.requiresContract, true);
   assert.equal(unitTypeOf(workload, "plan")?.profile, "research", "planning never changes the repository");
+  assert.equal(unitTypeOf(workload, "research")?.profile, "intelligence", "research reports intelligence and nothing else");
+  assert.deepEqual(unitTypeOf(workload, "research")?.checks, [], "intelligence is verified by its evidence refs, not by running the project");
   assert.equal(unitTypeOf(workload, "deploy"), undefined);
 });

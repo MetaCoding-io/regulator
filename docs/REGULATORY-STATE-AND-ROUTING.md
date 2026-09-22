@@ -4,7 +4,11 @@
 > layer on GSD-Pi. VSM-Pi now provides its own orchestrator
 > ([DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) §0); where this document says "GSD unit",
 > "GSD remains the scheduler", or "GSD owns execution state", read "the orchestrator".
-> The mechanisms described are unchanged and are built through the course.
+> The mechanisms described are unchanged and are built through the course. Lesson 11
+> (checkpoint 10) ships §§1–4 and the consumer/severity half of §8: the lifecycle with its
+> dispositions and successors, folded from events in the regulatory log; a versioned
+> routing policy; and the progression veto. Exposure and resolution boundaries (§7),
+> scope and visibility (§5) and required mechanisms (§6) remain design.
 
 ## Status
 
