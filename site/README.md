@@ -1,11 +1,16 @@
 # site/
 
-A single static landing page (`index.html`) covering VSM-Pi (the product) and Viable
-Agents (the course): the control model, the orchestrator/workload split, the control
-room mockups from [`course/CONTROL-REGISTRY.md`](../course/CONTROL-REGISTRY.md) §6, and
-the full 15-module syllabus with lessons 01–04 marked written and the rest planned.
+Two static pages, no build step — open them directly in a browser, or serve `site/` as
+static files.
 
-It carries no build step — open it directly in a browser, or serve `site/` as static
-files. It is hand-maintained alongside the repo's actual status; update it when
-`README.md`, `AGENTS.md`, or `course/` status lines change in a way this page states as
-fact (checkpoint status, package promotions, lessons written).
+- `index.html` — the landing page: VSM-Pi (the product) and Viable Agents (the course):
+  the control model, the orchestrator/workload split, the control room, the syllabus with
+  lessons 01–10 marked written, and the build's status.
+- `how-it-works.html` — the mechanism, drawn: how one unit runs through the S3 loop
+  (orchestrator, execution store, session, worktree, regulatory state), what a work
+  contract and a result report hold, the three stores that never infer each other, the
+  recovery lattice, and what an instance's `.regulator/` directory contains.
+
+Both are hand-maintained alongside the repo's actual status; update them when
+`README.md`, `AGENTS.md`, `course/README.md` or `docs/DEBT.md` change in a way a page
+states as fact (checkpoint status, package promotions, lessons written, registry count).
