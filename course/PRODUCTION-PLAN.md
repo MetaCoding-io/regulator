@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 started.** Lessons 01–09
-are written end to end with checkpoints 0–8, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 nearly complete.** Lessons 01–10
+are written end to end with checkpoints 0–9, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -35,13 +35,17 @@ The heart of the course and the hardest labs.
   checkpoint 6);
 - recovery router — **done** (lesson 08, checkpoint 7);
 - audit layer — **done** (lesson 09, checkpoint 8: the closeout gate over host-run
-  evidence); the adversarial protected-path drill (six routes), the injection fixture,
-  and the secret-canary / egress fixture remain for lesson 10;
+  evidence);
+- the adversarial protected-path drill (six routes), the injection fixture and the
+  secret canary — **done** (lesson 10, checkpoint 9); the egress half of the canary
+  drill names the container as the boundary rather than building one;
 - durable-execution fixture for M08: a side-effecting tool, a harness kill between
   effect and record, restart and reconciliation — **done** (`notify_owner`, the effect
   journal and the crash test in checkpoint 7);
-- OWASP ASI01–ASI10 / ACS crosswalk table for M10 and the rubric;
-- `BOUNDARY.md` discipline established.
+- OWASP ASI01–ASI10 / ACS crosswalk table for M10 — **done** (lesson 10 §2); the
+  rubric's use of it is capstone work;
+- `BOUNDARY.md` discipline established — **done**: generated from the registry's
+  limitations by `regulator docs`, drift refused under `pnpm check`.
 
 Exit criterion: the adversarial graders pass against the reference solution *and* catch
 three deliberately weak learner-style implementations.
@@ -111,7 +115,7 @@ repository is still design-only, the course must present it as design, not as sh
 | M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | routing shipped (lesson 08); obligations pending (lesson 11) |
 | M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
 | M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped; the closeout gate is the first regulator to emit one (lesson 09) |
-| M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
+| M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped; the preflight now lives in `core` and the lab gate shares it (lesson 10) |
 | M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
 | M14 drift | longitudinal drift fixture | planned (M0) |
 | M02+ registry | `packages/protocol/src/registry.ts`, `packages/core/src/registry.ts`, lab seed records | shipped |
@@ -182,11 +186,12 @@ does:
 
 ## Immediate next actions
 
-1. Review lessons 01–09 for tone, length and lab friction (owner: project maintainer).
+1. Review lessons 01–10 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 10 with checkpoint 9 (authority boundaries: protected identity seeded with
-   INV-001, the proposal path, the trust rule; the six-route protected-path drill and the
-   injection fixture); the control room gains the assurance view with it.
+3. Lesson 11 with checkpoint 10 (environmental intelligence: the read-only intelligence
+   subagent, typed intelligence routed and never auto-applied, and the obligation
+   lifecycle that gives recovery decisions, escalations and proposals somewhere to wait);
+   the control room gains the obligations view with it.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

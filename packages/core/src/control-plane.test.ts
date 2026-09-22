@@ -5,7 +5,7 @@ import path from "node:path";
 import test, { type TestContext } from "node:test";
 import { isTurnRecord, type CapabilityProfile } from "@metacoding/vsm-pi-protocol";
 import {
-  checkRegistry, isReadOnlyProfile, isWritableUnder, readOnlyViolations, renderProfileSection, renderRegistryMarkdown,
+  checkRegistry, isReadOnlyProfile, isWritableUnder, readOnlyViolations, renderBoundaryMarkdown, renderProfileSection, renderRegistryMarkdown,
   TraceWriter, TurnTracker,
 } from "./index.js";
 
@@ -107,6 +107,9 @@ test("checkRegistry accepts a record that shows what it claims and renders it", 
   assert.match(md, /^# Regulators\n/);
   assert.match(md, /`reg\.control\.example\.v1` \| Example \| S3 \| deterministic-gate \| active/);
   assert.match(md, /\*\*Limitations\.\*\*\n- lexical only/);
+  const boundary = renderBoundaryMarkdown(records);
+  assert.match(boundary, /^# Enforcement boundary\n/);
+  assert.match(boundary, /## Example \(`reg\.control\.example\.v1`\)\n\nEnforced at `tool_call` in `src\/gate\.ts`; S3, deterministic-gate\.\n\nNot covered:\n\n- lexical only/);
 });
 
 test("checkRegistry rejects a record that claims what it cannot show", async (t) => {

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { checkRegistry, loadRegistry, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
+import { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
@@ -12,7 +12,11 @@ test("the committed registry passes check: every record is well-formed, implemen
   const registry = await checkRegistry(registryDir, labRoot);
   assert.deepEqual(registry.problems, []);
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
+    "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",
+    "reg.authority.identity-write-gate.v1",
+    "reg.authority.project-trust-rule.v1",
+    "reg.authority.proposal-intake.v1",
     "reg.authority.vendor-write-gate.v1",
     "reg.control.budget-guard.v1",
     "reg.control.contract-advice.v1",
@@ -35,4 +39,7 @@ test("REGULATORS.md is generated from the records and has not drifted", async ()
   const { records } = await loadRegistry(registryDir);
   const committed = await readFile(path.join(registryDir, "REGULATORS.md"), "utf8");
   assert.equal(committed, renderRegistryMarkdown(records), "run `pnpm --filter @metacoding/vsm-pi-course-lab registry:docs`");
+  const boundary = await readFile(path.join(labRoot, "BOUNDARY.md"), "utf8");
+  assert.equal(boundary, renderBoundaryMarkdown(records), "BOUNDARY.md is generated from the same records");
+  assert.match(boundary, /## Identity write gate[\s\S]*Not covered:[\s\S]*- /, "every gate states what it does not cover");
 });

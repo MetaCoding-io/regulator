@@ -10,19 +10,61 @@
  * filtered by what is actually available; the first candidate runs, and a
  * provider failure moves to the next declared fallback in a fresh session.
  * Nothing outside the route is ever tried.
+ *
+ * The trust rule (lesson 10): the session loads the definition's checkpoints
+ * and nothing else. The SDK's resource loader discovers a project's own
+ * `.pi/extensions`, skills, prompt templates and themes from `cwd` without
+ * asking anyone — the `project_trust` event is the CLI's, not the loader's —
+ * so `definitionResourceLoader` turns project resources off and keeps only
+ * the extensions the definition names. A unit's project is data, never a
+ * source of control.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, type SettingsManager } from "@earendil-works/pi-coding-agent";
 import { chooseModels } from "@metacoding/vsm-pi-core";
 import type { Dispatcher } from "./controller.js";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js"].map((f) => path.join(dist, f));
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */
   echo?: boolean;
+}
+
+export interface DefinitionLoaderOptions {
+  cwd: string;
+  agentDir: string;
+  /** The extensions the definition declares; every other discovered extension is refused. */
+  extensionPaths?: readonly string[];
+  settingsManager?: SettingsManager;
+}
+
+export interface DefinitionLoader {
+  loader: DefaultResourceLoader;
+  /** Extensions the loader discovered and this rule kept out, by path. */
+  refused: string[];
+}
+
+/** A resource loader that trusts the definition and nothing found in the project. */
+export function definitionResourceLoader(options: DefinitionLoaderOptions): DefinitionLoader {
+  const allowed = new Set((options.extensionPaths ?? CHECKPOINT_EXTENSIONS).map((p) => path.resolve(p)));
+  const refused: string[] = [];
+  const loader = new DefaultResourceLoader({
+    cwd: options.cwd, agentDir: options.agentDir, additionalExtensionPaths: [...allowed],
+    ...(options.settingsManager ? { settingsManager: options.settingsManager } : {}),
+    noSkills: true, noPromptTemplates: true, noThemes: true,
+    extensionsOverride: (base) => {
+      const kept = base.extensions.filter((e) => {
+        const ok = allowed.has(path.resolve(e.resolvedPath)) || allowed.has(path.resolve(e.path));
+        if (!ok) refused.push(e.path);
+        return ok;
+      });
+      return { ...base, extensions: kept };
+    },
+  });
+  return { loader, refused };
 }
 
 export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
@@ -39,10 +81,11 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
       const slash = ref.indexOf("/");
       const model = modelRuntime.getModel(ref.slice(0, slash), ref.slice(slash + 1));
       if (!model) continue;
-      const resourceLoader = new DefaultResourceLoader({ cwd: worktree, agentDir, additionalExtensionPaths: CHECKPOINT_EXTENSIONS });
+      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir });
       await resourceLoader.reload();
       const { errors, runtime } = resourceLoader.getExtensions();
       if (errors.length) throw new Error(`extension load errors: ${errors.map((e) => `${e.path}: ${e.error}`).join("; ")}`);
+      if (refused.length && options.echo) process.stdout.write(`[regulator] refused ${refused.length} extension(s) the definition does not declare: ${refused.join(", ")}\n`);
       // The same values `pi --unit … --profile … --contract … --policy …` would set on the command line.
       // (Checkpoint 6 reads none of the first three: it finds the unit from the lease and the contract from the store.)
       for (const [name, value] of [["unit", unitId], ["profile", profile], ["contract", contractPath], ["policy", policyPath]] as const) runtime.flagValues.set(name, value);

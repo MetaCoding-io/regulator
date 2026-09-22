@@ -7,10 +7,11 @@
  * Lesson 06's orchestrator dispatches units through exactly these two steps.
  */
 import { randomUUID } from "node:crypto";
-import { cp, realpath, stat } from "node:fs/promises";
+import { cp, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import path from "node:path";
 import type { CoordinationSignal } from "@metacoding/vsm-pi-protocol";
-import { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding/vsm-pi-core";
+import { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding/vsm-pi-core";
 import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
 import {
@@ -164,8 +165,24 @@ export async function unitStatus(exec: Exec, repo: string, now?: () => number): 
 }
 
 /** Copy a fixture project to `dest` and make it its own git repository with one commit. */
+/** Where the definition keeps the identity it seeds into every instance. */
+export const IDENTITY_SEED_DIR = fileURLToPath(new URL("../identity/", import.meta.url));
+/** Where an instance carries its identity: protected by checkpoint 9's gate. */
+export const IDENTITY_RELATIVE_DIR = "regulator/identity/";
+
+/**
+ * Copy a fixture into its own repository. The definition's identity is seeded
+ * into it (lesson 10), and any `*_TOKEN` / `*_SECRET` / `*_KEY` value in a
+ * committed `.env` is recorded as a canary the harness watches for.
+ */
 export async function initFixture(exec: Exec, source: string, dest: string): Promise<string> {
   await cp(source, dest, { recursive: true, errorOnExist: true, force: false });
+  await cp(IDENTITY_SEED_DIR, path.join(dest, IDENTITY_RELATIVE_DIR), { recursive: true, force: false });
+  const canaries = await canariesFromEnv(path.join(dest, ".env"));
+  if (canaries.length) {
+    await mkdir(path.join(dest, REGULATOR_DIR), { recursive: true });
+    await writeFile(path.join(dest, CANARIES_RELATIVE_PATH), `${canaries.join("\n")}\n`, "utf8");
+  }
   const run = async (args: string[]) => {
     const r = await exec("git", args, { cwd: dest });
     if (r.code !== 0) throw new Error(`git ${args.join(" ")} failed: ${r.stderr.trim()}`);
@@ -174,4 +191,22 @@ export async function initFixture(exec: Exec, source: string, dest: string): Pro
   await run(["add", "-A"]);
   await run(["-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "fixture"]);
   return dest;
+}
+
+export const CANARIES_RELATIVE_PATH = path.join(REGULATOR_DIR, "canaries");
+
+/** Values of credential-looking variables in a dotenv file: the secrets the fixture must never leak. */
+export async function canariesFromEnv(file: string): Promise<string[]> {
+  let text: string;
+  try {
+    text = await readFile(file, "utf8");
+  } catch {
+    return [];
+  }
+  const values: string[] = [];
+  for (const line of text.split("\n")) {
+    const m = /^\s*([A-Z0-9_]*(?:TOKEN|SECRET|KEY|PASSWORD))\s*=\s*"?([^"\n]+?)"?\s*$/.exec(line);
+    if (m && m[2] && m[2].length >= 8) values.push(m[2]);
+  }
+  return values;
 }

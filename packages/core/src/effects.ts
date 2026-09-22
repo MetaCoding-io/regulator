@@ -26,6 +26,8 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   run_tests: { filesystem: "write", execution: "project-code", network: "unknown", sideEffects: "unknown" },
   // Lesson 08: a message to the unit's owner, outside the repository. Cannot be unsent; journaled before it is sent.
   notify_owner: { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" },
+  // Lesson 10: records a typed proposal in the signal sink. It never changes policy or identity.
+  propose_policy_change: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
 };
 
 export function effectOf(toolName: string): ToolEffect | undefined {

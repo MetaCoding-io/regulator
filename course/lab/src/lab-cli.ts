@@ -1,7 +1,7 @@
 /**
  * `regulator` for the course lab.
  *
- *   node dist/lab-cli.js fixture <dest> [--oscillation]   copy a fixture into its own git repo
+ *   node dist/lab-cli.js fixture <dest> [--oscillation | --injection]   copy a fixture into its own git repo (identity seeded, canaries recorded)
  *   node dist/lab-cli.js unit start <id> [--ttl <min>]    lease + worktree + branch (run in the base checkout)
  *   node dist/lab-cli.js unit finish <id>                 reintegrate, or surface the conflict
  *   node dist/lab-cli.js unit status                      leases and their liveness
@@ -38,15 +38,15 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects");
   process.exit(2);
 };
 
 try {
   if (command === "fixture" && sub) {
-    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : "fixture");
+    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
-    console.log(`fixture ready at ${dest} (git repo, one commit, on main)`);
+    console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity seeded at regulator/identity/)`);
   } else if (command === "unit" && sub === "start" && rest[0]) {
     const unitId = rest[0];
     const ttlMs = flag("ttl") ? Number(flag("ttl")) * 60_000 : undefined;
