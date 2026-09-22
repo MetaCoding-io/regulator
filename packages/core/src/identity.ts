@@ -20,10 +20,36 @@ export interface Invariant {
   text: string;
 }
 
+/** A word the glossary refuses, and the word it says instead (lesson 15). */
+export interface ForbiddenTerm {
+  term: string;
+  say: string;
+}
+
+const FORBIDDEN_HEADING = /^##\s+Words this instance does not use\s*$/m;
+const FORBIDDEN_LINE = /^-\s+(.+?)\s+\(say\s+([^)]+)\)\s*$/;
+
+/** The glossary's `## Words this instance does not use` section: `- task, job (say unit)` lines. Absent section, no terms. */
+export function parseForbiddenTerms(markdown: string): ForbiddenTerm[] {
+  const start = markdown.search(FORBIDDEN_HEADING);
+  if (start < 0) return [];
+  const rest = markdown.slice(start).split("\n").slice(1);
+  const out: ForbiddenTerm[] = [];
+  for (const line of rest) {
+    if (/^##\s/.test(line)) break;
+    const m = FORBIDDEN_LINE.exec(line.trim());
+    if (!m) continue;
+    for (const term of m[1]!.split(",").map((t) => t.trim()).filter(Boolean)) out.push({ term, say: m[2]!.trim() });
+  }
+  return out;
+}
+
 export interface IdentitySet {
   dir: string;
   files: Partial<Record<IdentityFile, string>>;
   invariants: Invariant[];
+  /** Words the glossary refuses (lesson 15), for the `glossary-lint` host check. */
+  forbidden: ForbiddenTerm[];
   problems: string[];
 }
 
@@ -50,7 +76,7 @@ export function parseInvariants(markdown: string): Invariant[] {
 
 /** Read an identity directory. Missing files and malformed invariants are problems, not exceptions. */
 export async function readIdentity(dir: string): Promise<IdentitySet> {
-  const set: IdentitySet = { dir, files: {}, invariants: [], problems: [] };
+  const set: IdentitySet = { dir, files: {}, invariants: [], forbidden: [], problems: [] };
   for (const name of IDENTITY_FILES) {
     try {
       set.files[name] = await readFile(path.join(dir, name), "utf8");
@@ -70,6 +96,8 @@ export async function readIdentity(dir: string): Promise<IdentitySet> {
       if (!inv.text) set.problems.push(`${inv.id} has a heading and no statement`);
     }
   }
+  const glossary = set.files["GLOSSARY.md"];
+  if (glossary !== undefined) set.forbidden = parseForbiddenTerms(glossary);
   return set;
 }
 

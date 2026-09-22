@@ -189,7 +189,7 @@ A channel communicates information; it does not by itself grant authority to mut
 ## Committed identity vs runtime evidence
 
 ```text
-vsm/                        .gsd/vsm-runtime/
+vsm/                        .regulator/
 ----                        -----------------
 WHAT THE SYSTEM IS          WHAT HAPPENED THIS RUN
 

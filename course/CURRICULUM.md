@@ -649,7 +649,7 @@ and a review-by date.
 the agent still honours from context alone versus from the gate.
 
 **Field study.** VSM-Pi `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml`, and
-the committed-identity vs runtime-evidence split (`vsm/` versus `.gsd/vsm-runtime/`).
+the committed-identity vs runtime-evidence split (`vsm/` versus `.regulator/`).
 GSD-Pi's `CONTEXT.md` glossary and ADR practice.
 
 **Checkpoint.** At least one invariant enforced in *both* prose and code; drift fixture

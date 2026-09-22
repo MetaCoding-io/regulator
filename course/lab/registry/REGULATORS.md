@@ -13,19 +13,25 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
 | `reg.identity.definition-check.v1` | Definition check | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.disposition-authority.v1` | Disposition authority | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.doctor.v1` | Doctor (the operating check) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.assurance.eval-harness.v1` | Eval harness and graders | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.evidence-preflight.v1` | Evidence preflight | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.glossary-lint.v1` | Glossary lint | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.identity.identity-context.v1` | Identity context | S5 | prompt | active | 2026-12-01 |
+| `reg.authority.identity-promotion.v1` | Identity promotion (the release path) | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.identity-untouched-check.v1` | Identity-untouched check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.identity-write-gate.v1` | Identity write gate | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.identity.instance-manifest.v1` | Instance manifest (regulator init) | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.intelligence.intelligence-intake.v1` | Intelligence intake | S4 | typed-tool | active | 2026-12-01 |
 | `reg.algedonic.interaction-contract.v1` | Interaction contract (ask_human) | S5 | typed-tool | active | 2026-12-01 |
 | `reg.control.memory-store.v1` | Operational memory store | S3 | typed-tool | active | 2026-12-01 |
 | `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.obligation-router.v1` | Obligation router | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.algedonic.outbox-watcher.v1` | Outbox watcher | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.pause-gate.v1` | Pause gate | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.progression-veto.v1` | Progression veto | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
@@ -393,6 +399,44 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Retirement condition.** Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts.
 
 
+## Doctor (the operating check)
+
+`reg.audit.doctor.v1` · S3* · deterministic-gate · active · introduced in M15
+
+**Purpose.** One headless pass over everything a person would check before trusting an installation, machine-readable, exit 1 on any problem: the Node floor, git, the Pi pin against what is installed, the registry check (with review dates) and the definition check, reviews due within thirty days, and — in an instance — the manifest, whether the instance was initialized under this definition revision, the identity's presence, the base's cleanliness, and what is owed, undelivered or holding the whole instance. The CI entry point, and the first command of the day.
+
+**Absorbs.** `works-on-my-laptop` — The definition was upgraded, a card's review date passed, the base had a stray file and an obligation nobody delivered was holding every unit — four things four people knew, none of them written where the next run would read them.
+
+**Mechanism.** `src/instance.ts` at `doctor (every check, ok or not, with its detail)`, `regulator doctor (exit code)`
+
+**Channels.** consumes `the runtime`, `the definition`, `the instance's manifest, base and ledger` · emits `doctor report (JSON or text)`
+
+**Scope.** subjects registry, identity, execution, obligation · resources the definition, .regulator/
+
+**Cost.** A registry and definition check plus a few reads; seconds.
+
+**May.**
+- report and refuse (exit 1)
+
+**May not.**
+- fix anything
+- dispatch, deliver or disposition
+- silence a check
+
+**Evidence.** `src/instance.test.ts`, `src/lab-cli.test.ts`
+
+**Limitations.**
+- It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.
+- Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
+- Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — A check a person or CI runs; it takes part in no unit's run.
+
+**Retirement condition.** Never as a mechanism; individual checks retire when what they check is checked earlier (a Pi pin enforced by the package manager retires the pin check).
+
+
 ## Effect journal
 
 `reg.coordination.effect-journal.v1` · S2 · deterministic-gate · active · introduced in M08
@@ -552,6 +596,45 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Retirement condition.** The router's decisions in the recovery drills match the observer's causes for three model versions when the observer is off, because the orchestrator's records alone name them.
 
 
+## Glossary lint
+
+`reg.audit.glossary-lint.v1` · S3* · deterministic-gate · active · introduced in M15
+
+**Purpose.** The identity's glossary names the words this instance does not use, with the word to say instead (`## Words this instance does not use`: `- task, job, ticket (say unit)`). At closeout the host reads the branch's added comment lines under the writable prefixes and its commit messages for them; a hit is failing evidence of class command, bound to the command-class criteria. Identifiers in code are not read: a variable named `task` is the project's business, a comment that calls a unit a task is drift. The check lesson 14's sloppy report showed was missing.
+
+**Absorbs.** `vocabulary-drift` — Six units later the comments say task, the commit log says ticket, and a new reader cannot tell a unit from an obligation — the glossary was in every prompt and enforced by nothing.
+
+**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)`, `parseForbiddenTerms (the glossary section)`, `auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)`
+
+**Channels.** consumes `regulator/identity/GLOSSARY.md`, `the unit's branch` · emits `evidence record (class command)`
+
+**Scope.** subjects evidence, identity · resources the unit's worktree
+
+**Cost.** Two git commands per closeout.
+
+**May.**
+- read added comment lines and commit messages
+- fail the command-class criteria
+
+**May not.**
+- read identifiers or strings
+- rewrite anything
+- invent a term the glossary did not list
+
+**Evidence.** `../../packages/checks/src/verify.test.ts`, `src/instance.test.ts`, `src/evals.test.ts`
+
+**Limitations.**
+- A word list with a plural: `tasks` is caught, `tasking` and a synonym are not. Prose in the writable prefixes that is not a comment (a README under src/) is read line by line like a comment when a line carries a comment marker, and otherwise not at all.
+- It is blocking wherever the workload declares it: one word in a commit message costs an attempt. The drift suite's sloppy report shows the cost; making the commit-message half advisory is a workload's declaration to make, and none makes it yet (docs/DEBT.md row 36).
+- The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `check:glossary-lint` — Drop the check from the unit types' lists; the drift suite's treatment arm without it is lesson 14's committed sloppy report.
+
+**Retirement condition.** The vocabulary graders stay at zero across three model versions and the drift suite with the check off: the rendered glossary alone holds the words.
+
+
 ## Identity context
 
 `reg.identity.identity-context.v1` · S5 · prompt · active · introduced in M12
@@ -589,6 +672,46 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ablation.** `extension:cp11-identity` — Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement.
 
 **Retirement condition.** Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone.
+
+
+## Identity promotion (the release path)
+
+`reg.authority.identity-promotion.v1` · S5 · deterministic-gate · active · introduced in M15
+
+**Purpose.** An identity decision accepted in an instance (`regulator identity accept`) changes that instance's copy; the definition's seed, which every later `init` starts from, is a file in the definition's repository. `regulator identity promote <file>.md` is the release path: run by a person the interaction policy lets act as S5, it copies the instance's identity file into the definition's seed, refuses a promotion that would leave the seed's identity set invalid or that changes nothing or that lands on a dirty definition, and commits in the definition's repository citing the instance and its revision. The S5 decision path (lesson 12) decides for an instance; this carries the decision to the definition, once, on the record.
+
+**Absorbs.** `decision-stays-in-one-instance` — INV-005 was proposed, decided and committed in one instance; the next fixture started from the seed without it, and the decision had to be made again — or was forgotten.
+
+**Mechanism.** `src/lab-cli.ts` at `identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)`
+
+**Channels.** consumes `the instance's regulator/identity/<file>`, `the definition's identity/ seed`, `the interaction policy's people` · emits `a commit in the definition's repository`
+
+**Scope.** subjects identity · resources <definition>/identity/
+
+**Cost.** One commit in the definition per promotion; no model calls.
+
+**May.**
+- write one seed file under S5 authority
+- commit it in the definition citing the instance
+
+**May not.**
+- promote without an S5-capable person
+- leave the seed's identity set invalid
+- promote into a dirty definition
+- be called by a tool
+
+**Evidence.** `src/lab-cli.test.ts`
+
+**Limitations.**
+- It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
+- The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — A CLI command a person runs; the arm without it is a person copying a file by hand, which is lesson 12's row 24.
+
+**Retirement condition.** Retire when the definition is versioned and released (a package version per promotion) and the promotion is a pull request the release path already requires.
 
 
 ## Identity-untouched check
@@ -669,6 +792,47 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
 
 **Retirement condition.** No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable.
+
+
+## Instance manifest (regulator init)
+
+`reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · introduced in M15
+
+**Purpose.** Install the definition into a repository as a declaration. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity, ignores `.regulator/`, records canaries from a committed `.env`, commits the identity on the base branch, and writes `.regulator/instance.json`: which definition, at which harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
+
+**Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
+
+**Mechanism.** `src/instance.ts` at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)`
+
+**Channels.** consumes `a git repository`, `the definition (registry, identity seed, package pin)`, `a person's declaration` · emits `.regulator/instance.json`, `a commit on the base branch (identity, .gitignore)`, `.regulator/canaries`
+
+**Scope.** subjects identity, execution · resources .regulator/instance.json, regulator/identity/, .gitignore
+
+**Cost.** One commit at init; one file read per session start and per closeout.
+
+**May.**
+- seed the identity and commit it
+- record what a person declared about the layout
+- refuse an init the definition or the tree does not allow
+
+**May not.**
+- create a repository
+- re-init an instance (an upgrade is a person's, per OPERATING.md)
+- read project settings, context files or extensions
+- widen a read-only profile
+
+**Evidence.** `src/instance.test.ts`, `src/lab-cli.test.ts`
+
+**Limitations.**
+- The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
+- The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
+- Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is every instance before lesson 15.
+
+**Retirement condition.** Never while the harness installs into repositories it did not create; the manifest is how it knows what it was told.
 
 
 ## Intelligence intake
@@ -865,7 +1029,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `../../packages/core/src/obligations.test.ts`, `src/controller.test.ts`
 
 **Limitations.**
-- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
+- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file. A message with no unit opens an obligation that holds nothing, with one exception (lesson 15): an audit finding with no unit — the base failing its checks after a merge — holds every dispatch until S3 dispositions it.
 - A consumer is a name in the policy (S3, S5, human). What is owed to a person is delivered to the outbox and reminded by `algedonic-delivery` (lesson 13); what is owed to S3 or S5 is exposed by the read model and the control room and delivered to nobody, because S3 is the loop and S5 is a person reading the definition's proposals — a queue for S5 decisions is not built.
 - Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
 - Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority` (lesson 13); the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
@@ -875,6 +1039,45 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ablation.** `loop:route-messages` — Routing is a step of the loop; not ablatable by the harness. An arm without it leaves every message unrouted and nothing holds a unit.
 
 **Retirement condition.** Never: an obligation is how a consequential signal stays visible until absorbed. Individual routing rules retire when a message kind is never raised.
+
+
+## Outbox watcher
+
+`reg.algedonic.outbox-watcher.v1` · S5 · deterministic-gate · active · introduced in M15
+
+**Purpose.** The process a quiet instance was missing. `regulator watch` ticks on an interval (or once, for CI): delivers what is pending, reminds what is due under the interaction policy, and forwards every outbox line it has not forwarded yet to the channel command the deployment names — mail, chat, a webhook — with the line as the command's last argument, remembering how far it got in a cursor file so a restart forwards nothing twice and a failed forward moves nothing. The outbox stays the record; the channel is the deployment's.
+
+**Absorbs.** `owed-and-nobody-running` — Lesson 13 delivered to the outbox at the loop's steps and on demand; an instance where nothing ran for a week reminded nobody, and an obligation owed to a person sat in a file nobody opened.
+
+**Mechanism.** `src/deliver.ts` at `watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)`, `regulator watch (once, or the loop)`
+
+**Channels.** consumes `the obligation ledger`, `the outbox`, `.regulator/outbox.cursor` · emits `a channel command invocation per line`, `obligation-delivered (via delivery and reminders)`
+
+**Scope.** subjects obligation · resources .regulator/outbox, .regulator/outbox.cursor
+
+**Cost.** One ledger read and one outbox read per tick; one process per forwarded line.
+
+**May.**
+- deliver, remind and forward
+- keep a cursor
+
+**May not.**
+- disposition anything
+- remove or rewrite an outbox line
+- choose the channel (a person names the command)
+
+**Evidence.** `src/deliver.test.ts`, `src/lab-cli.test.ts`
+
+**Limitations.**
+- A process, not a service: nothing restarts it, and an instance whose watcher is not running is lesson 13's instance again. Supervising it is the deployment's (a systemd unit, a CI schedule).
+- The channel command gets a line and an exit code; a channel that accepts the line and loses it downstream is forwarded once and never again. Delivery to a person is still not confirmation that a person read it.
+- One watcher per instance and one cursor: two watchers on one outbox forward every line twice.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `none` — An operating process; an instance without it is the instance of every lesson before 15, and the read model still shows what is owed.
+
+**Retirement condition.** Retire when delivery is a hook on the ledger's append (an event-driven channel) rather than a poll over the outbox.
 
 
 ## Pause gate
@@ -916,6 +1119,46 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ablation.** `extension:cp12-algedonic` — Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence.
 
 **Retirement condition.** Never while a question can go unanswered: the gate is the meaning of 'waits'.
+
+
+## Post-merge check
+
+`reg.audit.post-merge-check.v1` · S3* · deterministic-gate · active · introduced in M15
+
+**Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.
+
+**Absorbs.** `green-branches-red-base` — Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand.
+
+**Mechanism.** `src/controller.ts` at `verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)`, `progressionVeto (an open blocking obligation with no unit holds every dispatch)`
+
+**Channels.** consumes `the base at the merge commit`, `the workload's check list` · emits `evidence (post-merge:<check>)`, `audit-finding with no unit → obligation on the instance`
+
+**Scope.** subjects evidence, execution · resources the base checkout
+
+**Cost.** The project's test command once more per close, on the base.
+
+**May.**
+- run the checks on the base
+- record evidence and a finding
+- hold every dispatch through the veto
+
+**May not.**
+- revert the merge
+- block the merge (it has happened; this is evidence about it)
+- decide the repair
+
+**Evidence.** `src/controller.test.ts`, `src/instance.test.ts`
+
+**Limitations.**
+- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
+- The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+**Ablation.** `loop:post-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures.
+
+**Retirement condition.** Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it.
 
 
 ## Profile write grant
@@ -1303,7 +1546,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Limitations.**
 - Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.
 - Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.
-- The SQLite regulatory event store the reporting tools write (`.gsd/vsm-runtime/vsm.db`) is not projected: it is the Pi extension's store, not the lab instance's, and its path still carries a GSD-era name (docs/DEBT.md row 31).
+- The reporting tools' SQLite store (`.regulator/events.db` since lesson 15) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.
 - Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01

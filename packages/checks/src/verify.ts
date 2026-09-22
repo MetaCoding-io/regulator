@@ -46,6 +46,9 @@ export interface RunHostChecksOptions {
   protectedPaths?: readonly string[];
   /** For `export-signature` (lesson 14): the expectations that carry a check, taken from the contract. Each is observed by running the module. */
   expectations?: readonly EvidenceExpectation[];
+  /** For `glossary-lint` (lesson 15): the words the identity's glossary refuses, and the prefixes whose added comment lines are read. */
+  forbidden?: ReadonlyArray<{ term: string; say: string }>;
+  writablePaths?: readonly string[];
   conventions?: ProjectConventions;
   timeoutMs?: number;
   maxObservationChars?: number;
@@ -147,6 +150,39 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
             : ok ? `${spec.export}(${spec.arity} parameter${spec.arity === 1 ? "" : "s"}) exported by ${spec.module} at HEAD` : `${spec.export} declares ${probe.length} parameter(s); the contract fixes ${spec.arity}`,
         });
       }
+    } else if (name === "glossary-lint") {
+      // Vocabulary drift (lesson 15): the identity's glossary names the words this instance does not use; added comment lines
+      // under the writable prefixes and the branch's commit messages are read for them. Code identifiers are not: a variable
+      // named `task` is the project's business; a comment that calls a unit a task is drift.
+      const terms = options.forbidden ?? [];
+      if (!options.base) {
+        results.push({ check: name, class: "command", verdict: "inconclusive", observation: "no base ref given: the branch cannot be read" });
+        continue;
+      }
+      if (!terms.length) {
+        results.push({ check: name, class: "command", verdict: "pass", observation: "the glossary refuses no words" });
+        continue;
+      }
+      const prefixes = options.writablePaths ?? conventions.sourceDirs.map((d) => `${d}/`).concat("test/");
+      const diffArgv = ["git", "diff", `${options.base}...HEAD`, "--", ...prefixes];
+      const diff = await exec(diffArgv[0]!, diffArgv.slice(1), { cwd: options.cwd, timeout });
+      const log = await exec("git", ["log", "--format=%s%n%b", `${options.base}..HEAD`], { cwd: options.cwd, timeout });
+      if (diff.code !== 0 || log.code !== 0) {
+        results.push({ check: name, class: "command", verdict: "inconclusive", command: diffArgv, observation: `git failed: ${boundedTail((diff.stderr + log.stderr).trim(), max).text}` });
+        continue;
+      }
+      const hits: string[] = [];
+      const patterns = terms.map((t) => ({ ...t, re: new RegExp(`\\b${t.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?\\b`, "i") }));
+      for (const line of diff.stdout.split("\n")) {
+        if (!line.startsWith("+") || line.startsWith("+++")) continue;
+        const comment = /(\/\/.*|\/\*.*|^\s*\*.*|#.*)$/.exec(line.slice(1))?.[1];
+        if (!comment) continue;
+        for (const p of patterns) if (p.re.test(comment)) hits.push(`comment "${comment.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
+      }
+      for (const message of log.stdout.split("\n")) {
+        for (const p of patterns) if (p.re.test(message)) hits.push(`commit "${message.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
+      }
+      results.push({ check: name, class: "command", verdict: hits.length ? "fail" : "pass", command: diffArgv, observation: hits.length ? boundedTail(`the glossary's words drifted on the branch: ${hits.join("; ")}`, max).text : `no refused word in added comments under ${prefixes.join(", ")} or in commit messages since ${options.base}` });
     } else {
       results.push({ check: name, class: "command", verdict: "inconclusive", observation: `no host check named "${name}"` });
     }

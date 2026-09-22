@@ -13,12 +13,13 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, readIdentity, summarizeLedger,
-  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type UnitAudit,
+  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor,
+  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit,
 } from "@metacoding/vsm-pi-core";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  InstanceManifestSchema,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
@@ -72,6 +73,8 @@ export interface UnitView {
   audit: UnitAudit;
   /** What is owed on the unit, open or closed, folded from the regulatory log (lesson 11). */
   obligations: ObligationState[];
+  /** The replay (lesson 15): every record about the unit in time order, from the span projection. */
+  timeline: TimelineEntry[];
 }
 
 export interface InstanceView {
@@ -86,6 +89,9 @@ export interface InstanceView {
   memory: MemoryState[];
   /** What units asked a person and what came back (lesson 13), oldest first. */
   interactions: InteractionState[];
+  /** What `regulator init` wrote (lesson 15), when it did; the problem when the file is there and invalid. */
+  manifest: InstanceManifest | undefined;
+  manifestProblem?: string;
 }
 
 export interface StatusView {
@@ -228,6 +234,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   const auditLog = new AuditLog(dir);
   const ledger = new ObligationLedger(dir, now);
   const obligations = await ledger.obligations();
+  const spans = await projectSpans(dir);
   const units: UnitView[] = [];
   for (const unit of await store.listUnits()) {
     units.push({
@@ -239,11 +246,21 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
       decisions: await store.listDecisions(unit.unitId),
       audit: await auditLog.forUnit(unit.unitId),
       obligations: obligations.filter((o) => o.unit === unit.unitId),
+      timeline: timelineFor(spans, unit.unitId),
     });
+  }
+  let manifest: InstanceManifest | undefined;
+  let manifestProblem: string | undefined;
+  try {
+    const value: unknown = JSON.parse(await readFile(path.join(dir, INSTANCE_MANIFEST_RELATIVE_PATH), "utf8"));
+    assertValid(InstanceManifestSchema, value, "instance manifest");
+    manifest = value;
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") manifestProblem = (error as Error).message;
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions() };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions(), manifest, ...(manifestProblem ? { manifestProblem } : {}) };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -291,6 +308,7 @@ export function renderStatusText(view: StatusView): string {
   if (view.instance) {
     const i = view.instance;
     lines.push(`instance ${i.dir}`);
+    lines.push(`  manifest: ${i.manifest ? `definition ${i.manifest.definition.name} at ${i.manifest.definition.harnessRevision.slice(0, 7)} (${i.manifest.definition.registry} regulators, pi ${i.manifest.definition.pi}), initialized ${i.manifest.initializedAt.slice(0, 10)} by ${i.manifest.initializedBy}${i.manifest.writablePaths ? `; writable ${i.manifest.writablePaths.join(", ")}` : ""}${i.manifest.protectedPaths ? `; protected ${i.manifest.protectedPaths.join(", ")}` : ""}` : i.manifestProblem ? `! ${i.manifestProblem}` : "none (not initialized with `regulator init`)"}`);
     lines.push(`  units: ${i.units.length}`);
     for (const { unit, report, attemptRecords, budget, decisions, audit, obligations } of i.units) {
       const last = attemptRecords.at(-1);

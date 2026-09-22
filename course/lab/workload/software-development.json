@@ -25,7 +25,8 @@
         "run_checks",
         "run_tests",
         "identity-untouched",
-        "export-signature"
+        "export-signature",
+        "glossary-lint"
       ],
       "requiresContract": true
     },
@@ -37,7 +38,8 @@
         "run_checks",
         "run_tests",
         "identity-untouched",
-        "export-signature"
+        "export-signature",
+        "glossary-lint"
       ],
       "requiresContract": true
     },
@@ -48,7 +50,8 @@
       "checks": [
         "run_tests",
         "identity-untouched",
-        "export-signature"
+        "export-signature",
+        "glossary-lint"
       ],
       "requiresContract": true
     },

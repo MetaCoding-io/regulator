@@ -1,0 +1,42 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import test from "node:test";
+import { ObligationLedger } from "@metacoding/vsm-pi-core";
+import { OUTBOX_RELATIVE_PATH } from "./cp7-recovery.js";
+import { watchOutbox } from "./deliver.js";
+import { initRepo } from "./git-support.js";
+import { loadInteractionPolicy } from "./interaction-policy.js";
+
+test("the outbox watcher (lesson 15): each tick delivers and reminds, then forwards every new outbox line to the channel command once; a failed forward keeps the cursor so nothing is lost or repeated", async (t) => {
+  const repo = await initRepo(t);
+  let clock = Date.parse("2026-09-22T12:00:00.000Z");
+  const now = () => clock;
+  const policy = await loadInteractionPolicy();
+  const ledger = new ObligationLedger(repo, now);
+  await ledger.openObligation({ subject: "clarify: which behaviour", unit: "u1", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true, question: "Which?", openedBy: "S3" });
+  const sent: string[] = [];
+  let fail = false;
+  const run = async (command: string, args: string[]) => { if (fail) return { code: 1, stderr: "channel down" }; sent.push(`${command} ${args.at(-1)}`); return { code: 0, stderr: "" }; };
+  let ticks = await watchOutbox(repo, { policy, now, once: true, exec: ["mail", "-s", "regulator"], run });
+  assert.deepEqual(ticks.map((x) => [x.delivered, x.reminded, x.forwarded, x.failed]), [[1, 0, 1, 0]]);
+  assert.match(sent[0] ?? "", /^mail deliver:[0-9a-f-]+:0 2026-09-22T12:00:00\.000Z u1 blocking veto recovery-decision on u1: clarify: which behaviour — Which\?/);
+  ticks = await watchOutbox(repo, { policy, now, once: true, exec: ["mail"], run });
+  assert.deepEqual(ticks.map((x) => [x.delivered, x.reminded, x.forwarded, x.failed]), [[0, 0, 0, 0]], "nothing new: nothing forwarded twice");
+  clock += policy.reminderAfterMs;
+  fail = true;
+  ticks = await watchOutbox(repo, { policy, now, once: true, exec: ["mail"], run });
+  assert.deepEqual(ticks.map((x) => [x.delivered, x.reminded, x.forwarded, x.failed]), [[0, 1, 0, 1]], "the reminder was written to the outbox; the channel refused it");
+  fail = false;
+  ticks = await watchOutbox(repo, { policy, now, once: true, exec: ["mail"], run });
+  assert.deepEqual(ticks.map((x) => [x.delivered, x.reminded, x.forwarded, x.failed]), [[0, 0, 1, 0]], "the cursor did not move past the failure: the reminder is forwarded on the next tick");
+  assert.match(sent[1] ?? "", /REMINDER: blocking veto recovery-decision/);
+  assert.equal((await readFile(path.join(repo, OUTBOX_RELATIVE_PATH), "utf8")).split("\n").filter(Boolean).length, 2, "the outbox is the record: two lines, nothing removed");
+  // Without a channel, forwarding is counting: the outbox itself is the channel.
+  await ledger.openObligation({ subject: "another", unit: "u2", concern: "recovery-decision", sources: ["d2"], severity: "blocking", consumer: "human", blocks: true, openedBy: "S3" });
+  const controller = new AbortController();
+  const loop = watchOutbox(repo, { policy, now, intervalMs: 20, signal: controller.signal, onTick: (x) => { if (x.delivered) controller.abort(); } });
+  const all = await loop;
+  assert.equal(all[0]!.delivered, 1);
+  assert.equal(all[0]!.forwarded, 1);
+});

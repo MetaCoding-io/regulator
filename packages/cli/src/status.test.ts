@@ -124,6 +124,12 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.deepEqual(view.instance?.units[0]?.obligations.map((o) => o.id), [owed.id], "a unit's view carries what is owed on it");
   assert.deepEqual(view.instance?.obligations[0]?.deliveries, [{ at: new Date(clock).toISOString(), channel: "outbox", reminder: false, target: "outbox" }]);
   assert.deepEqual(view.instance?.interactions.map((x) => [x.request.kind, x.answers.map((a) => a.outcome)]), [["consent", ["unavailable"]]]);
+  assert.equal(view.instance?.manifest, undefined);
+  const timeline = view.instance?.units[0]?.timeline ?? [];
+  assert.deepEqual([...new Set(timeline.map((e) => e.name))].sort(), ["chat anthropic/claude-sonnet-4-5", "coordination-signal", "interaction-answered", "interaction-requested", "invoke_agent implement", "memory-recorded", "obligation-delivered", "obligation-opened", "recovery-decision", "unit u1", "verdict"].filter((n) => timeline.some((e) => e.name === n)), "the replay: every record about the unit");
+  assert.equal(timeline[0]?.name, "unit u1", "the unit span opens the replay");
+  assert.ok(timeline.length >= 6);
+  for (let i = 1; i < timeline.length; i++) assert.ok(timeline[i - 1]!.at <= timeline[i]!.at, "in time order");
 
   const text = renderStatusText(view);
   assert.match(text, /recovery recovery v1: 1 rule\(s\), fallback pause/);
@@ -142,6 +148,6 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 
   const empty = await readStatus({ instanceDir: path.join(root, "nothing-here"), now: () => clock });
-  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [], interactions: [] });
+  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [], interactions: [], manifest: undefined });
   assert.match(renderStatusText({ generatedAt: "t", definition: undefined, instance: undefined }), /nothing to show/);
 });

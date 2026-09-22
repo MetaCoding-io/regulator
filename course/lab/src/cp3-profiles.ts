@@ -17,7 +17,10 @@
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 import type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
 import { isWritableUnder, renderProfileSection } from "@metacoding/vsm-pi-core";
+import type { Exec } from "./exec.js";
+import { readManifest } from "./instance.js";
 import { isProfileName, PROFILES, type ProfileName } from "./profiles.js";
+import { baseRoot } from "./worktree.js";
 
 export const PROFILE_SECTION_TAG = "regulator_profile";
 
@@ -32,6 +35,12 @@ export function createProfilesExtension(options: ProfilesExtensionOptions = {}):
 
   return (pi) => {
     let current: CapabilityProfile = PROFILES[defaultProfile];
+    /** The project's writable prefixes as a person declared them at init (lesson 15); undefined means the profile's own. */
+    let declaredWritable: string[] | undefined;
+    const exec: Exec = async (command, args, execOptions) => {
+      const result = await pi.exec(command, args, execOptions?.cwd ? { cwd: execOptions.cwd } : {});
+      return { stdout: result.stdout, stderr: result.stderr, code: result.code };
+    };
 
     pi.registerFlag("profile", {
       description: `Capability profile to start in (${Object.keys(PROFILES).join(", ")})`,
@@ -55,9 +64,16 @@ export function createProfilesExtension(options: ProfilesExtensionOptions = {}):
       },
     });
 
-    pi.on("session_start", (_event, ctx) => {
+    pi.on("session_start", async (_event, ctx) => {
       const flag = pi.getFlag("profile");
       const name = typeof flag === "string" && isProfileName(flag) ? flag : defaultProfile;
+      declaredWritable = undefined;
+      try {
+        const manifest = await readManifest(await baseRoot(exec, ctx.cwd));
+        if (manifest?.writablePaths) declaredWritable = [...manifest.writablePaths];
+      } catch {
+        declaredWritable = undefined;
+      }
       apply(PROFILES[name], ctx);
     });
 
@@ -83,12 +99,13 @@ export function createProfilesExtension(options: ProfilesExtensionOptions = {}):
     });
 
     function apply(profile: CapabilityProfile, ctx: ExtensionContext): void {
-      current = profile;
+      // A read-only profile stays read-only whatever the manifest says: the declaration widens a grant, never creates one.
+      current = declaredWritable && profile.writablePaths.length ? { ...profile, writablePaths: declaredWritable } : profile;
       // Level 3: the tool surface. Names the host does not know are dropped, not errors.
       const known = new Set(pi.getAllTools().map((tool) => tool.name));
       pi.setActiveTools(profile.tools.filter((name) => known.has(name)));
       if (profile.thinkingLevel) pi.setThinkingLevel(profile.thinkingLevel as ThinkingLevel);
-      ctx.ui.setStatus("profile", `profile: ${profile.name}`);
+      ctx.ui.setStatus("profile", `profile: ${profile.name}${declaredWritable && profile.writablePaths.length ? ` (writes under ${declaredWritable.join(", ")} by the instance manifest)` : ""}`);
     }
   };
 }

@@ -4,7 +4,8 @@ import { DatabaseSync } from "node:sqlite";
 import { assertValid, RegulatoryReceiptSchema, type RegulatoryEvent, type RegulatoryReceipt } from "@metacoding/vsm-pi-protocol";
 import { assertRegulatoryEvent } from "./reporting.js";
 
-export const VSM_DATABASE_RELATIVE_PATH = ".gsd/vsm-runtime/vsm.db";
+/** Lesson 15: the reporting tools' event store lives with the instance's other records, under `.regulator/`. */
+export const VSM_DATABASE_RELATIVE_PATH = ".regulator/events.db";
 export interface StoredRegulatoryEvent {
   sequence: number;
   event: RegulatoryEvent;
@@ -22,13 +23,13 @@ function inspectPath(filename: string) {
 function databasePath(projectRoot: string): string {
   if (!path.isAbsolute(projectRoot)) throw new Error("VSM event store requires an absolute project root.");
   let directory = realpathSync(projectRoot);
-  for (const component of [".gsd", "vsm-runtime"]) {
+  for (const component of [".regulator"]) {
     directory = path.join(directory, component);
     mkdirSync(directory, { recursive: true });
     const info = lstatSync(directory);
     if (!info.isDirectory() || info.isSymbolicLink()) throw new Error("VSM runtime directories must not be aliases.");
   }
-  const filename = path.join(directory, "vsm.db");
+  const filename = path.join(directory, "events.db");
   for (const suffix of ["", "-wal", "-shm", "-journal"]) {
     const info = inspectPath(filename + suffix);
     if (info && (!info.isFile() || info.isSymbolicLink() || info.nlink !== 1)) {

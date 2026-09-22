@@ -78,6 +78,16 @@ Not covered:
 - The grants are three booleans and a severity; an obligation-specific grant (bob may answer questions on units he owns) is not expressible, and the policy is one file for the instance.
 - The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal.
 
+## Doctor (the operating check) (`reg.audit.doctor.v1`)
+
+Enforced at `doctor (every check, ok or not, with its detail)`, `regulator doctor (exit code)` in `src/instance.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.
+- Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
+- Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
+
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
 Enforced at `notify_owner (execute: begin/commit)`, `session_start (reconcile)` in `src/cp7-recovery.ts`; S2, deterministic-gate.
@@ -120,6 +130,26 @@ Not covered:
 - Only errors the tool layer reports as errors are observed: a test that fails is not an error, and a bash command that exits non-zero without the tool flagging it is invisible.
 - The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened.
 
+## Glossary lint (`reg.audit.glossary-lint.v1`)
+
+Enforced at `runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)`, `parseForbiddenTerms (the glossary section)`, `auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- A word list with a plural: `tasks` is caught, `tasking` and a synonym are not. Prose in the writable prefixes that is not a comment (a README under src/) is read line by line like a comment when a line carries a comment marker, and otherwise not at all.
+- It is blocking wherever the workload declares it: one word in a commit message costs an attempt. The drift suite's sloppy report shows the cost; making the commit-message half advisory is a workload's declaration to make, and none makes it yet (docs/DEBT.md row 36).
+- The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
+
+## Identity promotion (the release path) (`reg.authority.identity-promotion.v1`)
+
+Enforced at `identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)` in `src/lab-cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
+- The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
+
 ## Identity-untouched check (`reg.audit.identity-untouched-check.v1`)
 
 Enforced at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
@@ -140,6 +170,16 @@ Not covered:
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
 - Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+
+## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
+
+Enforced at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)` in `src/instance.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
+- The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
+- Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 ## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)
 
@@ -188,10 +228,20 @@ Enforced at `runUnit (after the session, after the audit, after the report's sig
 
 Not covered:
 
-- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
+- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file. A message with no unit opens an obligation that holds nothing, with one exception (lesson 15): an audit finding with no unit — the base failing its checks after a merge — holds every dispatch until S3 dispositions it.
 - A consumer is a name in the policy (S3, S5, human). What is owed to a person is delivered to the outbox and reminded by `algedonic-delivery` (lesson 13); what is owed to S3 or S5 is exposed by the read model and the control room and delivered to nobody, because S3 is the loop and S5 is a person reading the definition's proposals — a queue for S5 decisions is not built.
 - Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
 - Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority` (lesson 13); the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
+
+## Outbox watcher (`reg.algedonic.outbox-watcher.v1`)
+
+Enforced at `watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)`, `regulator watch (once, or the loop)` in `src/deliver.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- A process, not a service: nothing restarts it, and an instance whose watcher is not running is lesson 13's instance again. Supervising it is the deployment's (a systemd unit, a CI schedule).
+- The channel command gets a line and an exit code; a channel that accepts the line and loses it downstream is forwarded once and never again. Delivery to a person is still not confirmation that a person read it.
+- One watcher per instance and one cursor: two watchers on one outbox forward every line twice.
 
 ## Pause gate (`reg.algedonic.pause-gate.v1`)
 
@@ -202,6 +252,16 @@ Not covered:
 - The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
 - The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
 - A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays.
+
+## Post-merge check (`reg.audit.post-merge-check.v1`)
+
+Enforced at `verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)`, `progressionVeto (an open blocking obligation with no unit holds every dispatch)` in `src/controller.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
+- The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
@@ -303,7 +363,7 @@ Not covered:
 
 - Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.
 - Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.
-- The SQLite regulatory event store the reporting tools write (`.gsd/vsm-runtime/vsm.db`) is not projected: it is the Pi extension's store, not the lab instance's, and its path still carries a GSD-era name (docs/DEBT.md row 31).
+- The reporting tools' SQLite store (`.regulator/events.db` since lesson 15) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.
 - Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)

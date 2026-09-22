@@ -1,7 +1,7 @@
 {
   "name": "drift",
   "version": 1,
-  "description": "The longitudinal drift scenario (course/lab/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched and export-signature host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
+  "description": "The longitudinal drift scenario (course/lab/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
   "fixture": "fixture",
   "tasks": [
     "contracts/drift/d1-fix.json",
@@ -50,7 +50,8 @@
         "run_checks",
         "run_tests",
         "identity-untouched",
-        "export-signature"
+        "export-signature",
+        "glossary-lint"
       ],
       "identity": true
     },
@@ -73,7 +74,8 @@
       "checks": [
         "run_checks",
         "run_tests",
-        "export-signature"
+        "export-signature",
+        "glossary-lint"
       ],
       "identity": true,
       "ablates": "reg.audit.identity-untouched-check.v1",
@@ -98,11 +100,38 @@
       "checks": [
         "run_checks",
         "run_tests",
-        "identity-untouched"
+        "identity-untouched",
+        "glossary-lint"
       ],
       "identity": true,
       "ablates": "reg.audit.behaviour-check.v1",
       "switch": "check:export-signature"
+    },
+    {
+      "name": "no-glossary-lint",
+      "description": "Treatment with the glossary-lint host check off: the glossary's refused words are rendered advice only, which is lesson 14's committed sloppy report.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority",
+        "cp10-intelligence",
+        "cp11-identity",
+        "cp12-algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched",
+        "export-signature"
+      ],
+      "identity": true,
+      "ablates": "reg.audit.glossary-lint.v1",
+      "switch": "check:glossary-lint"
     }
   ],
   "repetitions": 3,

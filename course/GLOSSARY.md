@@ -119,4 +119,4 @@ gates nobody can explain.
 | Agent never asks, or asks about everything | Algedonic channel absent or unattenuated | Interaction kinds; recap by default, consent for the irreversible | M13 |
 | Headless run proceeds on timeout | Timeout treated as consent | Pause-and-record semantics | M13 |
 | Regulation feels rigorous but nobody can prove it helped | No control arm | Two-arm evals with repetitions | M14 |
-| Works on one laptop, breaks on the next repo | Assumptions baked into the harness | Packaging drill in a clean repo | M15 |
+| Works on one laptop, breaks on the next repo | Assumptions baked into the harness | Packaging drill in a clean repo: `regulator init` with the instance manifest, `regulator doctor` | M15 |

@@ -205,3 +205,27 @@ test("export-signature (lesson 14): a criterion observed by content — the host
   const verdict = technicalVerdict({ contract: { ...contract, expectedEvidence: expectations }, records: bound, acceptances: [], unitId: "u1", attempt: 1, revision });
   assert.deepEqual([verdict.verdict, verdict.satisfied, verdict.awaitingAcceptance], ["inconclusive", ["e-tests", "e-signature"], ["e-looks"]], "the probed runtime criterion is satisfied by host evidence; the unprobed one still waits for a person");
 });
+
+test("glossary-lint (lesson 15): the words the glossary refuses are read off the branch's added comment lines and commit messages, never off identifiers; no terms is a pass, no base is inconclusive", async (t) => {
+  const { cwd } = await project(t);
+  await git(cwd, "checkout", "--quiet", "-b", "unit/u1");
+  const forbidden = [{ term: "task", say: "unit" }, { term: "ticket", say: "obligation" }];
+  const run = async (base?: string) => (await runHostChecks(realExec, { cwd, checks: ["glossary-lint"], forbidden, writablePaths: ["src/", "test/"], ...(base === undefined ? {} : { base }) }))[0]!;
+  assert.equal((await run()).verdict, "inconclusive");
+  assert.equal((await runHostChecks(realExec, { cwd, checks: ["glossary-lint"], base: "main", forbidden: [] }))[0]?.observation, "the glossary refuses no words");
+  await writeFile(path.join(cwd, "src", "a.js"), "export const task = 1; // the value of a\nexport const a = task;\n");
+  await git(cwd, "commit", "--quiet", "-am", "unit u1: rename nothing");
+  let r = await run("main");
+  assert.equal(r.verdict, "pass", `an identifier is not drift: ${r.observation}`);
+  await writeFile(path.join(cwd, "src", "a.js"), "export const task = 1; // this task's value (ticket #4)\nexport const a = task;\n");
+  await git(cwd, "commit", "--quiet", "-am", "finish the Tasks for this ticket");
+  r = await run("main");
+  assert.equal(r.verdict, "fail");
+  assert.match(r.observation, /comment "\/\/ this task's value \(ticket #4\)": task \(say unit\)/);
+  assert.match(r.observation, /commit "finish the Tasks for this ticket": task \(say unit\)/);
+  assert.match(r.observation, /ticket \(say obligation\)/);
+  await writeFile(path.join(cwd, "vendor", "v.js"), "// vendored task runner\nexport const v = 0;\n");
+  await git(cwd, "commit", "--quiet", "-am", "unit u1: vendor note");
+  r = await run("main");
+  assert.doesNotMatch(r.observation, /vendored task runner/, "only the writable prefixes are read");
+});

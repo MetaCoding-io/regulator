@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 done, Phase 4 begun.** Lessons 01–14
-are written end to end with checkpoints 0–13, headless graders, the seed of the fixture
+Status: **design under review; Phases 1–4 content complete; the capstone rubric awaits calibration.** Lessons 01–15
+are written end to end with checkpoints 0–14, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -82,10 +82,13 @@ once).
 - the control room: topology, live, assurance, lifecycle and replay views over
   registry ∪ events ∪ eval results, read-only — topology, live, assurance and
   lifecycle **done**; replay is lesson 15's;
-- MCP / A2A / ACS portability appendix for M15, and the M03 MCP-export appendix;
+- MCP / A2A / ACS portability appendix for M15 — **done** as the survey in lesson 15's
+  field study; the M03 MCP-export appendix remains;
 - **adversarial grader fixtures**: a library of deliberately weak implementations per
   checkpoint that the graders must reject;
-- packaging lab and the clean-second-repo portability drill;
+- packaging lab and the clean-second-repo portability drill — **done** (lesson 15,
+  checkpoint 14: the lab as a pi package, `regulator init` with the instance manifest,
+  `doctor`, the unfamiliar-repository test, `OPERATING.md`);
 - capstone rubric calibration against at least three real submissions.
 
 Exit criterion: an eval report from the reference build that is honest about at least one
@@ -206,9 +209,8 @@ does:
 1. Review lessons 01–10 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 15 with checkpoint 14 (packaging and operating: the definition as a pi package
-   that installs and runs one unit in a clean second repository, the release path for
-   identity decisions, the operating appendix — a watcher over the outbox, review dates
-   under CI, the replay view); then the capstone rubric.
+3. The capstone: calibrate `ASSESSMENT.md`'s rubric against at least three real
+   submissions, and the M03 MCP-export appendix; a live eval report over the drift suite
+   with a model is owed by the first live run (`docs/DEBT.md` row 33).
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

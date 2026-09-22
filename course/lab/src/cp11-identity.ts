@@ -26,7 +26,7 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ReportedEvidenceSchema } from "@metacoding/vsm-pi-protocol";
-import { MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding/vsm-pi-core";
 import type { Exec } from "./exec.js";
 import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "./unit.js";
 import { baseRoot, headRevision } from "./worktree.js";
@@ -46,6 +46,7 @@ export const RememberInputSchema = Type.Object({
   note: Type.String({ minLength: 1, maxLength: 1000, description: "The fact, as one or two sentences a later unit can act on" }),
   evidence: Type.Array(ReportedEvidenceSchema, { description: "What you observed that establishes it; empty if it is a plain observation" }),
   reviewBy: Type.String({ minLength: 1, description: "ISO date after which the fact should be re-checked; required, in the future, within the store's limit" }),
+  scope: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { description: "Unit types this fact is for (implement, research, …); omit for every unit" })),
 }, { additionalProperties: false });
 
 export function createIdentityExtension(options: IdentityExtensionOptions = {}): (pi: ExtensionAPI) => void {
@@ -58,11 +59,13 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     };
     let base = "";
     let unitId = "";
+    let unitType: string | undefined;
     let identity: IdentitySet | undefined;
     let memory: MemoryStore | undefined;
 
     pi.on("session_start", async (_event, ctx) => {
       unitId = "";
+      unitType = undefined;
       identity = undefined;
       memory = undefined;
       try {
@@ -78,8 +81,10 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
         for (const lease of await leaseStoreFor(base, now).list()) {
           if (path.resolve(lease.resource) === path.resolve(ctx.cwd)) unitId = lease.unitId;
         }
+        // Memory is scoped by unit type (lesson 15): a fact for research units is not rendered to an implement unit.
+        if (unitId) unitType = (await new ExecutionStore(base, now).getUnit(unitId))?.unitType;
       }
-      const current = memory ? (await memory.current()).length : 0;
+      const current = memory ? (await memory.current(unitType)).length : 0;
       const problems = identity.problems.length ? `; ${identity.problems.length} problem(s)` : "";
       ctx.ui.setStatus("identity", identity.invariants.length ? `identity: ${identity.invariants.map((i) => i.id).join(", ")}${problems}; memory: ${current} current` : `identity: none found under ${IDENTITY_RELATIVE_DIR}${problems}`);
       if (identity.problems.length) ctx.ui.notify(`regulator: identity problems — ${identity.problems.join("; ")}`, "warning");
@@ -89,7 +94,7 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     // (checkpoint 9) and the closeout check (this lesson); what keeps memory honest is the expiry the tool enforces.
     pi.on("before_agent_start", async (event) => {
       if (identity && (identity.invariants.length || Object.keys(identity.files).length)) event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] = renderIdentitySection(identity);
-      if (memory) event.systemPromptOptions.sections[MEMORY_SECTION_TAG] = renderMemorySection(await memory.current());
+      if (memory) event.systemPromptOptions.sections[MEMORY_SECTION_TAG] = renderMemorySection(await memory.current(unitType));
       return undefined;
     });
 
@@ -108,12 +113,12 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
         const revision = await headRevision(exec, ctx.cwd).catch(() => undefined);
         const entry = await memory.record({
           subject: params.subject, note: params.note, evidence: params.evidence.map((e) => ({ ...e, ...(revision ? { sourceRevision: revision } : {}) })),
-          ...(unitId ? { unit: unitId } : {}), ...(revision ? { revision } : {}), recordedBy: "S1", reviewBy: params.reviewBy,
+          ...(unitId ? { unit: unitId } : {}), ...(revision ? { revision } : {}), recordedBy: "S1", reviewBy: params.reviewBy, ...(params.scope?.length ? { scope: params.scope } : {}),
         });
         pi.appendEntry(MEMORY_ENTRY_TYPE, { id: entry.id, subject: entry.subject, reviewBy: entry.reviewBy, at: entry.recordedAt });
         ctx.ui.notify(`regulator: remembered "${entry.subject}" until ${entry.reviewBy.slice(0, 10)}`, "info");
         return {
-          content: [{ type: "text", text: `Recorded memory ${entry.id} ("${entry.subject}"), current until ${entry.reviewBy.slice(0, 10)}, with unit ${unitId || "none"} and revision ${revision?.slice(0, 7) ?? "unknown"} as provenance. It is a fact for later units, not a rule.` }],
+          content: [{ type: "text", text: `Recorded memory ${entry.id} ("${entry.subject}"), current until ${entry.reviewBy.slice(0, 10)}, with unit ${unitId || "none"} and revision ${revision?.slice(0, 7) ?? "unknown"} as provenance${entry.scope?.length ? `, for ${entry.scope.join(", ")} units` : ""}. It is a fact for later units, not a rule.` }],
           details: { memoryId: entry.id, reviewBy: entry.reviewBy },
         };
       },

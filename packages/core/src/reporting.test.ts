@@ -136,10 +136,10 @@ test("invalid internal events are rejected before any insertion", async (t) => {
 test("runtime path aliases and failed opens cannot redirect persistence", async (t) => {
   const cwd = await project(t);
   const outside = await project(t);
-  await symlink(outside, path.join(cwd, ".gsd"));
+  await symlink(outside, path.join(cwd, ".regulator"));
   assert.throws(() => new RegulatoryEventStore(cwd), /aliases/);
-  await rm(path.join(cwd, ".gsd"));
-  await mkdir(path.join(cwd, ".gsd/vsm-runtime"), { recursive: true });
+  await rm(path.join(cwd, ".regulator"));
+  await mkdir(path.join(cwd, ".regulator"), { recursive: true });
   await symlink(path.join(outside, "target.db"), path.join(cwd, VSM_DATABASE_RELATIVE_PATH));
   assert.throws(() => new RegulatoryEventStore(cwd), /unaliased/);
   assert.equal(existsSync(path.join(outside, "target.db")), false);
@@ -167,7 +167,7 @@ test("first-open tolerates another process creating directories before mkdir", a
     const store = new RegulatoryEventStore(cwd);
     try {
       assert.equal(store.append(exampleEvent(0)).sequence, 1);
-      assert.equal(races, 2);
+      assert.equal(races, 1);
     } finally { store.close(); }
   } finally {
     t.mock.restoreAll();

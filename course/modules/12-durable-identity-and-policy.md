@@ -262,7 +262,7 @@ that authorized it.
 against the lab's `identity/`. Three things to check. `vsm/` has seven invariants and no
 *checked by* lines; the lab's four each name a mechanism. For your notes: which of the
 seven could take one today, from what the course has built, and which is a wish? Then the
-split between committed identity (`vsm/`) and runtime evidence (`.gsd/vsm-runtime/`,
+split between committed identity (`vsm/`) and runtime evidence (`.regulator/`,
 the path the architecture policy says is a code change to rename): the lab's instance
 keeps identity under `regulator/identity/` and evidence under `.regulator/`, and now
 memory beside evidence — same split, third kind. Finally `AGENTS.md` at the root of this

@@ -178,11 +178,13 @@ carry credentials.
   record carries `ablation` and `retirement`, or the check refuses it), `regulator review
   --due`, and the control room's assurance and lifecycle views over the committed eval
   suite and reports.
-- **Lesson 15** ships the control room as the harness's operating surface, and the
-  capstone's viability case is generated from the registry.
+- **Lesson 15** ships the control room as the harness's operating surface (the replay
+  view over the span projection, the instance manifest, `doctor` as the operating check)
+  and the lab as an installable package; the capstone's viability case is generated from
+  the registry.
 
 Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
-lab CLI and thirty-six records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
+lab CLI and forty-two records exist and run under CI (an overdue review date fails the check since lesson 15); `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
 `regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
 policies declared as files since lesson 07, the interaction policy with its people since lesson 13; profiles and the identity set since lesson 12; eval suites, committed reports and the lifecycle rows — review date, ablation switch, coverage, retirement condition — since lesson 14) and instance (units with
 contract, report, attempts, budget ledger, recovery decisions since lesson 08, the audit log — evidence, verdicts, acceptances — since lesson 09, and what is owed on the unit since lesson 11; leases; obligations by consumer with the veto marked and, since lesson 13, what was delivered where; interactions — what units asked a person and what came back — since lesson 13; operational memory since lesson 12; unrouted signals). `packages/control-room` serves the first page over
@@ -192,4 +194,7 @@ the whole record for a regulator or a unit; since lesson 14 the assurance view (
 committed report as a metrics table with intervals and the overlap screen, and its
 interpretation) and the lifecycle view (per regulator: review date, switch, which report
 covers it, retirement condition). It is read-only by construction (every non-GET request
-is refused). The replay view is still design (lesson 15).
+is refused). Since lesson 15 the unit inspector carries the replay view — every record
+about the unit in time order, from the span projection — and each instance shows its
+manifest. The five views of §6 exist; what the harness still lacks is a *diff mode*
+between registry revisions.

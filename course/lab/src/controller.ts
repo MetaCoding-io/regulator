@@ -50,6 +50,7 @@ import type {
 } from "@metacoding/vsm-pi-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
+import { readManifest } from "./instance.js";
 import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
@@ -104,13 +105,13 @@ async function routeAndDeliver(repo: string, ledger: ObligationLedger, routing: 
 async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dispatch" | "close"): Promise<ContractProblem[]> {
   return (await progressionVeto(ledger, unitId)).map((o) => ({
     path: "obligations",
-    message: `obligation ${o.id.slice(0, 8)} (${o.consumer}, ${o.severity}, ${o.concern}) is open on unit "${unitId}": ${o.subject}; it must be dispositioned before ${step} (\`regulator obligation resolve\`)`,
+    message: `obligation ${o.id.slice(0, 8)} (${o.consumer}, ${o.severity}, ${o.concern}) is open on ${o.unit ? `unit "${unitId}"` : "the instance itself (no unit: the base failed its checks after a merge)"}: ${o.subject}; it must be dispositioned before ${step} (\`regulator obligation resolve\`)`,
   }));
 }
 
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
-  | { status: "closed"; report: ResultReport; sha: string; signals: number }
+  | { status: "closed"; report: ResultReport; sha: string; signals: number; postMerge?: PostMergeOutcome }
   | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
@@ -237,10 +238,10 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
   const { contract, report, now } = options;
   const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
@@ -253,7 +254,47 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
     return { status: "blocked", reason: finished.result.reason, ...(finished.signal ? { detail: finished.signal.observation } : {}) };
   }
   await store.setStatus(contract.unitId, "closed");
-  return { status: "closed", report, sha: finished.result.sha, signals };
+  // Post-merge evidence (lesson 15): the unit was verified at its own HEAD; the base after the merge is a different tree.
+  const postMerge = await verifyBase(exec, { repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, sha: finished.result.sha, now });
+  await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
+  return { status: "closed", report, sha: finished.result.sha, signals, ...(postMerge ? { postMerge } : {}) };
+}
+
+export interface PostMergeOutcome {
+  verdict: "pass" | "fail" | "inconclusive";
+  sha: string;
+  reasons: string[];
+}
+
+/**
+ * Run the workload's checks on the base at the merge commit. Two units can change disjoint files and break each other;
+ * the closeout gate cannot see that, because it verifies a branch at its HEAD. A failure here is not the unit's — the
+ * unit closed on fresh evidence — it is the instance's: an audit finding with no unit, which the router turns into an
+ * obligation owed to S3 that holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision.
+ */
+async function verifyBase(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; sha: string; now: () => number }): Promise<PostMergeOutcome | undefined> {
+  const checks = options.unitType.checks.filter((c) => c === "run_tests" || c === "run_checks");
+  if (!checks.length) return undefined;
+  const conventions = await discoverConventions(options.repo);
+  const results = (await runHostChecks(exec, { cwd: options.repo, checks, conventions })).map((r) => ({ ...r, check: `post-merge:${r.check}` }));
+  const records = bindEvidence(results, { unitId: options.contract.unitId, attempt: options.attempt, contract: { id: options.contract.id, version: options.contract.version }, expectations: [], revision: options.sha, now: options.now });
+  const log = new AuditLog(options.repo);
+  for (const record of records) await log.appendEvidence(record);
+  const failing = results.filter((r) => r.verdict === "fail");
+  const inconclusive = results.filter((r) => r.verdict === "inconclusive");
+  const verdict = failing.length ? "fail" : inconclusive.length === results.length ? "inconclusive" : "pass";
+  const reasons = [...failing, ...inconclusive].map((r) => `${r.check}: ${r.observation.split("\n").slice(0, 3).join("; ")}`);
+  if (verdict === "fail") {
+    const finding: AuditFinding = {
+      id: randomUUID(), timestamp: new Date(options.now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking",
+      subject: `base ${options.sha.slice(0, 7)} fails its checks after reintegrating ${options.contract.unitId}`, invariant: "INV-003",
+      observation: `${failing.map((r) => `${r.check} — ${r.observation.split("\n").slice(0, 3).join("; ")}`).join("; ")}. The unit passed at its own HEAD; the merged base does not. Nothing was reverted.`,
+      evidence: records.map((r) => ({ class: r.class, ref: r.check, observation: r.observation.split("\n")[0] ?? "", sourceRevision: options.sha })),
+      suggestedAction: "decide on the base: revert the merge, or dispatch a repair unit against it; every dispatch is held until this is dispositioned",
+    };
+    await appendSignal(options.repo, finding);
+  }
+  return { verdict, sha: options.sha, reasons };
 }
 
 export interface AuditOutcome {
@@ -288,10 +329,14 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
     // INV-001 in code: the protected prefixes — the identity, and whatever the project's conventions protect — are
     // diffed against the base branch, so a change committed around the write gate is a failing check, not a clean tree.
     const conventions = await discoverConventions(worktree);
-    const protectedPaths = [IDENTITY_RELATIVE_DIR, ...conventions.protectedPaths.filter((p) => p !== IDENTITY_RELATIVE_DIR)];
+    // The instance manifest (lesson 15) is where a person declared this project's layout; the conventions are what the host discovered.
+    const manifest = await readManifest(options.repo);
+    const protectedPaths = [...new Set([IDENTITY_RELATIVE_DIR, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
+    const identity = await readIdentity(path.join(worktree, IDENTITY_RELATIVE_DIR));
     const results = await runHostChecks(exec, {
       cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
       base: await currentBranch(exec, options.repo), protectedPaths, conventions, expectations: contract.expectedEvidence,
+      forbidden: identity.forbidden, writablePaths: manifest?.writablePaths ?? [...conventions.sourceDirs.map((d) => `${d}/`), "test/"],
     });
     records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
     for (const record of records) await log.appendEvidence(record);
@@ -342,7 +387,7 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
     await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
 }
 
 const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;

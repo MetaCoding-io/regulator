@@ -25,6 +25,8 @@ export interface RecordMemoryInput {
   recordedBy: string;
   /** ISO date; must be in the future and within `maxReviewDays`. */
   reviewBy: string;
+  /** Unit types the fact is for (lesson 15); none means every unit. */
+  scope?: string[];
 }
 
 export class MemoryStore {
@@ -71,6 +73,7 @@ export class MemoryStore {
       id: randomUUID(), subject: input.subject, note: input.note, evidence: input.evidence,
       ...(input.unit === undefined ? {} : { unit: input.unit }), ...(input.revision === undefined ? {} : { revision: input.revision }),
       recordedBy: input.recordedBy, recordedAt: new Date(now).toISOString(), reviewBy: new Date(reviewBy).toISOString(),
+      ...(input.scope?.length ? { scope: [...input.scope] } : {}),
     };
     await this.#append({ type: "memory-recorded", entry });
     return entry;
@@ -99,8 +102,9 @@ export class MemoryStore {
     return [...states.values()];
   }
 
-  async current(): Promise<MemoryState[]> {
-    return (await this.states()).filter((s) => s.status === "current");
+  /** Current facts; with a unit type, only the facts scoped to it or to everyone (lesson 15). */
+  async current(unitType?: string): Promise<MemoryState[]> {
+    return (await this.states()).filter((s) => s.status === "current" && (unitType === undefined || !s.scope?.length || s.scope.includes(unitType)));
   }
 }
 
@@ -108,6 +112,6 @@ export class MemoryStore {
 export function renderMemorySection(entries: readonly MemoryState[]): string {
   if (!entries.length) return "Operational memory (S3): nothing current. Record what you learn about this environment with `remember`; each fact expires and is reviewed.";
   const lines = ["Operational memory (S3): what earlier units learned about this environment. Facts, not rules — each expires on its review-by date. Not identity; a fact that turns out to be policy is proposed, not remembered."];
-  for (const e of entries) lines.push(`- ${e.subject}: ${e.note} (recorded ${e.recordedAt.slice(0, 10)} by ${e.recordedBy}${e.unit ? ` in unit ${e.unit}` : ""}; review by ${e.reviewBy.slice(0, 10)})`);
+  for (const e of entries) lines.push(`- ${e.subject}: ${e.note} (recorded ${e.recordedAt.slice(0, 10)} by ${e.recordedBy}${e.unit ? ` in unit ${e.unit}` : ""}; review by ${e.reviewBy.slice(0, 10)}${e.scope?.length ? `; for ${e.scope.join(", ")} units` : ""})`);
   return lines.join("\n");
 }

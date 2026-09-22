@@ -270,7 +270,9 @@ export async function routeMessages(ledger: ObligationLedger, options: RouteMess
     for (const unit of new Set(units)) {
       routed.opened.push(await ledger.openObligation({
         subject: message.subject, ...(unit === undefined ? {} : { unit }), concern: message.kind, sources: [message.id], severity, consumer: rule.consumer,
-        blocks: blocks && unit !== undefined, openedBy: by,
+        // A blocking obligation holds the unit it is about. With no unit it holds nothing — except an audit finding about the
+        // instance itself (lesson 15: the base failing its checks after a merge), which holds every dispatch until S3 decides.
+        blocks: blocks && (unit !== undefined || message.kind === "audit-finding"), openedBy: by,
       }));
     }
   }
@@ -279,7 +281,9 @@ export async function routeMessages(ledger: ObligationLedger, options: RouteMess
 
 /** The open obligations that veto a unit's dispatch and close. */
 export async function progressionVeto(ledger: ObligationLedger, unitId: string): Promise<ObligationState[]> {
-  return (await ledger.open(unitId)).filter((o) => o.blocks);
+  // What is owed on the unit, and what is owed on the instance itself (lesson 15): an obligation with no unit — the base
+  // failing its checks after a merge — holds every unit until S3 dispositions it.
+  return (await ledger.open()).filter((o) => o.blocks && (o.unit === unitId || o.unit === undefined));
 }
 
 /**

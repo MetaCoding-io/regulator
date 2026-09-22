@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * `regulator` for the course lab.
  *
@@ -32,6 +33,12 @@
  *                                 [--interpretation <file>] [--by <who>] [--keep]   run the suite (lesson 14): scripted units headlessly, or live units through the Pi dispatcher
  *   node dist/lab-cli.js spans [--json]                    the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
  *   node dist/lab-cli.js review [--due] [--within <days>]  the registry's review dates; --due lists what is overdue or due within the window
+ *   node dist/lab-cli.js init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository (lesson 15):
+ *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
+ *   node dist/lab-cli.js doctor [--json] [--today <date>]  the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
+ *   node dist/lab-cli.js watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
+ *   node dist/lab-cli.js identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text>
+ *                                                         the release path: copy the instance's accepted identity file into the definition's seed and commit it there
  *
  * Every `--by` is checked against the interaction policy's people: a name not listed may disposition nothing, and what a
  * listed person may do (severity, accepted-risk, S5) is declared there. The name itself is asserted, not authenticated.
@@ -44,7 +51,8 @@ import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
 import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding/vsm-pi-protocol";
-import { deliverPending, remindDue } from "./deliver.js";
+import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
+import { doctor, initInstance, readManifest } from "./instance.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
 import { CHECKPOINT_EXTENSIONS, piDispatcher } from "./dispatch-pi.js";
@@ -66,7 +74,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -92,7 +100,79 @@ async function findObligation(ledger: ObligationLedger, ref: string): Promise<Ob
 }
 
 try {
-  if (command === "fixture" && sub) {
+  if (command === "init") {
+    const dir = sub && !sub.startsWith("--") ? path.resolve(sub) : process.cwd();
+    const args = [sub, ...rest].filter((a): a is string => a !== undefined);
+    const initFlag = (name: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : undefined; };
+    const split = (v: string | undefined) => (v ? v.split(",").map((p) => p.trim()).filter(Boolean) : undefined);
+    const writablePaths = split(initFlag("writable"));
+    const protectedPaths = split(initFlag("protected"));
+    const by = initFlag("by") ?? `${userInfo().username}@${hostname()}`;
+    const result = await initInstance(realExec, { repo: dir, by, ...(writablePaths ? { writablePaths } : {}), ...(protectedPaths ? { protectedPaths } : {}), ...(initFlag("definition") ? { definitionRoot: path.resolve(initFlag("definition")!) } : {}) });
+    const m = result.manifest;
+    console.log(`instance ready at ${dir}: definition ${m.definition.name} at ${m.definition.harnessRevision.slice(0, 7)} (${m.definition.registry} regulators, pi ${m.definition.pi}), initialized by ${m.initializedBy}`);
+    console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[IDENTITY_RELATIVE_DIR, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
+    console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity seeded, .regulator/ ignored)` : "  nothing to commit: identity and ignore line were already there");
+    console.log("  next: `regulator doctor`, then `regulator unit drive <contract.json>`");
+  } else if (command === "doctor") {
+    const manifestHere = await readManifest(process.cwd()).catch(() => undefined);
+    const report = await doctor(realExec, { ...(manifestHere || sub === "--instance" || rest.includes("--instance") ? { repo: process.cwd() } : {}), ...(flag("today") ? { today: flag("today")! } : {}), ...(flag("definition") ? { definitionRoot: path.resolve(flag("definition")!) } : {}) });
+    if (rest.includes("--json") || sub === "--json") console.log(JSON.stringify(report, null, 2));
+    else {
+      for (const c of report.checks) console.log(`${c.ok ? "ok      " : "PROBLEM "} ${c.name.padEnd(17)} ${c.detail}`);
+      console.log(`${report.problems} problem(s)`);
+    }
+    process.exit(report.problems ? 1 : 0);
+  } else if (command === "watch") {
+    const execAt = rest.indexOf("--exec");
+    const execCmd = execAt >= 0 ? rest.slice(execAt + 1) : sub === "--exec" ? rest : undefined;
+    const once = rest.includes("--once") || sub === "--once";
+    const intervalMs = flag("interval") ? Number(flag("interval")) : undefined;
+    const ticks = await watchOutbox(process.cwd(), {
+      policy: await interactionP(), once, ...(intervalMs === undefined ? {} : { intervalMs }), ...(execCmd?.length ? { exec: execCmd.filter((a) => a !== "--once") } : {}),
+      onTick: (t) => console.log(`${t.at}  delivered ${t.delivered}, reminded ${t.reminded}, forwarded ${t.forwarded}${t.failed ? `, FAILED ${t.failed} (cursor not advanced)` : ""}`),
+    });
+    if (once && ticks.some((t) => t.failed)) process.exit(1);
+  } else if (command === "identity" && sub === "promote" && rest[0]) {
+    // The release path (lesson 15): an instance's accepted identity file becomes the definition's seed, committed in the definition's repository.
+    const file = rest[0];
+    const rationale = flag("rationale");
+    if (!rationale || !(IDENTITY_FILES as readonly string[]).includes(file)) { console.error(`identity promote needs one of ${IDENTITY_FILES.join(", ")} and --rationale`); usage(); }
+    const by = await authorized(flag("by"), { severity: "blocking", s5: true });
+    const repo = process.cwd();
+    const manifest = await readManifest(repo);
+    const definitionRoot = flag("definition") ? path.resolve(flag("definition")!) : manifest?.definition.root ?? labRoot;
+    const instanceFile = path.join(repo, IDENTITY_RELATIVE_DIR, file);
+    const seedFile = path.join(definitionRoot, "identity", file);
+    if (!(await isClean(realExec, definitionRoot))) throw new Error(`the definition at ${definitionRoot} has uncommitted changes; a promotion is committed on its own`);
+    const content = await readFile(instanceFile, "utf8");
+    if (content === (await readFile(seedFile, "utf8").catch(() => ""))) throw new Error(`${file} in this instance is identical to the definition's seed; nothing to promote`);
+    const decision = authorizeWrite(path.posix.join(IDENTITY_RELATIVE_DIR, file), "s5-authority");
+    if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+    const { readIdentity: readSet } = await import("@metacoding/vsm-pi-core");
+    const { mkdtemp, cp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const trial = await mkdtemp(path.join(tmpdir(), "regulator-promote-"));
+    try {
+      await cp(path.join(definitionRoot, "identity"), trial, { recursive: true });
+      await writeFile(path.join(trial, file), content, "utf8");
+      const set = await readSet(trial);
+      if (set.problems.length) throw new Error(`promoting ${file} would leave the definition's identity invalid (${set.problems.join("; ")}); nothing changed`);
+    } finally {
+      await rm(trial, { recursive: true, force: true });
+    }
+    await writeFile(seedFile, content, "utf8");
+    const instanceRev = await headRevision(realExec, repo).catch(() => "unknown");
+    for (const args of [["add", "--", path.relative(definitionRoot, seedFile)], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: promote ${file} from instance ${path.basename(repo)}@${instanceRev.slice(0, 7)} into the definition
+
+Decided by ${by} under S5 authority.
+${rationale}`]]) {
+      const r = await realExec("git", args, { cwd: definitionRoot });
+      if (r.code !== 0) throw new Error(`git ${args[0]} failed in the definition: ${r.stderr.trim()}`);
+    }
+    const sha = await headRevision(realExec, definitionRoot);
+    console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's file, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
+  } else if (command === "fixture" && sub) {
     const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
     console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity seeded at regulator/identity/)`);

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { MemoryStore } from "@metacoding/vsm-pi-core";
 import { IDENTITY_SECTION_TAG, MEMORY_ENTRY_TYPE, MEMORY_SECTION_TAG, createIdentityExtension } from "./cp11-identity.js";
@@ -72,4 +73,33 @@ test("with a problem in the identity set the session says so; outside a reposito
   const other = ctxFor(bare);
   await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, other.ctx);
   await assert.rejects(tools.get("remember")!.execute("m", { subject: "s", note: "n", evidence: [], reviewBy: "2099-01-01T00:00:00.000Z" }, undefined as never, undefined as never, other.ctx as never), /not inside a repository the orchestrator knows; memory has nowhere to be recorded/);
+});
+
+test("memory scope (lesson 15): a fact recorded for research units is rendered to a research unit and not to an implement unit; the tool records the scope with the fact", async (t) => {
+  const repo = await initRepo(t);
+  const { ExecutionStore } = await import("@metacoding/vsm-pi-core");
+  const { loadContract } = await import("./cp5-contract.js");
+  const store = new ExecutionStore(repo);
+  const base = await loadContract(path.join(fileURLToPath(new URL("../", import.meta.url)), "contracts", "fix-known-issue.json"));
+  await store.createUnit({ ...base, unitId: "imp" });
+  await store.createUnit({ ...base, id: "tc-r", unitId: "res", unitType: "research" });
+  const clock = Date.parse("2026-09-22T12:00:00.000Z");
+  const imp = await startUnit(gitExec, { repo, unitId: "imp", owner: "alice" });
+  const res = await startUnit(gitExec, { repo, unitId: "res", owner: "alice" });
+  const { pi, handlers, tools } = mockPi();
+  createIdentityExtension({ now: () => clock, maxReviewDays: 30 })(pi);
+  const sections = async (cwd: string) => {
+    const { ctx } = ctxFor(cwd);
+    await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+    const event = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
+    await handlers.get("before_agent_start")!(event, ctx);
+    return { section: event.systemPromptOptions.sections[MEMORY_SECTION_TAG] ?? "", ctx };
+  };
+  const { ctx } = await sections(res.worktree.path);
+  const out = await tools.get("remember")!.execute("m", { subject: "advisory feed", note: "rate-limited to 60/min", evidence: [], reviewBy: new Date(clock + 7 * DAY).toISOString(), scope: ["research"] }, undefined as never, undefined as never, ctx as never) as { content: Array<{ text: string }> };
+  assert.match(out.content[0]!.text, /for research units\. It is a fact for later units/);
+  assert.match((await sections(res.worktree.path)).section, /advisory feed: rate-limited to 60\/min .*; for research units\)/);
+  assert.doesNotMatch((await sections(imp.worktree.path)).section, /advisory feed/, "an implement unit never sees it");
+  await tools.get("remember")!.execute("m2", { subject: "everyone", note: "n", evidence: [], reviewBy: new Date(clock + 7 * DAY).toISOString() }, undefined as never, undefined as never, ctx as never);
+  assert.match((await sections(imp.worktree.path)).section, /everyone: n/);
 });
