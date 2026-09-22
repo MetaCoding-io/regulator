@@ -360,6 +360,7 @@
       <a href="#course">Course</a>
       <a href="#syllabus">Syllabus</a>
       <a href="#status">Status</a>
+      <a href="how-it-works.html">How it works ↗</a>
     </div>
   </div>
 </nav>
@@ -378,6 +379,7 @@
   <div class="hero-links">
     <a class="btn primary" href="#syllabus">Read the syllabus</a>
     <a class="btn" href="#model">See the control model</a>
+    <a class="btn" href="how-it-works.html">How a unit runs (diagrams)</a>
     <a class="btn" href="https://pi.dev/">Pi, the substrate ↗</a>
   </div>
 </header>
@@ -403,27 +405,37 @@
     <div>
       <h3 style="font-size:14px;margin:0 0 10px;">Repository layout</h3>
       <pre class="tree"><b>packages/</b>
-  protocol/       VSM vocabulary + schemas — channels, trace,
-                  effects, profiles, registry record
-  core/           authority, routing, trace writer, effect +
-                  profile checks, registry check + docs gen
-  pi-extension/   Pi lifecycle integration, S5 write gate
-  checks/         deterministic S3* checks
-  cli/            vsm init / check / status / trace
+  protocol/       VSM vocabulary + runtime schemas — messages, trace,
+                  effects, profiles, registry, contracts, execution,
+                  policy, recovery, audit
+  core/           authority (write preflight), leases, thrash detector,
+                  execution store, signal sink, budgets, recovery
+                  router, effect journal, audit log, registry check +
+                  REGULATORS.md / BOUNDARY.md generators
+  checks/         deterministic S3* checks: host-run verification
+                  bound to a revision, the technical verdict
+  pi-extension/   Pi lifecycle integration, S5 write gate, typed
+                  proposal / audit-finding / uncertainty tools
+  cli/            `regulator status`: the read model over a
+                  definition and an instance
+  control-room/   read-only page over the read model
 
-<b>agents/</b>           judgment-oriented S1/S4/S3* prompt profiles
-<b>course/lab/</b>       reference build — checkpoints 0–3, fixture
-                  conventions, profile declarations, registry CLI
-<b>docs/</b>             architecture, roadmap, design notes
-<b>experiments/</b>      longitudinal drift scenarios + run artifacts
-<b>vsm/</b>               committed S5 artifacts for this repo itself</pre>
+<b>course/lab/</b>       reference build — checkpoints 0–9, three fixtures,
+                  the registry (20 records), identity, policies,
+                  workload, the `regulator` lab CLI
+<b>course/modules/</b>   lessons 01–10, written
+<b>docs/</b>             architecture, roadmap, design notes, DEBT.md
+<b>vsm/</b>               committed S5 artifacts for this repo itself
+<b>site/</b>              this page</pre>
     </div>
   </div>
   <p style="font-size:12.5px;color:var(--ink-dim);margin-top:18px;">
     Promotion is a standing rule, not a one-off: a checkpoint's Pi-free module moves from
-    <code>course/lab</code> into <code>packages/protocol</code> or <code>packages/core</code>
-    once two lessons depend on it, and the lab imports it back rather than re-implementing it.
-    Trace, effects, profiles, and the registry made that move most recently.
+    <code>course/lab</code> into <code>packages/</code> once two lessons depend on it, and
+    the lab imports it back rather than re-implementing it. Trace, effects, profiles and the
+    registry went first; contracts, the execution store, leases, budgets, the recovery
+    router, the effect journal, the host-run checks, the audit log and the write preflight
+    have followed.
   </p>
 </section>
 
@@ -432,7 +444,7 @@
   <h2 class="title">Six functions, one loop</h2>
   <p class="lede">Beer's Viable System Model, read as a harness architecture. Regulatory
     variety flows down as attenuated instruction and back up as amplified evidence —
-    S3\* audits independently of what S1 reports, and S4 argues with S3 about the future
+    S3&#42; audits independently of what S1 reports, and S4 argues with S3 about the future
     on S5's terms.</p>
 
   <div class="diagram-shell">
@@ -445,7 +457,7 @@
       <!-- environment -->
       <path d="M 560 20 C 660 40, 700 120, 690 200 C 700 280, 660 360, 560 380"
             fill="none" stroke="var(--line-strong)" stroke-width="1.5" stroke-dasharray="3 5"/>
-      <text x="700" y="16" font-family="var(--mono)" font-size="11" fill="var(--ink-faint)">ENVIRONMENT</text>
+      <text x="752" y="16" text-anchor="end" font-family="var(--mono)" font-size="11" fill="var(--ink-faint)">ENVIRONMENT</text>
 
       <!-- spine -->
       <line x1="150" y1="46" x2="150" y2="330" stroke="var(--line-strong)" stroke-width="1.5"/>
@@ -539,15 +551,18 @@
     <a href="https://github.com/open-gsd/gsd-pi">GSD-Pi</a>'s workflow kernel. GSD-Pi is
     mid-cutover to a database-authoritative lifecycle, OpenGSD is fanning out into separate
     projects, and the course lab already proved the regulation layer needs <em>an</em>
-    orchestrator, not GSD's — four checkpoints of gates, effects, profiles, trace and
-    registry run on bare Pi. <code>packages/</code> has no GSD dependency; GSD-Pi stays in
-    the course purely as comparison material.</p>
+    orchestrator, not GSD's — ten checkpoints of gates, effects, profiles, leases,
+    contracts, budgets, recovery, audit and authority run on bare Pi. <code>packages/</code>
+    has no GSD dependency; GSD-Pi stays in the course purely as comparison material.
+    <a href="how-it-works.html">How a unit runs through the loop</a> is drawn out on its
+    own page.</p>
 
   <div class="grid2">
     <div>
       <h3 style="font-size:14px;margin:0 0 10px;">The orchestrator, sized</h3>
       <p style="font-size:13.5px;color:var(--ink-dim);margin:0 0 12px;">Nothing but the S3
-        loop, generic over workloads, with leases, budgets, and attempts as immutable records:</p>
+        loop, generic over workloads, with leases, budgets, and attempts as immutable records.
+        All five stages exist in <code>course/lab/src/controller.ts</code>:</p>
       <div class="diagram-shell" style="padding:16px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-family:var(--mono);font-size:12.5px;">
           <span class="pill written" style="border-radius:6px;">contract</span>
@@ -563,7 +578,8 @@
       </div>
       <p style="font-size:12px;color:var(--ink-faint);margin-top:10px;">What made GSD heavy —
         seven fixed phases, milestone lifecycles, UAT, projections — is <em>workload</em>,
-        and lives in a workload definition, not in this loop.</p>
+        and lives in a workload definition, not in this loop. Recovery decisions cite a
+        versioned policy; closeout is refused on anything but fresh, host-run evidence.</p>
     </div>
     <div>
       <h3 style="font-size:14px;margin:0 0 10px;">The first workload: the autoloop</h3>
@@ -573,17 +589,17 @@
         <em>declaring</em> one rather than adapting it:</p>
       <div class="diagram-shell" style="padding:16px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:12px;">
-          <span class="pill planned" style="border-radius:6px;">plan</span>
-          <span class="pill planned" style="border-radius:6px;">implement</span>
-          <span class="pill planned" style="border-radius:6px;">verify</span>
-          <span class="pill planned" style="border-radius:6px;">integrate</span>
-          <span class="pill planned" style="border-radius:6px;">close</span>
+          <span class="pill written" style="border-radius:6px;">plan</span>
+          <span class="pill written" style="border-radius:6px;">implement</span>
+          <span class="pill written" style="border-radius:6px;">verify</span>
+          <span class="pill written" style="border-radius:6px;">integrate</span>
+          <span class="pill written" style="border-radius:6px;">close</span>
         </div>
-        <p style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 2px;">five unit types above, regulated by:</p>
+        <p style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 2px;">five unit types, declared in <code>workload/software-development.json</code>, each naming:</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:12.5px;color:var(--ink-dim);">
-          <div><b style="color:var(--ink);">Checks</b> that verify a unit's work — sourced from <code>read_conventions</code></div>
-          <div><b style="color:var(--ink);">S4 triggers</b> that can raise a new unit unasked — issue labelled, CI red, dependency advisory</div>
-          <div><b style="color:var(--ink);">Consent</b> required before a unit may act — deploy, force-push, history rewrite</div>
+          <div><b style="color:var(--ink);">A capability profile</b> the unit runs under — <code>implement</code> may write <code>src/</code> and <code>test/</code>; <code>research</code> is read-only by declared effect</div>
+          <div><b style="color:var(--ink);">Checks</b> the orchestrator re-runs itself at closeout — <code>run_checks</code>, <code>run_tests</code> — bound to the revision they ran against</div>
+          <div><b style="color:var(--ink);">Still design:</b> S4 triggers that raise a unit unasked (lesson 11) and consent before irreversible actions (lesson 13)</div>
         </div>
       </div>
     </div>
@@ -592,25 +608,33 @@
 
 <section id="status" class="wrap">
   <div class="kicker">Status<span class="tick"></span></div>
-  <h2 class="title">Early, and the primitives are tested</h2>
-  <p class="lede">The control-plane primitives exist and are tested; the orchestrator itself
-    is the next thing the course builds. <code>course/lab</code> is the reference build —
-    each checkpoint promotes into <code>packages/</code> as it stabilizes.</p>
+  <h2 class="title">The loop runs; the metasystem is next</h2>
+  <p class="lede">The S3 loop exists end to end — contract, dispatch, verify, route, close —
+    with leases, budgets, a versioned recovery policy, a closeout gate over host-run evidence,
+    and protected identity. Lessons 11–15 add environmental intelligence, obligations, the
+    complete identity set, the algedonic channel, evals and packaging.
+    <code>course/lab</code> is the reference build; each checkpoint promotes into
+    <code>packages/</code> as it stabilizes. What the build still owes is listed in
+    <code>docs/DEBT.md</code>.</p>
   <div class="cards">
-    <div class="card"><div class="k">0–3</div><div class="l">Lab checkpoints built: event log, schema-validated trace, typed tools, capability profiles</div></div>
-    <div class="card"><div class="k">↑</div><div class="l">Trace, effects, profiles and the registry promoted into <code>packages/protocol</code> and <code>packages/core</code></div></div>
-    <div class="card"><div class="k">15+1</div><div class="l">Modules specified in the full syllabus, plus the capstone viability case</div></div>
+    <div class="card"><div class="k">0–9</div><div class="l">Lab checkpoints built, each a loadable Pi extension tested without a model, under CI on two Node versions</div></div>
+    <div class="card"><div class="k">20</div><div class="l">Regulators in the registry, each with a stated limitation; <code>REGULATORS.md</code> and <code>BOUNDARY.md</code> generated from the records</div></div>
+    <div class="card"><div class="k">10 / 15</div><div class="l">Lessons written end to end, plus the capstone viability case specified</div></div>
   </div>
 </section>
 
 <section id="control-room" class="wrap">
   <div class="kicker">The maintainer's interface<span class="tick"></span></div>
-  <span class="fake-tag">Mockup — not built</span>
+  <span class="fake-tag">Illustrative — the first page is built</span>
   <h2 class="title">The control room</h2>
-  <p class="lede">A projection of <em>registry ∪ event store ∪ eval results</em>. It owns
-    no state of its own — every screen below is read from records and evidence that
-    already exist elsewhere. The mockups below are illustrative only; nothing in
-    <code>packages/</code> renders them yet.</p>
+  <p class="lede">A projection of <em>registry ∪ execution store ∪ regulatory state</em>.
+    It owns no state of its own — every screen is read from records that already exist
+    elsewhere. <code>packages/control-room</code> serves the first page today over the
+    <code>regulator status</code> read model: the topology (regulators by function with the
+    channels each declares), every instance's units with their budget, routing decision and
+    audit verdict, leases and unrouted signals, and an inspector showing the whole record for
+    a regulator or a unit. The frames below are illustrative; the assurance, lifecycle and
+    replay views are still design.</p>
 
   <div class="crframe">
     <div class="chrome">
@@ -641,12 +665,12 @@
         <div class="cr-field"><div class="k">Mechanism</div><div class="v">deterministic-gate · <code>tool_call</code></div></div>
         <div class="cr-field"><div class="k">Authority</div><div class="v">may block a write · may not approve a proposal</div></div>
         <div class="cr-field"><div class="k">Evidence</div><div class="v">3 tests · last verified rev 4b0e567</div></div>
-        <div class="cr-field"><div class="k">Boundary</div><div class="v">lexical path check only — <code>bash</code> bypasses it</div></div>
+        <div class="cr-field"><div class="k">Boundary</div><div class="v">lexical path check only; superseded by the identity write gate's filesystem walk when both load</div></div>
         <div class="cr-field"><div class="k">Owner</div><div class="v">reviewBy 2026-12-01</div></div>
       </div>
     </div>
   </div>
-  <div class="cr-caption">Design mode, built from the registry alone — selecting a node opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it.</div>
+  <div class="cr-caption">Topology, built from the registry alone — selecting a node opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it. (Built.)</div>
 
   <div class="crframe">
     <div class="chrome">
@@ -674,7 +698,7 @@
       </div>
     </div>
   </div>
-  <div class="cr-caption">Live mode, built from the event store — "healthy" means evidenced and current, never merely no errors reported.</div>
+  <div class="cr-caption">Instances, built from the execution store, the signal sink and the audit log — "healthy" means evidenced and current, never merely no errors reported. (Built, without the consent banner: that is lesson 13.)</div>
 
   <div class="cr-next">
     <div class="cr-next-card"><div class="t">Assurance</div><div class="d">Which regulators have fresh evidence, which acceptance criteria are uncovered, which claims rest only on self-report.</div></div>
@@ -686,8 +710,8 @@
     <strong>Read-only first.</strong> This is an S3&#42;/S4 observation surface. The moment
     it grows a "raise budget" or "dismiss obligation" button, it has quietly become an
     S3/S5 authority surface — actions land later only as typed proposals or explicitly
-    authorized commands with their own audit trail. Today the registry schema and check
-    exist and run in CI; the control room itself is design only.
+    authorized commands with their own audit trail. Every non-GET request the page receives
+    is refused with 405.
   </p>
 </section>
 
@@ -732,8 +756,8 @@
   <div class="kicker">Table of contents<span class="tick"></span></div>
   <h2 class="title">Full syllabus — 15 modules, six parts</h2>
   <p class="lede">Every module is a fixed unit: question → concept → Pi mechanism → build
-    step → break it → field study → checkpoint. Contents aren't published yet beyond
-    modules 01–04 — this is the map, not the manuscript.</p>
+    step → break it → field study → checkpoint. Modules 01–10 are written end to end in
+    <code>course/modules/</code>; 11–15 are specified in the curriculum and not yet written.</p>
 
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;0</span><span class="part-name">Framing</span></div>
@@ -778,12 +802,12 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;2</span><span class="part-name">S2 — Coordination</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">05</div>
-        <div class="body"><div class="name">Isolation, leases, anti-oscillation</div>
+        <div class="body"><div class="name">Isolation, leases, and the anti-oscillation problem</div>
           <div class="q">What stops two operations from fighting?</div>
-          <div class="surface">project trust · bash hooks · sandbox</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">pi.exec · worktrees · tool execution events · no-sandbox position</div></div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
@@ -791,26 +815,26 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;3</span><span class="part-name">S3 — Control</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">06</div>
-        <div class="body"><div class="name">Work contracts</div>
+        <div class="body"><div class="name">Work contracts: what you are actually authorizing</div>
           <div class="q">What am I actually authorizing this run to decide?</div>
-          <div class="surface">SDK runtime · custom tools · session entries</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">SDK sessions as a driver · typed session entries · extension flags</div></div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">07</div>
-        <div class="body"><div class="name">Context as a regulated resource</div>
+        <div class="body"><div class="name">Context and budget as regulated resources</div>
           <div class="q">What do I spend, and on what?</div>
-          <div class="surface">compaction hooks · getContextUsage · provider hooks</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">compaction hooks · ctx.abort · model_select · ModelRuntime</div></div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">08</div>
-        <div class="body"><div class="name">Failure, recovery, retry lattice</div>
+        <div class="body"><div class="name">Failure, recovery, and the retry lattice</div>
           <div class="q">What happens on attempt two, and on attempt six?</div>
-          <div class="surface">agent_end · agent_before_settle · recovery routing</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">agent_end · agent_before_settle · effect journal · recovery routing</div></div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
@@ -818,19 +842,19 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;4</span><span class="part-name">S3&#42; — Audit</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">09</div>
         <div class="body"><div class="name">Evidence, not claims</div>
           <div class="q">How do I know the work is done?</div>
-          <div class="surface">tool_call / tool_result hooks · host-run checks</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">tool_call / tool_result hooks · host-run checks · the closeout gate</div></div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">10</div>
-        <div class="body"><div class="name">Authority boundaries</div>
+        <div class="body"><div class="name">Authority boundaries and protected state</div>
           <div class="q">What must the agent never be able to change?</div>
-          <div class="surface">permission gates · protected paths · proposals</div></div>
-        <div class="pill planned">Planned</div>
+          <div class="surface">tool_call blocking · the write preflight · project trust · BOUNDARY.md</div></div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
@@ -894,6 +918,7 @@
   <div class="foot-row">
     <div class="foot-note">VSM-Pi · a control plane, and the course that builds it.</div>
     <div class="foot-links">
+      <a href="how-it-works.html">How it works</a>
       <a href="https://github.com/metacoding-io/vsm-pi">Repository ↗</a>
       <a href="https://pi.dev/">Pi ↗</a>
       <a href="https://github.com/open-gsd/gsd-pi">GSD-Pi (comparison) ↗</a>
