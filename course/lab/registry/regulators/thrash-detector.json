@@ -1,0 +1,30 @@
+{
+  "id": "reg.coordination.thrash-detector.v1",
+  "name": "Thrash detector",
+  "status": "active",
+  "vsmFunction": "S2",
+  "purpose": "Count write and edit calls per file within a unit and emit a typed coordination signal past a threshold, so oscillation between two fixes becomes visible to S3 instead of burning budget silently.",
+  "absorbs": {
+    "failureClass": "oscillation",
+    "description": "Fix A breaks B, fix B breaks A; each individual edit is locally reasonable and nothing in the loop notices the pattern."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp4-coordination.ts",
+    "enforcementPoints": ["tool_execution_end"]
+  },
+  "channels": { "consumes": ["tool_execution_end (write, edit)"], "emits": ["coordination-signal (oscillation) → S3"] },
+  "scope": { "subjects": ["unit"], "resources": ["file"] },
+  "authority": {
+    "may": ["record a coordination signal to .regulator/signals.ndjson and notify the user"],
+    "mayNot": ["block a tool call", "pause or replan the unit (S3 decides, lesson 08)", "decide which of two fixes is right"]
+  },
+  "evidence": { "tests": ["src/cp4-coordination.test.ts", "src/coordination.test.ts"] },
+  "limitations": [
+    "Counts write and edit tool calls only; edits made through bash are invisible to it.",
+    "Memory is per session: a unit resumed in a new session starts counting from zero.",
+    "The threshold is a constant, not a policy; lesson 07 makes it a budget."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M05"
+}

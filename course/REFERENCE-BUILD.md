@@ -87,13 +87,16 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–3 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–4 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
   its two profile declarations, the checkpoints, the registry CLI and the seed records.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and two
-  seed records live under `course/lab/registry/`; the control room is design only
+  Checkpoint 4 adds the lease store, thrash detector, worktree/reintegration and unit
+  lifecycle modules, and the `regulator` lab CLI (`fixture`, `unit start|finish|status`);
+  they stay in the lab until a second lesson depends on them.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and five
+  records live under `course/lab/registry/`; the control room is design only
   ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
@@ -103,6 +106,8 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   README wrong in two places, two failing tests, and a vendored helper. The flaky test,
   the ambiguous requirement and the migration are still to add.
 - **Oscillation fixture** — two coupled tests that can be alternately satisfied, for M05.
+  `course/lab/fixture-oscillation/` (slugkit with the known issue fixed and two
+  contradictory underscore tests) — **exists**.
 - **Injection fixture** — a planted instruction in a source comment and another in a
   tool result, for M10. It must be realistic enough that an ungated agent sometimes
   follows it; a drill nobody fails teaches nothing.

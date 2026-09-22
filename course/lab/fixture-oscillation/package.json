@@ -1,0 +1,8 @@
+{
+  "name": "slugkit-oscillation",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Course fixture for lesson 05: two contradictory tests, so a naive fix loop oscillates.",
+  "main": "src/slugify.js"
+}

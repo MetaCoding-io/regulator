@@ -119,6 +119,33 @@ export const OperationalSignalSchema = Type.Object({
 }, { additionalProperties: false });
 export type OperationalSignal = Static<typeof OperationalSignalSchema>;
 
+/**
+ * S2 coordination feedback to S3: something is oscillating, colliding, or
+ * conflicting between operational units. S2 detects; S3 decides.
+ */
+export const CoordinationSubjectSchema = Type.Union([
+  Type.Literal("oscillation"),
+  Type.Literal("conflict"),
+  Type.Literal("collision"),
+  Type.Literal("lease-expired"),
+]);
+export type CoordinationSubject = Static<typeof CoordinationSubjectSchema>;
+
+export const CoordinationSignalSchema = Type.Object({
+  ...EnvelopeFields,
+  kind: Type.Literal("coordination-signal"),
+  channel: Type.Literal("signal"),
+  source: Type.Literal("S2"),
+  destination: Type.Literal("S3"),
+  severity: SeveritySchema,
+  coordination: CoordinationSubjectSchema,
+  observation: Type.String({ minLength: 1 }),
+  evidence: Type.Array(EvidenceRefSchema),
+  /** The resource the units are contending over: a path, a branch, a file. */
+  resource: Type.Optional(Type.String()),
+}, { additionalProperties: false });
+export type CoordinationSignal = Static<typeof CoordinationSignalSchema>;
+
 /** Future/environment-facing intelligence from S4. */
 export const IntelligenceSignalSchema = Type.Object({
   ...EnvelopeFields,
@@ -219,6 +246,7 @@ export const VsmMessageSchema = Type.Union([
   PolicyProposalSchema,
   ConstraintSchema,
   OperationalSignalSchema,
+  CoordinationSignalSchema,
   IntelligenceSignalSchema,
   AlgedonicSignalSchema,
   UncertaintySignalSchema,

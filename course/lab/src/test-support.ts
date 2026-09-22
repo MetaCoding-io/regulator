@@ -1,11 +1,11 @@
 /** Shared helpers for the lab's headless tests. Not part of any checkpoint. */
-import { execFile } from "node:child_process";
 import { cp, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TestContext } from "node:test";
-import type { ExecOptions, ExecResult, ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { realExec } from "./exec.js";
 
 export type Handler = (event: unknown, ctx: unknown) => unknown;
 
@@ -45,18 +45,7 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
   return state;
 }
 
-export function realExec(command: string, args: string[], options?: ExecOptions): Promise<ExecResult> {
-  // The lab tools spawn `node --test`. Under the test runner, children inherit
-  // NODE_TEST_CONTEXT and refuse to run "recursively"; production never sets it.
-  const env = { ...process.env };
-  delete env.NODE_TEST_CONTEXT;
-  return new Promise((resolve) => {
-    const child = execFile(command, args, { cwd: options?.cwd, timeout: options?.timeout, env }, (error, stdout, stderr) => {
-      const code = error && typeof (error as { code?: unknown }).code === "number" ? ((error as { code: number }).code) : error ? 127 : 0;
-      resolve({ stdout: String(stdout), stderr: String(stderr), code, killed: Boolean(child.killed) });
-    });
-  });
-}
+export { realExec } from "./exec.js";
 
 export function ctxFor(cwd: string) {
   const notices: { message: string; level: string }[] = [];

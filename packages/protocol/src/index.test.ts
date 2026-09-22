@@ -52,6 +52,7 @@ const messages = [
   audit, proposal, algedonic,
   { ...envelope, kind: "constraint", channel: "constraint", source: "S5", destination: "S1", rule: "Preserve authority" },
   { ...envelope, kind: "operational-signal", channel: "signal", source: "S1", destination: "S3", observation: "Task complete" },
+  { ...envelope, kind: "coordination-signal", channel: "signal", source: "S2", destination: "S3", coordination: "oscillation", observation: "Same file edited 4 times", resource: "src/slugify.js" },
   { ...envelope, kind: "intelligence-signal", channel: "intelligence", source: "S4", destination: "S3", observation: "Environment changed" },
 ];
 test("all message kinds enforce their channel discriminator at runtime", () => {
