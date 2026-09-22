@@ -7,28 +7,22 @@
  * Lesson 06's orchestrator dispatches units through exactly these two steps.
  */
 import { randomUUID } from "node:crypto";
-import { appendFile, cp, mkdir, realpath } from "node:fs/promises";
+import { cp, realpath } from "node:fs/promises";
 import path from "node:path";
 import type { CoordinationSignal } from "@metacoding/vsm-pi-protocol";
+import { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding/vsm-pi-core";
 import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
 import {
-  baseRoot, createUnitWorktree, currentBranch, reintegrate, removeUnitWorktree, unitBranch, WORKTREES_RELATIVE_DIR,
+  baseRoot, createUnitWorktree, currentBranch, reintegrate, removeUnitWorktree, unitBranch,
   type ReintegrationResult, type UnitWorktree,
 } from "./worktree.js";
 
-export const LEASES_RELATIVE_DIR = path.join(".regulator", "leases");
-export const SIGNALS_RELATIVE_PATH = path.join(".regulator", "signals.ndjson");
+export { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, appendSignal } from "@metacoding/vsm-pi-core";
 export const DEFAULT_LEASE_TTL_MS = 10 * 60 * 1000;
 
 export function leaseStoreFor(repo: string, now?: () => number): LeaseStore {
   return new LeaseStore(path.join(repo, LEASES_RELATIVE_DIR), now);
-}
-
-export async function appendSignal(repo: string, signal: CoordinationSignal): Promise<void> {
-  const file = path.join(repo, SIGNALS_RELATIVE_PATH);
-  await mkdir(path.dirname(file), { recursive: true });
-  await appendFile(file, `${JSON.stringify(signal)}\n`, "utf8");
 }
 
 async function assertBaseCheckout(exec: Exec, repo: string): Promise<string> {

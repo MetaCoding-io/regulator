@@ -17,6 +17,7 @@ export interface MockPi {
   flags: Map<string, boolean | string | undefined>;
   activeTools: string[][];
   thinkingLevels: string[];
+  entries: { customType: string; data: unknown }[];
 }
 
 /** A `pi` that records registrations and runs `exec` for real. No session, no model. */
@@ -29,6 +30,7 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
     flags: new Map(),
     activeTools: [],
     thinkingLevels: [],
+    entries: [],
   };
   state.pi = {
     on: (name: string, handler: Handler) => state.handlers.set(name, handler),
@@ -41,6 +43,7 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
     setActiveTools: (names: string[]) => state.activeTools.push(names),
     setThinkingLevel: (level: string) => state.thinkingLevels.push(level),
     exec: realExec,
+    appendEntry: (customType: string, data: unknown) => state.entries.push({ customType, data }),
   } as unknown as ExtensionAPI;
   return state;
 }

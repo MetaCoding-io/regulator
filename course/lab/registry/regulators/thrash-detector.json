@@ -19,7 +19,7 @@
     "may": ["record a coordination signal to .regulator/signals.ndjson and notify the user"],
     "mayNot": ["block a tool call", "pause or replan the unit (S3 decides, lesson 08)", "decide which of two fixes is right"]
   },
-  "evidence": { "tests": ["src/cp4-coordination.test.ts", "src/coordination.test.ts"] },
+  "evidence": { "tests": ["src/cp4-coordination.test.ts", "../../packages/core/src/coordination.test.ts"] },
   "limitations": [
     "Counts write and edit tool calls only; edits made through bash are invisible to it.",
     "Memory is per session: a unit resumed in a new session starts counting from zero.",

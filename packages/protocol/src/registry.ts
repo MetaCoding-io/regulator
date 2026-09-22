@@ -9,16 +9,16 @@ import { VsmSystemSchema } from "./vsm-systems.js";
  * that the record grows deliberately, lesson by lesson.
  */
 const isoDate = Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" });
-const oneOf = <T extends readonly string[]>(values: T) => Type.Union(values.map((v) => Type.Literal(v)));
-
-export const MechanismLevelSchema = oneOf(["type", "deterministic-gate", "typed-tool", "model-judgment", "prompt"] as const);
+export const MechanismLevelSchema = Type.Union([
+  Type.Literal("type"), Type.Literal("deterministic-gate"), Type.Literal("typed-tool"), Type.Literal("model-judgment"), Type.Literal("prompt"),
+]);
 export type MechanismLevel = Static<typeof MechanismLevelSchema>;
 
 export const RegulatorRecordSchema = Type.Object(
   {
     id: Type.String({ pattern: "^reg\\.[a-z0-9-]+\\.[a-z0-9-]+\\.v\\d+$" }),
     name: Type.String({ minLength: 1 }),
-    status: oneOf(["proposed", "active", "retired"] as const),
+    status: Type.Union([Type.Literal("proposed"), Type.Literal("active"), Type.Literal("retired")]),
     vsmFunction: VsmSystemSchema,
     purpose: Type.String({ minLength: 1 }),
     absorbs: Type.Object(

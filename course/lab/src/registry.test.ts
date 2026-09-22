@@ -13,7 +13,10 @@ test("the committed registry passes check: every record is well-formed, implemen
   assert.deepEqual(registry.problems, []);
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
     "reg.authority.vendor-write-gate.v1",
+    "reg.control.contract-advice.v1",
     "reg.control.profile-write-grant.v1",
+    "reg.control.result-report-gate.v1",
+    "reg.control.work-contract-gate.v1",
     "reg.coordination.reintegration.v1",
     "reg.coordination.thrash-detector.v1",
     "reg.coordination.unit-lease.v1",

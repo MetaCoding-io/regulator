@@ -1,0 +1,42 @@
+{
+  "name": "software-development",
+  "version": 1,
+  "description": "The software-development autoloop: the first workload definition. Unit types are the kinds of work the orchestrator may dispatch against a repository; each names the capability profile it runs under and the harness-run checks that verify it.",
+  "unitTypes": [
+    {
+      "name": "plan",
+      "description": "Read the repository and produce work contracts for S3 to dispatch. Never changes the repository.",
+      "profile": "research",
+      "checks": [],
+      "requiresContract": false
+    },
+    {
+      "name": "implement",
+      "description": "Change source and tests under a work contract, in an isolated worktree, and report the result.",
+      "profile": "implement",
+      "checks": ["run_checks", "run_tests"],
+      "requiresContract": true
+    },
+    {
+      "name": "verify",
+      "description": "Independently examine a unit's output against its contract and the project's invariants. Read-only.",
+      "profile": "research",
+      "checks": ["run_checks", "run_tests"],
+      "requiresContract": true
+    },
+    {
+      "name": "integrate",
+      "description": "Reintegrate a unit's branch into the base and resolve what the harness refused to resolve on its own.",
+      "profile": "implement",
+      "checks": ["run_tests"],
+      "requiresContract": true
+    },
+    {
+      "name": "close",
+      "description": "Confirm evidence is fresh, obligations are dispositioned, and the unit may be retired. Read-only.",
+      "profile": "research",
+      "checks": [],
+      "requiresContract": true
+    }
+  ]
+}

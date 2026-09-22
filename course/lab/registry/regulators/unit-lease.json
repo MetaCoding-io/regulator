@@ -19,7 +19,7 @@
     "may": ["refuse any non-read-only tool call while no live lease covers the working directory", "renew the unit's lease at each turn end"],
     "mayNot": ["acquire or release a lease (the unit lifecycle does that)", "resolve which unit should hold a contested resource", "block read-only tools"]
   },
-  "evidence": { "tests": ["src/cp4-coordination.test.ts", "src/coordination.test.ts"] },
+  "evidence": { "tests": ["src/cp4-coordination.test.ts", "../../packages/core/src/coordination.test.ts"] },
   "limitations": [
     "Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.",
     "The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside it (lesson 10).",
