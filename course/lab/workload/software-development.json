@@ -11,6 +11,13 @@
       "requiresContract": false
     },
     {
+      "name": "research",
+      "description": "Answer one question about the environment — a dependency, a platform, an advisory, the project's own runtime behaviour — and report typed intelligence for S3. Read-only over the domain: its result is advice, never a commit and never a policy.",
+      "profile": "intelligence",
+      "checks": [],
+      "requiresContract": true
+    },
+    {
       "name": "implement",
       "description": "Change source and tests under a work contract, in an isolated worktree, and report the result.",
       "profile": "implement",

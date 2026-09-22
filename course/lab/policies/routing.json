@@ -1,0 +1,17 @@
+{
+  "name": "routing",
+  "version": 1,
+  "description": "What S3 owes for each message the instance records, and who a unit waits on. A message at or above its kind's line opens an obligation for the named consumer; below it, it is noted with the reason and stays trace. An uncertainty's reported impact is mapped here, never taken as severity. An open obligation at or above the blocking line, naming a unit, vetoes that unit's dispatch and close until a consumer dispositions it.",
+  "rules": [
+    { "kind": "algedonic-signal", "minSeverity": "blocking", "consumer": "human" },
+    { "kind": "policy-proposal", "minSeverity": "info", "consumer": "S5" },
+    { "kind": "audit-finding", "minSeverity": "blocking", "consumer": "S3" },
+    { "kind": "coordination-signal", "minSeverity": "advisory", "consumer": "S3" },
+    { "kind": "operational-signal", "minSeverity": "blocking", "consumer": "S3" },
+    { "kind": "uncertainty-signal", "minSeverity": "blocking", "consumer": "S3" },
+    { "kind": "intelligence-signal", "minSeverity": "advisory", "consumer": "S3" }
+  ],
+  "impactSeverity": { "low": "info", "medium": "advisory", "high": "blocking", "critical": "critical" },
+  "recovery": { "remediate": "S3", "replan": "S3", "clarify": "human", "pause": "human", "escalate": "human" },
+  "blocksAtOrAbove": "blocking"
+}

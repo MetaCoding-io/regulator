@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { AuditLog, ExecutionStore, LeaseStore, appendSignal } from "@metacoding/vsm-pi-core";
+import { AuditLog, ExecutionStore, LeaseStore, ObligationLedger, appendSignal } from "@metacoding/vsm-pi-core";
 import type { WorkContract } from "@metacoding/vsm-pi-protocol";
 import { readStatus, renderStatusText } from "./status.js";
 
@@ -41,6 +41,11 @@ test("status: a definition and an instance are read from files only, and the vie
     budgets: { default: { tokens: 1000, wallClockMs: 60_000, turns: 5, attempts: 2 } },
     models: { default: { primary: "anthropic/claude-sonnet-4-5", fallback: ["openai/gpt-5"] } },
   }), "utf8");
+  await writeFile(path.join(definition, "policies", "recovery.json"), JSON.stringify({ name: "recovery", version: 1, description: "d", rules: [{ cause: "no-report", actions: ["retry"] }], fallback: ["pause"] }), "utf8");
+  await writeFile(path.join(definition, "policies", "routing.json"), JSON.stringify({
+    name: "routing", version: 1, description: "d", rules: [{ kind: "coordination-signal", minSeverity: "advisory", consumer: "S3" }],
+    impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking",
+  }), "utf8");
 
   const instance = path.join(root, "instance");
   const clock = 5_000_000;
@@ -67,8 +72,16 @@ test("status: a definition and an instance are read from files only, and the vie
     severity: "advisory", subject: "src/a.js", unit: "u1", coordination: "oscillation", observation: "4 edits", evidence: [],
   });
 
+  const ledger = new ObligationLedger(instance, () => clock);
+  const owed = await ledger.openObligation({ subject: "unit u1: clarify (oscillation)", unit: "u1", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true, question: "Which behaviour is wanted?" });
+  const done = await ledger.openObligation({ subject: "allow x", concern: "policy-proposal", sources: ["p1"], severity: "info", consumer: "S5", blocks: false });
+  await ledger.resolve(done.id, { by: "alice", disposition: "rejected", rationale: "no" });
+
   const view = await readStatus({ definitionDir: definition, instanceDir: instance, now: () => clock });
   assert.deepEqual(view.definition?.declared, ["registry", "workload", "policies"]);
+  assert.equal(view.definition?.recovery[0]?.name, "recovery");
+  assert.equal(view.definition?.routing[0]?.name, "routing");
+  assert.deepEqual(view.definition?.problems.filter((p) => /recovery|routing/.test(p)), [], "the three policy shapes are all policies");
   assert.deepEqual(view.definition?.pending, ["profiles"]);
   assert.equal(view.definition?.policies[0]?.name, "default");
   assert.equal(view.definition?.registry.records.length, 1);
@@ -84,17 +97,22 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.deepEqual(view.instance?.units[0]?.decisions.map((d) => d.action), ["retry"]);
   assert.deepEqual(view.instance?.units[0]?.audit.verdicts.map((v) => v.verdict), ["inconclusive"]);
   assert.deepEqual(view.instance?.leases.map((l) => [l.lease.unitId, l.live]), [["u1", true]]);
-  assert.equal(view.instance?.signals[0]?.kind, "coordination-signal");
+  assert.equal(view.instance?.signals[0]?.kind, "coordination-signal", "unrouted: nothing has routed it yet");
+  assert.deepEqual(view.instance?.obligations.map((o) => [o.consumer, o.status]), [["human", "open"], ["S5", "resolved"]]);
+  assert.deepEqual(view.instance?.units[0]?.obligations.map((o) => o.id), [owed.id], "a unit's view carries what is owed on it");
 
   const text = renderStatusText(view);
+  assert.match(text, /recovery recovery v1: 1 rule\(s\), fallback pause/);
+  assert.match(text, /routing routing v1: coordination-signal≥advisory→S3; veto at blocking/);
+  assert.match(text, /obligations: 1 open of 2\n {4}open {8} human blocking veto {2}\w{8} {2}recovery-decision {2}unit u1: clarify \(oscillation\) {2}\(unit u1\) {2}Q: Which behaviour is wanted\?/);
   assert.match(text, /declared: registry, workload, policies; pending: profiles/);
   assert.match(text, /policy default v1: default 1000 tok, 5 turns, 2 attempts; models anthropic\/claude-sonnet-4-5 → openai\/gpt-5/);
   assert.match(text, /S3 {2}deterministic-gate {2}reg\.test\.gate\.v1/);
-  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}routed no-report→retry \(recovery v1\) {2}audit inconclusive@abcdef0 \(missing e-tests\) {2}— no-report/);
+  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}routed no-report→retry \(recovery v1\) {2}audit inconclusive@abcdef0 \(missing e-tests\) {2}owed human! {2}— no-report/);
   assert.match(text, /live {4}u1 {2}alice/);
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 
   const empty = await readStatus({ instanceDir: path.join(root, "nothing-here"), now: () => clock });
-  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [] });
+  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [] });
   assert.match(renderStatusText({ generatedAt: "t", definition: undefined, instance: undefined }), /nothing to show/);
 });

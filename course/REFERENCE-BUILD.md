@@ -87,7 +87,7 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–9 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–10 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
@@ -118,9 +118,14 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   `core`, where both now use it, adds the boundary-statement generator, and in the lab
   the identity seed, the `cp9-authority` extension (write gate, bash watch, proposal
   intake, canary watch, trust answer), the trust rule in the dispatcher's loader, the
-  injection fixture and `BOUNDARY.md`.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and twenty
-  records live under `course/lab/registry/`; the control room is design only, but its
+  injection fixture and `BOUNDARY.md`. Checkpoint 10 adds the obligation vocabulary and
+  the routing policy (`protocol`), the obligation ledger, router, veto and disposition
+  over the regulatory log (`core`), and in the lab the `research` unit type, the
+  `intelligence` profile, the `cp10-intelligence` extension (`report_intelligence`), the
+  routing policy, routing and the veto in the loop, and the obligation commands in the
+  CLI; the read model and the control room show obligations and all three policy shapes.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and
+  twenty-three records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one

@@ -20,7 +20,7 @@
       "tool call (propose_policy_change)"
     ],
     "emits": [
-      "policy-proposal → S5 (signal sink)"
+      "policy-proposal → S5 (regulatory log)"
     ]
   },
   "scope": {
@@ -50,7 +50,7 @@
     ]
   },
   "limitations": [
-    "Proposals land in the signal sink with every other unrouted message; nothing routes them to a person yet (lesson 11's obligations), so a proposal nobody reads is a proposal nobody decides.",
+    "A proposal is routed into an obligation owed to S5 (lesson 11) and shown by the read model; nothing delivers it to a person, and the S5 decision itself — accepting the proposal into identity — has no workflow yet (lesson 12).",
     "The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.",
     "Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence."
   ],

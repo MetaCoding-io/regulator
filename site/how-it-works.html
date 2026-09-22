@@ -425,8 +425,8 @@
         <text x="915" y="240" text-anchor="middle" font-size="10" fill="var(--ink-faint)">.regulator/*.ndjson, append-only</text>
         <g fill="var(--ink-dim)" font-size="9.5">
           <text x="766" y="264">audit.ndjson — evidence, verdicts, acceptances</text>
-          <text x="766" y="281">signals.ndjson — coordination and operational</text>
-          <text x="766" y="298">  signals, audit findings, proposals, escalations</text>
+          <text x="766" y="281">signals.ndjson — every typed message, and the</text>
+          <text x="766" y="298">  obligation events that say what became of each</text>
           <text x="766" y="315">effects.ndjson — intended / committed / confirmed</text>
           <text x="766" y="370" font-size="10" fill="var(--ink-faint)">owner: the regulators; the orchestrator only reads.</text>
         </g>
@@ -535,7 +535,7 @@
       <path d="M 1080 99 L 1092 99 L 1092 30 L 85 30 L 85 188" fill="none" stroke="var(--signal)" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#ah3)"/>
       <text x="588" y="25" text-anchor="middle" font-size="10.5" fill="var(--signal-ink)">runUnit again — attempt N+1, the hint appended to the prompt — then verify; back here if blocked</text>
     </svg>
-    <figcaption><b>The recovery lattice.</b> Classification is a fixed precedence over recorded facts: the orchestrator's own record wins, then what S2 signalled, then what the session observed. Every decision is appended with the policy name and version that produced it, so attempt three can be explained after the policy changes. Only <code>retry</code> and <code>repair</code> re-enter the loop; everything else either waits for a person or ends the unit.</figcaption>
+    <figcaption><b>The recovery lattice.</b> Classification is a fixed precedence over recorded facts: the orchestrator's own record wins, then what S2 signalled, then what the session observed. Every decision is appended with the policy name and version that produced it, so attempt three can be explained after the policy changes. Only <code>retry</code> and <code>repair</code> re-enter the loop; everything else either waits — as an obligation owed to S3 or a person, which vetoes the unit's dispatch until it is dispositioned — or ends the unit.</figcaption>
   </figure>
 </section>
 
@@ -589,14 +589,15 @@
     leases/                     empty: released at close
     worktrees/                  empty: removed at close
     audit.ndjson                evidence ×5, verdicts ×2 (fail, pass)
-    signals.ndjson              audit-finding S3*→S3 (closeout refused)
+    signals.ndjson              audit-finding S3*→S3 (closeout refused),
+                                its obligation: opened → resolved (rework)
     effects.ndjson              notify_owner: intended, committed
     trace.ndjson                one record per turn (cp1)
     canaries                    values that must never leak</pre>
     <div class="notes">
       <div class="note"><b>Two immutable files per attempt, one mutable</b>The contract and each report are written once with <code>wx</code> and never overwritten; <code>unit.json</code> is the one thing that changes, and it holds only status and the attempt count.</div>
       <div class="note"><b>Append-only logs, replayable</b>Attempts, observations, decisions, audit entries, signals and effects are NDJSON lines validated on write and on read. <code>regulator unit evidence u1</code> and the control room's inspector are replays of these files.</div>
-      <div class="note"><b>The read model</b><code>regulator status --definition course/lab --instance &lt;repo&gt;</code> projects the definition (registry, workload, policies) and the instance (units with contract, report, budget, decisions and verdict; leases; unrouted signals) — from files only. The control room serves the same view.</div>
+      <div class="note"><b>The read model</b><code>regulator status --definition course/lab --instance &lt;repo&gt;</code> projects the definition (registry, workload, policies) and the instance (units with contract, report, budget, decisions, verdict and what is owed on them; leases; obligations; unrouted signals) — from files only. The control room serves the same view.</div>
       <div class="note alarm"><b>What is not here</b>The transcript: Pi's session file is authoritative for the conversation and the orchestrator never reads it. And any notion of progress derived from the diff.</div>
     </div>
   </div>

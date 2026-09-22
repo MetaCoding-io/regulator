@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 nearly complete.** Lessons 01–10
-are written end to end with checkpoints 0–9, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 begun.** Lessons 01–11
+are written end to end with checkpoints 0–10, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -52,7 +52,9 @@ three deliberately weak learner-style implementations.
 
 ### Phase 3 — Intelligence, identity, escalation (Part 5, modules 11–13)
 
-- subagent driver with its own budget; typed intelligence record;
+- subagent driver with its own budget; typed intelligence record — **done** (lesson 11,
+  checkpoint 10: the research unit type, `report_intelligence`, the obligation lifecycle
+  under a routing policy, and the progression veto);
 - identity set and the dual prose/code invariant;
 - escalation with interaction-kind timeout semantics, including headless behaviour.
 
@@ -112,7 +114,7 @@ repository is still design-only, the course must present it as design, not as sh
 | Course element | Depends on | Current repo state |
 | --- | --- | --- |
 | M06 contracts | `docs/OPERATIONAL-WORK-CONTRACT.md`, `docs/PLANNER-CONTRACT-COMPOSITION.md` | designed, implementation pending |
-| M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | routing shipped (lesson 08); obligations pending (lesson 11) |
+| M08 recovery/obligations | `docs/REGULATORY-STATE-AND-ROUTING.md` | routing shipped (lesson 08); obligation lifecycle, dispositions and the routing policy shipped (lesson 11); exposure/resolution boundaries and scope still design |
 | M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
 | M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped; the closeout gate is the first regulator to emit one (lesson 09) |
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped; the preflight now lives in `core` and the lab gate shares it (lesson 10) |
@@ -189,9 +191,9 @@ does:
 1. Review lessons 01–10 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 11 with checkpoint 10 (environmental intelligence: the read-only intelligence
-   subagent, typed intelligence routed and never auto-applied, and the obligation
-   lifecycle that gives recovery decisions, escalations and proposals somewhere to wait);
-   the control room gains the obligations view with it.
+3. Lesson 12 with checkpoint 11 (durable identity and policy: the complete identity set
+   with one invariant enforced in both prose and code, profiles and settings as declared
+   parts of the definition, the operational memory store with provenance and expiry, and
+   the S5 workflow that decides a proposal); the control room gains the identity view.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

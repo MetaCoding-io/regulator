@@ -23,7 +23,7 @@
   "limitations": [
     "Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.",
     "A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.",
-    "Emergent decisions below high consequence are recorded in the report only; nothing routes them yet."
+    "Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "introducedIn": "M06"

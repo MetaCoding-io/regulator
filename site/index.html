@@ -412,8 +412,9 @@
                   policy, recovery, audit
   core/           authority (write preflight), leases, thrash detector,
                   execution store, signal sink, budgets, recovery
-                  router, effect journal, audit log, registry check +
-                  REGULATORS.md / BOUNDARY.md generators
+                  router, effect journal, audit log, obligation ledger
+                  and router, registry check + REGULATORS.md /
+                  BOUNDARY.md generators
   checks/         deterministic S3* checks: host-run verification
                   bound to a revision, the technical verdict
   pi-extension/   Pi lifecycle integration, S5 write gate, typed
@@ -422,10 +423,10 @@
                   definition and an instance
   control-room/   read-only page over the read model
 
-<b>course/lab/</b>       reference build — checkpoints 0–9, three fixtures,
-                  the registry (20 records), identity, policies,
+<b>course/lab/</b>       reference build — checkpoints 0–10, three fixtures,
+                  the registry (23 records), identity, policies,
                   workload, the `regulator` lab CLI
-<b>course/modules/</b>   lessons 01–10, written
+<b>course/modules/</b>   lessons 01–11, written
 <b>docs/</b>             architecture, roadmap, design notes, DEBT.md
 <b>vsm/</b>               committed S5 artifacts for this repo itself
 <b>site/</b>              this page</pre>
@@ -436,8 +437,8 @@
     <code>course/lab</code> into <code>packages/</code> once two lessons depend on it, and
     the lab imports it back rather than re-implementing it. Trace, effects, profiles and the
     registry went first; contracts, the execution store, leases, budgets, the recovery
-    router, the effect journal, the host-run checks, the audit log and the write preflight
-    have followed.
+    router, the effect journal, the host-run checks, the audit log, the write preflight and
+    the obligation ledger have followed.
   </p>
 </section>
 
@@ -571,6 +572,7 @@
           <span style="color:var(--ink-faint);">→</span>
           <span class="pill written" style="border-radius:6px;">dispatch</span>
           <span style="color:var(--ink-faint);">→</span>
+          <span class="pill written" style="border-radius:6px;">research</span>
           <span class="pill written" style="border-radius:6px;">verify</span>
           <span style="color:var(--ink-faint);">→</span>
           <span class="pill written" style="border-radius:6px;">route</span>
@@ -597,11 +599,12 @@
           <span class="pill written" style="border-radius:6px;">integrate</span>
           <span class="pill written" style="border-radius:6px;">close</span>
         </div>
-        <p style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 2px;">five unit types, declared in <code>workload/software-development.json</code>, each naming:</p>
+        <p style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 2px;">six unit types, declared in <code>workload/software-development.json</code>, each naming:</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:12.5px;color:var(--ink-dim);">
           <div><b style="color:var(--ink);">A capability profile</b> the unit runs under — <code>implement</code> may write <code>src/</code> and <code>test/</code>; <code>research</code> is read-only by declared effect</div>
           <div><b style="color:var(--ink);">Checks</b> the orchestrator re-runs itself at closeout — <code>run_checks</code>, <code>run_tests</code> — bound to the revision they ran against</div>
-          <div><b style="color:var(--ink);">Still design:</b> S4 triggers that raise a unit unasked (lesson 11) and consent before irreversible actions (lesson 13)</div>
+          <div><b style="color:var(--ink);">Intelligence</b> from a <code>research</code> unit is routed into an obligation that holds the units it names until a person or S3 dispositions it — never applied, never replanned</div>
+          <div><b style="color:var(--ink);">Still design:</b> S4 triggers that raise a research unit unasked, and consent before irreversible actions (lesson 13)</div>
         </div>
       </div>
     </div>
@@ -613,15 +616,16 @@
   <h2 class="title">The loop runs; the metasystem is next</h2>
   <p class="lede">The S3 loop exists end to end — contract, dispatch, verify, route, close —
     with leases, budgets, a versioned recovery policy, a closeout gate over host-run evidence,
-    and protected identity. Lessons 11–15 add environmental intelligence, obligations, the
-    complete identity set, the algedonic channel, evals and packaging.
+    protected identity, and obligations that say who owes what and hold a unit until it is
+    settled. Lessons 12–15 add the complete identity set, the algedonic channel, evals and
+    packaging.
     <code>course/lab</code> is the reference build; each checkpoint promotes into
     <code>packages/</code> as it stabilizes. What the build still owes is listed in
     <code>docs/DEBT.md</code>.</p>
   <div class="cards">
-    <div class="card"><div class="k">0–9</div><div class="l">Lab checkpoints built, each a loadable Pi extension tested without a model, under CI on two Node versions</div></div>
-    <div class="card"><div class="k">20</div><div class="l">Regulators in the registry, each with a stated limitation; <code>REGULATORS.md</code> and <code>BOUNDARY.md</code> generated from the records</div></div>
-    <div class="card"><div class="k">10 / 15</div><div class="l">Lessons written end to end, plus the capstone viability case specified</div></div>
+    <div class="card"><div class="k">0–10</div><div class="l">Lab checkpoints built, each a loadable Pi extension tested without a model, under CI on two Node versions</div></div>
+    <div class="card"><div class="k">23</div><div class="l">Regulators in the registry, each with a stated limitation; <code>REGULATORS.md</code> and <code>BOUNDARY.md</code> generated from the records</div></div>
+    <div class="card"><div class="k">11 / 15</div><div class="l">Lessons written end to end, plus the capstone viability case specified</div></div>
   </div>
 </section>
 
@@ -686,7 +690,7 @@
       </div>
     </div>
     <div class="body">
-      <div class="cr-banner"><span class="d"></span>UNROUTED SIGNAL · unit-0402 blocked — recovery policy chose "clarify"; nothing has delivered the question to a person yet (lesson 11)</div>
+      <div class="cr-banner"><span class="d"></span>OBLIGATION · owed to a person · veto — unit-0402 blocked: recovery policy chose "clarify"; the question waits on <code>regulator obligation resolve</code>, and nothing delivers it yet (lesson 13)</div>
       <div style="overflow-x:auto;">
         <table class="cr-table">
           <thead><tr><th>Unit</th><th>Type</th><th>Lease</th><th>Attempt</th><th>Budget</th><th>Status</th></tr></thead>
@@ -759,8 +763,8 @@
   <div class="kicker">Table of contents<span class="tick"></span></div>
   <h2 class="title">Full syllabus — 15 modules, six parts</h2>
   <p class="lede">Every module is a fixed unit: question → concept → Pi mechanism → build
-    step → break it → field study → checkpoint. Modules 01–10 are written end to end in
-    <code>course/modules/</code>; 11–15 are specified in the curriculum and not yet written.</p>
+    step → break it → field study → checkpoint. Modules 01–11 are written end to end in
+    <code>course/modules/</code>; 12–15 are specified in the curriculum and not yet written.</p>
 
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;0</span><span class="part-name">Framing</span></div>
@@ -865,12 +869,12 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;5</span><span class="part-name">S4, S5 &amp; the algedonic channel</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">11</div>
-        <div class="body"><div class="name">Environmental intelligence</div>
-          <div class="q">How does the system learn about its world?</div>
-          <div class="surface">subagents · plan mode · dynamic resources · RPC</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="body"><div class="name">Environmental intelligence and the obligation lifecycle</div>
+          <div class="q">How does the system learn about its world, and how does that knowledge get a say without becoming the decision?</div>
+          <div class="surface">research unit · report_intelligence · obligation ledger · routing policy · progression veto</div></div>
+        <div class="pill written">Written</div>
       </div>
       <div class="mod">
         <div class="num">12</div>

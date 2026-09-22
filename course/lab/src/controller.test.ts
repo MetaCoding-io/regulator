@@ -10,12 +10,14 @@ import { loadContract } from "./cp5-contract.js";
 import { gitExec, initRepo } from "./git-support.js";
 import { unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
+import { loadRoutingPolicy } from "./routing-policy.js";
 import { loadWorkload } from "./workload.js";
 
 const LAB_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const contractFile = path.join(LAB_ROOT, "contracts", "fix-known-issue.json");
 const policyP = loadPolicy();
-const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH });
+const routingP = loadRoutingPolicy();
+const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH, routing: await routingP });
 
 function reportFor(contract: WorkContract, overrides: Partial<ResultReport> = {}): ResultReport {
   return {
@@ -299,7 +301,7 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   assert.deepEqual(await unitStatus(gitExec, repo3), [], "lease released");
   await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
   assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
-  assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery }), undefined, "an aborted unit is not routed again");
+  assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery, routing: base.routing }), undefined, "an aborted unit is not routed again");
 });
 
 test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
@@ -370,7 +372,7 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   // Commit inside the worktree, as the unit should have; re-audit without an attempt.
   const worktree = path.join(repo, ".regulator", "worktrees", "u1");
   await gitExec("git", ["commit", "-qam", "commit the work"], { cwd: worktree });
-  const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
   assert.equal(waiting.status, "blocked");
   assert.equal(waiting.status === "blocked" ? waiting.verdict?.verdict : "", "inconclusive");
   assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.awaitingAcceptance : [], ["e-wording"]);
@@ -379,16 +381,125 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
 
   const revision = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: worktree })).stdout.trim();
   await new AuditLog(repo).appendAcceptance({ id: "a1", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision: "0000000", disposition: "accepted", by: "alice", at: "t" });
-  assert.equal((await closeUnit(gitExec, { repo, unitId: "u1", workload })).status, "blocked", "an acceptance at another revision is a memory");
+  assert.equal((await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing })).status, "blocked", "an acceptance at another revision is a memory");
   await new AuditLog(repo).appendAcceptance({ id: "a2", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision, disposition: "accepted", by: "alice", note: "clear", at: "t" });
-  const closed = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  const closed = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
   assert.equal(closed.status, "closed");
   assert.equal((await store.getUnit("u1"))?.attempts, 1, "a re-audit is not an attempt");
   assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["check-failure"], "the attempt history is immutable; the audit log says what changed");
   const audit = await new AuditLog(repo).forUnit("u1");
   assert.deepEqual(audit.verdicts.map((v) => v.verdict), ["inconclusive", "inconclusive", "inconclusive", "pass"]);
   assert.equal(await readFile(path.join(repo, "src.txt"), "utf8"), "uncommitted\n");
-  const again = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  const again = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing });
   assert.equal(again.status, "refused");
   assert.match(again.status === "refused" ? again.problems[0]?.message ?? "" : "", /is closed; only a blocked unit is re-audited/);
+});
+
+test("obligations: what a unit records is routed at the loop's steps under the routing policy; S3's recovery decision dispositions what S3 was routed; a waiting action becomes an obligation owed to a person that vetoes re-dispatch until it is resolved, and the resolution reaches the next attempt as the hint", async (t) => {
+  const { ObligationLedger, appendSignal } = await import("@metacoding/vsm-pi-core");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit } = await import("./controller.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const recovery = await loadRecoveryPolicy();
+  const base = await withPolicy();
+  const store = new ExecutionStore(repo);
+  const ledger = new ObligationLedger(repo);
+  const hints: Array<string | undefined> = [];
+
+  // Attempt 1 lies about the tests (closeout refused: a blocking finding), records a proposal, and S2 saw it thrash.
+  const first = await driveUnit(gitExec, {
+    ...base, repo, contract, workload, recovery, owner: "alice",
+    dispatcher: async (request) => {
+      hints.push(request.hint);
+      await appendSignal(repo, { id: "p1", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: "let units edit vendor/", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+      await appendSignal(repo, { id: "s1", timestamp: "t", source: "S2", kind: "coordination-signal", channel: "signal", destination: "S3", severity: "advisory", subject: "src/index.js", unit: "u1", coordination: "oscillation", observation: "4 edits to src/index.js", evidence: [] });
+      await writeFile(path.join(request.worktree, "src", "index.js"), `export const answer = ${100 + request.attempt};\n`);
+      await gitExec("git", ["commit", "-qam", "break"], { cwd: request.worktree });
+      await store.writeReport(reportFor(contract, { attempt: request.attempt, summary: "fixed; all tests pass" }));
+      return { sessionId: `s${request.attempt}` };
+    },
+  });
+  // check-failure wins the classification (the orchestrator's record first), so the router says repair — but repair
+  // spends an attempt, and the oscillation signal is still S3's to disposition: it was resolved as rework by the same decision.
+  assert.deepEqual(first.decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"], ["check-failure", "repair"], ["check-failure", "replan"]]);
+  assert.equal(first.final.status, "blocked");
+  let all = await ledger.obligations();
+  assert.deepEqual(all.map((o) => [o.concern, o.consumer, o.status, o.disposition ?? o.successor?.slice(0, 8)]).slice(0, 3), [
+    ["policy-proposal", "S5", "open", undefined],
+    ["coordination-signal", "S3", "resolved", "rework"],
+    ["audit-finding", "S3", "resolved", "rework"],
+  ], "the proposal is owed to S5 and stays; what was S3's was dispositioned by S3's decision");
+  const wait = all.find((o) => o.concern === "recovery-decision");
+  assert.ok(wait, "replan cannot be applied by the loop: an obligation says who it waits on");
+  assert.equal(wait.consumer, "S3");
+  assert.equal(wait.blocks, true);
+  assert.match(wait.subject, /^unit u1: replan \(check-failure\)$/);
+  assert.equal(all.filter((o) => o.status === "escalated").at(-1)?.successor, wait.id, "the finding S3 could not resolve was escalated to the wait, with a successor");
+  assert.deepEqual(await ledger.unrouted(), [], "nothing is left unrouted");
+  assert.equal(all.filter((o) => o.unit === "u1" && o.status === "open").length, 2, "the proposal and the wait");
+
+  // The veto: a re-dispatch under the same contract is refused while the wait is open — and a person answers it outside the loop.
+  const policy = { ...base.policy, budgets: { ...base.policy.budgets, byUnitType: { implement: { attempts: 4 } } } };
+  const refused = await runUnit(gitExec, { ...base, policy, repo, contract, workload, owner: "alice", dispatcher: async () => ({}) });
+  assert.equal(refused.status, "refused");
+  assert.match(refused.status === "refused" ? refused.problems.map((p) => p.message).join("\n") : "", new RegExp(`obligation ${wait.id.slice(0, 8)} \\(S3, blocking, recovery-decision\\) is open on unit "u1": unit u1: replan \\(check-failure\\); it must be dispositioned before dispatch`));
+  await ledger.resolve(wait.id, { by: "alice", disposition: "rework", rationale: "the test expects 42; keep the contract, fix the value" });
+  const answered = await runUnit(gitExec, { ...base, policy, repo, contract, workload, owner: "alice", dispatcher: async (request) => {
+    hints.push(request.hint);
+    await writeFile(path.join(request.worktree, "src", "index.js"), "export const answer = 42;\n");
+    await gitExec("git", ["commit", "-qam", "repair"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract, { attempt: 4, summary: "repaired", emergentDecisions: [{ subject: "a comment", choiceOrQuestion: "added one", consequenceIfWrong: "low" }], residualUncertainty: [{ subject: "unicode", reason: "not decided", consequenceIfWrong: "high" }] }));
+    return { sessionId: "s4" };
+  } });
+  assert.equal(answered.status, "closed");
+  assert.match(hints.at(-1) ?? "", /^Obligation \w{8} on this unit \(unit u1: replan \(check-failure\)\) was resolved by alice as rework: the test expects 42; keep the contract, fix the value$/);
+  all = await ledger.obligations();
+  assert.deepEqual(all.filter((o) => o.unit === "u1" && (o.status === "open")).map((o) => [o.concern, o.consumer, o.blocks]), [["policy-proposal", "S5", false], ["uncertainty-signal", "S3", true]], "residual uncertainty of high consequence is owed to S3; the closed unit is not held by it");
+  const noted = (await ledger.entries()).filter((e) => "type" in e && e.type === "message-noted");
+  assert.equal(noted.length, 1);
+  assert.match("reason" in noted[0]! ? noted[0].reason : "", /^info is below blocking, the routing v1 line for operational-signal$/, "a low-consequence emergent decision is routed as trace, with the reason, not dropped");
+});
+
+test("intelligence: a research unit runs under its own profile, budget and route; its report is verified by the files it cites; the intelligence it recorded is routed into an obligation per affected unit that vetoes their dispatch until dispositioned — never applied, never replanned; expired intelligence is noted", async (t) => {
+  const { ObligationLedger, appendSignal } = await import("@metacoding/vsm-pi-core");
+  const repo = await initRepo(t);
+  const research = await loadContract(path.join(LAB_ROOT, "contracts", "research-vendored-helper.json"));
+  const implement = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const base = await withPolicy();
+  const store = new ExecutionStore(repo);
+  const ledger = new ObligationLedger(repo);
+
+  const researched = await runUnit(gitExec, { ...base, repo, contract: research, workload, owner: "alice", dispatcher: async (request) => {
+    assert.equal(request.profile, "intelligence");
+    assert.equal(request.route.primary, "anthropic/claude-haiku-4-5", "research runs on the policy's cheaper route");
+    // What report_intelligence records (the tool is tested on its own): blocking, naming u1; and one that is already stale.
+    await appendSignal(repo, { id: "i1", timestamp: "t", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "blocking", subject: "vendor/left-pad.js", unit: "r1", observation: "line 4 pads with a tab", claim: "the vendored copy is modified", confidence: "high", evidence: [{ class: "file", ref: "src/index.js" }], affectedUnits: ["u1"], observedAt: "2026-09-22T00:00:00.000Z" });
+    await appendSignal(repo, { id: "i2", timestamp: "t", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "critical", subject: "node 18 EOL", unit: "r1", observation: "o", evidence: [], affectedUnits: ["u1"], expiresAt: "2020-01-01T00:00:00.000Z" });
+    await store.writeReport(reportFor(research, { evidence: [{ class: "file", ref: "src/index.js", observation: "read" }], delegatedResults: [{ decisionId: "d-scope", choice: "whole file" }], unresolvedOutcomes: [] }));
+    return { sessionId: "r" };
+  } });
+  assert.equal(researched.status, "closed", "a research unit closes like any unit: on evidence, not on its claim");
+  assert.equal((await store.getUnit("r1"))?.status, "closed");
+  const entries = await ledger.entries();
+  assert.deepEqual(entries.filter((e) => "type" in e && e.type === "message-noted").map((e) => "reason" in e ? e.reason : ""), ["intelligence expired at 2020-01-01T00:00:00.000Z; stale evidence cannot raise an obligation"]);
+  const held = (await ledger.open("u1")).filter((o) => o.blocks);
+  assert.deepEqual(held.map((o) => [o.concern, o.consumer, o.severity, o.sources]), [["intelligence-signal", "S3", "blocking", ["i1"]]], "the veto lands on the affected unit before it exists");
+  assert.equal(await readFile(path.join(repo, "src", "index.js"), "utf8"), "export const answer = 42;\n", "nothing was applied to the domain");
+
+  const refused = await runUnit(gitExec, { ...base, repo, contract: implement, workload, owner: "alice", dispatcher: async () => { throw new Error("must not dispatch"); } });
+  assert.equal(refused.status, "refused");
+  assert.match(refused.status === "refused" ? refused.problems[0]?.message ?? "" : "", /\(S3, blocking, intelligence-signal\) is open on unit "u1": vendor\/left-pad\.js; it must be dispositioned before dispatch/);
+  assert.equal(await store.getUnit("u1"), undefined, "refused before anything was claimed");
+
+  await ledger.resolve(held[0]!.id, { by: "alice", disposition: "accepted-risk", rationale: "the modification is the fix we are shipping" });
+  const dispatched = await runUnit(gitExec, { ...base, repo, contract: implement, workload, owner: "alice", dispatcher: unitThat(async (request, s) => {
+    assert.equal(request.hint, undefined, "an intelligence disposition is not a recovery answer; the contract stands as written");
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix"], { cwd: request.worktree });
+    await s.writeReport(reportFor(implement));
+  }, repo) });
+  assert.equal(dispatched.status, "closed");
 });

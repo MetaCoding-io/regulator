@@ -192,7 +192,9 @@ does not expand the native write/edit gate into complete filesystem enforcement.
 The store never opens `.gsd/gsd.db`, reads GSD workflow state, or changes S5
 artifacts. Later obligation projections can consume these events without adding
 another authoritative history. Routing, obligations, and retry/pause control are
-not implemented here.
+not implemented here: the course lab's router and obligation ledger (lesson 11) fold
+the instance's regulatory log under `.regulator/`, not this store; consolidating the
+two histories is `docs/DEBT.md` row 1.
 
 ## Reproduce the evidence without a model
 

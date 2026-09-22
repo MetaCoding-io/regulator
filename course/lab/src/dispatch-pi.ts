@@ -1,6 +1,6 @@
 /**
  * The one Pi-shaped step of the loop: run a session for a unit through the
- * Pi SDK, in the unit's worktree, with checkpoints 2–6 loaded and the unit,
+ * Pi SDK, in the unit's worktree, with checkpoints 2–10 loaded and the unit,
  * profile, contract and policy supplied as extension flags. The session is
  * persisted under Pi's session directory so the typed entries (contract,
  * report) survive; the orchestrator still reads the report from its own
@@ -26,7 +26,7 @@ import { chooseModels } from "@metacoding/vsm-pi-core";
 import type { Dispatcher } from "./controller.js";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js"].map((f) => path.join(dist, f));
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js", "cp10-intelligence.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */

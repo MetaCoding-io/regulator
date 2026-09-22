@@ -6,18 +6,20 @@
  * `.regulator/` directory.
  *
  *   definition = registry + profiles + policies + workload   (what is declared)
- *   instance   = units + leases + unrouted signals           (what is running)
+ *   instance   = units + leases + obligations + unrouted     (what is running, and
+ *                messages                                     what is owed)
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, checkRegistry, readSignals, summarizeLedger,
+  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, ObligationLedger, checkRegistry, summarizeLedger,
   type RegistryProblem, type UnitAudit,
 } from "@metacoding/vsm-pi-core";
 import {
-  PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid,
-  type AttemptRecord, type BudgetLedger, type Lease, type PolicyDefinition, type RecoveryDecision, type RegulatorRecord, type ResultReport, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
+  PolicyDefinitionSchema, RecoveryPolicySchema, RoutingPolicySchema, WorkloadDefinitionSchema, assertValid, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type AttemptRecord, type BudgetLedger, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
 export interface DefinitionView {
@@ -25,6 +27,9 @@ export interface DefinitionView {
   registry: { records: RegulatorRecord[]; problems: RegistryProblem[] };
   workloads: WorkloadDefinition[];
   policies: PolicyDefinition[];
+  /** The recovery policies (lesson 08) and routing policies (lesson 11) the definition declares beside its budget policies. */
+  recovery: RecoveryPolicy[];
+  routing: RoutingPolicy[];
   problems: string[];
   /** Which parts of the definition are declared as files today, and which are still code or absent. */
   declared: Array<"registry" | "workload" | "policies">;
@@ -42,13 +47,18 @@ export interface UnitView {
   decisions: RecoveryDecision[];
   /** S3*'s record for the unit: the latest technical verdict and the evidence behind it, replayed from the audit log. */
   audit: UnitAudit;
+  /** What is owed on the unit, open or closed, folded from the regulatory log (lesson 11). */
+  obligations: ObligationState[];
 }
 
 export interface InstanceView {
   dir: string;
   units: UnitView[];
   leases: Array<{ lease: Lease; live: boolean }>;
+  /** Messages nothing has routed yet: an obligation or a note is what routing leaves behind. */
   signals: VsmMessage[];
+  /** Every obligation the instance holds, in the order opened. */
+  obligations: ObligationState[];
 }
 
 export interface StatusView {
@@ -83,6 +93,8 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
     }
   }
   const policies: PolicyDefinition[] = [];
+  const recovery: RecoveryPolicy[] = [];
+  const routing: RoutingPolicy[] = [];
   let policyFiles: string[] = [];
   try {
     policyFiles = (await readdir(path.join(dir, "policies"))).filter((f) => f.endsWith(".json")).sort();
@@ -92,12 +104,16 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
   for (const file of policyFiles) {
     try {
       const value: unknown = JSON.parse(await readFile(path.join(dir, "policies", file), "utf8"));
-      assertValid(PolicyDefinitionSchema, value, `policy ${file}`);
-      policies.push(value);
+      // Three policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
+      if (isPolicyDefinition(value)) policies.push(value);
+      else if (isRecoveryPolicy(value)) recovery.push(value);
+      else if (isRoutingPolicy(value)) routing.push(value);
+      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget policy, a recovery policy or a routing policy)`);
     } catch (error) {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
   }
+  void RecoveryPolicySchema; void RoutingPolicySchema;
   const declared: DefinitionView["declared"] = ["registry"];
   if (workloads.length) declared.push("workload");
   if (policies.length) declared.push("policies");
@@ -106,6 +122,8 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
     registry: { records: registry.records, problems: registry.problems },
     workloads,
     policies,
+    recovery,
+    routing,
     problems,
     declared,
     pending: policies.length ? ["profiles"] : ["profiles", "policies"],
@@ -115,6 +133,8 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
   const store = new ExecutionStore(dir, now);
   const auditLog = new AuditLog(dir);
+  const ledger = new ObligationLedger(dir, now);
+  const obligations = await ledger.obligations();
   const units: UnitView[] = [];
   for (const unit of await store.listUnits()) {
     units.push({
@@ -125,11 +145,12 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
       budget: unit.attempts > 0 ? await store.getBudget(unit.unitId, unit.attempts) : await store.getBudget(unit.unitId, 1),
       decisions: await store.listDecisions(unit.unitId),
       audit: await auditLog.forUnit(unit.unitId),
+      obligations: obligations.filter((o) => o.unit === unit.unitId),
     });
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await readSignals(dir) };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -156,20 +177,26 @@ export function renderStatusText(view: StatusView): string {
       const b = policy.budgets.default;
       lines.push(`  policy ${policy.name} v${policy.version}: default ${b.tokens} tok, ${b.turns} turns, ${b.attempts} attempts; models ${policy.models.default.primary}${policy.models.default.fallback.length ? ` → ${policy.models.default.fallback.join(" → ")}` : ""}`);
     }
+    for (const policy of d.recovery) lines.push(`  recovery ${policy.name} v${policy.version}: ${policy.rules.length} rule(s), fallback ${policy.fallback.join(" → ")}`);
+    for (const policy of d.routing) lines.push(`  routing ${policy.name} v${policy.version}: ${policy.rules.map((r) => `${r.kind}≥${r.minSeverity}→${r.consumer}`).join(", ")}; veto at ${policy.blocksAtOrAbove}`);
     for (const problem of [...d.registry.problems.map((p) => `${p.file}: ${p.message}`), ...d.problems]) lines.push(`  ! ${problem}`);
   }
   if (view.instance) {
     const i = view.instance;
     lines.push(`instance ${i.dir}`);
     lines.push(`  units: ${i.units.length}`);
-    for (const { unit, report, attemptRecords, budget, decisions, audit } of i.units) {
+    for (const { unit, report, attemptRecords, budget, decisions, audit, obligations } of i.units) {
       const last = attemptRecords.at(-1);
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);
+    const open = i.obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
+    lines.push(`  obligations: ${open.length} open of ${i.obligations.length}`);
+    for (const o of open) lines.push(`    ${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto" : "    "}  ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `  Q: ${o.question}` : ""}`);
     lines.push(`  unrouted signals: ${i.signals.length}`);
     for (const signal of i.signals) lines.push(`    ${signal.kind}  ${signal.source}→${signal.destination}  ${signal.subject}${"unit" in signal && signal.unit ? `  (unit ${signal.unit})` : ""}`);
   }

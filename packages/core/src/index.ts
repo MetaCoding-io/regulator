@@ -11,7 +11,11 @@ export { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMark
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";
-export { appendSignal, readSignals } from "./signals.js";
+export { appendEntry, appendSignal, isMessage, readEntries, readSignals } from "./signals.js";
+export {
+  ObligationLedger, dispositionByDecision, effectiveSeverity, foldObligations, isOpen, progressionVeto, routeMessages, unroutedMessages,
+  type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
+} from "./obligations.js";
 export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
 export { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
 export {

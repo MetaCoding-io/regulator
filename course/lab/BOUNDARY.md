@@ -36,7 +36,7 @@ Not covered:
 - Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.
 - The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
-- The audit log is one NDJSON file per instance beside the signal sink; it is not yet merged with the SQLite regulatory event store the reporting tools write.
+- The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations, lesson 11); neither is merged with the SQLite regulatory event store the reporting tools write.
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
@@ -80,6 +80,17 @@ Not covered:
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
 - Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
+## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)
+
+Enforced at `report_intelligence (tool execute)` in `src/cp10-intelligence.ts`; S4, typed-tool.
+
+Not covered:
+
+- The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
+- Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.
+- Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
+- One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
+
 ## Model router (`reg.control.model-router.v1`)
 
 Enforced at `piDispatcher (model choice, failover)`, `model_select (ledger)` in `src/dispatch-pi.ts`; S3, deterministic-gate.
@@ -90,6 +101,17 @@ Not covered:
 - Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.
 - The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover.
 
+## Obligation router (`reg.control.obligation-router.v1`)
+
+Enforced at `runUnit (after the session, after the audit, after the report's signals)`, `closeUnit (after the audit)`, `routeUnit (before and after the recovery decision)`, `regulator signals route` in `src/controller.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
+- A consumer is a name in the policy (S3, S5, human). Nothing delivers an obligation to a person or reminds them; the read model and the control room expose what is owed, and lesson 13's algedonic channel is the delivery mechanism for the ones that cannot wait.
+- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy. A message that names a protected invariant is not raised above its severity by that fact; policy floors by subject are lesson 12's.
+- The CLI trusts `--by`: a resolution records who claimed to resolve it. Authority over dispositions (who may accept a risk at what severity) is not checked, and no dialog asks anyone (lesson 13).
+
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
 Enforced at `session_start`, `tool_call` in `src/cp3-profiles.ts`; S3, deterministic-gate.
@@ -99,6 +121,16 @@ Not covered:
 - Positive grant covers write and edit only; the implement profile grants bash, which is not path-gated.
 - Read-only means declared read-only effects (effects.ts); a tool with an undeclared effect is refused from read-only profiles, not audited.
 - Lexical path check only, as for the vendor write gate.
+
+## Progression veto (`reg.control.progression-veto.v1`)
+
+Enforced at `runUnit (before the lease is taken)`, `closeUnit (before the re-audit)` in `src/controller.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- Checked at dispatch and at close only. A unit already running when the obligation opens finishes its attempt; the veto meets it at the next step.
+- Blocking is a function of severity and the policy's line; the obligation's consumer is not consulted. An S5 proposal at blocking severity on a unit would hold the unit, which may or may not be wanted — the routing policy decides by setting the line.
+- The veto names the unit id. Intelligence that affects a unit not yet contracted holds it once it exists; intelligence that affects a file, a dependency or a workload has no unit to hold and is an obligation for S3 to read.
 
 ## Project trust rule (`reg.authority.project-trust-rule.v1`)
 
@@ -117,7 +149,7 @@ Enforced at `propose_policy_change (tool execute)` in `src/cp9-authority.ts`; S5
 
 Not covered:
 
-- Proposals land in the signal sink with every other unrouted message; nothing routes them to a person yet (lesson 11's obligations), so a proposal nobody reads is a proposal nobody decides.
+- A proposal is routed into an obligation owed to S5 (lesson 11) and shown by the read model; nothing delivers it to a person, and the S5 decision itself — accepting the proposal into identity — has no workflow yet (lesson 12).
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
@@ -128,9 +160,9 @@ Enforced at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)` in
 Not covered:
 
 - Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
-- Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).
-- Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.
-- Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered.
+- Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names (lesson 11); nothing in the loop performs them, and a person who resolves the obligation is trusted by name.
+- Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
+- Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11); it is exposed by the read model and the control room, not delivered to anyone (lesson 13).
 
 ## Reintegration guard (`reg.coordination.reintegration.v1`)
 
@@ -150,7 +182,7 @@ Not covered:
 
 - Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
 - A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
-- Emergent decisions below high consequence are recorded in the report only; nothing routes them yet.
+- Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
 

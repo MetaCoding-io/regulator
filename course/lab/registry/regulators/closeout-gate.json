@@ -25,7 +25,7 @@
     "Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.",
     "The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.",
     "Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.",
-    "The audit log is one NDJSON file per instance beside the signal sink; it is not yet merged with the SQLite regulatory event store the reporting tools write."
+    "The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations, lesson 11); neither is merged with the SQLite regulatory event store the reporting tools write."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "introducedIn": "M09"

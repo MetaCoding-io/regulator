@@ -18,13 +18,8 @@ export const ChannelSchema = Type.Union([
 ]);
 export type Channel = Static<typeof ChannelSchema>;
 
-export const SeveritySchema = Type.Union([
-  Type.Literal("info"),
-  Type.Literal("advisory"),
-  Type.Literal("blocking"),
-  Type.Literal("critical"),
-]);
-export type Severity = Static<typeof SeveritySchema>;
+import { SeveritySchema } from "./severity.js";
+export { SEVERITY_ORDER, SeveritySchema, severityAtLeast, type Severity } from "./severity.js";
 
 import { EvidenceClassSchema, EvidenceRefSchema } from "./evidence.js";
 export { EvidenceClassSchema, EvidenceRefSchema, type EvidenceClass, type EvidenceRef } from "./evidence.js";
@@ -131,7 +126,14 @@ export const CoordinationSignalSchema = Type.Object({
 }, { additionalProperties: false });
 export type CoordinationSignal = Static<typeof CoordinationSignalSchema>;
 
-/** Future/environment-facing intelligence from S4. */
+export const ConfidenceSchema = Type.Union([Type.Literal("low"), Type.Literal("medium"), Type.Literal("high")]);
+export type Confidence = Static<typeof ConfidenceSchema>;
+
+/**
+ * Future/environment-facing intelligence from S4. Advice to S3, never a
+ * decision: the structured fields (lesson 11) let the router weigh it — what
+ * is claimed, how surely, as of when, and which units it touches.
+ */
 export const IntelligenceSignalSchema = Type.Object({
   ...EnvelopeFields,
   kind: Type.Literal("intelligence-signal"),
@@ -142,6 +144,13 @@ export const IntelligenceSignalSchema = Type.Object({
   observation: Type.String({ minLength: 1 }),
   evidence: Type.Array(EvidenceRefSchema),
   expiresAt: Type.Optional(Type.String()),
+  /** The claim in one sentence, separate from the observation that supports it. */
+  claim: Type.Optional(Type.String({ minLength: 1 })),
+  confidence: Type.Optional(ConfidenceSchema),
+  /** When the environment was observed; recency is what makes intelligence usable. */
+  observedAt: Type.Optional(Type.String({ minLength: 1 })),
+  /** Units whose progression the intelligence bears on. */
+  affectedUnits: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
 }, { additionalProperties: false });
 export type IntelligenceSignal = Static<typeof IntelligenceSignalSchema>;
 
@@ -237,6 +246,11 @@ export const VsmMessageSchema = Type.Union([
   UncertaintySignalSchema,
 ]);
 export type VsmMessage = Static<typeof VsmMessageSchema>;
+
+import { ObligationEventSchema } from "./obligations.js";
+/** One line of the regulatory log (lesson 11): a typed message, or an event about its routing. */
+export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema]);
+export type RegulatoryEntry = Static<typeof RegulatoryEntrySchema>;
 
 /**
  * Only an explicit S5 authority action may directly change committed S5 state.
@@ -348,3 +362,9 @@ export {
   AuditEntrySchema, EvidenceEnvironmentSchema, EvidenceRecordSchema, HumanAcceptanceSchema, TechnicalVerdictSchema, VerdictSchema, isTechnicalVerdict,
   type AuditEntry, type EvidenceEnvironment, type EvidenceRecord, type HumanAcceptance, type TechnicalVerdict, type Verdict,
 } from "./audit.js";
+export {
+  ConcernSchema, ConsumerSchema, DispositionSchema, ObligationEventSchema, ObligationSchema, ObligationStatusSchema, RoutableKindSchema, RoutingPolicySchema,
+  RoutingRuleSchema, WAITING_ACTIONS, WaitingActionSchema, isObligationEvent, isRoutingPolicy,
+  type Concern, type Consumer, type Disposition, type Obligation, type ObligationEvent, type ObligationState, type ObligationStatus, type RoutableKind,
+  type RoutingPolicy, type RoutingRule, type WaitingAction,
+} from "./obligations.js";

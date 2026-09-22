@@ -24,7 +24,9 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.control.evidence-preflight.v1",
     "reg.control.failure-observer.v1",
     "reg.control.model-router.v1",
+    "reg.control.obligation-router.v1",
     "reg.control.profile-write-grant.v1",
+    "reg.control.progression-veto.v1",
     "reg.control.recovery-router.v1",
     "reg.control.result-report-gate.v1",
     "reg.control.work-contract-gate.v1",
@@ -32,6 +34,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.coordination.reintegration.v1",
     "reg.coordination.thrash-detector.v1",
     "reg.coordination.unit-lease.v1",
+    "reg.intelligence.intelligence-intake.v1",
   ]);
 });
 
