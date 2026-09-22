@@ -182,4 +182,8 @@ Status: the registry schema (`protocol`), `check` and the docs generator (`core`
 lab CLI and eight records exist and run under CI. The control room's read model exists as
 `regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
 profiles and policies still declared in code) and instance (units with contract, report
-and attempts; leases; unrouted signals). The pages are still design.
+and attempts; leases; unrouted signals). `packages/control-room` serves the first page over
+it: the design topology (regulators by function, with the channels each declares), the
+workloads, every instance's units, leases and unrouted signals, and an inspector that shows
+the whole record for a regulator or a unit. It is read-only by construction (every non-GET
+request is refused). Assurance, lifecycle and replay views are still design.

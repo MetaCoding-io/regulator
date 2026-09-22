@@ -88,7 +88,8 @@ Control Standard crosswalk (M10); a multi-agent decision rule and optional A2A m
 (M11); eval methodology, OpenTelemetry GenAI span mapping, and regulator ablation and
 retirement (M14); an MCP / A2A / ACS portability appendix (M15). The registry and
 control room ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)) are the review's structural
-proposal, adopted: the registry is implemented and seeded; the control room is design.
+proposal, adopted: the registry is implemented and seeded; the control room's first page
+exists over the `regulator status` read model.
 
 Two things the review proposed that were *not* adopted as stated: a YAML registry (JSON
 was chosen to avoid a parser dependency and keep the schema closed; the choice is
@@ -110,7 +111,7 @@ repository is still design-only, the course must present it as design, not as sh
 | M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
 | M14 drift | longitudinal drift fixture | planned (M0) |
 | M02+ registry | `packages/protocol/src/registry.ts`, `packages/core/src/registry.ts`, lab seed records | shipped |
-| M14/M15 control room | [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6 | design only |
+| M14/M15 control room | [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6 | topology, live and inspector views shipped (`packages/control-room`); assurance, lifecycle, replay are design |
 
 Two-way benefit worth stating plainly: the course is also a forcing function for this
 repository. Teaching a mechanism exposes whether it is actually explicable, and every
@@ -180,9 +181,7 @@ does:
 1. Review lessons 01–06 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. The control room's first page (`packages/control-room`): a read-only view over
-   `regulator status --json` — definition topology, instances, and what each unit is
-   doing — grown one view per lesson from here.
-4. Lesson 07 with checkpoint 6 (budgets and contract-preserving compaction).
-5. Run the Phase 1 pilot and record where learners got confused, as course-level
+3. Lesson 07 with checkpoint 6 (budgets and contract-preserving compaction); the control
+   room's live view gains budget consumed per unit with it.
+4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

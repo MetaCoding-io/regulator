@@ -36,9 +36,9 @@ Prompt engineering is valuable, but do not solve a mechanically enforceable rule
 
 Build `regulator` — VSM-Pi's reference build — through the course, one checkpoint per lesson, promoting stable pieces into `packages/`.
 
-Exists today: typed VSM protocol and runtime schemas (messages, trace, effects, profiles, registry, work contracts and result reports, workload and execution records); protected S5 write paths; a loadable Pi extension; typed policy-proposal, audit-finding and uncertainty tools; a SQLite regulatory event store; the lease store, thrash detector, contract/report checks and the execution store (all in `packages/`); the `regulator status` read model in `packages/cli`; and checkpoints 0–5 in `course/lab` (event log; schema-validated trace with the first gate and the registry seed; typed tools with effect contracts; capability profiles; leases, worktree isolation and reintegration; the first slice of the S3 loop with the software-development workload definition).
+Exists today: typed VSM protocol and runtime schemas (messages, trace, effects, profiles, registry, work contracts and result reports, workload and execution records); protected S5 write paths; a loadable Pi extension; typed policy-proposal, audit-finding and uncertainty tools; a SQLite regulatory event store; the lease store, thrash detector, contract/report checks and the execution store (all in `packages/`); the `regulator status` read model in `packages/cli` and the read-only control room page over it in `packages/control-room`; and checkpoints 0–5 in `course/lab` (event log; schema-validated trace with the first gate and the registry seed; typed tools with effect contracts; capability profiles; leases, worktree isolation and reintegration; the first slice of the S3 loop with the software-development workload definition).
 
-Next: budgets and contract-preserving compaction, then the recovery lattice, then independent audit; alongside, the control room's first page over the read model.
+Next: budgets and contract-preserving compaction, then the recovery lattice, then independent audit; the control room grows one view per lesson.
 
 Deliberately deferred: RDF/SHACL, full VSM recursion, broad S4 integrations, autonomous S5 mutation, production-grade benchmarks. **GSD-Pi is comparison material in the course, not a dependency; there is no GSD adapter.**
 

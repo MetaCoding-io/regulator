@@ -42,6 +42,18 @@ importers:
         specifier: workspace:*
         version: link:../protocol
 
+  packages/control-room:
+    dependencies:
+      '@metacoding/vsm-pi-cli':
+        specifier: workspace:*
+        version: link:../cli
+      '@metacoding/vsm-pi-core':
+        specifier: workspace:*
+        version: link:../core
+      '@metacoding/vsm-pi-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/core:
     dependencies:
       '@metacoding/vsm-pi-protocol':
