@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createProfilesExtension, PROFILE_SECTION_TAG } from "./cp3-profiles.js";
+import { readOnlyViolations } from "@metacoding/vsm-pi-core";
 import { isReadOnlyProfile, isWritableUnder, PROFILES, renderProfileSection } from "./profiles.js";
-import { readOnlyViolations } from "./effects.js";
 import { ctxFor, fixtureCopy, mockPi } from "./test-support.js";
 
 test("isWritableUnder is a positive grant: only listed prefixes, fail-closed elsewhere", () => {

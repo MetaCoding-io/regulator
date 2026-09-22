@@ -34,8 +34,9 @@ records what they *did*. Neither is ever copied into the other by a person.
 ## 2. The record
 
 A regulator record is its identity card. The schema lives in
-[`lab/src/registry.ts`](lab/src/registry.ts); the seed records in
-[`lab/registry/regulators/`](lab/registry/regulators/). Abbreviated:
+[`packages/protocol/src/registry.ts`](../packages/protocol/src/registry.ts), the check
+and docs generator in [`packages/core/src/registry.ts`](../packages/core/src/registry.ts);
+the seed records in [`lab/registry/regulators/`](lab/registry/regulators/). Abbreviated:
 
 ```jsonc
 {
@@ -177,5 +178,5 @@ carry credentials.
 - **Lesson 15** ships the control room as the harness's operating surface, and the
   capstone's viability case is generated from the registry.
 
-Status: the registry schema, `check`, the docs generator and two seed records exist and
-run under CI. The control room is design only.
+Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
+lab CLI and two seed records exist and run under CI. The control room is design only.

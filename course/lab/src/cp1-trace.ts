@@ -16,7 +16,8 @@
  */
 import path from "node:path";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { TraceWriter, TurnTracker, type TokenUsage } from "./trace.js";
+import type { TokenUsage } from "@metacoding/vsm-pi-protocol";
+import { TraceWriter, TurnTracker } from "@metacoding/vsm-pi-core";
 
 export const TRACE_RELATIVE_PATH = path.join(".regulator", "trace.ndjson");
 export const PROTECTED_PREFIX = "vendor/";

@@ -89,3 +89,7 @@ export function authorizeWrite(
 
 export { assertRegulatoryEvent, createRegulatoryEvent } from "./reporting.js";
 export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatoryEvent } from "./event-store.js";
+export { TOOL_EFFECTS, effectOf, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
+export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "./profiles.js";
+export { TurnTracker, TraceWriter } from "./trace.js";
+export { checkRegistry, loadRegistry, renderRegistryMarkdown, type LoadedRegistry, type RegistryProblem } from "./registry.js";

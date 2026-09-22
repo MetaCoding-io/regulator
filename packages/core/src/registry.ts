@@ -1,12 +1,11 @@
 /**
  * The regulator registry: one committed, machine-readable record per
- * regulator the harness runs. No Pi dependency.
+ * regulator the harness runs.
  *
- * A registry record is a regulator's identity card — what failure it absorbs,
- * at which level of the mechanism hierarchy, implemented where, evidenced by
- * which tests, with which limitations, owned by whom, reviewed when. Live
- * state (what a regulator is doing right now) is *not* here: that is a
- * projection of the event store, never hand-maintained.
+ * A record is a regulator's identity card — what failure it absorbs, at which
+ * level of the mechanism hierarchy, implemented where, evidenced by which
+ * tests, with which limitations, owned by whom, reviewed when. Live state is
+ * a projection of the event store, never kept here.
  *
  * `checkRegistry` is the mechanism behind the documentation: a record that
  * points at a missing implementation, cites a test that does not exist, or
@@ -14,50 +13,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { Type, type Static } from "typebox";
-import { Value } from "typebox/value";
-
-const isoDate = Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" });
-/** A closed string set. `StringEnum` from pi-ai is for provider-facing tool schemas; the registry is internal. */
-const oneOf = <T extends readonly string[]>(values: T) => Type.Union(values.map((v) => Type.Literal(v)));
-
-export const RegulatorRecordSchema = Type.Object(
-  {
-    id: Type.String({ pattern: "^reg\\.[a-z0-9-]+\\.[a-z0-9-]+\\.v\\d+$" }),
-    name: Type.String({ minLength: 1 }),
-    status: oneOf(["proposed", "active", "retired"] as const),
-    vsmFunction: oneOf(["S1", "S2", "S3", "S3*", "S4", "S5"] as const),
-    purpose: Type.String({ minLength: 1 }),
-    absorbs: Type.Object(
-      { failureClass: Type.String({ minLength: 1 }), description: Type.String({ minLength: 1 }) },
-      { additionalProperties: false },
-    ),
-    mechanism: Type.Object(
-      {
-        level: oneOf(["type", "deterministic-gate", "typed-tool", "model-judgment", "prompt"] as const),
-        implementation: Type.String({ minLength: 1 }),
-        enforcementPoints: Type.Array(Type.String({ minLength: 1 })),
-      },
-      { additionalProperties: false },
-    ),
-    authority: Type.Optional(
-      Type.Object({ may: Type.Array(Type.String()), mayNot: Type.Array(Type.String()) }, { additionalProperties: false }),
-    ),
-    evidence: Type.Object(
-      { tests: Type.Array(Type.String({ minLength: 1 })), lastVerifiedRevision: Type.Optional(Type.String()) },
-      { additionalProperties: false },
-    ),
-    limitations: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
-    ownership: Type.Object(
-      { owner: Type.String({ minLength: 1 }), introduced: isoDate, reviewBy: isoDate },
-      { additionalProperties: false },
-    ),
-    retirement: Type.Optional(Type.Object({ condition: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
-    introducedIn: Type.Optional(Type.String({ pattern: "^M\\d{2}$" })),
-  },
-  { additionalProperties: false },
-);
-export type RegulatorRecord = Static<typeof RegulatorRecordSchema>;
+import { isRegulatorRecord, type RegulatorRecord } from "@metacoding/vsm-pi-protocol";
 
 export interface RegistryProblem {
   file: string;
@@ -92,7 +48,7 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
       problems.push({ file, message: `not valid JSON: ${(error as Error).message}` });
       continue;
     }
-    if (!Value.Check(RegulatorRecordSchema, parsed)) {
+    if (!isRegulatorRecord(parsed)) {
       problems.push({ file, message: "does not match the regulator record schema" });
       continue;
     }
@@ -109,7 +65,7 @@ export async function checkRegistry(registryDir: string, root: string): Promise<
   const loaded = await loadRegistry(registryDir);
   const seen = new Map<string, string>();
   for (const record of loaded.records) {
-    const file = `${record.id}`;
+    const file = record.id;
     if (seen.has(record.id)) loaded.problems.push({ file, message: `duplicate id (also in ${seen.get(record.id)})` });
     seen.set(record.id, file);
     if (record.status === "retired") continue;
@@ -122,7 +78,7 @@ export async function checkRegistry(registryDir: string, root: string): Promise<
     for (const test of record.evidence.tests) {
       if (!(await exists(path.join(root, test)))) loaded.problems.push({ file, message: `cited test not found: ${test}` });
     }
-    if (record.mechanism.level === "deterministic-gate" && !(record.limitations?.length)) {
+    if (record.mechanism.level === "deterministic-gate" && !record.limitations?.length) {
       loaded.problems.push({ file, message: "a gate must state at least one limitation (its enforcement boundary)" });
     }
   }
