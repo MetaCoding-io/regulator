@@ -87,11 +87,13 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–3 exist; Pi-free modules shared
-  between them so far are `trace.ts`, `conventions.ts`, `effects.ts`, `profiles.ts` and
-  `registry.ts`.
-- **The regulator registry** — schema, `check`, docs generator and CLI exist under
-  `course/lab/registry/` with two seed records; the control room is design only
+  `pi -e` and tested without a model. Checkpoints 0–3 exist. Their Pi-free modules have
+  been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
+  the tracker/writer, effect declarations, profile checks and registry check to
+  `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
+  its two profile declarations, the checkpoints, the registry CLI and the seed records.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and two
+  seed records live under `course/lab/registry/`; the control room is design only
   ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one

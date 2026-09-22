@@ -7,7 +7,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkRegistry, renderRegistryMarkdown } from "./registry.js";
+import { checkRegistry, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");

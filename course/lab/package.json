@@ -17,6 +17,8 @@
     "registry:docs": "pnpm build && node dist/registry-cli.js docs --write"
   },
   "dependencies": {
+    "@metacoding/vsm-pi-core": "workspace:*",
+    "@metacoding/vsm-pi-protocol": "workspace:*",
     "typebox": "1.3.27"
   },
   "peerDependencies": {

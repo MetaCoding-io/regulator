@@ -1,31 +1,17 @@
 /**
- * Capability profiles. No Pi dependency.
- *
- * A profile is a positive grant: what a kind of work may do. It binds a tool
- * surface, the paths the work may write, a reasoning budget, and the advice
- * the model should carry — the part no gate can enforce. A persona says who
- * the agent is; a profile says what it can reach.
+ * The course's two capability profiles. The profile type, the effect
+ * declarations, and the checks (`isWritableUnder`, `isReadOnlyProfile`,
+ * `renderProfileSection`) ship in VSM-Pi's packages; the lab only declares
+ * the profiles it uses.
  *
  * Model and context-file bindings are deliberately absent at this checkpoint:
  * model routing arrives with budgets (lesson 07), durable context with
  * identity (lesson 12).
  */
-import path from "node:path";
-import { readOnlyViolations } from "./effects.js";
+import type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
 
-export type ReasoningLevel = "minimal" | "low" | "medium" | "high";
-
-export interface CapabilityProfile {
-  name: string;
-  description: string;
-  /** Tools this profile may use. Names unknown to the host are ignored when applied. */
-  tools: readonly string[];
-  /** Project-relative prefixes the profile may write under. Empty means no direct writes. */
-  writablePaths: readonly string[];
-  thinkingLevel?: ReasoningLevel;
-  /** Advice for the model: only what a gate cannot know. */
-  advice: readonly string[];
-}
+export type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
+export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "@metacoding/vsm-pi-core";
 
 export const PROFILES = {
   research: {
@@ -60,41 +46,4 @@ export type ProfileName = keyof typeof PROFILES;
 
 export function isProfileName(name: string): name is ProfileName {
   return Object.hasOwn(PROFILES, name);
-}
-
-/**
- * A profile is read-only when every tool it grants has a declared read-only
- * effect and it grants no direct writes. Removing `write`, `edit` and `bash`
- * is not enough: a tool with a one-string schema can still run the project.
- */
-export function isReadOnlyProfile(profile: CapabilityProfile): boolean {
-  return profile.writablePaths.length === 0 && readOnlyViolations(profile.tools).length === 0;
-}
-
-/**
- * Positive-grant path check: the normalized project-relative path must start
- * with one of the profile's writable prefixes. Anything the gate does not
- * understand — absolute paths, `..` — is refused. Same limits as checkpoint 1:
- * lexical only; lesson 10 hardens it.
- */
-export function isWritableUnder(profile: CapabilityProfile, input: string): boolean {
-  const cleaned = (input.startsWith("@") ? input.slice(1) : input).replaceAll("\\", "/");
-  if (path.posix.isAbsolute(cleaned)) return false;
-  const normalized = path.posix.normalize(cleaned).replace(/^\.\//, "");
-  if (normalized === ".." || normalized.startsWith("../")) return false;
-  return profile.writablePaths.some((prefix) => normalized.startsWith(prefix));
-}
-
-/** The profile as the model sees it: a system-prompt section, not a persona. */
-export function renderProfileSection(profile: CapabilityProfile): string {
-  const writable = profile.writablePaths.length ? profile.writablePaths.join(", ") : "none (no direct writes)";
-  const lines = [
-    `Active capability profile: ${profile.name} — ${profile.description}`,
-    `Writable paths for write/edit: ${writable}. Writes elsewhere are refused by the harness, not by you.`,
-  ];
-  if (profile.tools.includes("bash")) {
-    lines.push("bash is granted and is not path-gated: the writable paths bind you there too, and the harness cannot check it.");
-  }
-  lines.push(...profile.advice.map((line) => `- ${line}`));
-  return lines.join("\n");
 }

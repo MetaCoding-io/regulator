@@ -157,10 +157,13 @@ Checkpoint 1 builds level 2. The drill in section 5 runs level 2 against level 5
 
 Two additions to `regulator`. Open both files and read them fully before continuing.
 
-### A typed trace — [`course/lab/src/trace.ts`](../lab/src/trace.ts)
+### A typed trace — [`packages/protocol/src/trace.ts`](../../packages/protocol/src/trace.ts) and [`packages/core/src/trace.ts`](../../packages/core/src/trace.ts)
 
 Checkpoint 0's log was one line per event, untyped, with whatever fields seemed
-interesting. Checkpoint 1 replaces it with a claim about each turn:
+interesting. Checkpoint 1 replaces it with a claim about each turn. The claim's shape
+lives in `protocol`; the tracker and writer live in `core`; the checkpoint imports both —
+this is the first checkpoint whose pieces are VSM-Pi's own packages rather than lab
+files, which is what "the course builds the product" means in practice:
 
 ```ts
 export interface TurnRecord {
@@ -173,8 +176,8 @@ export interface TurnRecord {
 }
 ```
 
-Notice that `trace.ts` imports nothing from Pi. That is deliberate and it is the first
-design rule of the reference build: **the shape of what the harness claims should be
+Notice that neither `trace.ts` imports anything from Pi. That is deliberate and it is
+the first design rule of the reference build: **the shape of what the harness claims should be
 readable without knowing any harness API.** This repository enforces the same rule on
 itself as INV-007 (`packages/protocol` and `packages/core` never depend on Pi or GSD).
 When you can read a trace record and understand what happened without opening the

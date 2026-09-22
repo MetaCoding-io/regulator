@@ -91,8 +91,10 @@ project's test suite — and a test suite can write files, open sockets, read en
 variables, call out to services, or delete a database if that is what someone wrote.
 The tool's *effect surface* is the project's, not the schema's.
 
-So every tool in the lab declares an effect alongside its schema, in
-[`course/lab/src/effects.ts`](../lab/src/effects.ts):
+So every tool declares an effect alongside its schema. The `ToolEffect` shape is in
+[`packages/protocol/src/effects.ts`](../../packages/protocol/src/effects.ts); the
+declarations for Pi's built-ins and the lab's tools are in
+[`packages/core/src/effects.ts`](../../packages/core/src/effects.ts):
 
 ```ts
 export interface ToolEffect {

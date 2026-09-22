@@ -46,7 +46,7 @@ When adding a feature, prefer mechanisms in this order:
 
 ## Where it is
 
-Shipped in `packages/`: the typed VSM protocol and channel vocabulary, committed S5 artifacts, protected S5 write paths in a loadable Pi extension, typed policy-proposal / audit-finding / uncertainty tools, and a SQLite regulatory event store.
+Shipped in `packages/`: the typed VSM protocol and channel vocabulary, committed S5 artifacts, protected S5 write paths in a loadable Pi extension, typed policy-proposal / audit-finding / uncertainty tools, a SQLite regulatory event store — and, promoted from the course lab, the per-turn trace schema and writer, tool effect contracts, capability-profile checks, and the regulator registry schema with its `check`.
 
 Built in `course/lab` so far (checkpoints 0–3): a lifecycle event log; a schema-validated per-turn trace with the first gate and the regulator registry seed; typed tools with error and effect contracts; capability profiles as positive grants over declared effects.
 

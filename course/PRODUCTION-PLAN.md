@@ -107,7 +107,7 @@ repository is still design-only, the course must present it as design, not as sh
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped |
 | M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
 | M14 drift | longitudinal drift fixture | planned (M0) |
-| M02+ registry | `course/lab/src/registry.ts`, seed records | shipped (course lab) |
+| M02+ registry | `packages/protocol/src/registry.ts`, `packages/core/src/registry.ts`, lab seed records | shipped |
 | M14/M15 control room | [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6 | design only |
 
 Two-way benefit worth stating plainly: the course is also a forcing function for this

@@ -186,9 +186,12 @@ the lab.
 
 Two files, then one you write yourself.
 
-### The record — [`course/lab/src/profiles.ts`](../lab/src/profiles.ts)
+### The record — [`packages/protocol/src/profiles.ts`](../../packages/protocol/src/profiles.ts), [`packages/core/src/profiles.ts`](../../packages/core/src/profiles.ts), [`course/lab/src/profiles.ts`](../lab/src/profiles.ts)
 
-No Pi dependency. The profile type, two profiles, and two pure functions.
+No Pi dependency anywhere in this trio. The profile *type* is protocol vocabulary; the
+checks (`isWritableUnder`, `isReadOnlyProfile`, `renderProfileSection`) are core
+mechanisms; the lab file declares only the two profiles the course uses and imports the
+rest. The lab never re-implements what `packages/` already ships.
 
 ```ts
 export interface CapabilityProfile {

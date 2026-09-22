@@ -1,64 +1,13 @@
 /**
- * Typed trace records for the `regulator` reference build.
+ * Per-turn trace records: one typed claim about what happened in a turn.
  *
- * This module has no Pi dependency on purpose. A trace is a claim about what
- * happened in a turn, and the shape of that claim should be readable without
- * knowing any harness API. Compare VSM-Pi's INV-007: protocol stays runtime-free.
- *
- * The shape is a runtime schema, not only a TypeScript type: the writer
- * refuses a record that does not match it. A trace that can contain anything
- * is not evidence of anything.
+ * The shape lives in protocol as a runtime schema; the writer refuses a
+ * record that does not match it. A trace that can contain anything is not
+ * evidence of anything.
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { Type, type Static } from "typebox";
-import { Value } from "typebox/value";
-
-export const TokenUsageSchema = Type.Object(
-  {
-    input: Type.Integer({ minimum: 0 }),
-    output: Type.Integer({ minimum: 0 }),
-    cacheRead: Type.Integer({ minimum: 0 }),
-    cacheWrite: Type.Integer({ minimum: 0 }),
-    totalTokens: Type.Integer({ minimum: 0 }),
-    /** Total cost in the provider's currency, as Pi reports it. */
-    cost: Type.Number({ minimum: 0 }),
-  },
-  { additionalProperties: false },
-);
-export type TokenUsage = Static<typeof TokenUsageSchema>;
-
-export const ToolCallRecordSchema = Type.Object(
-  {
-    toolCallId: Type.String({ minLength: 1 }),
-    toolName: Type.String({ minLength: 1 }),
-    startedAt: Type.Integer(),
-    endedAt: Type.Optional(Type.Integer()),
-    isError: Type.Optional(Type.Boolean()),
-    /** Set when a `tool_call` handler refused the call before it executed. */
-    blocked: Type.Optional(Type.Boolean()),
-    reason: Type.Optional(Type.String()),
-  },
-  { additionalProperties: false },
-);
-export type ToolCallRecord = Static<typeof ToolCallRecordSchema>;
-
-export const TurnRecordSchema = Type.Object(
-  {
-    turnIndex: Type.Integer({ minimum: 0 }),
-    startedAt: Type.Integer(),
-    endedAt: Type.Integer(),
-    durationMs: Type.Integer({ minimum: 0 }),
-    usage: Type.Optional(TokenUsageSchema),
-    toolCalls: Type.Array(ToolCallRecordSchema),
-  },
-  { additionalProperties: false },
-);
-export type TurnRecord = Static<typeof TurnRecordSchema>;
-
-export function isTurnRecord(value: unknown): value is TurnRecord {
-  return Value.Check(TurnRecordSchema, value);
-}
+import { isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "@metacoding/vsm-pi-protocol";
 
 /** Accumulates one turn's worth of events into a single `TurnRecord`. */
 export class TurnTracker {
@@ -130,7 +79,7 @@ export class TraceWriter {
 
   async append(record: TurnRecord): Promise<void> {
     if (!isTurnRecord(record)) {
-      throw new Error(`regulator: refusing to write a malformed trace record: ${JSON.stringify(record)}`);
+      throw new Error(`vsm-pi: refusing to write a malformed trace record: ${JSON.stringify(record)}`);
     }
     this.#ready ??= mkdir(path.dirname(this.filePath), { recursive: true }).then(() => undefined);
     await this.#ready;

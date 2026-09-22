@@ -1,19 +1,8 @@
 import { Type, type Static, type TSchema } from "typebox";
 import { Value } from "typebox/value";
 
-/**
- * VSM functions are control-system responsibilities, not persona names.
- * Agents may participate in a function without becoming the authority for it.
- */
-export const VsmSystemSchema = Type.Union([
-  Type.Literal("S1"),
-  Type.Literal("S2"),
-  Type.Literal("S3"),
-  Type.Literal("S3*"),
-  Type.Literal("S4"),
-  Type.Literal("S5"),
-]);
-export type VsmSystem = Static<typeof VsmSystemSchema>;
+import { VsmSystemSchema } from "./vsm-systems.js";
+export { VsmSystemSchema, type VsmSystem } from "./vsm-systems.js";
 
 /**
  * Information is typed by control semantics rather than treated as generic
@@ -316,3 +305,9 @@ export type RegulatoryReceipt = Static<typeof RegulatoryReceiptSchema>;
 export function assertValid<T extends TSchema>(schema: T, value: unknown, label: string): asserts value is Static<T> {
   if (!Value.Check(schema, value)) throw new Error(`Invalid ${label}: payload does not match the closed runtime schema.`);
 }
+
+// Control-plane vocabulary promoted from the course lab (checkpoints 1–3).
+export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
+export { ToolEffectSchema, type ToolEffect } from "./effects.js";
+export type { CapabilityProfile, ReasoningLevel } from "./profiles.js";
+export { MechanismLevelSchema, RegulatorRecordSchema, isRegulatorRecord, type MechanismLevel, type RegulatorRecord } from "./registry.js";

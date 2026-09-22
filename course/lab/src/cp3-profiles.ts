@@ -15,7 +15,9 @@
  *   pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js
  */
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { isProfileName, isWritableUnder, PROFILES, renderProfileSection, type CapabilityProfile, type ProfileName } from "./profiles.js";
+import type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
+import { isWritableUnder, renderProfileSection } from "@metacoding/vsm-pi-core";
+import { isProfileName, PROFILES, type ProfileName } from "./profiles.js";
 
 export const PROFILE_SECTION_TAG = "regulator_profile";
 
