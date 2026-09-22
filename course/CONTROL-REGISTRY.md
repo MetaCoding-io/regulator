@@ -179,7 +179,7 @@ carry credentials.
   capstone's viability case is generated from the registry.
 
 Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
-lab CLI and sixteen records exist and run under CI. The control room's read model exists as
+lab CLI and twenty records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10). The control room's read model exists as
 `regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
 policies declared as files since lesson 07; profiles still in code) and instance (units with
 contract, report, attempts, budget ledger, recovery decisions since lesson 08, and the audit log — evidence, verdicts, acceptances — since lesson 09; leases; unrouted signals). `packages/control-room` serves the first page over

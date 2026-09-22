@@ -5,14 +5,18 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.canary-watch.v1` | Canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.evidence-preflight.v1` | Evidence preflight | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.identity-write-gate.v1` | Identity write gate | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.proposal-intake.v1` | Proposal intake | S5 | typed-tool | active | 2026-12-01 |
 | `reg.control.recovery-router.v1` | Recovery router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
@@ -54,6 +58,40 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.
 - The wall-clock ceiling is measured from session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Canary watch
+
+`reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · introduced in M10
+
+**Purpose.** Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
+
+**Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
+
+**Mechanism.** `src/cp9-authority.ts` at `tool_result (redact)`, `message_end (record)`
+
+**Channels.** consumes `tool_result`, `message_end`, `.regulator/canaries` · emits `audit-finding → S3 (secret-exposure, critical)`
+
+**Scope.** subjects tool result, assistant message · resources canary values
+
+**Cost.** One substring scan per tool result text block and per assistant message; no model calls.
+
+**May.**
+- redact a canary from a tool result
+- record a finding
+
+**May not.**
+- stop the model from reading the file (the read is the unit's; the exposure is what is watched)
+- recall text already sent to a provider
+
+**Evidence.** `src/cp9-authority.test.ts`
+
+**Limitations.**
+- It watches for known values only: a real secret the harness was not told about is not a canary. This measures whether the exposure path exists, not whether every secret is safe.
+- A canary that reaches the model in a form the scan does not match (split across blocks, base64, described rather than quoted) is not redacted.
+- By the time message_end records a leak the text has left the process: the finding is evidence of exposure, not prevention. Network egress is not watched at all; the lesson names it as the boundary a container provides.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -267,6 +305,44 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Identity write gate
+
+`reg.authority.identity-write-gate.v1` · S5 · deterministic-gate · active · introduced in M10
+
+**Purpose.** Refuse every write or edit that would touch the instance's identity (regulator/identity/), the committed S5 artifacts, the project's protected paths, or any of their parents — through any spelling Pi expands, any traversal, and any filesystem alias (symbolic link, hard link, non-directory parent) — and execute exactly the normalized path that was checked. For bash, which no hook can sandbox, snapshot the protected files before the command and restore them after: a change is reverted from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001.
+
+**Absorbs.** `identity-mutation` — The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted.
+
+**Mechanism.** `src/cp9-authority.ts` at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)`
+
+**Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
+
+**Scope.** subjects path, tool call · resources regulator/identity/, vsm/*, vendor/
+
+**Cost.** One filesystem walk of the target path per write or edit; one read of every protected file before and after each bash call. No model calls.
+
+**May.**
+- refuse a write or edit with the reason
+- rewrite the path a tool executes to the one it checked
+- restore a protected file from its pre-command snapshot
+- record an audit finding
+
+**May not.**
+- grant s5-authority (no argument, prompt or proposal can)
+- undo a commit, a push, or anything a shell did outside the working tree
+- sandbox a process
+
+**Evidence.** `../../packages/core/src/authority.test.ts`, `src/cp9-authority.test.ts`, `../../packages/pi-extension/src/index.test.ts`
+
+**Limitations.**
+- A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
+- The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
+- The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
+- Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Model router
 
 `reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
@@ -329,6 +405,76 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Lexical path check only, as for the vendor write gate.
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
+
+
+## Project trust rule
+
+`reg.authority.project-trust-rule.v1` · S5 · deterministic-gate · active · introduced in M10
+
+**Purpose.** Load into a unit's session the extensions the definition declares and nothing the project supplies. The SDK's resource loader discovers a project's own .pi/extensions, skills, prompt templates and themes from the working directory without asking — Pi's project_trust event is the CLI's, not the loader's — so the dispatcher builds every session with a loader that turns project resources off and filters the extensions it finds to the definition's list, recording what it refused. The CLI path answers project_trust with 'no' as well. A unit's project is data the unit works on, never a source of control for the harness.
+
+**Absorbs.** `trust-boundary-crossing` — The target repository ships .pi/extensions/helpful.ts, which registers a tool that widens the surface or rewrites results; the harness loads it because the directory looked like a project.
+
+**Mechanism.** `src/dispatch-pi.ts` at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (cp9-authority.ts, CLI sessions)`
+
+**Channels.** consumes `resource loader (discovered extensions)`, `project_trust` · emits `refused extension list (dispatcher echo)`
+
+**Scope.** subjects project · resources .pi/, .agents/skills
+
+**Cost.** None: one event handler that returns a constant.
+
+**May.**
+- refuse a discovered extension the definition does not declare
+- turn off project skills, prompt templates and themes for a session
+- decline project trust for a CLI session
+
+**May not.**
+- make untrusted content safe (trust is an input-loading guard, not a sandbox)
+- prevent context files (AGENTS.md) from loading: Pi loads them regardless of trust
+
+**Evidence.** `src/cp9-authority.test.ts`
+
+**Limitations.**
+- Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.
+- Context files (AGENTS.md, CLAUDE.md) and project settings are still read: Pi 0.87.0 loads context files regardless of trust, and the dispatcher does not yet substitute an in-memory settings manager, so a project's .pi/settings.json can still shape the session (compaction thresholds, for example).
+- The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.
+- The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Proposal intake
+
+`reg.authority.proposal-intake.v1` · S5 · typed-tool · active · introduced in M10
+
+**Purpose.** Give a unit a typed way to ask for a change to identity, policy or a protected path — propose_policy_change — that records a policy-proposal message on the proposal channel for S5 and changes nothing: no file, no policy, no grant. The right to ask is mechanically separate from the right to change (INV-002).
+
+**Absorbs.** `proposal-as-policy` — A unit that cannot edit the invariant argues its case in the transcript and then edits the invariant; or a harness that lets a 'proposal' tool apply the change it proposes.
+
+**Mechanism.** `src/cp9-authority.ts` at `propose_policy_change (tool execute)`
+
+**Channels.** consumes `tool call (propose_policy_change)` · emits `policy-proposal → S5 (signal sink)`
+
+**Scope.** subjects proposal · resources .regulator/signals.ndjson
+
+**Cost.** One appended message per proposal; no model calls.
+
+**May.**
+- record a proposal with the unit as provenance
+
+**May not.**
+- apply the change
+- grant authority
+- decide the proposal (S5 or a person does, outside the loop)
+
+**Evidence.** `src/cp9-authority.test.ts`
+
+**Limitations.**
+- Proposals land in the signal sink with every other unrouted message; nothing routes them to a person yet (lesson 11's obligations), so a proposal nobody reads is a proposal nobody decides.
+- The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
+- Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
 ## Recovery router
@@ -498,7 +644,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Limitations.**
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
-- The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside it (lesson 10).
+- The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — checkpoint 9's write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
@@ -526,8 +672,8 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `src/cp1-trace.test.ts`
 
 **Limitations.**
-- Lexical path check only: no symlink, hard-link or TOCTOU protection (lesson 10 hardens it).
-- Covers the write and edit tools; bash and custom tools bypass it (lessons 05 and 10).
+- Lexical path check only: no symlink, hard-link or TOCTOU protection. Checkpoint 9's identity write gate (lesson 10) supersedes it with the filesystem walk when both are loaded; this gate stays as the lesson 02 baseline.
+- Covers the write and edit tools; bash and custom tools bypass it. Checkpoint 9 adds the bash snapshot-and-restore for protected paths.
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
 

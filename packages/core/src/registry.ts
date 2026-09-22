@@ -116,3 +116,34 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }
+
+/**
+ * The enforcement boundary statement: for every regulator that enforces
+ * something, where it enforces and what it does not cover. Generated so a
+ * gate cannot gain a limitation the statement does not carry.
+ */
+export function renderBoundaryMarkdown(records: readonly RegulatorRecord[]): string {
+  const gates = records.filter((r) => r.mechanism.level === "deterministic-gate" || r.mechanism.level === "typed-tool" || r.mechanism.level === "type");
+  const others = records.filter((r) => !gates.includes(r));
+  const lines: string[] = [
+    "# Enforcement boundary",
+    "",
+    "Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by hand.",
+    "",
+    "A gate protects the calls that reach it. This statement lists, for every mechanical regulator, where it is",
+    "enforced and what it does not cover — the routes around it. A route that is not named here is not known",
+    "to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.",
+    "",
+  ];
+  for (const r of gates) {
+    lines.push(`## ${r.name} (\`${r.id}\`)`, "");
+    lines.push(`Enforced at ${r.mechanism.enforcementPoints.map((p) => `\`${p}\``).join(", ") || "(nowhere)"} in \`${r.mechanism.implementation}\`; ${r.vsmFunction}, ${r.mechanism.level}.`, "");
+    lines.push("Not covered:", "", ...(r.limitations?.length ? r.limitations.map((l) => `- ${l}`) : ["- (no limitation stated: this record would not pass `regulator check`)"]), "");
+  }
+  if (others.length) {
+    lines.push("## Advice and judgment", "", "These regulators do not enforce; they inform. A rule that only they carry is not enforced.", "");
+    for (const r of others) lines.push(`- ${r.name} (\`${r.id}\`, ${r.mechanism.level}): ${r.limitations?.[0] ?? "no limitation stated"}`);
+    lines.push("");
+  }
+  return `${lines.join("\n").trimEnd()}\n`;
+}

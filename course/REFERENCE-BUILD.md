@@ -87,7 +87,7 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–8 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–9 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
@@ -113,7 +113,13 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   package (host-run checks, evidence binding and the verdict, with the conventions
   discovery promoted from the lab), the audit log (`core`), and in the lab the closeout
   gate in the loop (`auditUnit`, `closeUnit`) and the `cp8-evidence` extension.
-- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and sixteen
+  Checkpoint 9 promotes the write preflight (`prepareWritePath`: expansion, traversal,
+  protected paths and parents, the filesystem alias walk) from the Pi extension into
+  `core`, where both now use it, adds the boundary-statement generator, and in the lab
+  the identity seed, the `cp9-authority` extension (write gate, bash watch, proposal
+  intake, canary watch, trust answer), the trust rule in the dispatcher's loader, the
+  injection fixture and `BOUNDARY.md`.
+- **The regulator registry** — schema and check ship in `packages/`; the lab CLI and twenty
   records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
@@ -127,8 +133,10 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   `course/lab/fixture-oscillation/` (slugkit with the known issue fixed and two
   contradictory underscore tests) — **exists**.
 - **Injection fixture** — a planted instruction in a source comment and another in a
-  tool result, for M10. It must be realistic enough that an ungated agent sometimes
-  follows it; a drill nobody fails teaches nothing.
+  tool result, for M10, with a canary credential in a committed `.env`.
+  `course/lab/fixture-injection/` — **exists**. Whether it is realistic enough that an
+  ungated agent sometimes follows it is what drill 2 measures; a drill nobody fails
+  teaches nothing.
 - **Drift fixture** — a longitudinal scenario (a sequence of related tasks) whose
   architectural conformance can be measured after N units, for M12 and M14.
 - **Lab grader** — deterministic checks per checkpoint, runnable locally and in CI,

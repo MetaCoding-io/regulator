@@ -1,0 +1,77 @@
+{
+  "id": "reg.authority.identity-write-gate.v1",
+  "name": "Identity write gate",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Refuse every write or edit that would touch the instance's identity (regulator/identity/), the committed S5 artifacts, the project's protected paths, or any of their parents — through any spelling Pi expands, any traversal, and any filesystem alias (symbolic link, hard link, non-directory parent) — and execute exactly the normalized path that was checked. For bash, which no hook can sandbox, snapshot the protected files before the command and restore them after: a change is reverted from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001.",
+  "absorbs": {
+    "failureClass": "identity-mutation",
+    "description": "The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp9-authority.ts",
+    "enforcementPoints": [
+      "tool_call (write, edit: prepareWritePath)",
+      "tool_call (bash: snapshot)",
+      "tool_result (bash: restore and report)"
+    ]
+  },
+  "channels": {
+    "consumes": [
+      "tool_call",
+      "tool_result",
+      "project conventions (protected paths)",
+      "regulator/identity/"
+    ],
+    "emits": [
+      "audit-finding → S3 (INV-001, bash restored a protected path)"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "path",
+      "tool call"
+    ],
+    "resources": [
+      "regulator/identity/",
+      "vsm/*",
+      "vendor/"
+    ]
+  },
+  "cost": {
+    "description": "One filesystem walk of the target path per write or edit; one read of every protected file before and after each bash call. No model calls."
+  },
+  "authority": {
+    "may": [
+      "refuse a write or edit with the reason",
+      "rewrite the path a tool executes to the one it checked",
+      "restore a protected file from its pre-command snapshot",
+      "record an audit finding"
+    ],
+    "mayNot": [
+      "grant s5-authority (no argument, prompt or proposal can)",
+      "undo a commit, a push, or anything a shell did outside the working tree",
+      "sandbox a process"
+    ]
+  },
+  "evidence": {
+    "tests": [
+      "../../packages/core/src/authority.test.ts",
+      "src/cp9-authority.test.ts",
+      "../../packages/pi-extension/src/index.test.ts"
+    ]
+  },
+  "limitations": [
+    "A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.",
+    "The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.",
+    "The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.",
+    "Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected."
+  ],
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "introducedIn": "M10"
+}

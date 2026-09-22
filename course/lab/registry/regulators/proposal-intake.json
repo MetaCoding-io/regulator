@@ -1,0 +1,63 @@
+{
+  "id": "reg.authority.proposal-intake.v1",
+  "name": "Proposal intake",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Give a unit a typed way to ask for a change to identity, policy or a protected path — propose_policy_change — that records a policy-proposal message on the proposal channel for S5 and changes nothing: no file, no policy, no grant. The right to ask is mechanically separate from the right to change (INV-002).",
+  "absorbs": {
+    "failureClass": "proposal-as-policy",
+    "description": "A unit that cannot edit the invariant argues its case in the transcript and then edits the invariant; or a harness that lets a 'proposal' tool apply the change it proposes."
+  },
+  "mechanism": {
+    "level": "typed-tool",
+    "implementation": "src/cp9-authority.ts",
+    "enforcementPoints": [
+      "propose_policy_change (tool execute)"
+    ]
+  },
+  "channels": {
+    "consumes": [
+      "tool call (propose_policy_change)"
+    ],
+    "emits": [
+      "policy-proposal → S5 (signal sink)"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "proposal"
+    ],
+    "resources": [
+      ".regulator/signals.ndjson"
+    ]
+  },
+  "cost": {
+    "description": "One appended message per proposal; no model calls."
+  },
+  "authority": {
+    "may": [
+      "record a proposal with the unit as provenance"
+    ],
+    "mayNot": [
+      "apply the change",
+      "grant authority",
+      "decide the proposal (S5 or a person does, outside the loop)"
+    ]
+  },
+  "evidence": {
+    "tests": [
+      "src/cp9-authority.test.ts"
+    ]
+  },
+  "limitations": [
+    "Proposals land in the signal sink with every other unrouted message; nothing routes them to a person yet (lesson 11's obligations), so a proposal nobody reads is a proposal nobody decides.",
+    "The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.",
+    "Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence."
+  ],
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "introducedIn": "M10"
+}

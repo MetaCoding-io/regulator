@@ -21,8 +21,8 @@
     "tests": ["src/cp1-trace.test.ts"]
   },
   "limitations": [
-    "Lexical path check only: no symlink, hard-link or TOCTOU protection (lesson 10 hardens it).",
-    "Covers the write and edit tools; bash and custom tools bypass it (lessons 05 and 10)."
+    "Lexical path check only: no symlink, hard-link or TOCTOU protection. Checkpoint 9's identity write gate (lesson 10) supersedes it with the filesystem walk when both are loaded; this gate stays as the lesson 02 baseline.",
+    "Covers the write and edit tools; bash and custom tools bypass it. Checkpoint 9 adds the bash snapshot-and-restore for protected paths."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-21", "reviewBy": "2026-12-01" },
   "introducedIn": "M02"
