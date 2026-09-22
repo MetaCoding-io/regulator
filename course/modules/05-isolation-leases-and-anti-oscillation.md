@@ -94,12 +94,13 @@ This is the first typed channel in the course whose source is S2. The protocol g
 a severity. Note what it is *not*: not an audit finding (S3\* has not examined
 anything), not a policy proposal, not an algedonic alarm. A signal is not a decision.
 
-> **An S5 note.** `vsm/channels.yaml` currently lists `signal` as a channel S1 may
-> author. This lesson's mechanism emits signals from S2. That is a change to an S5
-> artifact, and operational code may not make it: the build below emits the typed
-> message the protocol allows, and the change to the channel table is raised as a
-> proposal to the owner. Watch for the same shape in your own work — a mechanism that
-> quietly implies a policy change is exactly what the proposal path exists for.
+> **An S5 note.** Until this lesson, `vsm/channels.yaml` listed `signal` as a channel
+> only S1 may author. This lesson's mechanism emits signals from S2. That is a change
+> to an S5 artifact, and operational code may not make it: the build below emits the
+> typed message the protocol allows, and the change to the channel table was raised as
+> a proposal to the owner and adopted in its own commit. Watch for the same shape in
+> your own work — a mechanism that quietly implies a policy change is exactly what the
+> proposal path exists for.
 
 ### What the lease gate covers that the path gates could not
 

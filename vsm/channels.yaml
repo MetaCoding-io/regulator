@@ -7,9 +7,9 @@ channels:
     mutates_s5: false
 
   signal:
-    authority: S1
+    authority: [S1, S2]
     destinations: [S3]
-    purpose: ordinary operational feedback
+    purpose: ordinary operational feedback; S2 authors coordination signals (conflict, oscillation)
     mutates_s5: false
 
   audit:

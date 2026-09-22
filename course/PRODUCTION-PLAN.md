@@ -181,7 +181,5 @@ does:
    (the ambiguous requirement now lives in the oscillation fixture).
 3. Lesson 06 with checkpoint 5 (work contracts and the first workload definition), same
    vertical-slice discipline; it is the first consumer of checkpoint 4's unit lifecycle.
-4. Propose the S5 change that lesson 05 surfaced: `vsm/channels.yaml` lists `signal` as
-   S1-authored, and the coordination signal is authored by S2.
-5. Run the Phase 1 pilot and record where learners got confused, as course-level
+4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.
