@@ -23,6 +23,9 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: 0.87.0
         version: 0.87.0(ws@8.21.3)(zod@4.5.4)
+      '@metacoding/vsm-pi-checks':
+        specifier: workspace:*
+        version: link:../../packages/checks
       '@metacoding/vsm-pi-core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -33,8 +36,17 @@ importers:
         specifier: 1.3.27
         version: 1.3.27
 
+  packages/checks:
+    dependencies:
+      '@metacoding/vsm-pi-protocol':
+        specifier: workspace:*
+        version: link:../protocol
+
   packages/cli:
     dependencies:
+      '@metacoding/vsm-pi-checks':
+        specifier: workspace:*
+        version: link:../checks
       '@metacoding/vsm-pi-core':
         specifier: workspace:*
         version: link:../core

@@ -55,6 +55,7 @@ export function classifyFailure(context: FailureContext): Classification {
   if (unit.reason?.startsWith("reintegration:")) return { cause: "environment", evidence };
   if (last?.outcome === "budget-exhausted") return { cause: "budget-exhausted", evidence };
   if (last?.outcome === "invalid-report") return { cause: "invalid-report", evidence };
+  if (last?.outcome === "check-failure") return { cause: "check-failure", evidence };
   if (last?.outcome === "error") return { cause: last.detail ? causeFromError(last.detail) : "dispatch-error", evidence };
   if (mine.some((s) => s.kind === "coordination-signal" && s.coordination === "oscillation")) return { cause: "oscillation", evidence };
   if (last?.outcome === "no-report") {
@@ -109,6 +110,8 @@ export function hintFor(cause: FailureCause, action: RecoveryAction, evidence: r
   switch (cause) {
     case "invalid-report":
       return `Your previous attempt's report_result was refused: ${detail}. The work in the worktree stands; fix the report, not the contract.`;
+    case "check-failure":
+      return `Host-run verification refused closeout of your previous attempt: ${detail}. The evidence the harness produced, not the report, decides. Fix the code so every check passes on the committed tree, commit, run run_tests and run_checks again, and report again.`;
     case "conflict":
       return `Reintegrating your branch conflicts with the base: ${detail}. Merge the base branch into the unit branch, resolve the conflicts without changing what the contract fixes, run the checks, and commit. Your report already stands.`;
     case "budget-exhausted":

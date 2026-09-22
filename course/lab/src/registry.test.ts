@@ -12,10 +12,12 @@ test("the committed registry passes check: every record is well-formed, implemen
   const registry = await checkRegistry(registryDir, labRoot);
   assert.deepEqual(registry.problems, []);
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
+    "reg.audit.closeout-gate.v1",
     "reg.authority.vendor-write-gate.v1",
     "reg.control.budget-guard.v1",
     "reg.control.contract-advice.v1",
     "reg.control.contract-preserving-compaction.v1",
+    "reg.control.evidence-preflight.v1",
     "reg.control.failure-observer.v1",
     "reg.control.model-router.v1",
     "reg.control.profile-write-grant.v1",

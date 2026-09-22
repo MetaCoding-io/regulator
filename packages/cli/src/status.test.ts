@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { ExecutionStore, LeaseStore, appendSignal } from "@metacoding/vsm-pi-core";
+import { AuditLog, ExecutionStore, LeaseStore, appendSignal } from "@metacoding/vsm-pi-core";
 import type { WorkContract } from "@metacoding/vsm-pi-protocol";
 import { readStatus, renderStatusText } from "./status.js";
 
@@ -56,6 +56,10 @@ test("status: a definition and an instance are read from files only, and the vie
     unitId: "u1", attempt: 1, ceiling: { tokens: 1000, wallClockMs: 60_000, turns: 5 }, consumed: { tokens: 250, cost: 0, wallClockMs: 10, turns: 2 },
     startedAt: "a", updatedAt: "b", models: ["anthropic/claude-sonnet-4-5"], compactions: [],
   });
+  await new AuditLog(instance).appendVerdict({
+    id: "v1", unitId: "u1", attempt: 1, contract: { id: "tc-1", version: 1 }, revision: "abcdef0123", verdict: "inconclusive",
+    evidence: [], satisfied: [], failed: [], missing: ["e-tests"], stale: [], contradicted: [], awaitingAcceptance: [], reasons: ["e-tests (test): no host evidence"], decidedBy: "S3*", at: "t",
+  });
   const leases = new LeaseStore(path.join(instance, ".regulator", "leases"), () => clock);
   await leases.acquire({ unitId: "u1", owner: "alice", resource: "/w/u1", branch: "unit/u1", ttlMs: 1000 });
   await appendSignal(instance, {
@@ -78,6 +82,7 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.equal(view.instance?.units[0]?.attemptRecords[0]?.outcome, "no-report");
   assert.equal(view.instance?.units[0]?.budget?.consumed.tokens, 250);
   assert.deepEqual(view.instance?.units[0]?.decisions.map((d) => d.action), ["retry"]);
+  assert.deepEqual(view.instance?.units[0]?.audit.verdicts.map((v) => v.verdict), ["inconclusive"]);
   assert.deepEqual(view.instance?.leases.map((l) => [l.lease.unitId, l.live]), [["u1", true]]);
   assert.equal(view.instance?.signals[0]?.kind, "coordination-signal");
 
@@ -85,7 +90,7 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /declared: registry, workload, policies; pending: profiles/);
   assert.match(text, /policy default v1: default 1000 tok, 5 turns, 2 attempts; models anthropic\/claude-sonnet-4-5 → openai\/gpt-5/);
   assert.match(text, /S3 {2}deterministic-gate {2}reg\.test\.gate\.v1/);
-  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}routed no-report→retry \(recovery v1\) {2}— no-report/);
+  assert.match(text, /blocked {4}u1 {2}implement {2}contract tc-1 v1 {2}attempts 1 \(last: no-report\) {2}budget 250\/1000 tok \(25%\), 2\/5 turns {2}routed no-report→retry \(recovery v1\) {2}audit inconclusive@abcdef0 \(missing e-tests\) {2}— no-report/);
   assert.match(text, /live {4}u1 {2}alice/);
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 

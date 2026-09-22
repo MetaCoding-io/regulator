@@ -19,7 +19,7 @@ const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH
 
 function reportFor(contract: WorkContract, overrides: Partial<ResultReport> = {}): ResultReport {
   return {
-    contractId: contract.id, contractVersion: contract.version, unitId: contract.unitId, reportedAt: "2026-09-22T00:05:00.000Z",
+    contractId: contract.id, contractVersion: contract.version, unitId: contract.unitId, attempt: 1, reportedAt: "2026-09-22T00:05:00.000Z",
     summary: "done",
     evidence: [{ class: "test", ref: "run_tests", observation: "all pass" }, { class: "command", ref: "run_checks", observation: "all pass" }],
     delegatedResults: contract.delegated.map((d) => ({ decisionId: d.id, choice: "kept it simple" })),
@@ -178,7 +178,7 @@ test("budgets: a halted attempt is recorded as budget-exhausted; a blocked unit 
       assert.match(request.worktree, /\.regulator\/worktrees\/u1$/);
       await writeFile(path.join(request.worktree, "src.txt"), "second try\n");
       await gitExec("git", ["commit", "-qam", "second"], { cwd: request.worktree });
-      await store.writeReport(reportFor(contract));
+      await store.writeReport(reportFor(contract, { attempt: 2 }));
       return { sessionId: "s2" };
     },
   });
@@ -300,4 +300,95 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
   assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
   assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery }), undefined, "an aborted unit is not routed again");
+});
+
+test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
+  const { AuditLog } = await import("@metacoding/vsm-pi-core");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit } = await import("./controller.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const store = new ExecutionStore(repo);
+  const hints: Array<string | undefined> = [];
+  const { final, decisions } = await driveUnit(gitExec, {
+    ...(await withPolicy()), repo, contract, workload, recovery: await loadRecoveryPolicy(), owner: "alice",
+    dispatcher: async (request) => {
+      hints.push(request.hint);
+      if (request.attempt === 1) {
+        // The lie: break the test, commit, and report "all pass" with evidence of every required class.
+        await writeFile(path.join(request.worktree, "src", "index.js"), "export const answer = 41;\n");
+        await gitExec("git", ["commit", "-qam", "break"], { cwd: request.worktree });
+        await store.writeReport(reportFor(contract, { attempt: 1, summary: "fixed; all tests pass" }));
+      } else {
+        await writeFile(path.join(request.worktree, "src", "index.js"), "export const answer = 42;\n");
+        await gitExec("git", ["commit", "-qam", "repair"], { cwd: request.worktree });
+        await store.writeReport(reportFor(contract, { attempt: 2, summary: "repaired" }));
+      }
+      return { sessionId: `s${request.attempt}` };
+    },
+  });
+  assert.equal(final.status, "closed");
+  assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["check-failure", "reported"]);
+  assert.match((await store.listAttempts("u1"))[0]?.detail ?? "", /^fail@\w{7} \(failed e-tests; contradicted run_tests\)/);
+  assert.deepEqual(decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"]]);
+  assert.match(hints[1] ?? "", /Host-run verification refused closeout.*not ok: answer.*The evidence the harness produced, not the report, decides/s);
+  const audit = await new AuditLog(repo).forUnit("u1");
+  assert.deepEqual(audit.verdicts.map((v) => [v.attempt, v.verdict]), [[1, "fail"], [2, "pass"]]);
+  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"]], "in the order the workload names the checks");
+  assert.equal(audit.evidence[0]?.producedBy, "S3*");
+  assert.notEqual(audit.evidence[0]?.revision, audit.evidence.at(-1)?.revision, "each attempt's evidence binds to its own revision");
+  assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2).map((r) => r.id), "the passing verdict considered only the fresh records");
+  const findings = (await readSignals(repo)).filter((s) => s.kind === "audit-finding");
+  assert.equal(findings.length, 1);
+  assert.equal(findings[0]?.source, "S3*");
+  assert.equal((findings[0] as { severity: string }).severity, "blocking");
+  assert.match((findings[0] as { observation: string }).observation, /report cites test evidence "run_tests" but the host found run_tests failing/);
+  assert.equal(await readFile(path.join(repo, "src", "index.js"), "utf8"), "export const answer = 42;\n", "only the repaired revision was reintegrated");
+});
+
+test("closeout is inconclusive on an uncommitted tree or a criterion no check can observe; a human acceptance at that revision lets `close` finish it without spending an attempt", async (t) => {
+  const { AuditLog } = await import("@metacoding/vsm-pi-core");
+  const { closeUnit } = await import("./controller.js");
+  const repo = await initRepo(t);
+  const base = await loadContract(contractFile);
+  const contract: WorkContract = { ...base, expectedEvidence: [...base.expectedEvidence, { id: "e-wording", description: "the README's known-issue paragraph reads well", class: "semantic", required: true }] };
+  const workload = await loadWorkload();
+  const store = new ExecutionStore(repo);
+  const options = { ...(await withPolicy()), repo, contract, workload, owner: "alice" };
+
+  const dirty = await runUnit(gitExec, { ...options, dispatcher: unitThat(async (request, s) => {
+    await writeFile(path.join(request.worktree, "src.txt"), "uncommitted\n");
+    await s.writeReport(reportFor(contract, { evidence: [...reportFor(contract).evidence, { class: "semantic", ref: "README.md", observation: "reads well to me" }] }));
+  }, repo) });
+  assert.equal(dirty.status, "blocked");
+  assert.equal(dirty.status === "blocked" && dirty.reason, "check-failure");
+  assert.equal(dirty.status === "blocked" ? dirty.verdict?.verdict : "", "inconclusive");
+  assert.match(dirty.status === "blocked" ? dirty.verdict?.reasons[0] ?? "" : "", /uncommitted changes: evidence cannot be bound to revision/);
+  assert.equal((await new AuditLog(repo).forUnit("u1")).evidence.length, 0, "nothing was recorded against a tree that binds to no revision");
+
+  // Commit inside the worktree, as the unit should have; re-audit without an attempt.
+  const worktree = path.join(repo, ".regulator", "worktrees", "u1");
+  await gitExec("git", ["commit", "-qam", "commit the work"], { cwd: worktree });
+  const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  assert.equal(waiting.status, "blocked");
+  assert.equal(waiting.status === "blocked" ? waiting.verdict?.verdict : "", "inconclusive");
+  assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.awaitingAcceptance : [], ["e-wording"]);
+  assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.satisfied : [], ["e-tests", "e-checks"], "the host evidence is in; only the human's part is missing");
+  assert.match((await store.getUnit("u1"))?.reason ?? "", /audit refused closeout: inconclusive@\w{7} \(awaiting acceptance e-wording\)/);
+
+  const revision = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: worktree })).stdout.trim();
+  await new AuditLog(repo).appendAcceptance({ id: "a1", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision: "0000000", disposition: "accepted", by: "alice", at: "t" });
+  assert.equal((await closeUnit(gitExec, { repo, unitId: "u1", workload })).status, "blocked", "an acceptance at another revision is a memory");
+  await new AuditLog(repo).appendAcceptance({ id: "a2", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision, disposition: "accepted", by: "alice", note: "clear", at: "t" });
+  const closed = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  assert.equal(closed.status, "closed");
+  assert.equal((await store.getUnit("u1"))?.attempts, 1, "a re-audit is not an attempt");
+  assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["check-failure"], "the attempt history is immutable; the audit log says what changed");
+  const audit = await new AuditLog(repo).forUnit("u1");
+  assert.deepEqual(audit.verdicts.map((v) => v.verdict), ["inconclusive", "inconclusive", "inconclusive", "pass"]);
+  assert.equal(await readFile(path.join(repo, "src.txt"), "utf8"), "uncommitted\n");
+  const again = await closeUnit(gitExec, { repo, unitId: "u1", workload });
+  assert.equal(again.status, "refused");
+  assert.match(again.status === "refused" ? again.problems[0]?.message ?? "" : "", /is closed; only a blocked unit is re-audited/);
 });

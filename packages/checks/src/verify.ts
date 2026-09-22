@@ -1,0 +1,185 @@
+/**
+ * Host-run verification (lesson 09): the deterministic layer of S3*.
+ *
+ *   runHostChecks      run the checks a workload names for a unit type — the
+ *                      project's real test command, its deterministic checks,
+ *                      the existence of files a report cites — with the
+ *                      harness's own process runner, never a model's tool call
+ *   bindEvidence       turn each result into an evidence record bound to the
+ *                      unit, attempt, contract, revision, environment and the
+ *                      contract criteria it speaks to
+ *   technicalVerdict   derive pass / fail / inconclusive from the records that
+ *                      are *fresh* for the revision under closeout, plus human
+ *                      acceptances for criteria no host check can observe.
+ *                      The report is consulted for one thing only: to name
+ *                      the claims the evidence contradicts.
+ *
+ * Pi-free. It needs an `Exec` and a working directory; git is used only to
+ * ask whether a cited file exists at the revision.
+ */
+import { randomUUID } from "node:crypto";
+import type {
+  EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
+} from "@metacoding/vsm-pi-protocol";
+import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectConventions } from "./conventions.js";
+import type { Exec } from "./exec.js";
+
+export interface HostCheckResult {
+  /** `run_tests`, `run_checks:<name>` or `file:<path>`. */
+  check: string;
+  class: EvidenceClass;
+  verdict: Verdict;
+  command?: string[];
+  observation: string;
+}
+
+export interface RunHostChecksOptions {
+  cwd: string;
+  /** Check names from the workload's unit type: `run_tests`, `run_checks`. Unknown names are recorded as inconclusive. */
+  checks: readonly string[];
+  /** Files a report cites as evidence: each becomes a `file:` check against HEAD. */
+  fileRefs?: readonly string[];
+  conventions?: ProjectConventions;
+  timeoutMs?: number;
+  maxObservationChars?: number;
+}
+
+const DEFAULT_TIMEOUT_MS = 120_000;
+const DEFAULT_MAX_OBSERVATION_CHARS = 2000;
+
+/** Classes no host check can observe: they need a human acceptance to count. */
+export const ACCEPTANCE_CLASSES: ReadonlySet<EvidenceClass> = new Set<EvidenceClass>(["semantic", "model", "runtime"]);
+
+export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): Promise<HostCheckResult[]> {
+  const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const max = options.maxObservationChars ?? DEFAULT_MAX_OBSERVATION_CHARS;
+  const conventions = options.conventions ?? await discoverConventions(options.cwd);
+  const results: HostCheckResult[] = [];
+
+  for (const name of options.checks) {
+    if (name === "run_tests") {
+      if (conventions.testCommand.length === 0) {
+        results.push({ check: name, class: "test", verdict: "inconclusive", observation: "no test command discovered: no package.json scripts.test and no test/ directory" });
+        continue;
+      }
+      const argv = [...conventions.testCommand];
+      if (argv[0] === "node" && argv.includes("--test")) argv.push("--test-reporter", "tap");
+      const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
+      const output = `${result.stdout}\n${result.stderr}`;
+      const summary = parseNodeTestSummary(output);
+      if (!summary) {
+        results.push({ check: name, class: "test", verdict: "inconclusive", command: argv, observation: `tests did not run (exit ${result.code}): ${boundedTail(output.trim(), max).text}` });
+        continue;
+      }
+      const lines = [`${summary.pass} passed, ${summary.fail} failed`];
+      for (const failure of summary.failures) lines.push(`not ok: ${failure}`);
+      results.push({ check: name, class: "test", verdict: summary.fail === 0 ? "pass" : "fail", command: argv, observation: boundedTail(lines.join("\n"), max).text });
+    } else if (name === "run_checks") {
+      if (conventions.checks.length === 0) {
+        results.push({ check: name, class: "command", verdict: "inconclusive", observation: "no checks defined for this project" });
+        continue;
+      }
+      for (const check of conventions.checks) {
+        const result = await exec(check.argv[0]!, check.argv.slice(1), { cwd: options.cwd, timeout });
+        const ok = check.okWhen === "stdout-empty" ? result.code === 0 && result.stdout.trim() === "" : result.code === 0;
+        const raw = check.okWhen === "stdout-empty" && result.code === 0 ? result.stdout : `${result.stderr}\n${result.stdout}`;
+        results.push({ check: `run_checks:${check.name}`, class: "command", verdict: ok ? "pass" : "fail", command: check.argv, observation: ok ? `exit ${result.code}` : boundedTail(raw.trim() || `exit ${result.code}`, max).text });
+      }
+    } else {
+      results.push({ check: name, class: "command", verdict: "inconclusive", observation: `no host check named "${name}"` });
+    }
+  }
+
+  for (const ref of options.fileRefs ?? []) {
+    const argv = ["git", "cat-file", "-e", `HEAD:${ref}`];
+    const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
+    results.push({ check: `file:${ref}`, class: "file", verdict: result.code === 0 ? "pass" : "fail", command: argv, observation: result.code === 0 ? "present at HEAD" : `not in the tree at HEAD: ${result.stderr.trim()}` });
+  }
+  return results;
+}
+
+export interface BindOptions {
+  unitId: string;
+  attempt: number;
+  contract: { id: string; version: number };
+  expectations: readonly EvidenceExpectation[];
+  revision: string;
+  environment?: EvidenceEnvironment;
+  now?: () => number;
+}
+
+export function hostEnvironment(): EvidenceEnvironment {
+  return { node: process.version, platform: process.platform, arch: process.arch };
+}
+
+/** A record per result, bound to every expectation of the same class: that is the criterion the check speaks to. */
+export function bindEvidence(results: readonly HostCheckResult[], options: BindOptions): EvidenceRecord[] {
+  const at = new Date((options.now ?? Date.now)()).toISOString();
+  const environment = options.environment ?? hostEnvironment();
+  return results.map((r) => ({
+    id: randomUUID(), unitId: options.unitId, attempt: options.attempt, contract: options.contract,
+    check: r.check, class: r.class, criteria: options.expectations.filter((e) => e.class === r.class).map((e) => e.id),
+    verdict: r.verdict, ...(r.command ? { command: r.command } : {}), observation: r.observation,
+    revision: options.revision, environment, producedBy: "S3*", at,
+  }));
+}
+
+export interface VerdictInput {
+  contract: WorkContract;
+  /** The report under closeout, if any: consulted only to name contradicted claims. */
+  report?: ResultReport;
+  /** Every evidence record the log holds for the unit, any revision. */
+  records: readonly EvidenceRecord[];
+  acceptances: readonly HumanAcceptance[];
+  unitId: string;
+  attempt: number;
+  revision: string;
+  now?: () => number;
+}
+
+export function technicalVerdict(input: VerdictInput): TechnicalVerdict {
+  const { contract, revision } = input;
+  const fresh = input.records.filter((r) => r.revision === revision);
+  const satisfied: string[] = [], failed: string[] = [], missing: string[] = [], stale: string[] = [], awaitingAcceptance: string[] = [], reasons: string[] = [];
+
+  for (const e of contract.expectedEvidence) {
+    if (!e.required) continue;
+    if (ACCEPTANCE_CLASSES.has(e.class)) {
+      const disposition = input.acceptances.filter((a) => a.criterion === e.id && a.revision === revision && a.contract.version === contract.version).at(-1);
+      if (!disposition) { awaitingAcceptance.push(e.id); reasons.push(`${e.id} (${e.class}) cannot be observed by a host check and has no human acceptance at ${revision.slice(0, 7)}`); }
+      else if (disposition.disposition === "accepted") satisfied.push(e.id);
+      else { failed.push(e.id); reasons.push(`${e.id} rejected by ${disposition.by}${disposition.note ? `: ${disposition.note}` : ""}`); }
+      continue;
+    }
+    const any = input.records.filter((r) => r.criteria.includes(e.id));
+    const mine = fresh.filter((r) => r.criteria.includes(e.id));
+    if (any.length === 0) { missing.push(e.id); reasons.push(`${e.id} (${e.class}): no host evidence`); }
+    else if (mine.length === 0) { stale.push(e.id); reasons.push(`${e.id} (${e.class}): evidence exists only for ${[...new Set(any.map((r) => r.revision.slice(0, 7)))].join(", ")}, not ${revision.slice(0, 7)}`); }
+    else if (mine.some((r) => r.verdict === "fail")) { failed.push(e.id); reasons.push(`${e.id} (${e.class}): ${mine.filter((r) => r.verdict === "fail").map((r) => `${r.check} — ${r.observation.split("\n").slice(0, 4).join("; ")}`).join("; ")}`); }
+    else if (mine.every((r) => r.verdict === "inconclusive")) { missing.push(e.id); reasons.push(`${e.id} (${e.class}): ${mine.map((r) => `${r.check} — ${r.observation.split("\n")[0]}`).join("; ")}`); }
+    else satisfied.push(e.id);
+  }
+
+  const contradicted: string[] = [];
+  for (const claim of input.report?.evidence ?? []) {
+    const failing = fresh.filter((r) => r.class === claim.class && r.verdict === "fail");
+    if (failing.length) { contradicted.push(claim.ref); reasons.push(`report cites ${claim.class} evidence "${claim.ref}" but the host found ${failing.map((r) => r.check).join(", ")} failing at ${revision.slice(0, 7)}`); }
+  }
+
+  const verdict: Verdict = failed.length || contradicted.length ? "fail" : missing.length || stale.length || awaitingAcceptance.length ? "inconclusive" : "pass";
+  return {
+    id: randomUUID(), unitId: input.unitId, attempt: input.attempt, contract: { id: contract.id, version: contract.version }, revision, verdict,
+    evidence: fresh.map((r) => r.id), satisfied, failed, missing, stale, contradicted: [...new Set(contradicted)], awaitingAcceptance, reasons,
+    decidedBy: "S3*", at: new Date((input.now ?? Date.now)()).toISOString(),
+  };
+}
+
+export function summarizeVerdict(v: TechnicalVerdict): string {
+  const parts: string[] = [];
+  if (v.failed.length) parts.push(`failed ${v.failed.join(", ")}`);
+  if (v.contradicted.length) parts.push(`contradicted ${v.contradicted.join(", ")}`);
+  if (v.missing.length) parts.push(`missing ${v.missing.join(", ")}`);
+  if (v.stale.length) parts.push(`stale ${v.stale.join(", ")}`);
+  if (v.awaitingAcceptance.length) parts.push(`awaiting acceptance ${v.awaitingAcceptance.join(", ")}`);
+  return `${v.verdict}@${v.revision.slice(0, 7)}${parts.length ? ` (${parts.join("; ")})` : ""}`;
+}

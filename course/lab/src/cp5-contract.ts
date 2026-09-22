@@ -89,10 +89,14 @@ export function createContractExtension(options: ContractExtensionOptions = {}):
       async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
         if (!contract) throw new Error("This session has no work contract; there is nothing to report against.");
         if (reported) throw new Error(`Unit ${contract.unitId} already reported against ${contract.id} v${contract.version}; a report is not revised.`);
+        const store = new ExecutionStore(await baseRoot(exec, ctx.cwd), now);
+        // The attempt is the orchestrator's count plus one: it records the attempt after this session ends.
+        const attempt = ((await store.getUnit(contract.unitId))?.attempts ?? 0) + 1;
         const report: ResultReport = {
           contractId: contract.id,
           contractVersion: contract.version,
           unitId: contract.unitId,
+          attempt,
           reportedAt: new Date(now()).toISOString(),
           ...params,
         };
@@ -100,7 +104,6 @@ export function createContractExtension(options: ContractExtensionOptions = {}):
         if (problems.length) {
           throw new Error(`Report refused against ${contract.id} v${contract.version}:\n${problems.map((p) => `- ${p.path}: ${p.message}`).join("\n")}`);
         }
-        const store = new ExecutionStore(await baseRoot(exec, ctx.cwd), now);
         await store.writeReport(report);
         reported = true;
         pi.appendEntry(REPORT_ENTRY_TYPE, report);

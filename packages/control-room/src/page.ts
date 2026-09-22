@@ -108,6 +108,11 @@ const PAGE = String.raw`<!doctype html>
     const d = ds[ds.length - 1];
     return "<span class='mono'>" + esc(d.cause) + "</span> → " + chip(d.action) + (ds.length > 1 ? " <span class='banner'>(+" + (ds.length - 1) + ")</span>" : "");
   };
+  const verdictCell = (audit) => {
+    const v = audit && audit.verdicts && audit.verdicts[audit.verdicts.length - 1];
+    if (!v) return "—";
+    return chip(v.verdict) + " <span class='mono'>@" + esc(v.revision.slice(0, 7)) + "</span>" + (v.verdict === "pass" ? "" : " <span class='banner'>" + esc([v.failed.length && "failed " + v.failed.join(", "), v.contradicted.length && "contradicted " + v.contradicted.join(", "), v.missing.length && "missing " + v.missing.join(", "), v.stale.length && "stale " + v.stale.join(", "), v.awaitingAcceptance.length && "awaiting " + v.awaitingAcceptance.join(", ")].filter(Boolean).join("; ")) + "</span>");
+  };
   const list = (items, f) => items && items.length ? "<ul>" + items.map((i) => "<li>" + f(i) + "</li>").join("") + "</ul>" : '<span class="empty">none</span>';
   let view = null, selected = fromHash(), timer = null, paused = false;
   function fromHash() {
@@ -182,13 +187,13 @@ const PAGE = String.raw`<!doctype html>
     if (!instances.length) html += "<p class='empty'>no instance directories were given</p>";
     instances.forEach((inst, i) => {
       html += "<h3 class='mono'>" + esc(inst.dir) + "</h3>";
-      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>routed</th><th>report</th><th>reason</th></tr>";
-      if (!inst.units.length) html += "<tr><td colspan='10' class='empty'>no units</td></tr>";
+      html += "<table><tr><th>status</th><th>unit</th><th>type</th><th>contract</th><th>attempts</th><th>last</th><th>budget</th><th>routed</th><th>audit</th><th>report</th><th>reason</th></tr>";
+      if (!inst.units.length) html += "<tr><td colspan='11' class='empty'>no units</td></tr>";
       for (const u of inst.units) {
         const last = u.attemptRecords[u.attemptRecords.length - 1];
         const sel = selected && selected.kind === "unit" && selected.instance === i && selected.id === u.unit.unitId ? " selected" : "";
         html += "<tr class='row" + sel + "' data-inst='" + i + "' data-unit='" + esc(u.unit.unitId) + "'><td>" + chip(u.unit.status) + "</td><td class='mono'>" + esc(u.unit.unitId) + "</td><td class='mono'>" + esc(u.unit.unitType) + "</td>" +
-          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + budgetCell(u.budget) + "</td><td>" + routedCell(u.decisions) + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
+          "<td class='mono'>" + esc(u.unit.contract.id) + " v" + u.unit.contract.version + "</td><td>" + u.unit.attempts + "</td><td>" + (last ? esc(last.outcome) : "—") + "</td><td>" + budgetCell(u.budget) + "</td><td>" + routedCell(u.decisions) + "</td><td>" + verdictCell(u.audit) + "</td><td>" + (u.report ? "yes" : "—") + "</td><td>" + esc(u.unit.reason || "") + "</td></tr>";
       }
       html += "</table>";
       html += "<h3>Leases</h3><table><tr><th>state</th><th>unit</th><th>owner</th><th>branch</th><th>until</th></tr>";
@@ -235,6 +240,11 @@ const PAGE = String.raw`<!doctype html>
       (b ? "<dl><dt>budget (attempt " + b.attempt + ")</dt><dd>" + budgetCell(b) + "<br>cost " + b.consumed.cost.toFixed(4) + (b.ceiling.cost !== undefined ? " / " + b.ceiling.cost : "") + " · " + Math.round(b.consumed.wallClockMs / 1000) + "s / " + Math.round(b.ceiling.wallClockMs / 1000) + "s<br>models: <span class='mono'>" + esc(b.models.join(" → ") || "—") + "</span><br>compactions: " + (b.compactions.length ? b.compactions.map((c) => esc(c.reason) + (c.preserved ? " (contract carried)" : " (NOT carried)")).join(", ") : "none") + "</dd></dl>" : "") +
       "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd>" +
       "<dt>recovery decisions</dt><dd>" + list(u.decisions || [], (d) => "after attempt " + d.attempt + ": <span class='mono'>" + esc(d.cause) + "</span> (occurrence " + d.occurrence + ") → " + chip(d.action) + " under <span class='mono'>" + esc(d.policy.name) + " v" + d.policy.version + "</span><br><span class='banner'>" + esc(d.rationale) + "</span>" + (d.question ? "<br><b>question:</b> " + esc(d.question) : "") + (d.hint ? "<br><span class='banner'>hint: " + esc(d.hint) + "</span>" : "")) + "</dd></dl></section>";
+    const audit = u.audit || { evidence: [], verdicts: [], acceptances: [] };
+    html += "<section><h2>Audit (S3*)</h2><p class='banner'>host-run evidence bound to a revision; the report's claims satisfy nothing</p><dl>" +
+      "<dt>verdicts</dt><dd>" + list(audit.verdicts, (v) => "attempt " + v.attempt + ": " + verdictCell({ verdicts: [v] }) + " · " + v.evidence.length + " record(s) considered · " + esc(v.at) + (v.reasons.length ? "<br><span class='problem'>" + v.reasons.map(esc).join("<br>") + "</span>" : "")) + "</dd>" +
+      "<dt>evidence</dt><dd>" + list(audit.evidence, (r) => chip(r.verdict) + " attempt " + r.attempt + " <span class='mono'>@" + esc(r.revision.slice(0, 7)) + "</span> <span class='mono'>" + esc(r.check) + "</span> [" + esc(r.class) + " → " + esc(r.criteria.join(", ") || "no criterion") + "] " + esc(r.observation.split("\n")[0]) + (r.command ? "<br><span class='banner mono'>" + esc(r.command.join(" ")) + " · " + esc(r.environment.node) + " " + esc(r.environment.platform) + "/" + esc(r.environment.arch) + "</span>" : "")) + "</dd>" +
+      "<dt>human acceptances</dt><dd>" + list(audit.acceptances, (a) => chip(a.disposition) + " <span class='k'>" + esc(a.criterion) + "</span> <span class='mono'>@" + esc(a.revision.slice(0, 7)) + "</span> by " + esc(a.by) + (a.note ? " — " + esc(a.note) : "")) + "</dd></dl></section>";
     html += "<section><h2>Contract " + (c ? "<span class='mono'>" + esc(c.id) + " v" + c.version + "</span>" : "") + "</h2>";
     if (!c) html += "<p class='empty'>contract file missing</p>";
     else {

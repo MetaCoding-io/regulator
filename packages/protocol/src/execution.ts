@@ -38,6 +38,8 @@ export const AttemptOutcomeSchema = Type.Union([
   Type.Literal("no-report"),
   Type.Literal("invalid-report"),
   Type.Literal("budget-exhausted"),
+  /** The report was valid but host-run verification refused closeout (lesson 09). */
+  Type.Literal("check-failure"),
   Type.Literal("error"),
 ]);
 export type AttemptOutcome = Static<typeof AttemptOutcomeSchema>;

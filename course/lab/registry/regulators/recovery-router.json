@@ -22,7 +22,7 @@
   },
   "evidence": { "tests": ["../../packages/core/src/recovery.test.ts", "src/controller.test.ts"] },
   "limitations": [
-    "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds, and check-failure is not yet produced because harness-run verification arrives in lesson 09.",
+    "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.",
     "Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).",
     "Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.",
     "Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered."

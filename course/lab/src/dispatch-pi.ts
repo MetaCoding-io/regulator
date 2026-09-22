@@ -18,7 +18,7 @@ import { chooseModels } from "@metacoding/vsm-pi-core";
 import type { Dispatcher } from "./controller.js";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js"].map((f) => path.join(dist, f));
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */

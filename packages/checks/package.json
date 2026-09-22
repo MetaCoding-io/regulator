@@ -1,12 +1,9 @@
 {
-  "name": "@metacoding/vsm-pi-cli",
+  "name": "@metacoding/vsm-pi-checks",
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "User-facing CLI for VSM-Pi: the `regulator status` read model over a definition and an instance.",
-  "bin": {
-    "regulator-status": "./dist/cli.js"
-  },
+  "description": "Deterministic S3* checks: host-run verification bound to a revision, and the technical verdict derived from it.",
   "exports": {
     ".": "./dist/index.js"
   },
@@ -17,8 +14,6 @@
     "test": "pnpm build && node --test dist/*.test.js"
   },
   "dependencies": {
-    "@metacoding/vsm-pi-checks": "workspace:*",
-    "@metacoding/vsm-pi-core": "workspace:*",
     "@metacoding/vsm-pi-protocol": "workspace:*"
   }
 }

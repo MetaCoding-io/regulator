@@ -25,6 +25,11 @@ export async function baseRoot(exec: Exec, cwd: string): Promise<string> {
   return path.dirname(common);
 }
 
+/** The exact commit a checkout is at: what evidence binds to. */
+export async function headRevision(exec: Exec, cwd: string): Promise<string> {
+  return (await git(exec, cwd, ["rev-parse", "HEAD"])).trim();
+}
+
 export async function currentBranch(exec: Exec, cwd: string): Promise<string> {
   return (await git(exec, cwd, ["rev-parse", "--abbrev-ref", "HEAD"])).trim();
 }

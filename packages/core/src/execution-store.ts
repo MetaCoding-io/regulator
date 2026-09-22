@@ -4,7 +4,7 @@
  *
  *   unit.json              the unit record (status, attempts) — the only mutable file
  *   contract.v<N>.json     the contract version that governs execution; never overwritten
- *   report.v<N>.json       the result report against that version; never overwritten
+ *   report.v<N>.a<M>.json  the result report attempt M wrote against version N; never overwritten
  *   attempts.ndjson        one immutable record per attempt
  *   budget.a<N>.json       the running ledger of attempt N (a counter: rewritten, never merged)
  *   observations.ndjson    normalized failures the session observed, append-only
@@ -149,10 +149,10 @@ export class ExecutionStore {
     }
   }
 
-  /** One report per contract version; a second write is refused, not merged. */
+  /** One report per contract version and attempt; a second write is refused, not merged. */
   async writeReport(report: ResultReport): Promise<void> {
     assertValid(ResultReportSchema, report, "result report");
-    await writeNew(path.join(this.#unitDir(report.unitId), `report.v${report.contractVersion}.json`), report);
+    await writeNew(path.join(this.#unitDir(report.unitId), `report.v${report.contractVersion}.a${report.attempt}.json`), report);
   }
 
   /** The budget guard rewrites the ledger as the attempt consumes; a counter, not a record. */
@@ -214,9 +214,24 @@ export class ExecutionStore {
     return this.#readLines(unitId, "decisions.ndjson", (v): asserts v is RecoveryDecision => assertValid(RecoveryDecisionSchema, v, "recovery decision"));
   }
 
-  async getReport(unitId: string, version: number): Promise<ResultReport | undefined> {
+  /** The report a given attempt wrote against a contract version, or the latest attempt's when no attempt is named. */
+  async getReport(unitId: string, version: number, attempt?: number): Promise<ResultReport | undefined> {
+    let target = attempt;
+    if (target === undefined) {
+      let names: string[];
+      try {
+        names = await readdir(this.#unitDir(unitId));
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+        throw error;
+      }
+      const prefix = `report.v${version}.a`;
+      const attempts = names.filter((n) => n.startsWith(prefix) && n.endsWith(".json")).map((n) => Number(n.slice(prefix.length, -".json".length))).filter(Number.isInteger);
+      if (!attempts.length) return undefined;
+      target = Math.max(...attempts);
+    }
     try {
-      const value: unknown = JSON.parse(await readFile(path.join(this.#unitDir(unitId), `report.v${version}.json`), "utf8"));
+      const value: unknown = JSON.parse(await readFile(path.join(this.#unitDir(unitId), `report.v${version}.a${target}.json`), "utf8"));
       assertValid(ResultReportSchema, value, "result report");
       return value;
     } catch (error) {
