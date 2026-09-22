@@ -292,6 +292,8 @@
     background:var(--alarm-soft);padding:4px 10px;border-radius:20px;margin-bottom:16px;
   }
   .fake-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--alarm);}
+  .fake-tag.ok{color:var(--signal);border-color:var(--signal);background:var(--signal-soft);}
+  .fake-tag.ok::before{background:var(--signal);}
   .crframe{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);margin-top:18px;box-shadow:0 1px 0 var(--line);}
   .crframe .chrome{
     display:flex;align-items:center;gap:8px;padding:0 12px;height:38px;
@@ -404,17 +406,21 @@
       <h3 style="font-size:14px;margin:0 0 10px;">Repository layout</h3>
       <pre class="tree"><b>packages/</b>
   protocol/       VSM vocabulary + schemas — channels, trace,
-                  effects, profiles, registry record
-  core/           authority, routing, trace writer, effect +
-                  profile checks, registry check + docs gen
+                  effects, profiles, contracts, recovery, registry
+  core/           authority, contracts, coordination, recovery,
+                  effect journal, policy, execution store, registry
   pi-extension/   Pi lifecycle integration, S5 write gate
-  checks/         deterministic S3* checks
-  cli/            vsm init / check / status / trace
+  checks/         deterministic S3* checks — host-run verification
+                  bound to a revision, the technical verdict
+  cli/            regulator status — the read model over a
+                  definition and an instance
+  control-room/   read-only page over the read model: topology,
+                  instances, unit inspector
 
 <b>agents/</b>           judgment-oriented S1/S4/S3* prompt profiles
-<b>course/lab/</b>       reference build — checkpoints 0–3, fixture
-                  conventions, profile declarations, registry CLI
-<b>docs/</b>             architecture, roadmap, design notes
+<b>course/lab/</b>       reference build — checkpoints 0–9, fixtures,
+                  workload + policy definitions, registry CLI
+<b>docs/</b>             architecture, roadmap, design notes, DEBT.md
 <b>experiments/</b>      longitudinal drift scenarios + run artifacts
 <b>vsm/</b>               committed S5 artifacts for this repo itself</pre>
     </div>
@@ -423,7 +429,6 @@
     Promotion is a standing rule, not a one-off: a checkpoint's Pi-free module moves from
     <code>course/lab</code> into <code>packages/protocol</code> or <code>packages/core</code>
     once two lessons depend on it, and the lab imports it back rather than re-implementing it.
-    Trace, effects, profiles, and the registry made that move most recently.
   </p>
 </section>
 
@@ -568,22 +573,22 @@
     <div>
       <h3 style="font-size:14px;margin:0 0 10px;">The first workload: the autoloop</h3>
       <p style="font-size:13.5px;color:var(--ink-dim);margin:0 0 12px;">The
-        software-development autoloop is the first workload definition, and the one the
-        course builds against its fixture repository — "build my own GSD" satisfied by
+        software-development autoloop is the first workload definition, and it runs today
+        against the course's fixture repository — "build my own GSD" satisfied by
         <em>declaring</em> one rather than adapting it:</p>
       <div class="diagram-shell" style="padding:16px;">
         <div style="display:flex;flex-wrap:wrap;gap:8px;font-family:var(--mono);font-size:12px;">
-          <span class="pill planned" style="border-radius:6px;">plan</span>
-          <span class="pill planned" style="border-radius:6px;">implement</span>
-          <span class="pill planned" style="border-radius:6px;">verify</span>
-          <span class="pill planned" style="border-radius:6px;">integrate</span>
-          <span class="pill planned" style="border-radius:6px;">close</span>
+          <span class="pill written" style="border-radius:6px;">plan</span>
+          <span class="pill written" style="border-radius:6px;">implement</span>
+          <span class="pill written" style="border-radius:6px;">verify</span>
+          <span class="pill written" style="border-radius:6px;">integrate</span>
+          <span class="pill written" style="border-radius:6px;">close</span>
         </div>
         <p style="font-size:10.5px;color:var(--ink-faint);letter-spacing:.03em;text-transform:uppercase;margin:14px 0 2px;">five unit types above, regulated by:</p>
         <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;font-size:12.5px;color:var(--ink-dim);">
-          <div><b style="color:var(--ink);">Checks</b> that verify a unit's work — sourced from <code>read_conventions</code></div>
-          <div><b style="color:var(--ink);">S4 triggers</b> that can raise a new unit unasked — issue labelled, CI red, dependency advisory</div>
-          <div><b style="color:var(--ink);">Consent</b> required before a unit may act — deploy, force-push, history rewrite</div>
+          <div><b style="color:var(--ink);">Checks</b> that verify a unit's work — <code>run_checks</code>, <code>run_tests</code></div>
+          <div><b style="color:var(--ink);">Recovery</b> on a blocked unit — retry, repair, replan, remediate, clarify, pause, abort, escalate, under a versioned policy</div>
+          <div><b style="color:var(--ink);">Consent &amp; S4 triggers</b> on the irreversible are still the design target — modules 11 and 13, not yet built</div>
         </div>
       </div>
     </div>
@@ -592,35 +597,40 @@
 
 <section id="status" class="wrap">
   <div class="kicker">Status<span class="tick"></span></div>
-  <h2 class="title">Early, and the primitives are tested</h2>
-  <p class="lede">The control-plane primitives exist and are tested; the orchestrator itself
-    is the next thing the course builds. <code>course/lab</code> is the reference build —
-    each checkpoint promotes into <code>packages/</code> as it stabilizes.</p>
+  <h2 class="title">The orchestrator and independent audit are running</h2>
+  <p class="lede">Coordination, the S3 loop, budgets, recovery, and S3&#42; audit and
+    authority all have working checkpoints now. <code>course/lab</code> is the reference
+    build — each checkpoint promotes into <code>packages/</code> as it stabilizes.</p>
   <div class="cards">
-    <div class="card"><div class="k">0–3</div><div class="l">Lab checkpoints built: event log, schema-validated trace, typed tools, capability profiles</div></div>
-    <div class="card"><div class="k">↑</div><div class="l">Trace, effects, profiles and the registry promoted into <code>packages/protocol</code> and <code>packages/core</code></div></div>
-    <div class="card"><div class="k">15+1</div><div class="l">Modules specified in the full syllabus, plus the capstone viability case</div></div>
+    <div class="card"><div class="k">0–9</div><div class="l">Lab checkpoints built: event log through leases, contracts, budgets, recovery, evidence, and authority boundaries</div></div>
+    <div class="card"><div class="k">↑</div><div class="l">Contracts, coordination, recovery, authority and the read model promoted into <code>packages/protocol</code> and <code>packages/core</code></div></div>
+    <div class="card"><div class="k">10 / 15</div><div class="l">Modules written end to end; 11–15 (intelligence, identity, escalation, evals, packaging) remain</div></div>
   </div>
 </section>
 
 <section id="control-room" class="wrap">
   <div class="kicker">The maintainer's interface<span class="tick"></span></div>
-  <span class="fake-tag">Mockup — not built</span>
+  <span class="fake-tag ok">Definition &amp; Instances ship today — recreated below</span>
   <h2 class="title">The control room</h2>
   <p class="lede">A projection of <em>registry ∪ event store ∪ eval results</em>. It owns
-    no state of its own — every screen below is read from records and evidence that
-    already exist elsewhere. The mockups below are illustrative only; nothing in
-    <code>packages/</code> renders them yet.</p>
+    no state of its own. <code>packages/control-room</code> ships a real, running page over
+    <code>regulator status</code>'s read model today — <strong>Definition</strong> (the
+    registry as a topology), <strong>Instances</strong> (units, leases, unrouted signals per
+    instance), and an <strong>Inspector</strong> for the whole record. Every non-GET request
+    is refused with 405: the moment this grows a button that changes something, it becomes
+    an authority surface. The panels below recreate that live page for this write-up;
+    Assurance, Lifecycle and Replay — the fuller vision in
+    <code>course/CONTROL-REGISTRY.md</code> §6 — are still design only.</p>
 
   <div class="crframe">
     <div class="chrome">
       <span class="wdot"></span><span class="wdot"></span><span class="wdot"></span>
       <div class="tabs">
-        <span class="tab active">Topology</span>
-        <span class="tab">Live</span>
-        <span class="tab">Assurance</span>
-        <span class="tab">Lifecycle</span>
-        <span class="tab">Replay</span>
+        <span class="tab active">Definition</span>
+        <span class="tab">Instances</span>
+        <span class="tab">Assurance*</span>
+        <span class="tab">Lifecycle*</span>
+        <span class="tab">Replay*</span>
       </div>
     </div>
     <div class="body cr-topo">
@@ -635,32 +645,32 @@
         <div class="cr-node"><span class="d"></span>S1 — migration</div>
       </div>
       <div class="cr-inspector">
-        <div class="id">reg.authority.vendor-write-gate.v1</div>
+        <div class="id">reg.authority.identity-write-gate.v1</div>
         <div class="cr-field"><div class="k">Function</div><div class="v">S5 — write authority</div></div>
         <div class="cr-field"><div class="k">Absorbs</div><div class="v">protected-path mutation from operational code</div></div>
-        <div class="cr-field"><div class="k">Mechanism</div><div class="v">deterministic-gate · <code>tool_call</code></div></div>
+        <div class="cr-field"><div class="k">Mechanism</div><div class="v">deterministic-gate · filesystem alias walk</div></div>
         <div class="cr-field"><div class="k">Authority</div><div class="v">may block a write · may not approve a proposal</div></div>
-        <div class="cr-field"><div class="k">Evidence</div><div class="v">3 tests · last verified rev 4b0e567</div></div>
-        <div class="cr-field"><div class="k">Boundary</div><div class="v">lexical path check only — <code>bash</code> bypasses it</div></div>
-        <div class="cr-field"><div class="k">Owner</div><div class="v">reviewBy 2026-12-01</div></div>
+        <div class="cr-field"><div class="k">Evidence</div><div class="v">tests passing · evidence fresh</div></div>
+        <div class="cr-field"><div class="k">Boundary</div><div class="v">a protected change committed by one shell command survives the bash watch</div></div>
+        <div class="cr-field"><div class="k">Owner</div><div class="v">reviewBy set per record</div></div>
       </div>
     </div>
   </div>
-  <div class="cr-caption">Design mode, built from the registry alone — selecting a node opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it.</div>
+  <div class="cr-caption">Definition — S5→S1 columns, one card per regulator, each declaring the channels it consumes and emits. Selecting a card opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it.</div>
 
   <div class="crframe">
     <div class="chrome">
       <span class="wdot"></span><span class="wdot"></span><span class="wdot"></span>
       <div class="tabs">
-        <span class="tab">Topology</span>
-        <span class="tab active">Live</span>
-        <span class="tab">Assurance</span>
-        <span class="tab">Lifecycle</span>
-        <span class="tab">Replay</span>
+        <span class="tab">Definition</span>
+        <span class="tab active">Instances</span>
+        <span class="tab">Assurance*</span>
+        <span class="tab">Lifecycle*</span>
+        <span class="tab">Replay*</span>
       </div>
     </div>
     <div class="body">
-      <div class="cr-banner"><span class="d"></span>ALGEDONIC · unit-0402 requests consent for a force-push to main — pending 00:04:12, no timeout-as-approval</div>
+      <div class="cr-banner"><span class="d"></span>UNROUTED SIGNAL · unit-0402 blocked — recovery policy chose "clarify"; nothing has delivered it to a human yet</div>
       <div style="overflow-x:auto;">
         <table class="cr-table">
           <thead><tr><th>Unit</th><th>Type</th><th>Lease</th><th>Attempt</th><th>Budget</th><th>Status</th></tr></thead>
@@ -668,26 +678,27 @@
             <tr><td class="unit">unit-0417</td><td>implement</td><td>worker-3 · 4m</td><td>2 / 6</td><td>62% tokens</td><td><span class="cr-status run">Running</span></td></tr>
             <tr><td class="unit">unit-0415</td><td>verify</td><td>worker-1 · 1m</td><td>1 / 6</td><td>18% tokens</td><td><span class="cr-status run">Verifying</span></td></tr>
             <tr><td class="unit">unit-0409</td><td>integrate</td><td>expired</td><td>3 / 6</td><td>91% tokens</td><td><span class="cr-status block">Blocked — lease reclaimed</span></td></tr>
-            <tr><td class="unit">unit-0402</td><td>close</td><td>worker-2 · 9m</td><td>1 / 6</td><td>34% tokens</td><td><span class="cr-status block">Awaiting consent</span></td></tr>
+            <tr><td class="unit">unit-0402</td><td>close</td><td>worker-2 · 9m</td><td>1 / 6</td><td>34% tokens</td><td><span class="cr-status block">Blocked — clarify</span></td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
-  <div class="cr-caption">Live mode, built from the event store — "healthy" means evidenced and current, never merely no errors reported.</div>
+  <div class="cr-caption">Instances — units, leases and unrouted signals per instance, read straight from the execution store, the lease store and the signal sink. The page auto-refreshes every 5 seconds; nothing here reads the repository.</div>
 
   <div class="cr-next">
-    <div class="cr-next-card"><div class="t">Assurance</div><div class="d">Which regulators have fresh evidence, which acceptance criteria are uncovered, which claims rest only on self-report.</div></div>
-    <div class="cr-next-card"><div class="t">Lifecycle</div><div class="d">Which regulators are expensive, overdue for review, ineffective in ablation, or candidates for retirement.</div></div>
-    <div class="cr-next-card"><div class="t">Replay</div><div class="d">Scrub one run end to end: contract → dispatch → tool calls → failure → recovery → evidence → obligation → escalation → closeout.</div></div>
+    <div class="cr-next-card"><div class="t">Assurance*</div><div class="d">Which regulators have fresh evidence, which acceptance criteria are uncovered, which claims rest only on self-report.</div></div>
+    <div class="cr-next-card"><div class="t">Lifecycle*</div><div class="d">Which regulators are expensive, overdue for review, ineffective in ablation, or candidates for retirement.</div></div>
+    <div class="cr-next-card"><div class="t">Replay*</div><div class="d">Scrub one run end to end: contract → dispatch → tool calls → failure → recovery → evidence → obligation → escalation → closeout.</div></div>
   </div>
 
   <p style="font-size:13px;color:var(--ink-dim);margin-top:22px;max-width:64ch;">
     <strong>Read-only first.</strong> This is an S3&#42;/S4 observation surface. The moment
     it grows a "raise budget" or "dismiss obligation" button, it has quietly become an
     S3/S5 authority surface — actions land later only as typed proposals or explicitly
-    authorized commands with their own audit trail. Today the registry schema and check
-    exist and run in CI; the control room itself is design only.
+    authorized commands with their own audit trail. That's already true of what's shipped:
+    <code>packages/control-room</code> refuses every non-GET request. The three starred
+    views above remain design only.
   </p>
 </section>
 
@@ -732,8 +743,9 @@
   <div class="kicker">Table of contents<span class="tick"></span></div>
   <h2 class="title">Full syllabus — 15 modules, six parts</h2>
   <p class="lede">Every module is a fixed unit: question → concept → Pi mechanism → build
-    step → break it → field study → checkpoint. Contents aren't published yet beyond
-    modules 01–04 — this is the map, not the manuscript.</p>
+    step → break it → field study → checkpoint. Lessons 01–10 are written end to end with
+    working checkpoints; 11–15 are specified but not yet written — this is the map, not
+    the whole manuscript.</p>
 
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;0</span><span class="part-name">Framing</span></div>
@@ -778,12 +790,12 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;2</span><span class="part-name">S2 — Coordination</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">05</div>
         <div class="body"><div class="name">Isolation, leases, anti-oscillation</div>
           <div class="q">What stops two operations from fighting?</div>
           <div class="surface">project trust · bash hooks · sandbox</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
@@ -791,26 +803,26 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;3</span><span class="part-name">S3 — Control</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">06</div>
         <div class="body"><div class="name">Work contracts</div>
           <div class="q">What am I actually authorizing this run to decide?</div>
           <div class="surface">SDK runtime · custom tools · session entries</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">07</div>
         <div class="body"><div class="name">Context as a regulated resource</div>
           <div class="q">What do I spend, and on what?</div>
           <div class="surface">compaction hooks · getContextUsage · provider hooks</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">08</div>
         <div class="body"><div class="name">Failure, recovery, retry lattice</div>
           <div class="q">What happens on attempt two, and on attempt six?</div>
           <div class="surface">agent_end · agent_before_settle · recovery routing</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
@@ -818,19 +830,19 @@
   <div class="part">
     <div class="part-head"><span class="part-num">PART&nbsp;4</span><span class="part-name">S3&#42; — Audit</span></div>
     <div class="modlist">
-      <div class="mod">
+      <div class="mod written">
         <div class="num">09</div>
         <div class="body"><div class="name">Evidence, not claims</div>
           <div class="q">How do I know the work is done?</div>
           <div class="surface">tool_call / tool_result hooks · host-run checks</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
-      <div class="mod">
+      <div class="mod written">
         <div class="num">10</div>
         <div class="body"><div class="name">Authority boundaries</div>
           <div class="q">What must the agent never be able to change?</div>
           <div class="surface">permission gates · protected paths · proposals</div></div>
-        <div class="pill planned">Planned</div>
+        <div class="pill written">Written</div>
       </div>
     </div>
   </div>
