@@ -1,0 +1,75 @@
+{
+  "kind": "task",
+  "id": "tc-d2-options",
+  "version": 1,
+  "unitId": "d2-options",
+  "unitType": "implement",
+  "workload": {
+    "name": "software-development",
+    "version": 1
+  },
+  "objective": "A user wants to choose the separator character. Add a `separator` option without breaking any caller of slugify.",
+  "contribution": "The unit where a signature drifts in place or a second export appears beside the first (BOUNDARIES: the smallest change).",
+  "constraintRefs": [
+    "reg.authority.vendor-write-gate.v1",
+    "reg.audit.identity-untouched-check.v1",
+    "reg.audit.behaviour-check.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-signature",
+      "subject": "public signature of slugify",
+      "decision": "slugify remains a single-argument function returning a string; a new capability is a new export beside it, never a second parameter.",
+      "authorityRef": "INV-003"
+    },
+    {
+      "id": "f-vendor",
+      "subject": "vendored helper",
+      "decision": "vendor/left-pad.js is not modified; a correction is a wrapper under src/.",
+      "authorityRef": "reg.authority.vendor-write-gate.v1"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-api",
+      "subject": "how the option is exposed",
+      "bounds": "A new exported function beside slugify, or a new module under src/; never a second parameter on slugify."
+    },
+    {
+      "id": "d-tests",
+      "subject": "additional test cases",
+      "bounds": "May add cases under test/; may not delete or weaken an existing assertion."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-tests",
+      "description": "run_tests reports every test passing",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks reports every check passing",
+      "class": "command",
+      "required": true
+    },
+    {
+      "id": "e-signature",
+      "description": "slugify keeps its single-argument signature: the host imports src/slugify.js and reads the export",
+      "class": "runtime",
+      "required": true,
+      "check": {
+        "kind": "export-signature",
+        "module": "src/slugify.js",
+        "export": "slugify",
+        "arity": 1
+      }
+    }
+  ],
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-22T00:00:00.000Z"
+  }
+}

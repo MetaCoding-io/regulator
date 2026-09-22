@@ -102,6 +102,8 @@ export function checkResultReport(contract: WorkContract, report: ResultReport):
 
   const present = new Set<EvidenceClass>(report.evidence.map((e) => e.class));
   for (const expectation of contract.expectedEvidence) {
+    // An expectation that carries its own host check (lesson 14) is the host's to observe at closeout; the unit is not asked to cite it.
+    if (expectation.check) continue;
     if (expectation.required && !present.has(expectation.class)) {
       problems.push({ path: "evidence", message: `required evidence "${expectation.id}" (${expectation.class}: ${expectation.description}) has no reference of that class` });
     }

@@ -340,7 +340,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
   assert.match(hints[1] ?? "", /Host-run verification refused closeout.*not ok: answer.*The evidence the harness produced, not the report, decides/s);
   const audit = await new AuditLog(repo).forUnit("u1");
   assert.deepEqual(audit.verdicts.map((v) => [v.attempt, v.verdict]), [[1, "fail"], [2, "pass"]]);
-  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["identity-untouched", "pass"]], "in the order the workload names the checks");
+  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["identity-untouched", "pass"], ["export-signature", "inconclusive"]], "in the order the workload names the checks; a signature check with no expectation carrying one is inconclusive, and binds to nothing");
   assert.equal(audit.evidence[0]?.producedBy, "S3*");
   assert.notEqual(audit.evidence[0]?.revision, audit.evidence.at(-1)?.revision, "each attempt's evidence binds to its own revision");
   assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2).map((r) => r.id), "the passing verdict considered only the fresh records");

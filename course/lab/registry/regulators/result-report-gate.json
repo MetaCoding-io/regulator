@@ -26,5 +26,7 @@
     "Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp5-contract", "note": "Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report."},
+  "retirement": {"condition": "Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them."},
   "introducedIn": "M06"
 }

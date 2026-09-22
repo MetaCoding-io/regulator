@@ -27,5 +27,7 @@
     "It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to course/lab/identity/ by hand."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "none", "note": "A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand."},
+  "retirement": {"condition": "Never: INV-002 names it as the only writer. Retire with the proposal path, not before."},
   "introducedIn": "M12"
 }

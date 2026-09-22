@@ -123,8 +123,9 @@ So every active record must eventually carry:
 - a **retirement condition** — typically "ablation shows no significant regression
   across N supported model versions and M eval suites."
 
-Lesson 14 adds the ablation arm to the eval harness; `regulator review --due` lists what
-is overdue. Retiring a regulator is a recorded decision, not a deletion: the record's
+Lesson 14 adds the ablation arm to the eval harness and `regulator review --due`, which
+lists what is overdue; two of thirty-six records have a runnable ablation arm in the
+committed suite, and the rest name their switch honestly (`loop:`, `policy:`, `none`). Retiring a regulator is a recorded decision, not a deletion: the record's
 `status` becomes `retired` and it keeps its history.
 
 ## 6. The control room
@@ -173,17 +174,22 @@ carry credentials.
   as part of the checkpoint.
 - **Lessons 03–12** each add their fields (table above); the check grows stricter as the
   schema does.
-- **Lesson 14** adds ablation, review dates and retirement conditions, and the control
-  room's assurance and lifecycle views.
+- **Lesson 14** adds ablation, review dates and retirement conditions (every active
+  record carries `ablation` and `retirement`, or the check refuses it), `regulator review
+  --due`, and the control room's assurance and lifecycle views over the committed eval
+  suite and reports.
 - **Lesson 15** ships the control room as the harness's operating surface, and the
   capstone's viability case is generated from the registry.
 
 Status: the registry schema (`protocol`), `check` and the docs generator (`core`), the
-lab CLI and thirty-two records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
+lab CLI and thirty-six records exist and run under CI; `BOUNDARY.md` is generated from the same records (lesson 10), and `regulator check` covers the rest of the definition — profiles, workload, policies, identity — since lesson 12. The control room's read model exists as
 `regulator status --json` in `packages/cli` (lesson 06): definition (registry, workload;
-policies declared as files since lesson 07, the interaction policy with its people since lesson 13; profiles and the identity set since lesson 12) and instance (units with
+policies declared as files since lesson 07, the interaction policy with its people since lesson 13; profiles and the identity set since lesson 12; eval suites, committed reports and the lifecycle rows — review date, ablation switch, coverage, retirement condition — since lesson 14) and instance (units with
 contract, report, attempts, budget ledger, recovery decisions since lesson 08, the audit log — evidence, verdicts, acceptances — since lesson 09, and what is owed on the unit since lesson 11; leases; obligations by consumer with the veto marked and, since lesson 13, what was delivered where; interactions — what units asked a person and what came back — since lesson 13; operational memory since lesson 12; unrouted signals). `packages/control-room` serves the first page over
 it: the design topology (regulators by function, with the channels each declares), the
 workloads, every instance's units, leases and unrouted signals, and an inspector that shows
-the whole record for a regulator or a unit. It is read-only by construction (every non-GET
-request is refused). Assurance, lifecycle and replay views are still design.
+the whole record for a regulator or a unit; since lesson 14 the assurance view (every
+committed report as a metrics table with intervals and the overlap screen, and its
+interpretation) and the lifecycle view (per regulator: review date, switch, which report
+covers it, retirement condition). It is read-only by construction (every non-GET request
+is refused). The replay view is still design (lesson 15).

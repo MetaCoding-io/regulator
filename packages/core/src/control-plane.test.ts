@@ -91,6 +91,8 @@ const record = {
   evidence: { tests: ["src/gate.test.ts"] },
   limitations: ["lexical only"],
   ownership: { owner: "o", introduced: "2026-09-21", reviewBy: "2026-12-01" },
+  ablation: { switch: "extension:gate", note: "the harness drops the extension" },
+  retirement: { condition: "no regression across two model versions" },
 };
 
 test("checkRegistry accepts a record that shows what it claims and renders it", async (t) => {
@@ -107,6 +109,11 @@ test("checkRegistry accepts a record that shows what it claims and renders it", 
   assert.match(md, /^# Regulators\n/);
   assert.match(md, /`reg\.control\.example\.v1` \| Example \| S3 \| deterministic-gate \| active/);
   assert.match(md, /\*\*Limitations\.\*\*\n- lexical only/);
+  assert.match(md, /\*\*Ablation\.\*\* `extension:gate` — the harness drops the extension\n\n\*\*Retirement condition\.\*\* no regression across two model versions/);
+  const { reviewDue } = await import("./registry.js");
+  assert.deepEqual(reviewDue(records, "2026-11-01").map((d) => d.record.id), [], "not due yet");
+  assert.deepEqual(reviewDue(records, "2026-11-01", 30).map((d) => [d.record.id, d.overdueDays]), [["reg.control.example.v1", -30]], "due within a month");
+  assert.deepEqual(reviewDue(records, "2026-12-11").map((d) => d.overdueDays), [10], "overdue");
   const boundary = renderBoundaryMarkdown(records);
   assert.match(boundary, /^# Enforcement boundary\n/);
   assert.match(boundary, /## Example \(`reg\.control\.example\.v1`\)\n\nEnforced at `tool_call` in `src\/gate\.ts`; S3, deterministic-gate\.\n\nNot covered:\n\n- lexical only/);
@@ -119,12 +126,14 @@ test("checkRegistry rejects a record that claims what it cannot show", async (t)
   await writeFile(path.join(root, "registry/regulators/dupe.json"), JSON.stringify({ ...record, limitations: [] }));
   await writeFile(path.join(root, "registry/regulators/broken.json"), "{not json");
   await writeFile(path.join(root, "registry/regulators/shape.json"), JSON.stringify({ ...record, id: "bad id" }));
+  await writeFile(path.join(root, "registry/regulators/lifecycle.json"), JSON.stringify({ ...record, id: "reg.control.lifecycle.v1", ablation: undefined, retirement: undefined }));
   const { problems, records } = await checkRegistry(path.join(root, "registry"), root);
-  assert.equal(records.length, 2);
+  assert.equal(records.length, 3);
   const messages = problems.map((p) => p.message);
   for (const expected of [
     "not valid JSON", "does not match the regulator record schema", "duplicate id",
     "implementation not found: src/gate.ts", "cited test not found: src/gate.test.ts", "must state at least one limitation",
+    "names no ablation switch", "states no retirement condition",
   ]) {
     assert.ok(messages.some((m) => m.includes(expected)), `expected a problem containing "${expected}"; got ${JSON.stringify(messages)}`);
   }

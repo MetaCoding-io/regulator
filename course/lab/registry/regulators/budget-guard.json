@@ -28,5 +28,7 @@
     "Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp6-budget", "note": "The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},
+  "retirement": {"condition": "No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models."},
   "introducedIn": "M07"
 }

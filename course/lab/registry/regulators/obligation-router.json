@@ -28,5 +28,7 @@
     "Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority` (lesson 13); the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:route-messages", "note": "Routing is a step of the loop; not ablatable by the harness. An arm without it leaves every message unrouted and nothing holds a unit."},
+  "retirement": {"condition": "Never: an obligation is how a consequential signal stays visible until absorbed. Individual routing rules retire when a message kind is never raised."},
   "introducedIn": "M11"
 }

@@ -29,6 +29,7 @@ test("status: a definition and an instance are read from files only, and the vie
     mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: ["tool_call"] },
     evidence: { tests: ["src/gate.test.ts"] }, limitations: ["l"],
     ownership: { owner: "o", introduced: "2026-09-22", reviewBy: "2026-12-01" },
+    ablation: { switch: "extension:gate", note: "n" }, retirement: { condition: "c" },
   }), "utf8");
   await writeFile(path.join(definition, "workload", "sd.json"), JSON.stringify({
     name: "software-development", version: 1, description: "d",
@@ -101,6 +102,8 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.equal(view.definition?.routing[0]?.name, "routing");
   assert.equal(view.definition?.interaction[0]?.people.length, 2);
   assert.deepEqual(view.definition?.problems.filter((p) => /recovery|routing|interaction/.test(p)), [], "the four policy shapes are all policies");
+  assert.deepEqual(view.definition?.evals, []);
+  assert.deepEqual(view.definition?.lifecycle.map((l) => [l.id, l.ablation?.switch, l.retirement, l.ablatedIn, l.reportedIn, l.overdueDays < 0]), [["reg.test.gate.v1", "extension:gate", "c", [], [], true]], "the lifecycle row: switch, condition, no ablation arm yet, not due");
   assert.deepEqual(view.definition?.pending, []);
   assert.equal(view.definition?.policies[0]?.name, "default");
   assert.equal(view.definition?.registry.records.length, 1);
@@ -128,6 +131,7 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /interaction interaction v1: waits recap 30s, choice 120s, clarification 300s, consent 300s, uat 600s; 2 blocking interrupt\(s\) per attempt; remind after 60 min\n {4}alice: up to critical, may accept risk, may act as S5\n {4}bob: up to blocking\n/);
   assert.match(text, /obligations: 1 open of 2\n {4}open {8} human blocking veto {2}\w{8} {2}recovery-decision {2}unit u1: clarify \(oscillation\) {2}\(unit u1\) {2}Q: Which behaviour is wanted\? {2}delivered ×1 \(outbox\)\n {2}interactions: 1 asked, 1 unanswered\n {4}consent {7}r1 {2}force-push {2}\(unit u1, attempt 1\) {2}via none {2}unavailable by S1\n/);
   assert.match(text, /declared: registry, workload, policies, profiles, identity; pending: $/m);
+  assert.match(text, /lifecycle: 1 active regulator\(s\), 0 overdue for review, 0 with an ablation arm, 0 with a committed ablation report/);
   assert.match(text, /profile implement: read, write; writes src\//);
   assert.match(text, /identity: INV-001\n/);
   assert.match(text, /memory: 1 current of 1\n {4}\w{8} {2}runner: lacks docker {2}\(by alice in u1; review by \d{4}-\d{2}-\d{2}\)/);

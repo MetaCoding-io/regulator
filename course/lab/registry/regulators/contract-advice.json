@@ -25,5 +25,7 @@
     "The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp5-contract", "note": "Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all."},
+  "retirement": {"condition": "Retire the advice when a contract-aware model needs no rendered section: units under three model versions report every delegated decision without it, with the gate still on."},
   "introducedIn": "M06"
 }

@@ -27,5 +27,7 @@
     "A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp12-algedonic", "note": "Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence."},
+  "retirement": {"condition": "Never while a question can go unanswered: the gate is the meaning of 'waits'."},
   "introducedIn": "M13"
 }

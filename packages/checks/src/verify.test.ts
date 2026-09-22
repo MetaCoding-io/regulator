@@ -163,3 +163,45 @@ test("identity-untouched (lesson 12): INV-001 in code — a change under a prote
   assert.equal((await run("main")).verdict, "pass");
   assert.equal((await runHostChecks(realExec, { cwd, checks: ["identity-untouched"], base: "main", protectedPaths: [] }))[0]?.observation, "no protected prefixes declared");
 });
+
+test("export-signature (lesson 14): a criterion observed by content — the host imports the module at HEAD and reads the export's arity; the record binds to that criterion alone, and a runtime criterion with host evidence no longer waits for a person", async (t) => {
+  const { cwd, revision } = await project(t);
+  const expectations = [
+    { id: "e-tests", description: "tests pass", class: "test" as const, required: true },
+    { id: "e-signature", description: "a keeps one parameter", class: "runtime" as const, required: true, check: { kind: "export-signature" as const, module: "src/a.js", export: "a", arity: 1 } },
+    { id: "e-looks", description: "the page looks right", class: "runtime" as const, required: true },
+  ];
+  const run = async () => runHostChecks(realExec, { cwd, checks: ["export-signature"], expectations });
+  // `a` is a constant, not a function.
+  let [r] = await run();
+  assert.deepEqual([r!.check, r!.class, r!.criterion, r!.verdict], ["export-signature:e-signature", "runtime", "e-signature", "fail"]);
+  assert.equal(r!.observation, "src/a.js exports a as a number, not a function");
+  await writeFile(path.join(cwd, "src", "a.js"), "export const a = (x) => x;\n");
+  [r] = await run();
+  assert.equal(r!.verdict, "pass");
+  assert.equal(r!.observation, "a(1 parameter) exported by src/a.js at HEAD");
+  await writeFile(path.join(cwd, "src", "a.js"), "export function a(x, options = {}) { return x; }\n");
+  [r] = await run();
+  assert.equal(r!.verdict, "pass", "a defaulted second parameter does not count towards Function.length: the signature the caller sees is one argument");
+  await writeFile(path.join(cwd, "src", "a.js"), "export function a(x, sep) { return x + sep; }\n");
+  [r] = await run();
+  assert.equal(r!.verdict, "fail");
+  assert.equal(r!.observation, "a declares 2 parameter(s); the contract fixes 1");
+  await writeFile(path.join(cwd, "src", "a.js"), "export function b(x) { return x; }\n");
+  [r] = await run();
+  assert.equal(r!.observation, "src/a.js does not export a");
+  await writeFile(path.join(cwd, "src", "a.js"), "export function a(x) { return x; }\nthrow new Error('boom at import');\n");
+  [r] = await run();
+  assert.equal(r!.verdict, "inconclusive");
+  assert.match(r!.observation, /could not load src\/a\.js: boom at import/);
+  assert.equal((await runHostChecks(realExec, { cwd, checks: ["export-signature"], expectations: [expectations[0]!] }))[0]?.observation, "no expectation in the contract carries an export-signature check");
+
+  // Binding by content: the signature record names only its criterion; a test record binds to test-class expectations that carry no check.
+  await writeFile(path.join(cwd, "src", "a.js"), "export function a(x) { return x; }\n");
+  await writeFile(path.join(cwd, "test", "a.test.js"), 'import test from "node:test"; import assert from "node:assert/strict"; import { a } from "../src/a.js"; test("a", () => assert.equal(a(1), 1));\n');
+  const results = await runHostChecks(realExec, { cwd, checks: ["run_tests", "export-signature"], expectations });
+  const bound = bindEvidence(results, { unitId: "u1", attempt: 1, contract: { id: "tc-1", version: 1 }, expectations, revision });
+  assert.deepEqual(bound.map((b) => [b.check, b.criteria]), [["run_tests", ["e-tests"]], ["export-signature:e-signature", ["e-signature"]]]);
+  const verdict = technicalVerdict({ contract: { ...contract, expectedEvidence: expectations }, records: bound, acceptances: [], unitId: "u1", attempt: 1, revision });
+  assert.deepEqual([verdict.verdict, verdict.satisfied, verdict.awaitingAcceptance], ["inconclusive", ["e-tests", "e-signature"], ["e-looks"]], "the probed runtime criterion is satisfied by host evidence; the unprobed one still waits for a person");
+});

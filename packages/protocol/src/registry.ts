@@ -1,5 +1,6 @@
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import { AblationSwitchSchema } from "./evals.js";
 import { VsmSystemSchema } from "./vsm-systems.js";
 
 /**
@@ -57,6 +58,9 @@ export const RegulatorRecordSchema = Type.Object(
       { owner: Type.String({ minLength: 1 }), introduced: isoDate, reviewBy: isoDate },
       { additionalProperties: false },
     ),
+    /** Lesson 14: the eval arm with this regulator switched off, and what the harness can and cannot switch. */
+    ablation: Type.Optional(Type.Object({ switch: AblationSwitchSchema, note: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
+    /** Lesson 14: when this regulator may be retired — typically no significant regression in ablation across N model versions and M suites. */
     retirement: Type.Optional(Type.Object({ condition: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
     introducedIn: Type.Optional(Type.String({ pattern: "^M\\d{2}$" })),
   },

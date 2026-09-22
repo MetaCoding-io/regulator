@@ -28,5 +28,7 @@
     "The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp7-recovery", "note": "Shares checkpoint 7 with the failure observer; delivery (lesson 13) uses the same journal from the loop and is not ablated with the extension."},
+  "retirement": {"condition": "No side-effecting tool is invoked twice for one intention across the recovery drills and three model versions with the journal off — which is to say never, because a restart is not a model behaviour."},
   "introducedIn": "M08"
 }

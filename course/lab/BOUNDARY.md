@@ -16,6 +16,16 @@ Not covered:
 - Reminders run on demand (`regulator remind`) and at the loop's steps; nothing schedules them. A quiet instance reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
 
+## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
+
+Enforced at `runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)`, `bindEvidence (criterion binding)`, `technicalVerdict (host evidence before acceptance for runtime criteria)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- One kind of check exists: an export's declared parameter count. Return types, thrown errors and behaviour under input are not observed; `Function.length` stops at the first defaulted parameter, so a defaulted second argument passes as a one-argument signature.
+- The probe imports the module: import-time side effects run in the host's process tree, at HEAD, once per closeout. A module that cannot be imported is inconclusive, never a pass.
+- A criterion that carries no check is still bound by class, as before. Content binding is opt-in per expectation, and the drift contracts are the only ones that opt in so far.
+
 ## Budget guard (`reg.control.budget-guard.v1`)
 
 Enforced at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `src/cp6-budget.ts`; S3, deterministic-gate.
@@ -78,6 +88,17 @@ Not covered:
 - The idempotency key is the unit, the tool and the arguments; the same message sent on purpose twice is refused. Vary the message.
 - Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration (lesson 03), and nothing here can journal what it cannot name.
 - The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions.
+
+## Eval harness and graders (`reg.assurance.eval-harness.v1`)
+
+Enforced at `runSuite (one instance per arm × repetition, the tasks through driveUnit)`, `contractForArm / workloadForArm (an arm changes only what the definition declares)`, `graders.ts (outcome and trajectory graders, no judge model)`, `checkDefinition (suites and committed reports validate; ablation arms name their switch)` in `src/evals.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement.
+- The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
+- Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
+- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
 
 ## Evidence preflight (`reg.control.evidence-preflight.v1`)
 
@@ -234,6 +255,16 @@ Not covered:
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
 - Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11), delivered to the outbox and reminded under the interaction policy (lesson 13). The outbox is a file: no channel beyond it exists in the lab.
 
+## Regulator lifecycle (`reg.identity.regulator-lifecycle.v1`)
+
+Enforced at `checkRegistry (active record without ablation or retirement is a problem)`, `reviewDue`, `regulator review --due (CLI)`, `the lifecycle view (read model, control room)` in `../../packages/core/src/registry.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- A retirement condition is prose; nothing checks that a committed report satisfies it. The lifecycle view shows coverage (an ablation arm exists for the record), not satisfaction; a person reads the report against the condition.
+- Review dates are checked on demand, not scheduled: `regulator review --due` runs when someone runs it, and nothing under CI fails on an overdue record (docs/DEBT.md row 32).
+- Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite.
+
 ## Reintegration guard (`reg.coordination.reintegration.v1`)
 
 Enforced at `regulator unit finish` in `src/worktree.ts`; S2, deterministic-gate.
@@ -263,6 +294,17 @@ Not covered:
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write (lesson 13); the name on `--by` is asserted, not authenticated.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to course/lab/identity/ by hand.
+
+## Span projection (OpenTelemetry GenAI) (`reg.assurance.span-projection.v1`)
+
+Enforced at `projectSpans (schema-validated SpanRecord per record; redact on every string attribute)`, `reportSpans (one span per eval run)`, `regulator spans (CLI)` in `../../packages/core/src/spans.ts`; S3*, type.
+
+Not covered:
+
+- Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.
+- Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.
+- The SQLite regulatory event store the reporting tools write (`.gsd/vsm-runtime/vsm.db`) is not projected: it is the Pi extension's store, not the lab instance's, and its path still carries a GSD-era name (docs/DEBT.md row 31).
+- Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
 

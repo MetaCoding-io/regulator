@@ -73,5 +73,7 @@
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
+  "ablation": {"switch": "extension:cp9-authority", "note": "Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
+  "retirement": {"condition": "No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable."},
   "introducedIn": "M10"
 }

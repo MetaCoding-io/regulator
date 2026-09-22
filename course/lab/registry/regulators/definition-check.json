@@ -27,5 +27,7 @@
     "The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "none", "note": "A check on the definition, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against."},
+  "retirement": {"condition": "Never: a declared control plane is checked as a whole or it is assembled."},
   "introducedIn": "M12"
 }

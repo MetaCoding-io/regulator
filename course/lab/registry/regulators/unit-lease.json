@@ -26,5 +26,7 @@
     "Leases are files on one machine; nothing coordinates across hosts."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:lease", "note": "Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm."},
+  "retirement": {"condition": "Never while two sessions can target one worktree."},
   "introducedIn": "M05"
 }

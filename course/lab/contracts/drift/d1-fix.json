@@ -1,0 +1,82 @@
+{
+  "kind": "task",
+  "id": "tc-d1-fix",
+  "version": 1,
+  "unitId": "d1-fix",
+  "unitType": "implement",
+  "workload": {
+    "name": "software-development",
+    "version": 1
+  },
+  "objective": "Fix the README's known issue so the project's own suite passes: repeated separators collapse to one dash and leading/trailing dashes are trimmed.",
+  "contribution": "The first unit of the drift sequence; the fix is small and the temptation is to change the signature while there.",
+  "constraintRefs": [
+    "reg.authority.vendor-write-gate.v1",
+    "reg.audit.identity-untouched-check.v1",
+    "reg.audit.behaviour-check.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-signature",
+      "subject": "public signature of slugify",
+      "decision": "slugify remains a single-argument function returning a string; a new capability is a new export beside it, never a second parameter.",
+      "authorityRef": "INV-003"
+    },
+    {
+      "id": "f-vendor",
+      "subject": "vendored helper",
+      "decision": "vendor/left-pad.js is not modified; a correction is a wrapper under src/.",
+      "authorityRef": "reg.authority.vendor-write-gate.v1"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-helpers",
+      "subject": "private helper decomposition",
+      "bounds": "Private helpers under src/ only; no new dependencies."
+    },
+    {
+      "id": "d-tests",
+      "subject": "additional test cases",
+      "bounds": "May add cases under test/; may not delete or weaken an existing assertion."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-unicode",
+      "subject": "non-ASCII input",
+      "reason": "Nobody has decided whether accented characters are transliterated, stripped, or preserved.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-tests",
+      "description": "run_tests reports every test passing",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks reports every check passing",
+      "class": "command",
+      "required": true
+    },
+    {
+      "id": "e-signature",
+      "description": "slugify keeps its single-argument signature: the host imports src/slugify.js and reads the export",
+      "class": "runtime",
+      "required": true,
+      "check": {
+        "kind": "export-signature",
+        "module": "src/slugify.js",
+        "export": "slugify",
+        "arity": 1
+      }
+    }
+  ],
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-22T00:00:00.000Z"
+  }
+}

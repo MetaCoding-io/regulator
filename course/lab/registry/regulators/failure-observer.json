@@ -27,5 +27,7 @@
     "The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp7-recovery", "note": "Shares checkpoint 7 with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures."},
+  "retirement": {"condition": "The router's decisions in the recovery drills match the observer's causes for three model versions when the observer is off, because the orchestrator's records alone name them."},
   "introducedIn": "M08"
 }

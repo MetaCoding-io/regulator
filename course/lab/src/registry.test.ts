@@ -15,6 +15,9 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.algedonic.delivery.v1",
     "reg.algedonic.interaction-contract.v1",
     "reg.algedonic.pause-gate.v1",
+    "reg.assurance.eval-harness.v1",
+    "reg.assurance.span-projection.v1",
+    "reg.audit.behaviour-check.v1",
     "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",
     "reg.audit.identity-untouched-check.v1",
@@ -43,6 +46,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.coordination.unit-lease.v1",
     "reg.identity.definition-check.v1",
     "reg.identity.identity-context.v1",
+    "reg.identity.regulator-lifecycle.v1",
     "reg.intelligence.intelligence-intake.v1",
   ]);
 });
@@ -55,6 +59,8 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
   assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);
+  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift", 4, 6]], "the drift suite is part of the declaration");
+  assert.deepEqual(definition.reports.map((r) => r.fingerprint.dispatcher).sort(), ["scripted:drifter", "scripted:reference", "scripted:sloppy"]);
 });
 
 test("REGULATORS.md is generated from the records and has not drifted", async () => {

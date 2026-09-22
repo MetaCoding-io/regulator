@@ -43,6 +43,8 @@ export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */
   echo?: boolean;
+  /** The checkpoint extensions to load instead of the definition's full list: an eval arm (lesson 14). */
+  extensionPaths?: readonly string[];
 }
 
 export interface DefinitionLoaderOptions {
@@ -94,7 +96,7 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
       const model = modelRuntime.getModel(ref.slice(0, slash), ref.slice(slash + 1));
       if (!model) continue;
       const settingsManager = await definitionSettings();
-      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir, settingsManager });
+      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir, settingsManager, ...(options.extensionPaths ? { extensionPaths: options.extensionPaths } : {}) });
       await resourceLoader.reload();
       const { errors, runtime } = resourceLoader.getExtensions();
       if (errors.length) throw new Error(`extension load errors: ${errors.map((e) => `${e.path}: ${e.error}`).join("; ")}`);

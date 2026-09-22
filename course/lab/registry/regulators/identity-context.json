@@ -27,5 +27,7 @@
     "Rendering is truncated at 6000 characters; an identity set longer than that is partly advice the model never sees, and the status line does not say so."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp11-identity", "note": "Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement."},
+  "retirement": {"condition": "Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone."},
   "introducedIn": "M12"
 }

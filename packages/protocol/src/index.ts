@@ -341,10 +341,10 @@ export { CapabilityProfileSchema, ReasoningLevelSchema, isCapabilityProfile, typ
 export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
 export { MechanismLevelSchema, RegulatorRecordSchema, isRegulatorRecord, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
-  ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, FixedDecisionSchema,
+  ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, ExpectationCheckSchema, FixedDecisionSchema,
   ResultReportInputSchema, ResultReportSchema, UnresolvedDecisionSchema, UnresolvedHandlingSchema, UnresolvedOutcomeSchema,
   WorkContractSchema, isResultReport, isWorkContract,
-  type Consequence, type DelegatedDecision, type EvidenceExpectation, type FixedDecision, type ResultReport, type ResultReportInput,
+  type Consequence, type DelegatedDecision, type EvidenceExpectation, type ExpectationCheck, type FixedDecision, type ResultReport, type ResultReportInput,
   type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
 } from "./contracts.js";
 export { HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
@@ -375,3 +375,10 @@ export {
   isInteractionEvent, isInteractionPolicy,
   type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
 } from "./interaction.js";
+export {
+  ArmSummarySchema, AblationSwitchSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
+  GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricSummarySchema, isEvalReport, isEvalSuite,
+  type AblationSwitch, type ArmSummary, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
+  type GraderVerdict, type Lift, type MetricSummary,
+} from "./evals.js";
+export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";

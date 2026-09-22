@@ -54,11 +54,29 @@ export const UnresolvedDecisionSchema = Type.Object({
 }, { additionalProperties: false });
 export type UnresolvedDecision = Static<typeof UnresolvedDecisionSchema>;
 
+/**
+ * How the host observes a criterion by content, not by class (lesson 14). An
+ * expectation that carries a check is satisfied by that check's evidence
+ * alone: a passing suite that never exercised the behaviour does not count.
+ */
+export const ExpectationCheckSchema = Type.Union([
+  Type.Object({
+    kind: Type.Literal("export-signature"),
+    /** Module path relative to the worktree. */
+    module: NonEmpty,
+    export: NonEmpty,
+    /** The declared parameter count the export must keep. */
+    arity: Type.Integer({ minimum: 0 }),
+  }, { additionalProperties: false }),
+]);
+export type ExpectationCheck = Static<typeof ExpectationCheckSchema>;
+
 export const EvidenceExpectationSchema = Type.Object({
   id: DecisionId,
   description: NonEmpty,
   class: EvidenceClassSchema,
   required: Type.Boolean(),
+  check: Type.Optional(ExpectationCheckSchema),
 }, { additionalProperties: false });
 export type EvidenceExpectation = Static<typeof EvidenceExpectationSchema>;
 

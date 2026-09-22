@@ -25,12 +25,14 @@ import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectCon
 import type { Exec } from "./exec.js";
 
 export interface HostCheckResult {
-  /** `run_tests`, `run_checks:<name>` or `file:<path>`. */
+  /** `run_tests`, `run_checks:<name>`, `file:<path>`, `identity-untouched` or `export-signature:<criterion>`. */
   check: string;
   class: EvidenceClass;
   verdict: Verdict;
   command?: string[];
   observation: string;
+  /** Set when the check observed one criterion by content (lesson 14): the record binds to that criterion alone, not to every expectation of its class. */
+  criterion?: string;
 }
 
 export interface RunHostChecksOptions {
@@ -42,6 +44,8 @@ export interface RunHostChecksOptions {
   /** For `identity-untouched` (lesson 12): the base ref the unit branched from, and the prefixes nothing may have changed. */
   base?: string;
   protectedPaths?: readonly string[];
+  /** For `export-signature` (lesson 14): the expectations that carry a check, taken from the contract. Each is observed by running the module. */
+  expectations?: readonly EvidenceExpectation[];
   conventions?: ProjectConventions;
   timeoutMs?: number;
   maxObservationChars?: number;
@@ -50,8 +54,17 @@ export interface RunHostChecksOptions {
 const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_MAX_OBSERVATION_CHARS = 2000;
 
-/** Classes no host check can observe: they need a human acceptance to count. */
+/** Classes no generic host check can observe: they need a human acceptance to count, unless an expectation carries its own content check (lesson 14). */
 export const ACCEPTANCE_CLASSES: ReadonlySet<EvidenceClass> = new Set<EvidenceClass>(["semantic", "model", "runtime"]);
+
+/** A module run in a child process that reports what an export actually is: the host observes runtime behaviour, not source text. */
+const SIGNATURE_PROBE = `
+const [modulePath, name] = process.argv.slice(1);
+import(modulePath).then((m) => {
+  const v = m[name];
+  process.stdout.write(JSON.stringify({ present: name in m, type: typeof v, length: typeof v === "function" ? v.length : null, name: typeof v === "function" ? v.name : null }));
+}).catch((e) => { process.stdout.write(JSON.stringify({ error: String(e && e.message || e) })); });
+`;
 
 export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): Promise<HostCheckResult[]> {
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -108,6 +121,32 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
       }
       const changed = result.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
       results.push({ check: name, class: "command", verdict: changed.length ? "fail" : "pass", command: argv, observation: changed.length ? `protected paths changed on the branch (INV-001): ${changed.join(", ")}` : `no change under ${prefixes.join(", ")} since ${options.base}` });
+    } else if (name === "export-signature") {
+      // Behaviour by content (lesson 14): an expectation names the module, the export and the arity it must keep; the host
+      // imports the module in its own process at HEAD and reads the function. A passing suite that never calls it is not evidence.
+      const carrying = (options.expectations ?? []).filter((e) => e.check?.kind === "export-signature");
+      if (!carrying.length) {
+        results.push({ check: name, class: "runtime", verdict: "inconclusive", observation: "no expectation in the contract carries an export-signature check" });
+        continue;
+      }
+      for (const e of carrying) {
+        const spec = e.check!;
+        const argv = [process.execPath, "--input-type=module", "-e", SIGNATURE_PROBE, "--", `./${spec.module.replace(/^\.\//, "")}`, spec.export];
+        const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
+        const shown = ["node", "--input-type=module", "-e", "<signature probe>", "--", spec.module, spec.export];
+        let probe: { present?: boolean; type?: string; length?: number | null; error?: string } | undefined;
+        try { probe = JSON.parse(result.stdout.trim()); } catch { probe = undefined; }
+        if (!probe || probe.error !== undefined || result.code !== 0) {
+          results.push({ check: `${name}:${e.id}`, class: "runtime", verdict: "inconclusive", command: shown, criterion: e.id, observation: `could not load ${spec.module}: ${boundedTail((probe?.error ?? result.stderr ?? "").trim() || `exit ${result.code}`, max).text}` });
+          continue;
+        }
+        const ok = probe.present === true && probe.type === "function" && probe.length === spec.arity;
+        results.push({
+          check: `${name}:${e.id}`, class: "runtime", verdict: ok ? "pass" : "fail", command: shown, criterion: e.id,
+          observation: !probe.present ? `${spec.module} does not export ${spec.export}` : probe.type !== "function" ? `${spec.module} exports ${spec.export} as a ${probe.type}, not a function`
+            : ok ? `${spec.export}(${spec.arity} parameter${spec.arity === 1 ? "" : "s"}) exported by ${spec.module} at HEAD` : `${spec.export} declares ${probe.length} parameter(s); the contract fixes ${spec.arity}`,
+        });
+      }
     } else {
       results.push({ check: name, class: "command", verdict: "inconclusive", observation: `no host check named "${name}"` });
     }
@@ -135,13 +174,16 @@ export function hostEnvironment(): EvidenceEnvironment {
   return { node: process.version, platform: process.platform, arch: process.arch };
 }
 
-/** A record per result, bound to every expectation of the same class: that is the criterion the check speaks to. */
+/**
+ * A record per result, bound to the criteria the check speaks to: the one criterion it observed by content, when it names
+ * one (lesson 14); otherwise every expectation of the same class that carries no content check of its own.
+ */
 export function bindEvidence(results: readonly HostCheckResult[], options: BindOptions): EvidenceRecord[] {
   const at = new Date((options.now ?? Date.now)()).toISOString();
   const environment = options.environment ?? hostEnvironment();
   return results.map((r) => ({
     id: randomUUID(), unitId: options.unitId, attempt: options.attempt, contract: options.contract,
-    check: r.check, class: r.class, criteria: options.expectations.filter((e) => e.class === r.class).map((e) => e.id),
+    check: r.check, class: r.class, criteria: r.criterion ? [r.criterion] : options.expectations.filter((e) => e.class === r.class && !e.check).map((e) => e.id),
     verdict: r.verdict, ...(r.command ? { command: r.command } : {}), observation: r.observation,
     revision: options.revision, environment, producedBy: "S3*", at,
   }));
@@ -167,7 +209,9 @@ export function technicalVerdict(input: VerdictInput): TechnicalVerdict {
 
   for (const e of contract.expectedEvidence) {
     if (!e.required) continue;
-    if (ACCEPTANCE_CLASSES.has(e.class)) {
+    // A class no host check can observe waits for a person — unless a host check observed this criterion by content (lesson 14):
+    // runtime behaviour a probe can read is host evidence like any other, and a person is asked only where no probe exists.
+    if (ACCEPTANCE_CLASSES.has(e.class) && !input.records.some((r) => r.criteria.includes(e.id))) {
       const disposition = input.acceptances.filter((a) => a.criterion === e.id && a.revision === revision && a.contract.version === contract.version).at(-1);
       if (!disposition) { awaitingAcceptance.push(e.id); reasons.push(`${e.id} (${e.class}) cannot be observed by a host check and has no human acceptance at ${revision.slice(0, 7)}`); }
       else if (disposition.disposition === "accepted") satisfied.push(e.id);

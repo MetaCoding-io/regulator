@@ -27,5 +27,7 @@
     "A run_tests call with a filter that passes counts as a passing run: the preflight sees the verdict, not the coverage."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp8-evidence", "note": "A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost."},
+  "retirement": {"condition": "Reports under three model versions cite only evidence the session produced, with the preflight off, and the closeout gate's contradicted count stays at zero."},
   "introducedIn": "M09"
 }

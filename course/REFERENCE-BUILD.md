@@ -87,7 +87,7 @@ without checking out history.
 Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
-  `pi -e` and tested without a model. Checkpoints 0–12 exist. Their Pi-free modules have
+  `pi -e` and tested without a model. Checkpoints 0–13 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
   `packages/core`. The lab keeps `conventions.ts` (software-workload fact discovery),
@@ -139,9 +139,18 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   (`ask_human`, the pause gate), the interaction policy, delivery to the outbox through
   the effect journal, the paused path in the loop, and `answer`, `remind` and the
   authority check in the CLI; the read model and the control room show the interaction
-  policy, deliveries and interactions.
+  policy, deliveries and interactions. Checkpoint 13 adds the eval vocabulary (arms,
+  suites, runs, summaries, lifts, fingerprints, reports, the ablation switch), the span
+  records with the GenAI attribute names, the expectation check and the `export-signature`
+  check name (`protocol`); the eval arithmetic, the span projection with redaction, the
+  registry's lifecycle rules and the definition check over suites and reports (`core`); the
+  `export-signature` check with content binding and host-first runtime verdicts
+  (`checks`); and in the lab the harness, the graders, three scripted learner-style units,
+  the six drift contracts, the drift suite and its three committed reports, `regulator
+  eval | spans | review`, and `ablation` and `retirement` on every registry card; the read
+  model and the control room gain the assurance and lifecycle views.
 - **The regulator registry** — schema and check ship in `packages/`; the lab CLI and
-  thirty-two records live under `course/lab/registry/`; the control room is design only, but its
+  thirty-six records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one

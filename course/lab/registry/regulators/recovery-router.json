@@ -28,5 +28,7 @@
     "Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11), delivered to the outbox and reminded under the interaction policy (lesson 13). The outbox is a file: no channel beyond it exists in the lab."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "policy:recovery.rules", "note": "A policy whose every rule is escalate is the ablation: every blocked unit goes to a person. The harness does not throw policy switches."},
+  "retirement": {"condition": "Never as a mechanism; individual rules retire when a cause is not seen in a quarter of runs."},
   "introducedIn": "M08"
 }
