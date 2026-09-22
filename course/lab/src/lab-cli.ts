@@ -26,6 +26,11 @@
  *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
  *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
  *   node dist/lab-cli.js identity reject <obligation> --by <who> --rationale <text>
+ *   node dist/lab-cli.js answer <obligation> --by <who> --answer <text>   answer a question a unit asked (lesson 13): recorded as the person's disposition; the next attempt carries it
+ *   node dist/lab-cli.js remind                            deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
+ *
+ * Every `--by` is checked against the interaction policy's people: a name not listed may disposition nothing, and what a
+ * listed person may do (severity, accepted-risk, S5) is declared there. The name itself is asserted, not authenticated.
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
@@ -33,8 +38,10 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import { readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
-import { ConsumerSchema, DispositionSchema, assertValid, type ObligationState } from "@metacoding/vsm-pi-protocol";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding/vsm-pi-protocol";
+import { deliverPending, remindDue } from "./deliver.js";
+import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import { piDispatcher } from "./dispatch-pi.js";
@@ -53,14 +60,23 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text>");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
+const interactionP = () => loadInteractionPolicy(path.resolve(flag("interaction") ?? INTERACTION_POLICY_PATH));
+/** Who may disposition what: the interaction policy's people. Refuses before anything is written. */
+async function authorized(by: string | undefined, ask: { severity: Severity; disposition?: Disposition; s5?: boolean }): Promise<string> {
+  if (!by) usage();
+  const problem = checkDispositionAuthority(await interactionP(), by!, ask);
+  if (problem) throw new Error(problem);
+  return by!;
+}
 const regulatorsP = async () => (await loadRegistry(path.join(labRoot, "registry"))).records.map((r) => r.id);
 
 function describe(o: ObligationState): string {
-  return `${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto " : "     "} ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `\n      question: ${o.question}` : ""}${o.disposition ? `\n      ${o.disposition} by ${o.closedBy}: ${o.rationale}` : o.successor ? `\n      ${o.status} by ${o.closedBy} → ${o.successor.slice(0, 8)}: ${o.rationale}` : ""}`;
+  const delivered = o.deliveries.length ? `  delivered ×${o.deliveries.length} (${o.deliveries.at(-1)!.channel} ${o.deliveries.at(-1)!.at.slice(0, 16)})` : (o.consumer === "human" && (o.status === "open" || o.status === "acknowledged") ? "  not delivered" : "");
+  return `${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto " : "     "} ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${delivered}${o.question ? `\n      question: ${o.question}` : ""}${o.disposition ? `\n      ${o.disposition} by ${o.closedBy}: ${o.rationale}` : o.successor ? `\n      ${o.status} by ${o.closedBy} → ${o.successor.slice(0, 8)}: ${o.rationale}` : ""}`;
 }
 
 async function findObligation(ledger: ObligationLedger, ref: string): Promise<ObligationState> {
@@ -104,7 +120,7 @@ try {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
@@ -125,7 +141,7 @@ try {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
@@ -137,7 +153,7 @@ try {
   } else if (command === "unit" && sub === "route" && rest[0]) {
     const policy = await loadPolicy(path.resolve(flag("policy") ?? POLICY_PATH));
     const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
-    const decision = await routeUnit(realExec, { repo: process.cwd(), unitId: rest[0], policy, recovery, routing: await routingP() });
+    const decision = await routeUnit(realExec, { repo: process.cwd(), unitId: rest[0], policy, recovery, routing: await routingP(), interaction: await interactionP() });
     if (!decision) { console.log(`unit ${rest[0]} is not blocked; nothing to route`); }
     else {
       console.log(`unit ${rest[0]}: ${decision.cause} (occurrence ${decision.occurrence}) → ${decision.action} under ${decision.policy.name} v${decision.policy.version}`);
@@ -169,7 +185,7 @@ try {
     console.log(owed.length ? `  obligations:` : "  obligations: none");
     for (const o of owed) console.log(`    ${describe(o)}`);
   } else if (command === "unit" && sub === "close" && rest[0]) {
-    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload(), routing: await routingP() });
+    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload(), routing: await routingP(), interaction: await interactionP() });
     if (outcome.status === "closed") console.log(`unit ${rest[0]}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
@@ -216,33 +232,34 @@ try {
     console.log(`  id ${o.id}; opened ${o.openedAt} by ${o.openedBy}; sources ${o.sources.join(", ")}`);
     for (const h of o.history) console.log(`  ${h.at}  ${h.type.replace("obligation-", "")}  by ${h.by}${"note" in h && h.note ? ` — ${h.note}` : ""}${"rationale" in h ? ` — ${h.rationale}` : ""}${"successor" in h ? ` → ${h.successor}` : ""}`);
   } else if (command === "obligation" && (sub === "ack" || sub === "resolve" || sub === "escalate") && rest[0]) {
-    const by = flag("by");
-    if (!by) usage();
     const ledger = new ObligationLedger(process.cwd());
     const o = await findObligation(ledger, rest[0]);
     if (sub === "ack") {
+      const by = await authorized(flag("by"), { severity: "info" });
       const note = flag("note");
-      await ledger.acknowledge(o.id, by!, note);
+      await ledger.acknowledge(o.id, by, note);
       console.log(`obligation ${o.id.slice(0, 8)} acknowledged by ${by}: received, not resolved`);
     } else if (sub === "resolve") {
       const disposition = flag("disposition");
       const rationale = flag("rationale");
       if (!disposition || !rationale) usage();
       assertValid(DispositionSchema, disposition, `disposition (one of ${DispositionSchema.anyOf.map((d) => d.const).join(", ")})`);
-      await ledger.resolve(o.id, { by: by!, disposition, rationale: rationale! });
+      const by = await authorized(flag("by"), { severity: o.severity, disposition });
+      await ledger.resolve(o.id, { by, disposition, rationale: rationale! });
       console.log(`obligation ${o.id.slice(0, 8)} resolved by ${by} as ${disposition}${o.unit && o.blocks ? `; unit ${o.unit} may proceed if nothing else is owed on it` : ""}`);
     } else {
       const to = flag("to");
       const rationale = flag("rationale");
       if (!to || !rationale) usage();
       assertValid(ConsumerSchema, to, `consumer (one of ${ConsumerSchema.anyOf.map((c) => ("const" in c ? c.const : c.anyOf?.map((x) => x.const).join(", "))).join(", ")})`);
-      const successor = await ledger.escalate(o.id, { by: by!, to, rationale: rationale! });
+      const by = await authorized(flag("by"), { severity: o.severity });
+      const successor = await ledger.escalate(o.id, { by, to, rationale: rationale! });
       console.log(`obligation ${o.id.slice(0, 8)} escalated by ${by} to ${to}: successor ${successor.id.slice(0, 8)} is now what is owed`);
     }
   } else if (command === "memory" && sub === "retract" && rest[0]) {
-    const by = flag("by");
     const reason = flag("reason");
-    if (!by || !reason) usage();
+    if (!reason) usage();
+    const by = await authorized(flag("by"), { severity: "info" });
     const store = new MemoryStore(process.cwd());
     const match = (await store.states()).filter((s) => s.id === rest[0] || s.id.startsWith(rest[0]!));
     if (match.length !== 1) throw new Error(match.length ? `"${rest[0]}" matches ${match.length} entries` : `no memory entry "${rest[0]}"`);
@@ -256,12 +273,12 @@ try {
     console.log(`${shown.length} shown of ${states.length}`);
   } else if (command === "identity" && (sub === "accept" || sub === "reject") && rest[0]) {
     // The S5 decision path (INV-002): the only writer of an identity file, run by a person, citing the obligation it decides.
-    const by = flag("by");
     const rationale = flag("rationale");
-    if (!by || !rationale) usage();
+    if (!rationale) usage();
     const ledger = new ObligationLedger(process.cwd());
     const o = await findObligation(ledger, rest[0]);
     if (o.concern !== "policy-proposal" || o.consumer !== "S5") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.concern} owed to ${o.consumer}; \`identity accept|reject\` decides proposals owed to S5`);
+    const by = await authorized(flag("by"), { severity: o.severity, s5: true });
     if (sub === "reject") {
       await ledger.resolve(o.id, { by: by!, disposition: "rejected", rationale: rationale! });
       console.log(`proposal ${o.id.slice(0, 8)} rejected by ${by} (S5): ${rationale}; identity unchanged`);
@@ -294,7 +311,28 @@ try {
     const routed = await routeMessages(new ObligationLedger(process.cwd()), { policy: await routingP() });
     for (const o of routed.opened) console.log(`opened  ${describe(o as ObligationState & { status: "open" })}`);
     for (const n of routed.noted) console.log(`noted   ${n.message.kind}  ${n.message.subject}: ${n.reason}`);
-    console.log(`${routed.opened.length} obligation(s) opened, ${routed.noted.length} message(s) noted`);
+    const delivered = await deliverPending(process.cwd(), { policy: await interactionP() });
+    console.log(`${routed.opened.length} obligation(s) opened, ${routed.noted.length} message(s) noted, ${delivered.length} delivered to the outbox`);
+  } else if (command === "answer" && sub) {
+    // A person answers what a unit asked (lesson 13). The answer is the disposition; the next attempt carries it as the hint.
+    const answer = flag("answer");
+    if (!answer) usage();
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, sub);
+    if (o.concern !== "interaction") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.concern}, not a question a unit asked; use \`obligation resolve\``);
+    if (o.status !== "open" && o.status !== "acknowledged") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.status}`);
+    const request = (await ledger.interactions()).find((i) => i.request.obligationId === o.id);
+    if (!request) throw new Error(`no interaction request recorded for obligation ${o.id.slice(0, 8)}`);
+    if (request.request.options && !request.request.options.includes(answer!)) throw new Error(`the question offers ${request.request.options.join(" | ")}; "${answer}" is not one of them`);
+    const by = await authorized(flag("by"), { severity: o.severity });
+    const disposition = dispositionForAnswer(request.request.kind, answer!);
+    await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli" });
+    await ledger.resolve(o.id, { by, disposition, rationale: answer! });
+    console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
+  } else if (command === "remind") {
+    const delivered = await remindDue(process.cwd(), { policy: await interactionP() });
+    for (const d of delivered) console.log(`${d.reminder ? "reminded " : "delivered"} ${describe(d.obligation)}`);
+    console.log(`${delivered.length} delivered`);
   } else {
     usage();
   }

@@ -1,0 +1,31 @@
+{
+  "id": "reg.algedonic.delivery.v1",
+  "name": "Algedonic delivery",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Put what is owed to a person in front of one. Every open obligation whose consumer is human and that nothing has delivered is written to the owner's outbox — the same file `notify_owner` uses, an effect that cannot be unsent — through the effect journal under an idempotency key, once, at every step of the loop and on `regulator signals route`; the delivery is recorded on the obligation. `regulator remind` delivers again every obligation owed to a person whose last delivery is older than the policy's reminder interval, marked as a reminder. Delivery is not a disposition: the obligation stays open until a person answers.",
+  "absorbs": {
+    "failureClass": "owed-but-unseen",
+    "description": "The read model shows twelve obligations owed to a person; the person did not know, because nothing told them, and the units waited on nobody."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/deliver.ts",
+    "enforcementPoints": ["deliverPending (undelivered → outbox, journaled, ledger.deliver)", "remindDue (remindable → outbox, reminder)", "routeAndDeliver in the loop", "signals route / remind (CLI)"]
+  },
+  "channels": { "consumes": ["obligation ledger (open, owed to a person, deliveries)", "interaction policy (reminderAfterMs)"], "emits": ["outbox line (deliver:<obligation>:<n>)", "effect journal entry", "obligation-delivered (channel outbox, reminder)"] },
+  "scope": { "subjects": ["obligation"], "resources": [".regulator/outbox", ".regulator/effects.ndjson", ".regulator/signals.ndjson"] },
+  "cost": { "description": "One outbox line and one journal entry per delivery; reminders are bounded by the policy's interval." },
+  "authority": {
+    "may": ["write an obligation to the outbox once, and again after the interval", "record the delivery on the obligation"],
+    "mayNot": ["disposition anything", "deliver what is owed to S3 or S5 (a person reads the read model for those)", "deliver a closed obligation", "deliver twice inside the interval"]
+  },
+  "evidence": { "tests": ["src/controller.test.ts", "src/lab-cli.test.ts", "../../packages/core/src/interaction.test.ts"] },
+  "limitations": [
+    "The outbox is a file; no real channel (mail, chat, a daemon that watches the file) exists, so delivery reaches a person who reads the file. The channel is a property of the deployment, not of this lesson.",
+    "Reminders run on demand (`regulator remind`) and at the loop's steps; nothing schedules them. A quiet instance reminds nobody until someone runs something.",
+    "One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M13"
+}

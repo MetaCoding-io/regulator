@@ -1,0 +1,13 @@
+{
+  "name": "interaction",
+  "version": 1,
+  "description": "How the instance interrupts a person, and who may answer. Timeouts are per interaction kind; a timeout, a cancellation or an absent person is recorded and the unit pauses — silence is never consent, and no policy can make it one (the rule is fixed in the protocol). Attention is the scarcest budget: an attempt may spend a bounded number of blocking interrupts. An obligation owed to a person is delivered to the outbox and delivered again after the reminder interval. People are named with what they may disposition.",
+  "timeoutsMs": { "recap": 30000, "choice": 120000, "clarification": 300000, "consent": 300000, "uat": 600000 },
+  "attention": { "blockingPerAttempt": 2 },
+  "reminderAfterMs": 3600000,
+  "people": [
+    { "name": "course-lab", "resolveUpTo": "critical", "acceptRisk": true, "actAsS5": true },
+    { "name": "alice", "resolveUpTo": "critical", "acceptRisk": true, "actAsS5": true },
+    { "name": "bob", "resolveUpTo": "blocking", "acceptRisk": false, "actAsS5": false }
+  ]
+}

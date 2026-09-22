@@ -17,26 +17,32 @@
 import { randomUUID } from "node:crypto";
 import {
   WAITING_ACTIONS, severityAtLeast,
-  type Consumer, type Disposition, type Obligation, type ObligationEvent, type ObligationState, type RecoveryDecision, type RegulatoryEntry, type RoutingPolicy, type Severity,
-  type VsmMessage, type VsmSystem,
+  type Consumer, type Disposition, type InteractionEvent, type InteractionOutcome, type InteractionRequest, type Obligation, type ObligationEvent, type ObligationState,
+  type RecoveryDecision, type RegulatoryEntry, type RoutingPolicy, type Severity, type VsmMessage, type VsmSystem,
 } from "@metacoding/vsm-pi-protocol";
 import { appendEntry, isMessage, readEntries } from "./signals.js";
 
 const TERMINAL = new Set(["resolved", "escalated", "superseded"]);
 
+function isObligationEvent(entry: RegulatoryEntry): entry is ObligationEvent {
+  return "type" in entry && entry.type.startsWith("obligation-");
+}
+
 /** Fold the log's events into obligation states, in the order they were opened. */
 export function foldObligations(entries: readonly RegulatoryEntry[]): ObligationState[] {
   const states = new Map<string, ObligationState>();
   for (const entry of entries) {
-    if (isMessage(entry) || entry.type === "message-noted") continue;
+    if (!isObligationEvent(entry) || entry.type === "message-noted") continue;
     if (entry.type === "obligation-opened") {
-      states.set(entry.obligation.id, { ...entry.obligation, status: "open", acknowledgedBy: [], history: [entry] });
+      states.set(entry.obligation.id, { ...entry.obligation, status: "open", acknowledgedBy: [], deliveries: [], history: [entry] });
       continue;
     }
     const state = states.get(entry.obligationId);
     if (!state) throw new Error(`corrupt regulatory log: ${entry.type} for unknown obligation ${entry.obligationId}`);
     state.history.push(entry);
-    if (entry.type === "obligation-acknowledged") {
+    if (entry.type === "obligation-delivered") {
+      state.deliveries.push({ at: entry.at, channel: entry.channel, reminder: entry.reminder, ...(entry.target === undefined ? {} : { target: entry.target }) });
+    } else if (entry.type === "obligation-acknowledged") {
       state.acknowledgedBy.push(entry.by);
       if (state.status === "open") state.status = "acknowledged";
     } else {
@@ -178,6 +184,38 @@ export class ObligationLedger {
   async note(messageId: string, by: string, reason: string): Promise<void> {
     await this.#append({ type: "message-noted", id: randomUUID(), at: this.#stamp(), by, message: messageId, reason });
   }
+
+  /** The obligation was put in front of its consumer (lesson 13). Delivery is not a disposition. */
+  async deliver(id: string, delivery: { by: string; channel: "outbox" | "tui" | "rpc" | "cli"; reminder?: boolean; target?: string }): Promise<void> {
+    await this.#live(id);
+    await this.#append({ type: "obligation-delivered", id: randomUUID(), at: this.#stamp(), by: delivery.by, obligationId: id, channel: delivery.channel, reminder: delivery.reminder ?? false, ...(delivery.target === undefined ? {} : { target: delivery.target }) });
+  }
+
+  // Interactions (lesson 13): what a unit asked a person, and what came back. Events beside the obligations they concern.
+  async requestInteraction(request: InteractionRequest, by: string): Promise<void> {
+    await appendEntry(this.root, { type: "interaction-requested", id: randomUUID(), at: this.#stamp(), by, request });
+  }
+
+  async answerInteraction(answer: { requestId: string; outcome: InteractionOutcome; answer?: string; by: string; channel: InteractionRequest["channel"] }): Promise<void> {
+    await appendEntry(this.root, { type: "interaction-answered", id: randomUUID(), at: this.#stamp(), by: answer.by, requestId: answer.requestId, outcome: answer.outcome, channel: answer.channel, ...(answer.answer === undefined ? {} : { answer: answer.answer }) });
+  }
+
+  /** Every request with its answers, oldest first. */
+  async interactions(): Promise<InteractionState[]> {
+    const states = new Map<string, InteractionState>();
+    for (const entry of await this.entries()) {
+      if (isMessage(entry) || !entry.type.startsWith("interaction-")) continue;
+      const e = entry as InteractionEvent;
+      if (e.type === "interaction-requested") states.set(e.request.id, { request: e.request, answers: [] });
+      else states.get(e.requestId)?.answers.push({ at: e.at, by: e.by, outcome: e.outcome, channel: e.channel, ...(e.answer === undefined ? {} : { answer: e.answer }) });
+    }
+    return [...states.values()];
+  }
+}
+
+export interface InteractionState {
+  request: InteractionRequest;
+  answers: Array<{ at: string; by: string; outcome: InteractionOutcome; channel: InteractionRequest["channel"]; answer?: string }>;
 }
 
 /**

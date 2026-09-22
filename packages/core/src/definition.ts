@@ -9,8 +9,8 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type CapabilityProfile, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
+  CapabilityProfileSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type CapabilityProfile, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
@@ -27,6 +27,7 @@ export interface CheckedDefinition {
   policies: PolicyDefinition[];
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
+  interaction: InteractionPolicy[];
   identity: IdentitySet;
   problems: DefinitionProblem[];
 }
@@ -40,7 +41,7 @@ async function jsonFiles(dir: string): Promise<string[]> {
 }
 
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], identity: await readIdentity(path.join(dir, "identity")), problems: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), problems: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
@@ -92,7 +93,10 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         for (const floor of value.floors ?? []) {
           try { new RegExp(floor.pattern); } catch { problem(`policies/${file}`, `floor pattern "${floor.pattern}" is not a regular expression`); }
         }
-      } else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery or routing policy)`);
+      } else if (isInteractionPolicy(value)) {
+        out.interaction.push(value);
+        if (!value.people.length) problem(`policies/${file}`, "names nobody: no obligation owed to a person can ever be dispositioned");
+      } else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
     } catch (error) {
       problem(`policies/${file}`, (error as Error).message);
     }
@@ -100,6 +104,7 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   if (!out.policies.length) problem("policies/", "no budget policy declared");
   if (!out.recovery.length) problem("policies/", "no recovery policy declared");
   if (!out.routing.length) problem("policies/", "no routing policy declared");
+  if (!out.interaction.length) problem("policies/", "no interaction policy declared: nothing says how long to wait for a person or who may answer");
   for (const p of out.identity.problems) problem("identity/", p);
   return out;
 }

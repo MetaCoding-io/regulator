@@ -23,6 +23,12 @@
  * in the loop resolves one; a consumer does, outside it, and the loop reads
  * the disposition.
  *
+ * The algedonic path (lesson 13): a session that asked a person and got no
+ * answer leaves a blocking interaction obligation; the attempt is recorded as
+ * paused, the unit is held and not routed, and what is owed to a person is
+ * delivered to the outbox — once, and again after the policy's reminder
+ * interval. A person's answer reaches the next attempt as the hint.
+ *
  * The loop is generic: nothing here knows the workload is software; the
  * checks it runs are the ones the workload names.
  *
@@ -39,9 +45,10 @@ import {
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
 import type {
-  AlgedonicSignal, AuditFinding, EvidenceRecord, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy, TechnicalVerdict,
-  UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
+  AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
+  TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
+import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
@@ -75,6 +82,8 @@ export interface RunUnitOptions {
   policyPath: string;
   /** Which messages become obligations, for whom, and what vetoes progression (lesson 11). */
   routing: RoutingPolicy;
+  /** How a person is interrupted, and when what is owed to one is delivered again (lesson 13). */
+  interaction: InteractionPolicy;
   /** The regulator ids the definition declares, so a fixed decision's authority reference can be resolved (lesson 12). */
   regulators?: readonly string[];
   dispatcher: Dispatcher;
@@ -83,6 +92,12 @@ export interface RunUnitOptions {
   ttlMs?: number;
   /** Carried into the dispatch request: the router's hint for this attempt. */
   hint?: string;
+}
+
+/** Route what the log holds, then deliver what is owed to a person: the two steps that turn a record into an obligation someone sees. */
+async function routeAndDeliver(repo: string, ledger: ObligationLedger, routing: RoutingPolicy, interaction: InteractionPolicy, now: () => number): Promise<void> {
+  await routeMessages(ledger, { policy: routing, now });
+  await deliverPending(repo, { policy: interaction, now });
 }
 
 /** The problems the veto raises: one per open blocking obligation on the unit. */
@@ -96,7 +111,7 @@ async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dis
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
   | { status: "closed"; report: ResultReport; sha: string; signals: number }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
@@ -140,8 +155,12 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   let hint = options.hint;
   if (existing && hint === undefined) {
     const lastEnded = (await store.listAttempts(contract.unitId)).at(-1)?.endedAt ?? "";
-    const answered = (await ledger.obligations()).filter((o) => o.unit === contract.unitId && o.concern === "recovery-decision" && o.status === "resolved" && (o.closedAt ?? "") > lastEnded).at(-1);
-    if (answered?.rationale) hint = `Obligation ${answered.id.slice(0, 8)} on this unit (${answered.subject}) was resolved by ${answered.closedBy} as ${answered.disposition}: ${answered.rationale}`;
+    const answered = (await ledger.obligations()).filter((o) => o.unit === contract.unitId && (o.concern === "recovery-decision" || o.concern === "interaction") && o.status === "resolved" && (o.closedAt ?? "") > lastEnded).at(-1);
+    if (answered?.rationale) {
+      hint = answered.concern === "interaction"
+        ? `Your question (${answered.subject}${answered.question ? `: ${answered.question}` : ""}) was answered by ${answered.closedBy} — ${answered.disposition}: ${answered.rationale}${answered.disposition === "rejected" ? ". Do not perform what was refused." : ""}`
+        : `Obligation ${answered.id.slice(0, 8)} on this unit (${answered.subject}) was resolved by ${answered.closedBy} as ${answered.disposition}: ${answered.rationale}`;
+    }
   }
   const contractPath = path.join(options.repo, UNITS_RELATIVE_DIR, contract.unitId, `contract.v${contract.version}.json`);
   let worktree: string;
@@ -173,7 +192,17 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     return { status: "blocked", reason: "dispatch-error", detail };
   }
   // What the session recorded — proposals, findings, coordination signals, intelligence — is routed now, not left in the log.
-  await routeMessages(ledger, { policy: options.routing, now });
+  await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
+
+  // paused (lesson 13): the session asked a person and no answer came. The unit waits on that, whatever else it did.
+  const unanswered = (await ledger.open(contract.unitId)).filter((o) => o.concern === "interaction" && o.blocks);
+  if (unanswered.length) {
+    const first = unanswered[0]!;
+    const detail = `${first.subject}${first.question ? ` — ${first.question}` : ""} (obligation ${first.id.slice(0, 8)}${unanswered.length > 1 ? `, +${unanswered.length - 1}` : ""})`;
+    await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }), endedAt: stamp(), outcome: "paused", detail });
+    await store.setStatus(contract.unitId, "blocked", `paused: awaiting a person — ${detail}`);
+    return { status: "blocked", reason: "paused", detail };
+  }
 
   // close — from the report the unit wrote, never from the domain
   const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
@@ -204,19 +233,19 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     const detail = `${summary} — ${audit.verdict.reasons.join("; ")}`;
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "check-failure", detail });
     await store.setStatus(contract.unitId, "blocked", `audit refused closeout: ${summary}`);
-    await routeMessages(ledger, { policy: options.routing, now });
+    await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, interaction: options.interaction, now });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; routing: RoutingPolicy; now: () => number }): Promise<RunUnitOutcome> {
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
   const { contract, report, now } = options;
   const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
   const signals = await emitReportSignals(options.repo, contract, report, now);
-  await routeMessages(new ObligationLedger(options.repo, now), { policy: options.routing, now });
+  await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
 
   const finished = await finishUnit(exec, { repo: options.repo, unitId: contract.unitId, now });
   if (!finished.result.merged) {
@@ -291,7 +320,7 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
  * missing for an environmental reason can be produced. The attempt history is
  * untouched: a re-audit is not an attempt.
  */
-export async function closeUnit(exec: Exec, options: { repo: string; unitId: string; workload: WorkloadDefinition; routing: RoutingPolicy; now?: () => number }): Promise<RunUnitOutcome> {
+export async function closeUnit(exec: Exec, options: { repo: string; unitId: string; workload: WorkloadDefinition; routing: RoutingPolicy; interaction: InteractionPolicy; now?: () => number }): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
@@ -310,10 +339,10 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
   if (audit.verdict.verdict !== "pass") {
     const detail = summarizeVerdict(audit.verdict);
     await store.setStatus(unit.unitId, "blocked", `audit refused closeout: ${detail}`);
-    await routeMessages(ledger, { policy: options.routing, now });
+    await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, report, routing: options.routing, interaction: options.interaction, now });
 }
 
 const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;
@@ -368,13 +397,15 @@ async function emitReportSignals(repo: string, contract: WorkContract, report: R
  * opens the obligation the unit now waits on, for the consumer the routing
  * policy names, and escalates the S3 ones to it.
  */
-export async function routeUnit(exec: Exec, options: { repo: string; unitId: string; policy: PolicyDefinition; recovery: RecoveryPolicy; routing: RoutingPolicy; now?: () => number }): Promise<RecoveryDecision | undefined> {
+export async function routeUnit(exec: Exec, options: { repo: string; unitId: string; policy: PolicyDefinition; recovery: RecoveryPolicy; routing: RoutingPolicy; interaction: InteractionPolicy; now?: () => number }): Promise<RecoveryDecision | undefined> {
   const now = options.now ?? Date.now;
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
-  await routeMessages(ledger, { policy: options.routing, now });
+  await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
+  // A unit paused on a question is not a failure to route: it waits for a person, and the recovery policy has nothing to say until one answers.
+  if ((await ledger.open(options.unitId)).some((o) => o.concern === "interaction" && o.blocks)) return undefined;
   const decision = await routeBlockedUnit(store, {
     policy: options.recovery, unitId: options.unitId, attemptCeiling: ceilingFor(options.policy, unit.unitType).attempts,
     signals: await readSignals(options.repo), now,
@@ -399,6 +430,7 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
     await store.setStatus(options.unitId, "blocked", `awaiting ${decision.action}: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
   }
   await dispositionByDecision(ledger, decision, options.routing, { cites });
+  await deliverPending(options.repo, { policy: options.interaction, now });
   return decision;
 }
 
@@ -422,7 +454,7 @@ export async function driveUnit(exec: Exec, options: DriveUnitOptions): Promise<
   for (;;) {
     const outcome = await runUnit(exec, { ...options, ...(hint === undefined ? {} : { hint }) });
     if (outcome.status !== "blocked") return { final: outcome, decisions };
-    const decision = await routeUnit(exec, { repo: options.repo, unitId: options.contract.unitId, policy: options.policy, recovery: options.recovery, routing: options.routing, ...(options.now ? { now: options.now } : {}) });
+    const decision = await routeUnit(exec, { repo: options.repo, unitId: options.contract.unitId, policy: options.policy, recovery: options.recovery, routing: options.routing, interaction: options.interaction, ...(options.now ? { now: options.now } : {}) });
     if (!decision) return { final: outcome, decisions };
     decisions.push(decision);
     if (!ATTEMPT_ACTIONS.has(decision.action)) return { final: outcome, decisions };

@@ -14,11 +14,11 @@ import path from "node:path";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import {
   AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, readIdentity, summarizeLedger,
-  type IdentitySet, type MemoryState, type RegistryProblem, type UnitAudit,
+  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type UnitAudit,
 } from "@metacoding/vsm-pi-core";
 import {
-  CapabilityProfileSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  CapabilityProfileSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
@@ -27,9 +27,10 @@ export interface DefinitionView {
   registry: { records: RegulatorRecord[]; problems: RegistryProblem[] };
   workloads: WorkloadDefinition[];
   policies: PolicyDefinition[];
-  /** The recovery policies (lesson 08) and routing policies (lesson 11) the definition declares beside its budget policies. */
+  /** The recovery policies (lesson 08), routing policies (lesson 11) and interaction policies (lesson 13) the definition declares beside its budget policies. */
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
+  interaction: InteractionPolicy[];
   /** Capability profiles, declared as files since lesson 12. */
   profiles: CapabilityProfile[];
   /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
@@ -65,6 +66,8 @@ export interface InstanceView {
   obligations: ObligationState[];
   /** Operational memory (lesson 12): current, expired and retracted facts. */
   memory: MemoryState[];
+  /** What units asked a person and what came back (lesson 13), oldest first. */
+  interactions: InteractionState[];
 }
 
 export interface StatusView {
@@ -101,6 +104,7 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
   const policies: PolicyDefinition[] = [];
   const recovery: RecoveryPolicy[] = [];
   const routing: RoutingPolicy[] = [];
+  const interaction: InteractionPolicy[] = [];
   let policyFiles: string[] = [];
   try {
     policyFiles = (await readdir(path.join(dir, "policies"))).filter((f) => f.endsWith(".json")).sort();
@@ -110,11 +114,12 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
   for (const file of policyFiles) {
     try {
       const value: unknown = JSON.parse(await readFile(path.join(dir, "policies", file), "utf8"));
-      // Three policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
+      // Four policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
       if (isPolicyDefinition(value)) policies.push(value);
       else if (isRecoveryPolicy(value)) recovery.push(value);
       else if (isRoutingPolicy(value)) routing.push(value);
-      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget policy, a recovery policy or a routing policy)`);
+      else if (isInteractionPolicy(value)) interaction.push(value);
+      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
     } catch (error) {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
@@ -150,6 +155,7 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
     policies,
     recovery,
     routing,
+    interaction,
     profiles,
     identity,
     problems,
@@ -178,7 +184,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states() };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions() };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -209,6 +215,10 @@ export function renderStatusText(view: StatusView): string {
     lines.push(`  identity: ${d.identity.invariants.map((i) => i.id).join(", ") || "none"}${d.identity.problems.length ? ` (${d.identity.problems.length} problem(s))` : ""}`);
     for (const policy of d.recovery) lines.push(`  recovery ${policy.name} v${policy.version}: ${policy.rules.length} rule(s), fallback ${policy.fallback.join(" → ")}`);
     for (const policy of d.routing) lines.push(`  routing ${policy.name} v${policy.version}: ${policy.rules.map((r) => `${r.kind}≥${r.minSeverity}→${r.consumer}`).join(", ")}; veto at ${policy.blocksAtOrAbove}`);
+    for (const policy of d.interaction) {
+      lines.push(`  interaction ${policy.name} v${policy.version}: waits ${Object.entries(policy.timeoutsMs).map(([k, ms]) => `${k} ${Math.round(ms / 1000)}s`).join(", ")}; ${policy.attention.blockingPerAttempt} blocking interrupt(s) per attempt; remind after ${Math.round(policy.reminderAfterMs / 60_000)} min`);
+      for (const p of policy.people) lines.push(`    ${p.name}: up to ${p.resolveUpTo}${p.acceptRisk ? ", may accept risk" : ""}${p.actAsS5 ? ", may act as S5" : ""}`);
+    }
     for (const problem of [...d.registry.problems.map((p) => `${p.file}: ${p.message}`), ...d.problems]) lines.push(`  ! ${problem}`);
   }
   if (view.instance) {
@@ -226,7 +236,13 @@ export function renderStatusText(view: StatusView): string {
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);
     const open = i.obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
     lines.push(`  obligations: ${open.length} open of ${i.obligations.length}`);
-    for (const o of open) lines.push(`    ${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto" : "    "}  ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `  Q: ${o.question}` : ""}`);
+    for (const o of open) lines.push(`    ${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto" : "    "}  ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `  Q: ${o.question}` : ""}${o.deliveries.length ? `  delivered ×${o.deliveries.length} (${o.deliveries.at(-1)!.channel})` : o.consumer === "human" ? "  not delivered" : ""}`);
+    const unanswered = i.interactions.filter((x) => !x.answers.some((a) => a.outcome === "answered"));
+    lines.push(`  interactions: ${i.interactions.length} asked, ${unanswered.length} unanswered`);
+    for (const x of i.interactions) {
+      const last = x.answers.at(-1);
+      lines.push(`    ${x.request.kind.padEnd(13)} ${x.request.id.slice(0, 8)}  ${x.request.subject}${x.request.unit ? `  (unit ${x.request.unit}, attempt ${x.request.attempt ?? "?"})` : ""}  via ${x.request.channel}  ${last ? `${last.outcome} by ${last.by}${last.answer ? `: ${last.answer}` : ""}` : "pending"}`);
+    }
     const current = i.memory.filter((m) => m.status === "current");
     lines.push(`  memory: ${current.length} current of ${i.memory.length}`);
     for (const m of current) lines.push(`    ${m.id.slice(0, 8)}  ${m.subject}: ${m.note}  (by ${m.recordedBy}${m.unit ? ` in ${m.unit}` : ""}; review by ${m.reviewBy.slice(0, 10)})`);

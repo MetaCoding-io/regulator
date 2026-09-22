@@ -6,6 +6,16 @@ A gate protects the calls that reach it. This statement lists, for every mechani
 enforced and what it does not cover — the routes around it. A route that is not named here is not known
 to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.
 
+## Algedonic delivery (`reg.algedonic.delivery.v1`)
+
+Enforced at `deliverPending (undelivered → outbox, journaled, ledger.deliver)`, `remindDue (remindable → outbox, reminder)`, `routeAndDeliver in the loop`, `signals route / remind (CLI)` in `src/deliver.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- The outbox is a file; no real channel (mail, chat, a daemon that watches the file) exists, so delivery reaches a person who reads the file. The channel is a property of the deployment, not of this lesson.
+- Reminders run on demand (`regulator remind`) and at the loop's steps; nothing schedules them. A quiet instance reminds nobody until someone runs something.
+- One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
+
 ## Budget guard (`reg.control.budget-guard.v1`)
 
 Enforced at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `src/cp6-budget.ts`; S3, deterministic-gate.
@@ -47,6 +57,16 @@ Not covered:
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
 - The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+
+## Disposition authority (`reg.authority.disposition-authority.v1`)
+
+Enforced at `authorized() before every write that takes --by (checkDispositionAuthority)`, `answer (options check, dispositionForAnswer)` in `src/lab-cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- `--by` is asserted, not authenticated: the check is whether the named person may, not whether the caller is that person. Authentication is the deployment's (an OS user, a signed request) and is out of the lab's scope; the record stays honest about the claim.
+- The grants are three booleans and a severity; an obligation-specific grant (bob may answer questions on units he owns) is not expressible, and the policy is one file for the instance.
+- The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal.
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
@@ -111,6 +131,16 @@ Not covered:
 - Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
+## Interaction contract (ask_human) (`reg.algedonic.interaction-contract.v1`)
+
+Enforced at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout` in `src/cp12-algedonic.ts`; S5, typed-tool.
+
+Not covered:
+
+- The dialog answer is attributed to the OS user of the session (or the `person` option), not to an authenticated identity; in a session run by hand that is the person at the keyboard, which is what the record says.
+- Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).
+- A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible.
+
 ## Operational memory store (`reg.control.memory-store.v1`)
 
 Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `src/cp11-identity.ts`; S3, typed-tool.
@@ -119,7 +149,7 @@ Not covered:
 
 - A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
 - Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.
-- Retraction is trusted by name (`--by`), like every disposition in the lab (docs/DEBT.md row 20).
+- Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated.
 
 ## Model router (`reg.control.model-router.v1`)
 
@@ -138,9 +168,19 @@ Enforced at `runUnit (after the session, after the audit, after the report's sig
 Not covered:
 
 - Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
-- A consumer is a name in the policy (S3, S5, human). Nothing delivers an obligation to a person or reminds them; the read model and the control room expose what is owed, and lesson 13's algedonic channel is the delivery mechanism for the ones that cannot wait.
+- A consumer is a name in the policy (S3, S5, human). What is owed to a person is delivered to the outbox and reminded by `algedonic-delivery` (lesson 13); what is owed to S3 or S5 is exposed by the read model and the control room and delivered to nobody, because S3 is the loop and S5 is a person reading the definition's proposals — a queue for S5 decisions is not built.
 - Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
-- The CLI trusts `--by`: a resolution records who claimed to resolve it. Authority over dispositions (who may accept a risk at what severity) is not checked, and no dialog asks anyone (lesson 13).
+- Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority` (lesson 13); the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
+
+## Pause gate (`reg.algedonic.pause-gate.v1`)
+
+Enforced at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)` in `src/cp12-algedonic.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
+- The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
+- A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays.
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
@@ -179,7 +219,7 @@ Enforced at `propose_policy_change (tool execute)` in `src/cp9-authority.ts`; S5
 
 Not covered:
 
-- A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; nothing delivers the obligation to that person (lesson 13), and the proposal's requestedChange is text a person turns into a file by hand.
+- A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; the proposal's requestedChange is text a person turns into a file by hand. What is owed to S5 is not delivered to the outbox (lesson 13 delivers what is owed to a person): a person reads the read model for it.
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
@@ -190,9 +230,9 @@ Enforced at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)` in
 Not covered:
 
 - Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
-- Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names (lesson 11); nothing in the loop performs them, and a person who resolves the obligation is trusted by name.
+- Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names (lesson 11); nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people (lesson 13) but not authenticated.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
-- Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11); it is exposed by the read model and the control room, not delivered to anyone (lesson 13).
+- Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11), delivered to the outbox and reminded under the interaction policy (lesson 13). The outbox is a file: no channel beyond it exists in the lab.
 
 ## Reintegration guard (`reg.coordination.reintegration.v1`)
 
@@ -220,7 +260,7 @@ Enforced at `identity accept (authorizeWrite s5-authority, readIdentity, git com
 
 Not covered:
 
-- Who may act as S5 is not checked: `--by` is a name (docs/DEBT.md row 20). The record is honest about who claimed the authority; the claim itself is trusted until lesson 13's interaction contracts.
+- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write (lesson 13); the name on `--by` is asserted, not authenticated.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to course/lab/identity/ by hand.
 

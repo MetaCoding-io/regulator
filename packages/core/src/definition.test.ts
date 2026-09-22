@@ -34,9 +34,10 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "workload/sd.json: unit type \"implement\" names check \"lint\", which the host does not run (known: run_tests, run_checks, identity-untouched)",
     "workload/sd.json: unit type \"plan\" runs under profile \"nope\", which is not declared under profiles/",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
-    "policies/odd.json: Invalid policy odd.json (not a budget, recovery or routing policy): payload does not match the closed runtime schema.",
+    "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",
     "policies/routing.json: floor pattern \"(\" is not a regular expression",
     "policies/: no recovery policy declared",
+    "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
   ]);
   assert.deepEqual(checked.identity.invariants.map((i) => i.id), ["INV-001"]);
   assert.equal(checked.profiles.length, 2, "a profile with a naming problem is still loaded; the problem is reported");

@@ -34,6 +34,8 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   report_intelligence: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
   // Lesson 12: appends a fact with provenance and an expiry to the operational memory store. Never identity.
   remember: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  // Lesson 13: interrupts a person. Attention spent cannot be returned, and the obligation it opens is owed.
+  ask_human: { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" },
 };
 
 export function effectOf(toolName: string): ToolEffect | undefined {

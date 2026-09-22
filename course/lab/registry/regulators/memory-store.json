@@ -24,7 +24,7 @@
   "limitations": [
     "A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.",
     "Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.",
-    "Retraction is trusted by name (`--by`), like every disposition in the lab (docs/DEBT.md row 20)."
+    "Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "introducedIn": "M12"

@@ -248,8 +248,9 @@ export const VsmMessageSchema = Type.Union([
 export type VsmMessage = Static<typeof VsmMessageSchema>;
 
 import { ObligationEventSchema } from "./obligations.js";
-/** One line of the regulatory log (lesson 11): a typed message, or an event about its routing. */
-export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema]);
+import { InteractionEventSchema } from "./interaction.js";
+/** One line of the regulatory log (lesson 11): a typed message, an event about its routing, or (lesson 13) an interaction with a person. */
+export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema, InteractionEventSchema]);
 export type RegulatoryEntry = Static<typeof RegulatoryEntrySchema>;
 
 /**
@@ -369,3 +370,8 @@ export {
   type Concern, type Consumer, type Disposition, type Obligation, type ObligationEvent, type ObligationState, type ObligationStatus, type RoutableKind,
   type RoutingPolicy, type RoutingRule, type WaitingAction,
 } from "./obligations.js";
+export {
+  CONTINUES_WITHOUT_ANSWER, InteractionChannelSchema, InteractionEventSchema, InteractionKindSchema, InteractionOutcomeSchema, InteractionPolicySchema, InteractionRequestSchema, PersonSchema,
+  isInteractionEvent, isInteractionPolicy,
+  type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
+} from "./interaction.js";

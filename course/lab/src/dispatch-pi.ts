@@ -38,7 +38,7 @@ export async function definitionSettings(file: string = SETTINGS_PATH): Promise<
   if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`settings ${file} must be an object`);
   return SettingsManager.inMemory(value as Parameters<typeof SettingsManager.inMemory>[0]);
 }
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js", "cp10-intelligence.js", "cp11-identity.js"].map((f) => path.join(dist, f));
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js", "cp10-intelligence.js", "cp11-identity.js", "cp12-algedonic.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */
