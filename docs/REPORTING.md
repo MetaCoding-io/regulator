@@ -154,7 +154,7 @@ A stored event has this shape (content abbreviated):
     "consequence": "...", "impact": "high", "evidence": []
   },
   "authority": { "id": "owner-designated-s1", "capabilities": { "reportOperationalSignal": true } },
-  "provenance": { "host": "@earendil-works/pi-coding-agent@0.85.1", "sessionId": "<Pi session ID>" },
+  "provenance": { "host": "@earendil-works/pi-coding-agent@0.87.0", "sessionId": "<Pi session ID>" },
   "tool": { "name": "vsm_report_uncertainty", "callId": "<Pi tool call ID>" }
 }
 ```

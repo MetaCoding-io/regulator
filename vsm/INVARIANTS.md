@@ -18,9 +18,9 @@ An S1 executor's claim that work is correct cannot, by itself, satisfy S3* audit
 
 If a rule can be represented reliably as a TypeScript invariant or deterministic runtime check, the control plane should not rely on an LLM prompt as the sole enforcement mechanism.
 
-## INV-005 — GSD remains workflow authority
+## INV-005 — Execution state and regulatory state stay separate
 
-VSM-Pi must not create a second competing source of truth for GSD task/slice/milestone lifecycle state.
+The orchestrator is the only authority over execution state (units, attempts, leases, budgets). Regulators are the only authority over regulatory state (obligations, evidence, findings, escalations). Neither is inferred from the other, and neither is inferred from domain output.
 
 ## INV-006 — Channel type carries control semantics
 

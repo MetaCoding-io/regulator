@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repository experiments with applying Stafford Beer's Viable System Model (VSM) to agentic software development using Pi and GSD.
+This repository builds **VSM-Pi**: a coding-agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane, applying Stafford Beer's Viable System Model (VSM) as a control architecture. VSM-Pi provides its own orchestrator. The course under `course/` builds it lesson by lesson; the course lab (`regulator`) is the reference build, and its checkpoints promote into `packages/` as they stabilize.
 
 The project is intentionally **not** a collection of themed chatbot personas. Treat S1–S5 as control-system functions, authority boundaries, channels, and feedback loops.
 
@@ -20,33 +20,27 @@ Prompt engineering is valuable, but do not solve a mechanically enforceable rule
 
 ## Architectural boundaries
 
-- **Do not fork or modify GSD** unless an issue explicitly requires an upstream/kernel change.
-- **Do not create a second source of truth for GSD workflow state.** GSD owns its lifecycle, attempts, task/slice/milestone state, retries, verification, and recovery.
+- **The orchestrator owns execution state; regulators own regulatory state; neither infers the other.** Execution state (units, attempts, leases, budgets consumed) lives in the orchestrator's store. Regulatory state (obligations, evidence, findings, escalations) lives in the append-only event store. Domain output (the code, the files) lives in the repository. Nothing reads its own progress off the domain.
+- **The control plane is declared, not assembled.** An instance runs from a *definition*: the regulator registry, capability profiles, policies, and a workload. The definition is versioned and checked (`regulator check`); the orchestrator is generic over workloads.
+- **The orchestrator stays small.** It is the S3 loop — contract → dispatch → verify → route → close — with leases and budgets. Workload-specific behaviour (the software-development autoloop, first) is declared in a workload definition, not coded into the loop.
 - **S5 is not an agent.** Version-controlled system identity, architecture, invariants, domain model, and policy are authoritative. Agents may interpret them and propose changes.
 - **Operational code must not directly mutate S5 artifacts.** Use an explicit S5-authority workflow or a typed proposal path.
-- **S3* is not merely a reviewer prompt.** Prefer independent host-owned evidence, deterministic checks, and provenance. LLM review is an additional judgment layer.
-- **S2 should mostly be mechanisms**, including tool contracts, isolation, scheduling, coordination, locks/leases, and anti-oscillation behavior—not a coordinator roleplay persona.
-- **S1 profiles are operational capability profiles**, not personalities. Specialize by responsibility, tools, constraints, and evidence requirements.
-- **S4 is environment/future-facing.** Keep environmental intelligence distinct from S3 operational control and S5 policy.
+- **S3\* is not merely a reviewer prompt.** Prefer independent host-owned evidence, deterministic checks, and provenance. LLM review is an additional judgment layer.
+- **S2 should mostly be mechanisms**, including tool contracts, isolation, scheduling, coordination, locks/leases, reintegration, and anti-oscillation behavior—not a coordinator roleplay persona.
+- **S1 profiles are operational capability profiles**, not personalities. Specialize by responsibility, tools, constraints, and evidence requirements. A profile is a grant over declared tool *effects*; read-only means read-only by effect, not by tool name.
+- **S4 is environment/future-facing.** Keep environmental intelligence distinct from S3 operational control and S5 policy. Intelligence can raise an obligation; it never replans on its own.
 - **Typed channels carry control semantics.** A signal is not an audit; an audit is not a policy decision; a proposal does not mutate policy; an algedonic signal is exceptional escalation.
+- **Every regulator has a registry record.** Purpose, failure absorbed, mechanism level, implementation, tests, limitations, owner, review date. A gate without a stated limitation does not pass `regulator check`.
 
-## Current M0 goal
+## Current goal
 
-Prove that a small TypeScript control plane can augment Pi/GSD without replacing GSD's orchestration kernel.
+Build `regulator` — VSM-Pi's reference build — through the course, one checkpoint per lesson, promoting stable pieces into `packages/`.
 
-M0 should establish:
+Exists today: typed VSM protocol and runtime schemas; protected S5 write paths; a loadable Pi extension; typed policy-proposal, audit-finding and uncertainty tools; a SQLite regulatory event store (all in `packages/`); and checkpoints 0–3 in `course/lab` (event log; schema-validated trace with the first gate and the registry seed; typed tools with effect contracts; capability profiles).
 
-- typed VSM protocol and runtime schemas;
-- protected S5 authority boundaries;
-- a loadable Pi extension;
-- typed policy-proposal and audit-finding tools;
-- runtime trace/provenance;
-- a GSD-aware adapter;
-- one deterministic S3* architecture gate;
-- one advisory LLM architecture-review path;
-- one tiny longitudinal drift fixture.
+Next: coordination (leases, reintegration, anti-oscillation), then the orchestrator (work contracts, budgets, the recovery lattice), then independent audit.
 
-RDF/SHACL, recursive VSM, broad S4 integrations, autonomous S5 mutation, and production-grade benchmarks are deliberately deferred.
+Deliberately deferred: RDF/SHACL, full VSM recursion, broad S4 integrations, autonomous S5 mutation, production-grade benchmarks. **GSD-Pi is comparison material in the course, not a dependency; there is no GSD adapter.**
 
 ## Repository conventions
 
@@ -54,23 +48,23 @@ RDF/SHACL, recursive VSM, broad S4 integrations, autonomous S5 mutation, and pro
 - Keep packages small and dependency direction explicit.
 - Put shared protocol/schema definitions in `packages/protocol`.
 - Put authority/routing/policy mechanisms in `packages/core`.
-- Generic Pi integration belongs in `packages/pi-extension`.
-- GSD-specific integration belongs in `packages/gsd-extension`.
-- Deterministic S3* checks belong in `packages/checks`.
+- Pi integration belongs in `packages/pi-extension`.
+- Deterministic S3\* checks belong in `packages/checks`.
 - User-facing CLI behavior belongs in `packages/cli`.
+- `course/lab` is the reference build. A checkpoint's Pi-free modules move to `packages/protocol` or `packages/core` once two lessons depend on them, and the lab imports them from there; the lab never re-implements what `packages/` already ships.
 - Judgment-oriented agent prompts belong under `agents/` and should not contain authority that the runtime can enforce mechanically.
 - Committed S5 artifacts belong under `vsm/`.
+- Regulator registry records belong beside the code they describe; `regulator check` and the generated `REGULATORS.md` run under `pnpm check`.
 - Ephemeral run evidence/traces must not become a competing project source of truth.
 
-## Pi/GSD integration rules
+## Pi integration rules
 
 - Use Pi's TypeScript extension API and lifecycle events directly where possible.
 - Prefer typed event narrowing (for example `isToolCallEventType`) over stringly-typed inspection.
-- Use registered tools with runtime schemas for structured model-to-runtime communication.
+- Use registered tools with runtime schemas for structured model-to-runtime communication. Every tool declares its effect (filesystem, execution, network, side effects).
 - Use tool-call interception or active-tool restrictions for enforcement; do not rely only on instruction text.
-- Treat GSD's state machine as authoritative during auto mode.
-- Do not trigger ad-hoc autonomous turns inside GSD auto mode unless the integration is explicitly designed around GSD's lifecycle and recovery semantics.
-- When a finding affects progression, route it through GSD's supported retry/pause/remediation mechanisms rather than inventing a parallel loop.
+- Pin the Pi version. Treat an upgrade as a change with evidence: the course's feature matrix is the checklist, and both CI Node versions must pass.
+- When a finding affects progression, route it through the orchestrator's recovery lattice rather than inventing a parallel loop.
 
 ## Testing and evidence
 
@@ -85,7 +79,7 @@ At minimum:
 
 Do not claim a check passed without command output or equivalent host-owned evidence.
 
-For extension work, test registration and handlers independently where possible using Pi's documented extension testing patterns and Node's built-in test runner.
+For extension work, test registration and handlers independently where possible using Pi's documented extension testing patterns and Node's built-in test runner. Test without a live model wherever the behavior is mechanical; live-model runs are for drills and evals.
 
 ## Change discipline
 
@@ -101,7 +95,7 @@ Confirm:
 
 1. The implementation satisfies the issue acceptance criteria.
 2. No new prompt-only enforcement was introduced where a typed/mechanical mechanism was reasonable.
-3. GSD remains the workflow authority.
+3. The orchestrator remains the only execution authority; regulators do not schedule.
 4. S5 mutation boundaries remain explicit.
 5. Tests/typechecks were run and results are reported.
 6. The final response lists files changed and exact verification commands.

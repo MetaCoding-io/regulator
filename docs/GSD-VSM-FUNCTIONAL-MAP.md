@@ -1,5 +1,12 @@
 # GSD → VSM Functional Projection
 
+> **Status (2026-09-22): comparison material.** This document was written when VSM-Pi
+> was scoped as a regulation layer on GSD-Pi. VSM-Pi now provides its own orchestrator
+> (see [DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) §0), so nothing here is implemented
+> against GSD. It remains useful as a worked example of projecting VSM functions onto a
+> production harness's units, and the capability-derivation and separation-of-duty
+> rules in §4–§6 carry over unchanged to VSM-Pi's own units (course lesson 04).
+
 ## Status
 
 Design document. This mapping is intentionally **descriptive and provisional** until the GSD-aware adapter in issue #5 is implemented against GSD's supported extension/context API.

@@ -1,5 +1,11 @@
 # Regulatory State and Routing
 
+> **Status (2026-09-22): design record.** Written while VSM-Pi was scoped as a regulation
+> layer on GSD-Pi. VSM-Pi now provides its own orchestrator
+> ([DESIGN-ROADMAP.md](DESIGN-ROADMAP.md) §0); where this document says "GSD unit",
+> "GSD remains the scheduler", or "GSD owns execution state", read "the orchestrator".
+> The mechanisms described are unchanged and are built through the course.
+
 ## Status
 
 Design document. This defines the durable regulatory-memory model that sits between typed VSM messages and GSD workflow progression.

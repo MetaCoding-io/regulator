@@ -1,0 +1,30 @@
+{
+  "id": "reg.control.profile-write-grant.v1",
+  "name": "Profile write grant",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools.",
+  "absorbs": {
+    "failureClass": "ungranted-capability-use",
+    "description": "Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp3-profiles.ts",
+    "enforcementPoints": ["session_start", "tool_call"]
+  },
+  "authority": {
+    "may": ["set the active tool set when a profile is applied", "block a write or edit outside the profile's writable paths"],
+    "mayNot": ["select a profile without a user command or CLI flag", "block shell commands", "grant a tool the host does not have"]
+  },
+  "evidence": {
+    "tests": ["src/cp3-profiles.test.ts"]
+  },
+  "limitations": [
+    "Positive grant covers write and edit only; the implement profile grants bash, which is not path-gated.",
+    "Read-only means declared read-only effects (effects.ts); a tool with an undeclared effect is refused from read-only profiles, not audited.",
+    "Lexical path check only, as for the vendor write gate."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-21", "reviewBy": "2026-12-01" },
+  "introducedIn": "M04"
+}

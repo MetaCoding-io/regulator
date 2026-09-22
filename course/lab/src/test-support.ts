@@ -1,0 +1,86 @@
+/** Shared helpers for the lab's headless tests. Not part of any checkpoint. */
+import { execFile } from "node:child_process";
+import { cp, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import type { TestContext } from "node:test";
+import type { ExecOptions, ExecResult, ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
+
+export type Handler = (event: unknown, ctx: unknown) => unknown;
+
+export interface MockPi {
+  pi: ExtensionAPI;
+  handlers: Map<string, Handler>;
+  tools: Map<string, ToolDefinition>;
+  commands: Map<string, { handler: (args: string, ctx: unknown) => unknown }>;
+  flags: Map<string, boolean | string | undefined>;
+  activeTools: string[][];
+  thinkingLevels: string[];
+}
+
+/** A `pi` that records registrations and runs `exec` for real. No session, no model. */
+export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash", "grep", "find", "ls"]): MockPi {
+  const state: MockPi = {
+    pi: undefined as unknown as ExtensionAPI,
+    handlers: new Map(),
+    tools: new Map(),
+    commands: new Map(),
+    flags: new Map(),
+    activeTools: [],
+    thinkingLevels: [],
+  };
+  state.pi = {
+    on: (name: string, handler: Handler) => state.handlers.set(name, handler),
+    registerTool: (definition: ToolDefinition) => state.tools.set(definition.name, definition),
+    registerCommand: (name: string, options: { handler: (args: string, ctx: unknown) => unknown }) => state.commands.set(name, options),
+    // A value set before registration stands in for a CLI-provided flag; the default fills the gap.
+    registerFlag: (name: string, options: { default?: boolean | string }) => { if (!state.flags.has(name)) state.flags.set(name, options.default); },
+    getFlag: (name: string) => state.flags.get(name),
+    getAllTools: () => [...allToolNames, ...state.tools.keys()].map((name) => ({ name })),
+    setActiveTools: (names: string[]) => state.activeTools.push(names),
+    setThinkingLevel: (level: string) => state.thinkingLevels.push(level),
+    exec: realExec,
+  } as unknown as ExtensionAPI;
+  return state;
+}
+
+export function realExec(command: string, args: string[], options?: ExecOptions): Promise<ExecResult> {
+  // The lab tools spawn `node --test`. Under the test runner, children inherit
+  // NODE_TEST_CONTEXT and refuse to run "recursively"; production never sets it.
+  const env = { ...process.env };
+  delete env.NODE_TEST_CONTEXT;
+  return new Promise((resolve) => {
+    const child = execFile(command, args, { cwd: options?.cwd, timeout: options?.timeout, env }, (error, stdout, stderr) => {
+      const code = error && typeof (error as { code?: unknown }).code === "number" ? ((error as { code: number }).code) : error ? 127 : 0;
+      resolve({ stdout: String(stdout), stderr: String(stderr), code, killed: Boolean(child.killed) });
+    });
+  });
+}
+
+export function ctxFor(cwd: string) {
+  const notices: { message: string; level: string }[] = [];
+  const statuses: Record<string, string> = {};
+  return {
+    ctx: { cwd, ui: { notify: (message: string, level: string) => notices.push({ message, level }), setStatus: (key: string, value: string) => { statuses[key] = value; } } },
+    notices,
+    statuses,
+  };
+}
+
+export const FIXTURE_DIR = fileURLToPath(new URL("../fixture/", import.meta.url));
+
+/** A throwaway copy of the fixture project, optionally as a git repo with one commit. */
+export async function fixtureCopy(t: TestContext, { git = false } = {}): Promise<string> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-fixture-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await cp(FIXTURE_DIR, dir, { recursive: true });
+  await rm(path.join(dir, ".regulator"), { recursive: true, force: true });
+  if (git) {
+    const run = (...args: string[]) => realExec("git", args, { cwd: dir });
+    await run("init", "--quiet");
+    await run("-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false", "add", ".");
+    await run("-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "fixture");
+  }
+  return dir;
+}
