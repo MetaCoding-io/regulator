@@ -49,7 +49,7 @@ test("default Pi registers three closed-schema tools but grants no reporting aut
     assert.doesNotThrow(() => assertValid(tool.parameters, examples[index].payload, "provider schema"));
     await assert.rejects(host.execute(name, examples[index].payload), /authority denied/);
   }
-  assert.equal(existsSync(path.join(cwd, ".gsd")), false);
+  assert.equal(existsSync(path.join(cwd, ".regulator")), false);
 });
 
 test("all successful tool calls persist one event and return replayable receipts without S5 writes", async (t) => {
@@ -120,7 +120,7 @@ test("execute revalidates closed payloads even if Pi validation is bypassed or a
   for (const reportedSeverity of ["blocking", "critical"]) {
     await assert.rejects(host.execute(names[1], { ...examples[1].payload, reportedSeverity, evidence: [] }), /require evidence/);
   }
-  assert.equal(existsSync(path.join(cwd, ".gsd")), false);
+  assert.equal(existsSync(path.join(cwd, ".regulator")), false);
 });
 
 test("persistence failures never produce a success receipt or a partial row", async (t) => {
@@ -139,7 +139,7 @@ test("persistence failures never produce a success receipt or a partial row", as
   assertValid(RegulatoryReceiptSchema, result.details, "receipt after recovery");
   assert.equal(result.details.sequence, 1);
   const failedRoot = await project(t);
-  await writeFile(path.join(failedRoot, ".gsd"), "not a directory");
+  await writeFile(path.join(failedRoot, ".regulator"), "not a directory");
   const failedHost = harness(failedRoot, () => ({ authority: examples[0].authority, sourceRevision: "rev" }));
   await assert.rejects(failedHost.execute(names[0], examples[0].payload));
 });
@@ -148,7 +148,7 @@ test("aborted calls and non-Git provenance fail safely without inventing metadat
   const cwd = await project(t);
   const host = harness(cwd, () => ({ authority: examples[2].authority }));
   await assert.rejects(host.execute(names[2], examples[2].payload, "aborted", AbortSignal.abort()), /abort/i);
-  assert.equal(existsSync(path.join(cwd, ".gsd")), false);
+  assert.equal(existsSync(path.join(cwd, ".regulator")), false);
   await host.execute(names[2], examples[2].payload);
   const store = new RegulatoryEventStore(cwd);
   assert.equal(store.readAll()[0]?.event.provenance.sourceRevision, undefined);
@@ -170,7 +170,7 @@ test("canonical runtime root is separate from execution cwd and its Git provenan
   const runtimeRoot = await project(t);
   const host = harness(cwd, () => ({ authority: examples[1].authority, runtimeRoot }));
   await host.execute(names[1], examples[1].payload);
-  assert.equal(existsSync(path.join(cwd, ".gsd")), false);
+  assert.equal(existsSync(path.join(cwd, ".regulator")), false);
   assert.equal(existsSync(path.join(runtimeRoot, VSM_DATABASE_RELATIVE_PATH)), true);
   const store = new RegulatoryEventStore(runtimeRoot);
   const event = store.readAll()[0]!.event;

@@ -134,7 +134,7 @@ separate enforcement.
 Three content-only tools record policy proposals, independent audit findings,
 and operational uncertainty signals. A trusted host supplies reporting grants;
 the default context is unprivileged. Successful calls append to the separate
-`.gsd/vsm-runtime/vsm.db` SQLite event store and return committed event receipts.
+`.regulator/events.db` SQLite event store and return committed event receipts.
 The store never opens `.gsd/gsd.db` or mutates S5 artifacts.
 
 Run `pnpm smoke:reporting` for model-free examples using the real Pi SDK and a

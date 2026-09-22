@@ -191,16 +191,16 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   r = await regulator(repo, "review");
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /reg\.audit\.behaviour-check\.v1 {2}ablation check:export-signature {2}retire when: Never as a mechanism/);
-  assert.match(r.stdout, /\n36 record\(s\)\n$/);
+  assert.match(r.stdout, /\n42 record\(s\)\n$/);
   r = await regulator(repo, "review", "--due");
   assert.match(r.stdout, /^0 record\(s\) overdue or due within 0 day\(s\)\n$/, "nothing is overdue at the lesson's date");
   r = await regulator(repo, "review", "--due", "--within", "3650");
-  assert.match(r.stdout, /36 record\(s\) overdue or due within 3650 day\(s\)/);
+  assert.match(r.stdout, /42 record\(s\) overdue or due within 3650 day\(s\)/);
 
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 2 of 36 regulators\n/);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 3 of 42 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -212,4 +212,78 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "nope");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /no scripted behaviour "nope"/);
+});
+
+test("operating from the outside (lesson 15): `init` installs the definition into a repository, `doctor` is the CI entry point and fails on an overdue review date, `watch --once` forwards the outbox to a channel command, and `identity promote` is the release path into the definition's seed", async (t) => {
+  const { mkdtemp, rm, mkdir, readdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-second-repo-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(path.join(dir, "lib"));
+  await writeFile(path.join(dir, "lib", "a.js"), "export const a = 1;\n");
+  await writeFile(path.join(dir, "package.json"), JSON.stringify({ name: "second", private: true, type: "module" }));
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) await gitExec("git", args, { cwd: dir });
+  let r = await regulator(dir, "doctor");
+  assert.equal(r.code, 0, "no manifest yet: only the definition checks run, and the definition is fine");
+  assert.doesNotMatch(r.stdout, /manifest/);
+  r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(42 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  r = await regulator(dir, "init");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is already an instance/);
+  r = await regulator(dir, "doctor");
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^ok {6} node/m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 42 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
+  assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
+  assert.match(r.stdout, /\n0 problem\(s\)\n$/);
+  r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");
+  assert.equal(r.code, 1);
+  const report = JSON.parse(r.stdout) as { checks: Array<{ name: string; ok: boolean; detail: string }>; problems: number };
+  assert.deepEqual(report.checks.filter((c) => !c.ok).map((c) => c.name), ["registry", "reviews"], "an overdue review date is a problem for the registry check and the review check");
+  assert.equal(report.problems, 2);
+
+  // The watcher forwards to whatever command the deployment names; here, a script that appends to a file.
+  const ledger = new ObligationLedger(dir);
+  await ledger.openObligation({ subject: "clarify: x", unit: "u1", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true, openedBy: "S3" });
+  const channel = path.join(dir, "channel.log");
+  r = await regulator(dir, "watch", "--once", "--exec", process.execPath, "-e", `require("fs").appendFileSync(${JSON.stringify(channel)}, process.argv[1] + "\\n")`);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /delivered 1, reminded 0, forwarded 1\n$/);
+  assert.match(await readFile(channel, "utf8"), /^deliver:[0-9a-f-]+:0 .* u1 blocking veto recovery-decision on u1: clarify: x/);
+  r = await regulator(dir, "watch", "--once", "--exec", process.execPath, "-e", "process.exit(3)");
+  assert.equal(r.code, 0, "nothing new to forward");
+  assert.match(r.stdout, /forwarded 0\n$/);
+
+  // The release path: the instance's identity file into a definition's seed, committed there under S5 authority.
+  const definition = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(definition, { recursive: true, force: true }));
+  const { cp } = await import("node:fs/promises");
+  await cp(path.join(LAB_ROOT, "identity"), path.join(definition, "identity"), { recursive: true });
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "seed"]]) await gitExec("git", args, { cwd: definition });
+  r = await regulator(dir, "identity", "promote", "GLOSSARY.md", "--by", "alice", "--rationale", "x", "--definition", definition);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /identical to the definition's seed; nothing to promote/);
+  await writeFile(path.join(dir, "regulator/identity/GLOSSARY.md"), `${await readFile(path.join(dir, "regulator/identity/GLOSSARY.md"), "utf8")}- sprint (say unit)\n`);
+  await gitExec("git", ["commit", "-qam", "S5: accept a glossary change (simulated)"], { cwd: dir });
+  r = await regulator(dir, "identity", "promote", "GLOSSARY.md", "--by", "bob", "--rationale", "x", "--definition", definition);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await regulator(dir, "identity", "promote", "INVARIANTS.md", "--by", "alice", "--rationale", "x", "--definition", definition);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /identical to the definition's seed/);
+  await writeFile(path.join(dir, "regulator/identity/INVARIANTS.md"), "# no invariants\n");
+  await gitExec("git", ["commit", "-qam", "break"], { cwd: dir });
+  r = await regulator(dir, "identity", "promote", "INVARIANTS.md", "--by", "alice", "--rationale", "x", "--definition", definition);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /would leave the definition's identity invalid \(INVARIANTS\.md declares no invariant/);
+  assert.match(await readFile(path.join(definition, "identity", "INVARIANTS.md"), "utf8"), /INV-001/, "the seed is untouched by a refused promotion");
+  assert.deepEqual((await readdir(path.join(definition, "identity"))).sort(), ["BOUNDARIES.md", "GLOSSARY.md", "IDENTITY.md", "INVARIANTS.md"]);
+  r = await regulator(dir, "identity", "promote", "GLOSSARY.md", "--by", "alice", "--rationale", "the instance learned a word", "--definition", definition);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^GLOSSARY\.md promoted by alice \(S5\): the definition's seed at .* now carries this instance's file, committed as [0-9a-f]{7}; every instance initialized from now on starts from it\n$/);
+  assert.match(await readFile(path.join(definition, "identity", "GLOSSARY.md"), "utf8"), /- sprint \(say unit\)\n$/);
+  assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote GLOSSARY\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned a word/);
+  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
 });

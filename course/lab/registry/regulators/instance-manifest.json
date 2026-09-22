@@ -1,0 +1,33 @@
+{
+  "id": "reg.identity.instance-manifest.v1",
+  "name": "Instance manifest (regulator init)",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Install the definition into a repository as a declaration. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity, ignores `.regulator/`, records canaries from a committed `.env`, commits the identity on the base branch, and writes `.regulator/instance.json`: which definition, at which harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.",
+  "absorbs": {
+    "failureClass": "layout-assumed",
+    "description": "Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/instance.ts",
+    "enforcementPoints": ["initInstance (refusals; identity seed; manifest written and validated; commit)", "readManifest (schema-validated)", "cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)", "auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)"]
+  },
+  "channels": { "consumes": ["a git repository", "the definition (registry, identity seed, package pin)", "a person's declaration"], "emits": [".regulator/instance.json", "a commit on the base branch (identity, .gitignore)", ".regulator/canaries"] },
+  "scope": { "subjects": ["identity", "execution"], "resources": [".regulator/instance.json", "regulator/identity/", ".gitignore"] },
+  "cost": { "description": "One commit at init; one file read per session start and per closeout." },
+  "authority": {
+    "may": ["seed the identity and commit it", "record what a person declared about the layout", "refuse an init the definition or the tree does not allow"],
+    "mayNot": ["create a repository", "re-init an instance (an upgrade is a person's, per OPERATING.md)", "read project settings, context files or extensions", "widen a read-only profile"]
+  },
+  "evidence": { "tests": ["src/instance.test.ts", "src/lab-cli.test.ts"] },
+  "limitations": [
+    "The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.",
+    "The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.",
+    "Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8)."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is every instance before lesson 15." },
+  "retirement": { "condition": "Never while the harness installs into repositories it did not create; the manifest is how it knows what it was told." },
+  "introducedIn": "M15"
+}

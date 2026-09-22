@@ -14,14 +14,19 @@ test("the committed registry passes check: every record is well-formed, implemen
   assert.deepEqual(registry.records.map((r) => r.id).sort(), [
     "reg.algedonic.delivery.v1",
     "reg.algedonic.interaction-contract.v1",
+    "reg.algedonic.outbox-watcher.v1",
     "reg.algedonic.pause-gate.v1",
     "reg.assurance.eval-harness.v1",
     "reg.assurance.span-projection.v1",
     "reg.audit.behaviour-check.v1",
     "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",
+    "reg.audit.doctor.v1",
+    "reg.audit.glossary-lint.v1",
     "reg.audit.identity-untouched-check.v1",
+    "reg.audit.post-merge-check.v1",
     "reg.authority.disposition-authority.v1",
+    "reg.authority.identity-promotion.v1",
     "reg.authority.identity-write-gate.v1",
     "reg.authority.project-trust-rule.v1",
     "reg.authority.proposal-intake.v1",
@@ -46,9 +51,18 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.coordination.unit-lease.v1",
     "reg.identity.definition-check.v1",
     "reg.identity.identity-context.v1",
+    "reg.identity.instance-manifest.v1",
     "reg.identity.regulator-lifecycle.v1",
     "reg.intelligence.intelligence-intake.v1",
   ]);
+});
+
+test("an overdue review date fails the registry check (lesson 15): every record carries one, and CI reads it", async () => {
+  const fine = await checkRegistry(registryDir, labRoot, { today: "2026-09-22" });
+  assert.deepEqual(fine.problems, []);
+  const late = await checkRegistry(registryDir, labRoot, { today: "2027-01-01" });
+  assert.equal(late.problems.length, late.records.length, "every active record is overdue by then");
+  assert.match(late.problems[0]!.message, /^review overdue since 2026-12-01: review the record, then move ownership\.reviewBy or retire it$/);
 });
 
 test("the committed definition passes the definition check: profiles, workload, policies and identity validate and resolve", async () => {
@@ -59,7 +73,7 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
   assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);
-  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift", 4, 6]], "the drift suite is part of the declaration");
+  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift", 5, 6]], "the drift suite is part of the declaration");
   assert.deepEqual(definition.reports.map((r) => r.fingerprint.dispatcher).sort(), ["scripted:drifter", "scripted:reference", "scripted:sloppy"]);
 });
 

@@ -770,7 +770,7 @@ Did the planned feedback loop actually close?
 Use the dedicated VSM-Pi SQLite store introduced by the regulatory-state layer, for example:
 
 ```text
-.gsd/vsm-runtime/vsm.db
+.regulator/events.db
 ```
 
 The contract store is regulatory/control metadata, not GSD workflow truth.

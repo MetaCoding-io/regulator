@@ -40,9 +40,10 @@ For each arm, after all six units:
   evidence), the test suite as the only closeout check, no identity rendered, no memory
   tool.
 - **Treatment**: checkpoints 2–12 with the full check list — `run_checks`, `run_tests`,
-  `identity-untouched`, `export-signature`.
-- **Ablation arms** (lesson 14): the treatment minus one check each — `no-identity-check`
-  and `no-behaviour-check` — so a regulator's contribution is its own row.
+  `identity-untouched`, `export-signature` and, since lesson 15, `glossary-lint`.
+- **Ablation arms** (lessons 14 and 15): the treatment minus one check each —
+  `no-identity-check`, `no-behaviour-check` and `no-glossary-lint` — so a regulator's
+  contribution is its own row.
 
 The committed reports under `evals/reports/` ran the suite with three scripted
 learner-style units (reference, drifter, sloppy) and say so in their fingerprint; a live

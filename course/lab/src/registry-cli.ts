@@ -1,8 +1,8 @@
 /**
  * `regulator check` and `regulator docs` for the lab's definition.
  *
- *   node dist/registry-cli.js check          validate the registry records and the rest of the definition
- *                                            (profiles, workload, policies, identity; lesson 12), exit 1 on problems
+ *   node dist/registry-cli.js check [--today <date>]   validate the registry records and the rest of the definition (profiles, workload,
+ *                                            policies, identity, evals; lesson 12), exit 1 on problems — an overdue review date is one (lesson 15)
  *   node dist/registry-cli.js docs [--write]  render REGULATORS.md and BOUNDARY.md (to stdout, or in place)
  */
 import { readFile, writeFile } from "node:fs/promises";
@@ -16,7 +16,9 @@ const docsPath = path.join(registryDir, "REGULATORS.md");
 const boundaryPath = path.join(labRoot, "BOUNDARY.md");
 
 const [command, ...flags] = process.argv.slice(2);
-const registry = await checkRegistry(registryDir, labRoot);
+const todayAt = flags.indexOf("--today");
+const today = todayAt >= 0 && flags[todayAt + 1] ? flags[todayAt + 1]! : new Date().toISOString().slice(0, 10);
+const registry = await checkRegistry(registryDir, labRoot, { today });
 
 if (command === "check") {
   for (const problem of registry.problems) console.error(`✖ ${problem.file}: ${problem.message}`);

@@ -7,7 +7,7 @@
  * Delivery is not a disposition: the obligation stays open until a person
  * answers.
  */
-import { appendFile, mkdir } from "node:fs/promises";
+import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { EffectJournal, ObligationLedger, remindable, undelivered } from "@metacoding/vsm-pi-core";
 import type { InteractionPolicy, ObligationState } from "@metacoding/vsm-pi-protocol";
@@ -65,4 +65,76 @@ export async function remindDue(repo: string, options: DeliverOptions): Promise<
     if (await deliverOne(ledger, journal, outbox, o, reminder, now)) delivered.push({ obligation: o, reminder });
   }
   return delivered;
+}
+
+export interface WatchOptions extends DeliverOptions {
+  /** A command run once per new outbox line, with the line as its last argument: the channel is the deployment's. */
+  exec?: readonly string[];
+  /** The process runner for `exec`. */
+  run?: (command: string, args: string[]) => Promise<{ code: number; stderr: string }>;
+  intervalMs?: number;
+  /** One tick, then return — for CI and tests. */
+  once?: boolean;
+  onTick?: (tick: WatchTick) => void;
+  /** A signal that ends the loop. */
+  signal?: AbortSignal;
+}
+
+export interface WatchTick {
+  at: string;
+  delivered: number;
+  reminded: number;
+  /** New outbox lines handed to the channel this tick. */
+  forwarded: number;
+  failed: number;
+}
+
+const CURSOR_RELATIVE_PATH = path.join(".regulator", "outbox.cursor");
+
+/**
+ * The watcher (lesson 15): the process a quiet instance was missing. Each tick delivers what is pending, reminds what
+ * is due, and forwards every outbox line it has not forwarded yet to the channel command, remembering how far it got
+ * in a cursor file so a restart forwards nothing twice. The outbox stays the record; the channel is whatever the
+ * deployment names.
+ */
+export async function watchOutbox(repo: string, options: WatchOptions): Promise<WatchTick[]> {
+  const now = options.now ?? Date.now;
+  const outbox = options.outbox ?? process.env.REGULATOR_OUTBOX ?? path.join(repo, OUTBOX_RELATIVE_PATH);
+  const cursorFile = path.join(repo, CURSOR_RELATIVE_PATH);
+  const run = options.run ?? (async (command: string, args: string[]) => {
+    const { execFile } = await import("node:child_process");
+    return new Promise<{ code: number; stderr: string }>((resolve) => {
+      execFile(command, args, { cwd: repo }, (error, _stdout, stderr) => resolve({ code: error && typeof (error as { code?: unknown }).code === "number" ? (error as { code: number }).code : error ? 1 : 0, stderr: String(stderr) }));
+    });
+  });
+  const ticks: WatchTick[] = [];
+  for (;;) {
+    const delivered = await deliverPending(repo, { policy: options.policy, now, outbox });
+    const reminded = await remindDue(repo, { policy: options.policy, now, outbox });
+    let forwarded = 0, failed = 0;
+    const text = await readFile(outbox, "utf8").catch(() => "");
+    const cursor = Number((await readFile(cursorFile, "utf8").catch(() => "0")).trim()) || 0;
+    if (text.length > cursor) {
+      const lines = text.slice(cursor).split("\n").filter(Boolean);
+      for (const line of lines) {
+        if (options.exec?.length) {
+          const result = await run(options.exec[0]!, [...options.exec.slice(1), line]);
+          if (result.code === 0) forwarded++; else failed++;
+        } else forwarded++;
+      }
+      if (!failed) {
+        await mkdir(path.dirname(cursorFile), { recursive: true });
+        await writeFile(cursorFile, `${text.length}\n`, "utf8");
+      }
+    }
+    const tick: WatchTick = { at: new Date(now()).toISOString(), delivered: delivered.length, reminded: reminded.length, forwarded, failed };
+    ticks.push(tick);
+    options.onTick?.(tick);
+    if (options.once || options.signal?.aborted) return ticks;
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(resolve, options.intervalMs ?? 60_000);
+      options.signal?.addEventListener("abort", () => { clearTimeout(timer); resolve(); }, { once: true });
+    });
+    if (options.signal?.aborted) return ticks;
+  }
 }

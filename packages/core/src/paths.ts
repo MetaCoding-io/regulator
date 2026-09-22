@@ -17,3 +17,5 @@ export const EFFECTS_RELATIVE_PATH = path.join(REGULATOR_DIR, "effects.ndjson");
 export const AUDIT_RELATIVE_PATH = path.join(REGULATOR_DIR, "audit.ndjson");
 /** Operational memory (lesson 12): S3's facts about the environment, with provenance and expiry. Append-only. Not identity. */
 export const MEMORY_RELATIVE_PATH = path.join(REGULATOR_DIR, "memory.ndjson");
+/** Lesson 15: what `regulator init` wrote — the definition this instance runs under and the layout a person declared. */
+export const INSTANCE_MANIFEST_RELATIVE_PATH = path.join(REGULATOR_DIR, "instance.json");

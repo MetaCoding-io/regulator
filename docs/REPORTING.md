@@ -4,7 +4,8 @@ VSM-Pi registers three reporting tools alongside its native write/edit gate.
 Model inputs contain observations and requests. A trusted host supplies grants,
 source/destination/channel, UUID, UTC timestamp, session/unit provenance, and
 source revision. Every successful call commits one event to the separate
-`.gsd/vsm-runtime/vsm.db` before returning a `persisted` receipt.
+`.regulator/events.db` (beside the instance's other records since lesson 15; the
+GSD-era `.gsd/vsm-runtime/vsm.db` path is gone) before returning a `persisted` receipt.
 
 ## Default authority and explicit host binding
 
@@ -216,4 +217,4 @@ context audit denial and `source: "S5"` payload rejection before recording the
 three events. The temporary database is removed afterward. No live model,
 credentials, or real GSD database are used. The same smoke function runs in CI.
 
-The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project root for `.gsd/vsm-runtime/vsm.db`. It defaults to `ctx.cwd` for generic Pi. Git revision discovery continues to use execution `ctx.cwd` (or the explicit host `sourceRevision`), independently of the runtime root. Hosts running isolated units should bind the same canonical runtime root across contexts. Model payloads cannot select this root. Directory creation tolerates concurrent creators and retains post-create symlink checks.
+The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project root for `.regulator/events.db`. It defaults to `ctx.cwd` for generic Pi. Git revision discovery continues to use execution `ctx.cwd` (or the explicit host `sourceRevision`), independently of the runtime root. Hosts running isolated units should bind the same canonical runtime root across contexts. Model payloads cannot select this root. Directory creation tolerates concurrent creators and retains post-create symlink checks.

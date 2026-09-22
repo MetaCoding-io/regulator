@@ -17,13 +17,14 @@ const byTask = (runs: EvalRun[], arm: string) => Object.fromEntries(runs.filter(
 test("the drift suite is a declared part of the definition: its arms name what they switch off, every ablation resolves to a registry record, and an arm's checks replace the workload's on the unit types that change the repository", async () => {
   const suite = await suiteP;
   assert.deepEqual(suite.arms.map((a) => [a.name, a.checks.length, a.ablates ?? null, a.switch ?? null]), [
-    ["control", 1, null, null], ["treatment", 4, null, null],
-    ["no-identity-check", 3, "reg.audit.identity-untouched-check.v1", "check:identity-untouched"], ["no-behaviour-check", 3, "reg.audit.behaviour-check.v1", "check:export-signature"],
+    ["control", 1, null, null], ["treatment", 5, null, null],
+    ["no-identity-check", 4, "reg.audit.identity-untouched-check.v1", "check:identity-untouched"], ["no-behaviour-check", 4, "reg.audit.behaviour-check.v1", "check:export-signature"],
+    ["no-glossary-lint", 4, "reg.audit.glossary-lint.v1", "check:glossary-lint"],
   ]);
   const ids = (await loadRegistry(path.join(LAB_ROOT, "registry"))).records.map((r) => r.id);
   const coverage = ablationCoverage(suite, ids);
   assert.deepEqual(coverage.unknown, []);
-  assert.deepEqual(coverage.covered, ["reg.audit.identity-untouched-check.v1", "reg.audit.behaviour-check.v1"]);
+  assert.deepEqual(coverage.covered, ["reg.audit.identity-untouched-check.v1", "reg.audit.behaviour-check.v1", "reg.audit.glossary-lint.v1"]);
   assert.ok(coverage.uncovered.length > 20, "most regulators have no ablation arm yet, and the lifecycle view says so");
   const workload = await loadWorkload();
   const control = workloadForArm(workload, suite.arms[0]!);
@@ -35,9 +36,10 @@ test("the drift suite is a declared part of the definition: its arms name what t
   assert.deepEqual(contractForArm(d1, suite.arms[0]!).expectedEvidence.map((e) => e.id), ["e-tests"]);
   assert.deepEqual(contractForArm(d1, suite.arms[1]!).expectedEvidence.map((e) => e.id), ["e-tests", "e-checks", "e-signature"]);
   assert.deepEqual(contractForArm(d1, suite.arms[3]!).expectedEvidence.map((e) => e.id), ["e-tests", "e-checks"], "without the behaviour check the signature is a fixed decision in prose only");
+  assert.deepEqual(contractForArm(d1, suite.arms[4]!).expectedEvidence.map((e) => e.id), ["e-tests", "e-checks", "e-signature"]);
 });
 
-test("the harness validates its graders against three scripted learner-style units: the reference closes every task under every arm with no drift; the drifter closes under control and is refused by the treatment's checks; the sloppy unit passes every gate and drifts in what no gate measures — the honest row", async (t) => {
+test("the harness validates its graders against three scripted learner-style units: the reference closes every task under every arm with no drift; the drifter closes under control and is refused by the treatment's checks; the sloppy unit keeps every boundary and is refused by glossary-lint on its commit messages alone — the honest row", async (t) => {
   t.diagnostic("runs the six-task scenario under two arms for three behaviours; ~1 minute");
   const suite = await suiteP;
   const reports = new Map<string, Awaited<ReturnType<typeof runSuite>>>();
@@ -88,13 +90,19 @@ test("the harness validates its graders against three scripted learner-style uni
   assert.ok(lift("treatment", "signatureDrift").delta < 0 && lift("treatment", "invariantViolations").delta > 0, "and wins on what it measures: drift on main is lower, violations are recorded instead of merged");
   assert.equal(lift("treatment", "closed").separated, true, "six tasks all closed against six all blocked: the intervals are points. n counts runs, and the six tasks of one repetition are not six independent trials — which is why the suite declares repetitions and the interpretation must say what n was");
 
-  // Sloppy: every gate passes; the drift is in prose and vocabulary, which no gate in either arm measures.
+  // Sloppy: every boundary holds and the drift is in prose and vocabulary. Under control it all lands; under treatment
+  // glossary-lint (lesson 15) refuses every unit — on the commit message alone, three attempts each — so nothing lands, drift or work.
   const sloppy = reports.get("sloppy")!;
-  const st = byTask(sloppy.runs, "treatment");
-  assert.deepEqual(Object.values(st).map((r) => r.outcome), Array(6).fill("closed"));
-  assert.equal(st["d5-memory"]!.metrics.memoryRules, 1);
-  assert.ok(st["d6-cleanup"]!.metrics.vocabularyDrift! >= 6, `task/job/ticket in comments and commit messages: ${st["d6-cleanup"]!.graders.find((g) => g.grader === "vocabularyDrift")?.observation}`);
-  assert.equal(sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "vocabularyDrift")!.delta, 0, "the treatment arm absorbs none of it: a gap the report must name");
+  const sc = byTask(sloppy.runs, "control"), st = byTask(sloppy.runs, "treatment");
+  assert.deepEqual(Object.values(sc).map((r) => r.outcome), Array(6).fill("closed"));
+  assert.equal(sc["d5-memory"]!.metrics.memoryRules, 1);
+  assert.ok(sc["d6-cleanup"]!.metrics.vocabularyDrift! >= 6, `task/job/ticket in comments and commit messages: ${sc["d6-cleanup"]!.graders.find((g) => g.grader === "vocabularyDrift")?.observation}`);
+  assert.deepEqual(Object.values(st).map((r) => [r.outcome, r.metrics.refusals]), Array(6).fill(["blocked", 3]), "treatment: refused three times per unit for a word in the commit message");
+  assert.match(st["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /glossary-lint/);
+  assert.equal(st["d6-cleanup"]!.metrics.vocabularyDrift, 0, "nothing drifted on main, because nothing landed");
+  assert.equal(st["d6-cleanup"]!.metrics.memoryRules, 0);
+  const vocab = sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "vocabularyDrift")!;
+  assert.ok(vocab.delta < 0 && sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "closed")!.delta < 0, "the gated arm wins on the drift it now measures and loses on everything else: the over-regulation row");
 });
 
 test("the committed reports validate, report on the committed suite, and carry a person's interpretation that names where the gated arm lost", async () => {

@@ -13,9 +13,11 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { existsSync } from "node:fs";
 import { GENAI, VSM_ATTR, type EvalReport, type SpanEvent, type SpanRecord } from "@metacoding/vsm-pi-protocol";
 import { AuditLog } from "./audit-log.js";
 import { EffectJournal } from "./effect-journal.js";
+import { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "./event-store.js";
 import { ExecutionStore } from "./execution-store.js";
 import { MemoryStore } from "./memory.js";
 import { ObligationLedger } from "./obligations.js";
@@ -125,6 +127,18 @@ export async function projectSpans(root: string, options: ProjectSpansOptions = 
   const effects = await journal.entries();
   const memory = await new MemoryStore(root).states();
   const spans: SpanRecord[] = [];
+  // The reporting tools' SQLite store (lesson 15: under .regulator/ like every other record) — its events by unit, when it exists.
+  const reported: Array<{ unit?: string; at: string; kind: string; channel: string; source: string; destination: string; subject: string; tool: string; host: string; sequence: number }> = [];
+  if (existsSync(path.join(root, VSM_DATABASE_RELATIVE_PATH))) {
+    const store = new RegulatoryEventStore(root);
+    try {
+      for (const { sequence, event } of store.readAll()) {
+        reported.push({ ...(event.provenance.unit ? { unit: event.provenance.unit } : {}), at: event.message.timestamp, kind: event.message.kind, channel: event.message.channel, source: event.message.source, destination: event.message.destination, subject: event.message.subject, tool: event.tool.name, host: event.provenance.host, sequence });
+      }
+    } finally {
+      store.close();
+    }
+  }
 
   for (const unit of await store.listUnits()) {
     const traceId = traceIdFor(root, unit.unitId);
@@ -151,6 +165,9 @@ export async function projectSpans(root: string, options: ProjectSpansOptions = 
     for (const e of entries) {
       if (!isMessage(e) || e.unit !== unit.unitId) continue;
       events.push({ name: e.kind, time: e.timestamp, attributes: attrs({ [VSM_ATTR.system]: e.source, channel: e.channel, subject: e.subject, ...("severity" in e && e.severity ? { severity: e.severity } : {}) }) });
+    }
+    for (const r of reported.filter((x) => x.unit === unit.unitId)) {
+      events.push({ name: `reported ${r.kind}`, time: r.at, attributes: attrs({ [VSM_ATTR.system]: r.source, channel: r.channel, subject: r.subject, [GENAI.toolName]: r.tool, "vsm.events.sequence": r.sequence, host: r.host }) });
     }
     events.sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : 0));
     const last = attempts.at(-1);
@@ -219,6 +236,32 @@ export async function projectSpans(root: string, options: ProjectSpansOptions = 
   }
   if (anyRedacted) for (const s of spans) if (s.attributes[VSM_ATTR.redacted] === undefined) s.attributes[VSM_ATTR.redacted] = false;
   return spans;
+}
+
+/** One row of a unit's replay (lesson 15): a span or a span event, in time order, with the regulator it belongs to when the record says. */
+export interface TimelineEntry {
+  at: string;
+  /** `span` for something with a duration, `event` for a point on the unit's span. */
+  kind: "span" | "event";
+  name: string;
+  status?: string;
+  regulator?: string;
+  attempt?: number;
+  detail: string;
+}
+
+const DETAIL_KEYS = ["detail", "observation", "reasons", "subject", "description", "result", "outcome", "action", "cause", "by", "vsm.outcome", "vsm.verdict", "vsm.effect.status"] as const;
+
+/** A unit's replay: contract → attempts → tool executions → evidence → verdicts → decisions → obligations → deliveries, from its spans. */
+export function timelineFor(spans: readonly SpanRecord[], unitId: string): TimelineEntry[] {
+  const mine = spans.filter((s) => s.attributes[VSM_ATTR.unit] === unitId);
+  const out: TimelineEntry[] = [];
+  const detailOf = (a: Record<string, string | number | boolean>) => DETAIL_KEYS.filter((k) => a[k] !== undefined && a[k] !== "").map((k) => `${k}: ${String(a[k]).split("\n")[0]}`).join(" · ");
+  for (const s of mine) {
+    out.push({ at: s.startTime, kind: "span", name: s.name, status: s.status, ...(typeof s.attributes[VSM_ATTR.regulator] === "string" ? { regulator: s.attributes[VSM_ATTR.regulator] as string } : {}), ...(typeof s.attributes[VSM_ATTR.attempt] === "number" ? { attempt: s.attributes[VSM_ATTR.attempt] as number } : {}), detail: detailOf(s.attributes) });
+    for (const e of s.events) out.push({ at: e.time, kind: "event", name: e.name, ...(typeof e.attributes[VSM_ATTR.regulator] === "string" ? { regulator: e.attributes[VSM_ATTR.regulator] as string } : {}), ...(typeof e.attributes[VSM_ATTR.attempt] === "number" ? { attempt: e.attributes[VSM_ATTR.attempt] as number } : {}), detail: detailOf(e.attributes) });
+  }
+  return out.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
 }
 
 /** The spans an eval report is evidence for: one per run, so a tracing backend can join runs to units by attribute. */

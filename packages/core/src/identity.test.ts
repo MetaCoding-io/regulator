@@ -82,3 +82,26 @@ test("memory: an entry needs a review-by date in the future within the store's l
   assert.deepEqual(await store.current(), []);
   assert.match(renderMemorySection([]), /nothing current/);
 });
+
+test("the glossary's refused words (lesson 15) are parsed from one section with the word to say instead; memory scoped to unit types is rendered to those units only", async (t) => {
+  const { parseForbiddenTerms } = await import("./identity.js");
+  const { MemoryStore } = await import("./memory.js");
+  assert.deepEqual(parseForbiddenTerms("# g\n\n- **Unit** — x\n"), [], "no section, no terms");
+  const glossary = "# g\n\n- **Unit** — x\n\n## Words this instance does not use\n\n- task, job, ticket (say unit)\n- TODO list (say obligation ledger)\nnot a bullet\n\n## Later\n\n- ignored (say nothing)\n";
+  assert.deepEqual(parseForbiddenTerms(glossary), [{ term: "task", say: "unit" }, { term: "job", say: "unit" }, { term: "ticket", say: "unit" }, { term: "TODO list", say: "obligation ledger" }]);
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-memory-scope-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const clock = Date.parse("2026-09-22T12:00:00.000Z");
+  const store = new MemoryStore(dir, () => clock);
+  const day = 86_400_000;
+  await store.record({ subject: "everyone", note: "n", evidence: [], recordedBy: "alice", reviewBy: new Date(clock + day).toISOString() });
+  await store.record({ subject: "research only", note: "n", evidence: [], recordedBy: "alice", reviewBy: new Date(clock + day).toISOString(), scope: ["research"] });
+  assert.deepEqual((await store.current()).map((m) => m.subject), ["everyone", "research only"], "unscoped reads see everything");
+  assert.deepEqual((await store.current("implement")).map((m) => m.subject), ["everyone"]);
+  assert.deepEqual((await store.current("research")).map((m) => m.subject), ["everyone", "research only"]);
+  const { renderMemorySection } = await import("./memory.js");
+  assert.match(renderMemorySection(await store.current("research")), /research only: n \(recorded 2026-09-22 by alice; review by 2026-09-23; for research units\)/);
+});

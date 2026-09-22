@@ -3,7 +3,39 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "description": "Reference build for the Viable Agents course: `regulator`, one checkpoint per lesson.",
+  "description": "Reference build for the Viable Agents course: `regulator`, one checkpoint per lesson. Installable as a pi package (the checkpoints load as extensions) and as the `regulator` CLI; the definition — registry, identity, profiles, policies, workload, evals — ships beside the code. See OPERATING.md.",
+  "bin": {
+    "regulator": "./dist/lab-cli.js"
+  },
+  "pi": {
+    "extensions": [
+      "./dist/cp2-typed-tools.js",
+      "./dist/cp3-profiles.js",
+      "./dist/cp4-coordination.js",
+      "./dist/cp5-contract.js",
+      "./dist/cp6-budget.js",
+      "./dist/cp7-recovery.js",
+      "./dist/cp8-evidence.js",
+      "./dist/cp9-authority.js",
+      "./dist/cp10-intelligence.js",
+      "./dist/cp11-identity.js",
+      "./dist/cp12-algedonic.js"
+    ]
+  },
+  "files": [
+    "dist",
+    "identity",
+    "profiles",
+    "policies",
+    "workload",
+    "registry",
+    "evals",
+    "contracts",
+    "settings.json",
+    "BOUNDARY.md",
+    "OPERATING.md",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

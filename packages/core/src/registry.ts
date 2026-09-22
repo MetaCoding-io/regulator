@@ -61,7 +61,12 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
  * Shape plus substance. `root` is the directory that `mechanism.implementation`
  * and `evidence.tests` paths are relative to.
  */
-export async function checkRegistry(registryDir: string, root: string): Promise<LoadedRegistry> {
+export interface CheckRegistryOptions {
+  /** ISO date; an active record whose review date is before it is a problem (lesson 15). Omit to skip the date check. */
+  today?: string;
+}
+
+export async function checkRegistry(registryDir: string, root: string, options: CheckRegistryOptions = {}): Promise<LoadedRegistry> {
   const loaded = await loadRegistry(registryDir);
   const seen = new Map<string, string>();
   for (const record of loaded.records) {
@@ -84,6 +89,9 @@ export async function checkRegistry(registryDir: string, root: string): Promise<
     // Lesson 14: a regulator that cannot be switched off cannot be shown to help, and one with no retirement condition only grows.
     if (record.status === "active" && !record.ablation) loaded.problems.push({ file, message: "active regulator names no ablation switch (`none` is allowed, with a note saying why)" });
     if (record.status === "active" && !record.retirement) loaded.problems.push({ file, message: "active regulator states no retirement condition" });
+    if (options.today && record.status === "active" && record.ownership.reviewBy < options.today) {
+      loaded.problems.push({ file, message: `review overdue since ${record.ownership.reviewBy}: review the record, then move ownership.reviewBy or retire it` });
+    }
   }
   return loaded;
 }

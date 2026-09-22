@@ -27,6 +27,8 @@ export const MemoryEntrySchema = Type.Object({
   recordedAt: NonEmpty,
   /** After this date the entry is stale: not rendered, shown as expired. */
   reviewBy: NonEmpty,
+  /** Unit types the fact is rendered to (lesson 15); absent or empty means every unit of the instance. */
+  scope: Type.Optional(Type.Array(NonEmpty)),
 }, { additionalProperties: false });
 export type MemoryEntry = Static<typeof MemoryEntrySchema>;
 

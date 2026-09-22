@@ -382,3 +382,4 @@ export {
   type GraderVerdict, type Lift, type MetricSummary,
 } from "./evals.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
+export { InstanceManifestSchema, isInstanceManifest, type InstanceManifest } from "./instance.js";

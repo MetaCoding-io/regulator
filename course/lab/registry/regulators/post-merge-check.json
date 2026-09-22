@@ -1,0 +1,33 @@
+{
+  "id": "reg.audit.post-merge-check.v1",
+  "name": "Post-merge check",
+  "status": "active",
+  "vsmFunction": "S3*",
+  "purpose": "The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.",
+  "absorbs": {
+    "failureClass": "green-branches-red-base",
+    "description": "Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/controller.ts",
+    "enforcementPoints": ["verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)", "progressionVeto (an open blocking obligation with no unit holds every dispatch)"]
+  },
+  "channels": { "consumes": ["the base at the merge commit", "the workload's check list"], "emits": ["evidence (post-merge:<check>)", "audit-finding with no unit → obligation on the instance"] },
+  "scope": { "subjects": ["evidence", "execution"], "resources": ["the base checkout"] },
+  "cost": { "description": "The project's test command once more per close, on the base." },
+  "authority": {
+    "may": ["run the checks on the base", "record evidence and a finding", "hold every dispatch through the veto"],
+    "mayNot": ["revert the merge", "block the merge (it has happened; this is evidence about it)", "decide the repair"]
+  },
+  "evidence": { "tests": ["src/controller.test.ts", "src/instance.test.ts"] },
+  "limitations": [
+    "It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.",
+    "Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.",
+    "The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "loop:post-merge", "note": "A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures." },
+  "retirement": { "condition": "Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it." },
+  "introducedIn": "M15"
+}

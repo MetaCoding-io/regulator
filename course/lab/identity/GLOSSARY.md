@@ -20,3 +20,12 @@ means "task" is drifting.
   Not identity.
 - **Identity** — these files. Committed, write-protected, proposed against, never edited
   by a unit.
+
+## Words this instance does not use
+
+Read by the `glossary-lint` host check at closeout: an added comment line under the
+writable prefixes, or a commit message on the unit's branch, that uses one of these is
+vocabulary drift and fails the check. Identifiers in code are the project's business.
+
+- task, job, ticket (say unit)
+- todo, backlog item (say obligation)
