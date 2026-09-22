@@ -105,6 +105,23 @@ test("intelligence: effective severity is the router's; expired intelligence is 
   assert.deepEqual((await progressionVeto(ledger, "u2")).map((o) => o.subject), ["intel i1"], "the veto lands on the affected unit, not on the unit that researched");
 });
 
+test("floors (lesson 12): a message that names an invariant or the identity path is raised to the floor's severity; one that only cites an invariant as its authority is not", async (t) => {
+  const dir = await root(t);
+  const ledger = new ObligationLedger(dir, tick);
+  const floored: RoutingPolicy = { ...policy, floors: [{ pattern: "\\bINV-\\d{3}\\b|regulator/identity/", severity: "blocking", reason: "about S5" }] };
+  const proposal: VsmMessage = { ...envelope("p1", "u1"), kind: "policy-proposal", channel: "proposal", source: "S1", destination: "S5", severity: "info", subject: "relax INV-001 for this unit", rationale: "r", requestedChange: "x", evidence: [] };
+  const applied: VsmMessage = { ...envelope("f1", "u1"), kind: "audit-finding", channel: "audit", source: "S3*", destination: "S3", severity: "advisory", subject: "unit u1: closeout refused (inconclusive)", invariant: "INV-003", observation: "the worktree has uncommitted changes", evidence: [] };
+  const bash: VsmMessage = { ...envelope("f2", "u1"), kind: "audit-finding", channel: "audit", source: "S3*", destination: "S3", severity: "advisory", subject: "protected path changed by bash", observation: "bash changed regulator/identity/INVARIANTS.md (modified)", evidence: [] };
+  assert.equal(effectiveSeverity(proposal, floored), "blocking");
+  assert.equal(effectiveSeverity(applied, floored), "advisory", "citing an invariant as authority is not naming it as the subject");
+  assert.equal(effectiveSeverity(bash, floored), "blocking");
+  assert.equal(effectiveSeverity(proposal, policy), "info", "no floors, no raise");
+  for (const m of [proposal, applied, bash]) await appendSignal(dir, m);
+  const routed = await routeMessages(ledger, { policy: floored, now: tick });
+  assert.deepEqual(routed.opened.map((o) => [o.sources[0], o.severity, o.blocks]), [["p1", "blocking", true], ["f2", "blocking", true]]);
+  assert.deepEqual(routed.noted.map((n) => n.message.id), ["f1"]);
+});
+
 test("disposition by decision: retry, repair and abort resolve the unit's open S3 obligations with the decision as rationale; a waiting action opens one obligation for the policy's consumer and escalates the S3 ones to it", async (t) => {
   const dir = await root(t);
   const ledger = new ObligationLedger(dir, tick);

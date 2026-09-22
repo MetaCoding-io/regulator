@@ -336,7 +336,8 @@ export function assertValid<T extends TSchema>(schema: T, value: unknown, label:
 // Control-plane vocabulary promoted from the course lab (checkpoints 1–3).
 export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
-export type { CapabilityProfile, ReasoningLevel } from "./profiles.js";
+export { CapabilityProfileSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ReasoningLevel } from "./profiles.js";
+export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
 export { MechanismLevelSchema, RegulatorRecordSchema, isRegulatorRecord, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
   ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, FixedDecisionSchema,
@@ -345,7 +346,7 @@ export {
   type Consequence, type DelegatedDecision, type EvidenceExpectation, type FixedDecision, type ResultReport, type ResultReportInput,
   type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
 } from "./contracts.js";
-export { UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
+export { HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema,
   isAttemptRecord, isLease, isUnitRecord,

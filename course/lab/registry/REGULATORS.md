@@ -9,11 +9,15 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
+| `reg.identity.definition-check.v1` | Definition check | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.evidence-preflight.v1` | Evidence preflight | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.identity.identity-context.v1` | Identity context | S5 | prompt | active | 2026-12-01 |
+| `reg.audit.identity-untouched-check.v1` | Identity-untouched check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.identity-write-gate.v1` | Identity write gate | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.intelligence.intelligence-intake.v1` | Intelligence intake | S4 | typed-tool | active | 2026-12-01 |
+| `reg.control.memory-store.v1` | Operational memory store | S3 | typed-tool | active | 2026-12-01 |
 | `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.obligation-router.v1` | Obligation router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
@@ -23,6 +27,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.control.recovery-router.v1` | Recovery router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.s5-decision.v1` | S5 decision path | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | active | 2026-12-01 |
@@ -203,6 +208,41 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Definition check
+
+`reg.identity.definition-check.v1` · S5 · deterministic-gate · active · introduced in M12
+
+**Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.
+
+**Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
+
+**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`
+
+**Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
+
+**Scope.** subjects definition · resources course/lab
+
+**Cost.** One pass over the definition's files in CI; no model calls.
+
+**May.**
+- refuse a definition whose parts do not resolve
+- report what is missing
+
+**May not.**
+- change a file
+- check an instance (that is the read model's)
+- judge whether a policy is wise
+
+**Evidence.** `../../packages/core/src/definition.test.ts`, `src/registry.test.ts`
+
+**Limitations.**
+- Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
+- It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
+- The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Effect journal
 
 `reg.coordination.effect-journal.v1` · S2 · deterministic-gate · active · introduced in M08
@@ -308,6 +348,75 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Identity context
+
+`reg.identity.identity-context.v1` · S5 · prompt · active · introduced in M12
+
+**Purpose.** Render the instance's identity set — IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md under regulator/identity/ — into every unit's system prompt from the files on each run, and current operational memory beside it as facts that expire. Identity never lives in the transcript: compaction cannot lose it, a fork cannot diverge from it, a model version cannot reinterpret it from memory. The dispatcher loads no context files from the worktree, so this is the identity a unit sees.
+
+**Absorbs.** `identity-in-context` — The rules the system runs by exist as a paragraph in a context window that gets compacted, forked and re-read by a different model; six months later the same harness is a different system and nobody changed a file.
+
+**Mechanism.** `src/cp11-identity.ts` at `before_agent_start (sections regulator_identity, regulator_memory)`
+
+**Channels.** consumes `regulator/identity/* (worktree)`, `memory store (current entries)` · emits `system-prompt sections`
+
+**Scope.** subjects identity, memory · resources regulator/identity/, .regulator/memory.ndjson
+
+**Cost.** The identity's length in every prompt, capped at 6000 characters; Pi diffs sections, so an unchanged identity is a cache hit.
+
+**May.**
+- render identity and memory as prompt sections
+- report problems in the identity set
+
+**May not.**
+- change identity
+- make identity binding (the gate and the closeout check do)
+- render expired memory
+
+**Evidence.** `src/cp11-identity.test.ts`, `../../packages/core/src/identity.test.ts`
+
+**Limitations.**
+- Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.
+- The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.
+- Rendering is truncated at 6000 characters; an identity set longer than that is partly advice the model never sees, and the status line does not say so.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Identity-untouched check
+
+`reg.audit.identity-untouched-check.v1` · S3* · deterministic-gate · active · introduced in M12
+
+**Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the identity and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
+
+**Absorbs.** `committed-around-the-gate` — A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base.
+
+**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)`
+
+**Channels.** consumes `worktree branch vs base`, `protected prefixes (identity + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
+
+**Scope.** subjects unit, revision · resources regulator/identity/, vendor/, worktree
+
+**Cost.** One `git diff --name-only` per closeout; no model calls.
+
+**May.**
+- fail the closeout of a unit whose branch changed a protected prefix
+
+**May not.**
+- revert the change (a person or a repair attempt does)
+- decide what the unit does next (the recovery router does)
+- check a prefix the identity or conventions do not declare
+
+**Evidence.** `../../packages/checks/src/verify.test.ts`, `src/controller.test.ts`
+
+**Limitations.**
+- It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
+- The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
+- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Identity write gate
 
 `reg.authority.identity-write-gate.v1` · S5 · deterministic-gate · active · introduced in M10
@@ -383,6 +492,42 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Operational memory store
+
+`reg.control.memory-store.v1` · S3 · typed-tool · active · introduced in M12
+
+**Purpose.** Give units one typed way to record what they learn about the environment — remember — into an append-only store separate from identity and from evidence. Every entry carries host-stamped provenance (unit, revision, time) and a required review-by date within the store's limit, after which it is expired: shown by the read model, rendered to no unit. A retraction is an appended event by a named person. Nothing here can reach an identity file (INV-004).
+
+**Absorbs.** `memory-becomes-policy` — A note that tests need FOO=1 is written into AGENTS.md as a temporary reminder; a year later it is an undocumented rule nobody can date, source or retire.
+
+**Mechanism.** `src/cp11-identity.ts` at `remember (tool execute)`, `MemoryStore.record (expiry bounds)`
+
+**Channels.** consumes `tool call (remember)`, `lease (unit provenance)`, `worktree HEAD (revision)` · emits `memory-recorded / memory-retracted (.regulator/memory.ndjson)`, `regulator:memory (session entry)`
+
+**Scope.** subjects memory · resources .regulator/memory.ndjson
+
+**Cost.** One appended line per fact; current facts ride in every prompt of every unit, so the review-by limit is also a context budget.
+
+**May.**
+- record a fact with provenance and an expiry
+- render current facts to later units
+
+**May not.**
+- write identity or policy
+- record a fact without an expiry, or with one beyond the limit
+- retract (a person does, by name)
+- treat a fact as a rule
+
+**Evidence.** `src/cp11-identity.test.ts`, `../../packages/core/src/identity.test.ts`
+
+**Limitations.**
+- A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
+- Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.
+- Retraction is trusted by name (`--by`), like every disposition in the lab (docs/DEBT.md row 20).
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Model router
 
 `reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
@@ -452,7 +597,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Limitations.**
 - Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file.
 - A consumer is a name in the policy (S3, S5, human). Nothing delivers an obligation to a person or reminds them; the read model and the control room expose what is owed, and lesson 13's algedonic channel is the delivery mechanism for the ones that cannot wait.
-- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy. A message that names a protected invariant is not raised above its severity by that fact; policy floors by subject are lesson 12's.
+- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
 - The CLI trusts `--by`: a resolution records who claimed to resolve it. Authority over dispositions (who may accept a risk at what severity) is not checked, and no dialog asks anyone (lesson 13).
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
@@ -547,13 +692,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **May not.**
 - make untrusted content safe (trust is an input-loading guard, not a sandbox)
-- prevent context files (AGENTS.md) from loading: Pi loads them regardless of trust
+- prevent the model from reading a project file that carries instructions
 
 **Evidence.** `src/cp9-authority.test.ts`
 
 **Limitations.**
 - Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.
-- Context files (AGENTS.md, CLAUDE.md) and project settings are still read: Pi 0.87.0 loads context files regardless of trust, and the dispatcher does not yet substitute an in-memory settings manager, so a project's .pi/settings.json can still shape the session (compaction thresholds, for example).
+- Since lesson 12 the loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.
 - The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.
 - The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves.
 
@@ -587,7 +732,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `src/cp9-authority.test.ts`
 
 **Limitations.**
-- A proposal is routed into an obligation owed to S5 (lesson 11) and shown by the read model; nothing delivers it to a person, and the S5 decision itself — accepting the proposal into identity — has no workflow yet (lesson 12).
+- A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; nothing delivers the obligation to that person (lesson 13), and the proposal's requestedChange is text a person turns into a file by hand.
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
@@ -702,6 +847,43 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## S5 decision path
+
+`reg.authority.s5-decision.v1` · S5 · deterministic-gate · active · introduced in M12
+
+**Purpose.** The one path that changes an identity file: `regulator identity accept`, run by a named person, on an obligation owed to S5 that a proposal opened. It writes the proposed file under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a result that leaves the identity set invalid, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `identity reject` resolves it as rejected and changes nothing. INV-002 with a workflow: the right to ask is the proposal tool; the right to change is this, and only this.
+
+**Absorbs.** `proposal-with-no-decider` — A proposal is recorded and owed to S5, and then a person edits the identity file by hand with no link to what was asked, or never does, and the obligation sits open with no way to close it honestly.
+
+**Mechanism.** `src/lab-cli.ts` at `identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)`, `identity reject (ledger.resolve rejected)`
+
+**Channels.** consumes `obligation (policy-proposal, owed to S5)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
+
+**Scope.** subjects identity, obligation · resources regulator/identity/, base branch
+
+**Cost.** One commit per accepted proposal; no model calls.
+
+**May.**
+- write one identity file under S5 authority
+- commit it citing the obligation
+- resolve the proposal's obligation
+
+**May not.**
+- accept a proposal a unit made for itself (a unit has no S5 authority)
+- write outside regulator/identity/
+- leave the identity set invalid
+- be called by a tool
+
+**Evidence.** `src/lab-cli.test.ts`
+
+**Limitations.**
+- Who may act as S5 is not checked: `--by` is a name (docs/DEBT.md row 20). The record is honest about who claimed the authority; the claim itself is trusted until lesson 13's interaction contracts.
+- The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
+- It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to course/lab/identity/ by hand.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Thrash detector
 
 `reg.coordination.thrash-detector.v1` · S2 · deterministic-gate · active · introduced in M05
@@ -729,7 +911,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Limitations.**
 - Counts write and edit tool calls only; edits made through bash are invisible to it.
 - Memory is per session: a unit resumed in a new session starts counting from zero.
-- The threshold is a constant, not a policy; lesson 07 makes it a budget.
+- The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -822,7 +1004,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Limitations.**
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
-- Authority references on fixed decisions are strings; nothing verifies that the cited invariant or decision exists (lesson 12).
+- Authority references on fixed decisions resolve since lesson 12 — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01

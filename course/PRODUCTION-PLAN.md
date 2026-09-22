@@ -1,7 +1,7 @@
 # Production plan
 
-Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 begun.** Lessons 01–11
-are written end to end with checkpoints 0–10, headless graders, the seed of the fixture
+Status: **design under review; Phase 1 content complete, Phase 2 nearly complete, Phase 3 two-thirds done.** Lessons 01–12
+are written end to end with checkpoints 0–11, headless graders, the seed of the fixture
 repository and the oscillation fixture — the vertical slices the sequencing below calls for. This file exists so course production
 can continue against a fixed target and so the dependencies on VSM-Pi's own milestones
 stay visible.
@@ -55,7 +55,10 @@ three deliberately weak learner-style implementations.
 - subagent driver with its own budget; typed intelligence record — **done** (lesson 11,
   checkpoint 10: the research unit type, `report_intelligence`, the obligation lifecycle
   under a routing policy, and the progression veto);
-- identity set and the dual prose/code invariant;
+- identity set and the dual prose/code invariant — **done** (lesson 12, checkpoint 11:
+  the four-file identity set, INV-001 as the `identity-untouched` host check, memory
+  with provenance and expiry, the S5 decision path, profiles and settings as declared
+  parts of the definition, and the drift scenario recorded for lesson 14);
 - escalation with interaction-kind timeout semantics, including headless behaviour.
 
 Exit criterion: headless run with a pending consent-class escalation terminates safely
@@ -118,7 +121,7 @@ repository is still design-only, the course must present it as design, not as sh
 | M04 capability profiles | `docs/GSD-VSM-FUNCTIONAL-MAP.md` | designed, implementation pending |
 | M09 audit findings | typed reporting tools (M0.3), `docs/REPORTING.md` | shipped; the closeout gate is the first regulator to emit one (lesson 09) |
 | M10 protected paths | `packages/pi-extension` write gate + boundary README | shipped; the preflight now lives in `core` and the lab gate shares it (lesson 10) |
-| M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped |
+| M12 identity | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml` | shipped; the lab's own identity set, memory store and S5 decision path ship with lesson 12 |
 | M14 drift | longitudinal drift fixture | planned (M0) |
 | M02+ registry | `packages/protocol/src/registry.ts`, `packages/core/src/registry.ts`, lab seed records | shipped |
 | M14/M15 control room | [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6 | topology, live and inspector views shipped (`packages/control-room`); assurance, lifecycle, replay are design |
@@ -191,9 +194,10 @@ does:
 1. Review lessons 01–10 for tone, length and lab friction (owner: project maintainer).
 2. Extend the fixture with the flaky test and the migration that must not be re-run
    (the ambiguous requirement now lives in the oscillation fixture).
-3. Lesson 12 with checkpoint 11 (durable identity and policy: the complete identity set
-   with one invariant enforced in both prose and code, profiles and settings as declared
-   parts of the definition, the operational memory store with provenance and expiry, and
-   the S5 workflow that decides a proposal); the control room gains the identity view.
+3. Lesson 13 with checkpoint 12 (algedonic channels: delivery of what is owed to a
+   person, interaction kinds with timeout semantics — a nonblocking recap is not
+   consent — and the headless rule that silence, cancellation and timeout are never
+   consent; disposition authority checked rather than trusted by name); the control room
+   gains the escalations view.
 4. Run the Phase 1 pilot and record where learners got confused, as course-level
    residual uncertainty.

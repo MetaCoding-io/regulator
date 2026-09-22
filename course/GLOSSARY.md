@@ -77,7 +77,7 @@ learners to build themselves.
 | **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent. | GSD (M13). |
 | **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. | GSD (M13). |
 | **Identity** | What the system is. Committed, reviewed, S5. | `vsm/` (M12). |
-| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.gsd/` project memory (M12). |
+| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). |
 | **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.gsd/vsm-runtime/vsm.db` (M09, M14). |
 | **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | VSM-Pi drift fixture (M12, M14). |
 | **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | Pi `evals` package pattern (M14). |

@@ -32,9 +32,10 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding/vsm-pi-checks";
+import { discoverConventions } from "@metacoding/vsm-pi-checks";
 import {
-  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport,
-  dispositionByDecision, progressionVeto, readSignals, routeBlockedUnit, routeFor, routeMessages,
+  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
+  dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
 import type {
@@ -42,9 +43,9 @@ import type {
   UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
-import { abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
+import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
-import { headRevision, isClean } from "./worktree.js";
+import { currentBranch, headRevision, isClean } from "./worktree.js";
 
 export interface DispatchRequest {
   unitId: string;
@@ -74,6 +75,8 @@ export interface RunUnitOptions {
   policyPath: string;
   /** Which messages become obligations, for whom, and what vetoes progression (lesson 11). */
   routing: RoutingPolicy;
+  /** The regulator ids the definition declares, so a fixed decision's authority reference can be resolved (lesson 12). */
+  regulators?: readonly string[];
   dispatcher: Dispatcher;
   owner: string;
   now?: () => number;
@@ -110,6 +113,12 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   const ceiling = ceilingFor(policy, contract.unitType);
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
+  // Authority is what exists (lesson 12): a fixed decision cites an invariant the instance's identity declares, a
+  // regulator the definition declares, an obligation the instance holds, or a person. Free text fixes nothing.
+  const identity = await readIdentity(path.join(options.repo, IDENTITY_RELATIVE_DIR));
+  problems.push(...checkAuthorityRefs(contract.fixed, {
+    invariants: identity.invariants.map((i) => i.id), regulators: options.regulators ?? [], obligations: (await ledger.obligations()).map((o) => o.id),
+  }));
   const existing = await store.getUnit(contract.unitId);
   if (existing) {
     // A further attempt: only for a blocked unit, under the same contract version, within the attempt ceiling.
@@ -247,7 +256,14 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
   const revision = await headRevision(exec, worktree);
   let records: EvidenceRecord[] = [];
   if (clean) {
-    const results = await runHostChecks(exec, { cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref) });
+    // INV-001 in code: the protected prefixes — the identity, and whatever the project's conventions protect — are
+    // diffed against the base branch, so a change committed around the write gate is a failing check, not a clean tree.
+    const conventions = await discoverConventions(worktree);
+    const protectedPaths = [IDENTITY_RELATIVE_DIR, ...conventions.protectedPaths.filter((p) => p !== IDENTITY_RELATIVE_DIR)];
+    const results = await runHostChecks(exec, {
+      cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
+      base: await currentBranch(exec, options.repo), protectedPaths, conventions,
+    });
     records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
     for (const record of records) await log.appendEvidence(record);
   }

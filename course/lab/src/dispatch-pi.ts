@@ -17,16 +17,28 @@
  * asking anyone — the `project_trust` event is the CLI's, not the loader's —
  * so `definitionResourceLoader` turns project resources off and keeps only
  * the extensions the definition names. A unit's project is data, never a
- * source of control.
+ * source of control. Since lesson 12 the same rule covers context files and
+ * settings: the session reads no `AGENTS.md` from the worktree and no
+ * `.pi/settings.json` — the identity comes from checkpoint 11, the settings
+ * from the definition's `settings.json`, held in memory.
  */
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, type SettingsManager } from "@earendil-works/pi-coding-agent";
+import { readFile } from "node:fs/promises";
+import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { chooseModels } from "@metacoding/vsm-pi-core";
 import type { Dispatcher } from "./controller.js";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
-export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js", "cp10-intelligence.js"].map((f) => path.join(dist, f));
+export const SETTINGS_PATH = fileURLToPath(new URL("../settings.json", import.meta.url));
+
+/** The definition's settings, in memory: nothing the project's `.pi/settings.json` says reaches a unit's session. */
+export async function definitionSettings(file: string = SETTINGS_PATH): Promise<SettingsManager> {
+  const value: unknown = JSON.parse(await readFile(file, "utf8"));
+  if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error(`settings ${file} must be an object`);
+  return SettingsManager.inMemory(value as Parameters<typeof SettingsManager.inMemory>[0]);
+}
+export const CHECKPOINT_EXTENSIONS = ["cp2-typed-tools.js", "cp3-profiles.js", "cp4-coordination.js", "cp5-contract.js", "cp6-budget.js", "cp7-recovery.js", "cp8-evidence.js", "cp9-authority.js", "cp10-intelligence.js", "cp11-identity.js"].map((f) => path.join(dist, f));
 
 export interface PiDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */
@@ -47,14 +59,14 @@ export interface DefinitionLoader {
   refused: string[];
 }
 
-/** A resource loader that trusts the definition and nothing found in the project. */
+/** A resource loader that trusts the definition and nothing found in the project: no extensions, skills, prompts, themes or context files from the worktree. */
 export function definitionResourceLoader(options: DefinitionLoaderOptions): DefinitionLoader {
   const allowed = new Set((options.extensionPaths ?? CHECKPOINT_EXTENSIONS).map((p) => path.resolve(p)));
   const refused: string[] = [];
   const loader = new DefaultResourceLoader({
     cwd: options.cwd, agentDir: options.agentDir, additionalExtensionPaths: [...allowed],
     ...(options.settingsManager ? { settingsManager: options.settingsManager } : {}),
-    noSkills: true, noPromptTemplates: true, noThemes: true,
+    noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,
     extensionsOverride: (base) => {
       const kept = base.extensions.filter((e) => {
         const ok = allowed.has(path.resolve(e.resolvedPath)) || allowed.has(path.resolve(e.path));
@@ -81,7 +93,8 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
       const slash = ref.indexOf("/");
       const model = modelRuntime.getModel(ref.slice(0, slash), ref.slice(slash + 1));
       if (!model) continue;
-      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir });
+      const settingsManager = await definitionSettings();
+      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir, settingsManager });
       await resourceLoader.reload();
       const { errors, runtime } = resourceLoader.getExtensions();
       if (errors.length) throw new Error(`extension load errors: ${errors.map((e) => `${e.path}: ${e.error}`).join("; ")}`);
@@ -89,7 +102,7 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
       // The same values `pi --unit … --profile … --contract … --policy …` would set on the command line.
       // (Checkpoint 6 reads none of the first three: it finds the unit from the lease and the contract from the store.)
       for (const [name, value] of [["unit", unitId], ["profile", profile], ["contract", contractPath], ["policy", policyPath]] as const) runtime.flagValues.set(name, value);
-      const { session } = await createAgentSession({ cwd: worktree, agentDir, model, modelRuntime, resourceLoader, sessionManager: SessionManager.create(worktree) });
+      const { session } = await createAgentSession({ cwd: worktree, agentDir, model, modelRuntime, resourceLoader, settingsManager, sessionManager: SessionManager.create(worktree) });
       try {
         if (options.echo) {
           process.stdout.write(`[regulator] unit ${unitId} on ${ref}\n`);

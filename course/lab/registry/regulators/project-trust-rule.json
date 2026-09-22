@@ -45,7 +45,7 @@
     ],
     "mayNot": [
       "make untrusted content safe (trust is an input-loading guard, not a sandbox)",
-      "prevent context files (AGENTS.md) from loading: Pi loads them regardless of trust"
+      "prevent the model from reading a project file that carries instructions"
     ]
   },
   "evidence": {
@@ -55,7 +55,7 @@
   },
   "limitations": [
     "Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.",
-    "Context files (AGENTS.md, CLAUDE.md) and project settings are still read: Pi 0.87.0 loads context files regardless of trust, and the dispatcher does not yet substitute an in-memory settings manager, so a project's .pi/settings.json can still shape the session (compaction thresholds, for example).",
+    "Since lesson 12 the loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.",
     "The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.",
     "The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves."
   ],

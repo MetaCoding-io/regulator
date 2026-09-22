@@ -13,5 +13,8 @@
   ],
   "impactSeverity": { "low": "info", "medium": "advisory", "high": "blocking", "critical": "critical" },
   "recovery": { "remediate": "S3", "replan": "S3", "clarify": "human", "pause": "human", "escalate": "human" },
-  "blocksAtOrAbove": "blocking"
+  "blocksAtOrAbove": "blocking",
+  "floors": [
+    { "pattern": "\\bINV-\\d{3}\\b|regulator/identity/", "severity": "blocking", "reason": "a message that names an invariant or the identity is about S5, whatever the emitter claimed" }
+  ]
 }

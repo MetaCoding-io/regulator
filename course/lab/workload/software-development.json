@@ -21,21 +21,21 @@
       "name": "implement",
       "description": "Change source and tests under a work contract, in an isolated worktree, and report the result.",
       "profile": "implement",
-      "checks": ["run_checks", "run_tests"],
+      "checks": ["run_checks", "run_tests", "identity-untouched"],
       "requiresContract": true
     },
     {
       "name": "verify",
       "description": "Independently examine a unit's output against its contract and the project's invariants. Read-only.",
       "profile": "research",
-      "checks": ["run_checks", "run_tests"],
+      "checks": ["run_checks", "run_tests", "identity-untouched"],
       "requiresContract": true
     },
     {
       "name": "integrate",
       "description": "Reintegrate a unit's branch into the base and resolve what the harness refused to resolve on its own.",
       "profile": "implement",
-      "checks": ["run_tests"],
+      "checks": ["run_tests", "identity-untouched"],
       "requiresContract": true
     },
     {

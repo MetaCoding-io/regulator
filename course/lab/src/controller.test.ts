@@ -3,7 +3,7 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { ExecutionStore, SIGNALS_RELATIVE_PATH, readSignals } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, SIGNALS_RELATIVE_PATH, loadRegistry, readSignals } from "@metacoding/vsm-pi-core";
 import type { ResultReport, WorkContract } from "@metacoding/vsm-pi-protocol";
 import { runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
@@ -17,7 +17,8 @@ const LAB_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const contractFile = path.join(LAB_ROOT, "contracts", "fix-known-issue.json");
 const policyP = loadPolicy();
 const routingP = loadRoutingPolicy();
-const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH, routing: await routingP });
+const regulatorsP = loadRegistry(path.join(LAB_ROOT, "registry")).then((r) => r.records.map((x) => x.id));
+const withPolicy = async () => ({ policy: await policyP, policyPath: POLICY_PATH, routing: await routingP, regulators: await regulatorsP });
 
 function reportFor(contract: WorkContract, overrides: Partial<ResultReport> = {}): ResultReport {
   return {
@@ -337,7 +338,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
   assert.match(hints[1] ?? "", /Host-run verification refused closeout.*not ok: answer.*The evidence the harness produced, not the report, decides/s);
   const audit = await new AuditLog(repo).forUnit("u1");
   assert.deepEqual(audit.verdicts.map((v) => [v.attempt, v.verdict]), [[1, "fail"], [2, "pass"]]);
-  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"]], "in the order the workload names the checks");
+  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["identity-untouched", "pass"]], "in the order the workload names the checks");
   assert.equal(audit.evidence[0]?.producedBy, "S3*");
   assert.notEqual(audit.evidence[0]?.revision, audit.evidence.at(-1)?.revision, "each attempt's evidence binds to its own revision");
   assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2).map((r) => r.id), "the passing verdict considered only the fresh records");
@@ -363,7 +364,7 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
     await writeFile(path.join(request.worktree, "src.txt"), "uncommitted\n");
     await s.writeReport(reportFor(contract, { evidence: [...reportFor(contract).evidence, { class: "semantic", ref: "README.md", observation: "reads well to me" }] }));
   }, repo) });
-  assert.equal(dirty.status, "blocked");
+  assert.equal(dirty.status, "blocked", JSON.stringify(dirty));
   assert.equal(dirty.status === "blocked" && dirty.reason, "check-failure");
   assert.equal(dirty.status === "blocked" ? dirty.verdict?.verdict : "", "inconclusive");
   assert.match(dirty.status === "blocked" ? dirty.verdict?.reasons[0] ?? "" : "", /uncommitted changes: evidence cannot be bound to revision/);
@@ -502,4 +503,40 @@ test("intelligence: a research unit runs under its own profile, budget and route
     await s.writeReport(reportFor(implement));
   }, repo) });
   assert.equal(dispatched.status, "closed");
+});
+
+test("identity in code (lesson 12): a fixed decision must cite an authority that exists, and a unit that commits a change under a protected prefix on its branch fails the identity-untouched check at closeout — INV-001 as evidence, not as a sentence", async (t) => {
+  const { AuditLog, ObligationLedger } = await import("@metacoding/vsm-pi-core");
+  const repo = await initRepo(t);
+  const base = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const options = { ...(await withPolicy()), repo, workload, owner: "alice" };
+
+  const freeText: WorkContract = { ...base, fixed: [{ id: "f-x", subject: "x", decision: "y", authorityRef: "S3 planning decision P1 (lesson 06)" }, { id: "f-y", subject: "x", decision: "y", authorityRef: "INV-099" }] };
+  const refused = await runUnit(gitExec, { ...options, contract: freeText, dispatcher: async () => { throw new Error("must not dispatch"); } });
+  assert.equal(refused.status, "refused");
+  assert.deepEqual(refused.status === "refused" ? refused.problems.map((p) => p.path) : [], ["fixed[0].authorityRef", "fixed[1].authorityRef"]);
+  assert.match(refused.status === "refused" ? refused.problems[0]?.message ?? "" : "", /is free text; an authority is an invariant \(INV-nnn\)/);
+  assert.match(refused.status === "refused" ? refused.problems[1]?.message ?? "" : "", /cites INV-099, which the identity does not declare \(it declares INV-001, INV-002, INV-003, INV-004\)/);
+  assert.equal(await new ExecutionStore(repo).getUnit("u1"), undefined, "nothing was claimed");
+
+  // The route lesson 10 could not close: edit the identity and commit in one shell command. The tree is clean; the branch is not.
+  const cited: WorkContract = { ...base, fixed: [...base.fixed, { id: "f-identity", subject: "identity", decision: "untouched", authorityRef: "INV-001" }] };
+  const outcome = await runUnit(gitExec, { ...options, contract: cited, dispatcher: unitThat(async (request, store) => {
+    await writeFile(path.join(request.worktree, "regulator", "identity", "INVARIANTS.md"), "# relaxed\n\n## INV-001 — Identity is editable\n\nsure\n");
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix, and relax the invariant while we are here"], { cwd: request.worktree });
+    await store.writeReport(reportFor(cited));
+  }, repo) });
+  assert.equal(outcome.status, "blocked");
+  assert.equal(outcome.status === "blocked" && outcome.reason, "check-failure");
+  const verdict = outcome.status === "blocked" ? outcome.verdict : undefined;
+  assert.equal(verdict?.verdict, "fail");
+  assert.deepEqual(verdict?.failed, ["e-checks"], "the identity check speaks to the command-class criterion");
+  assert.match(verdict?.reasons.join("\n") ?? "", /identity-untouched — protected paths changed on the branch \(INV-001\): regulator\/identity\/INVARIANTS\.md/);
+  const audit = await new AuditLog(repo).forUnit("u1");
+  assert.deepEqual(audit.evidence.filter((r) => r.check === "identity-untouched").map((r) => r.verdict), ["fail"]);
+  assert.equal(await readFile(path.join(repo, "regulator", "identity", "INVARIANTS.md"), "utf8").then((s) => s.includes("editable")), false, "nothing reintegrated");
+  const owed = (await new ObligationLedger(repo).open("u1")).filter((o) => o.concern === "audit-finding");
+  assert.deepEqual(owed.map((o) => [o.severity, o.blocks]), [["blocking", true]], "the closeout finding names INV-001; the routing floor keeps it at blocking");
 });

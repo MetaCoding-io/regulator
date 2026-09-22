@@ -5,20 +5,20 @@
  * everything here is read from the definition's files and the instance's
  * `.regulator/` directory.
  *
- *   definition = registry + profiles + policies + workload   (what is declared)
- *   instance   = units + leases + obligations + unrouted     (what is running, and
- *                messages                                     what is owed)
+ *   definition = registry + profiles + policies + workload + identity   (what is declared)
+ *   instance   = units + leases + obligations + memory + unrouted messages (what is running,
+ *                                                                          what is owed, what is known)
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding/vsm-pi-checks";
 import {
-  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, ObligationLedger, checkRegistry, summarizeLedger,
-  type RegistryProblem, type UnitAudit,
+  AuditLog, ExecutionStore, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, readIdentity, summarizeLedger,
+  type IdentitySet, type MemoryState, type RegistryProblem, type UnitAudit,
 } from "@metacoding/vsm-pi-core";
 import {
-  PolicyDefinitionSchema, RecoveryPolicySchema, RoutingPolicySchema, WorkloadDefinitionSchema, assertValid, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
-  type AttemptRecord, type BudgetLedger, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  CapabilityProfileSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
@@ -30,10 +30,14 @@ export interface DefinitionView {
   /** The recovery policies (lesson 08) and routing policies (lesson 11) the definition declares beside its budget policies. */
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
+  /** Capability profiles, declared as files since lesson 12. */
+  profiles: CapabilityProfile[];
+  /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
+  identity: IdentitySet;
   problems: string[];
-  /** Which parts of the definition are declared as files today, and which are still code or absent. */
-  declared: Array<"registry" | "workload" | "policies">;
-  pending: Array<"profiles" | "policies">;
+  /** Which parts of the definition are declared as files, and which are absent. */
+  declared: Array<"registry" | "workload" | "policies" | "profiles" | "identity">;
+  pending: Array<"profiles" | "policies" | "identity">;
 }
 
 export interface UnitView {
@@ -59,6 +63,8 @@ export interface InstanceView {
   signals: VsmMessage[];
   /** Every obligation the instance holds, in the order opened. */
   obligations: ObligationState[];
+  /** Operational memory (lesson 12): current, expired and retracted facts. */
+  memory: MemoryState[];
 }
 
 export interface StatusView {
@@ -113,10 +119,30 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
   }
-  void RecoveryPolicySchema; void RoutingPolicySchema;
+  const profiles: CapabilityProfile[] = [];
+  let profileFiles: string[] = [];
+  try {
+    profileFiles = (await readdir(path.join(dir, "profiles"))).filter((f) => f.endsWith(".json")).sort();
+  } catch {
+    problems.push("no profiles/ directory: the definition declares no capability profiles");
+  }
+  for (const file of profileFiles) {
+    try {
+      const value: unknown = JSON.parse(await readFile(path.join(dir, "profiles", file), "utf8"));
+      assertValid(CapabilityProfileSchema, value, `profile ${file}`);
+      profiles.push(value);
+    } catch (error) {
+      problems.push(`profiles/${file}: ${(error as Error).message}`);
+    }
+  }
+  const identity = await readIdentity(path.join(dir, "identity"));
+  for (const p of identity.problems) problems.push(`identity/: ${p}`);
   const declared: DefinitionView["declared"] = ["registry"];
+  const pending: DefinitionView["pending"] = [];
   if (workloads.length) declared.push("workload");
-  if (policies.length) declared.push("policies");
+  if (policies.length) declared.push("policies"); else pending.push("policies");
+  if (profiles.length) declared.push("profiles"); else pending.push("profiles");
+  if (identity.invariants.length && !identity.problems.length) declared.push("identity"); else pending.push("identity");
   return {
     dir,
     registry: { records: registry.records, problems: registry.problems },
@@ -124,9 +150,11 @@ export async function readDefinition(dir: string): Promise<DefinitionView> {
     policies,
     recovery,
     routing,
+    profiles,
+    identity,
     problems,
     declared,
-    pending: policies.length ? ["profiles"] : ["profiles", "policies"],
+    pending,
   };
 }
 
@@ -150,7 +178,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await ledger.unrouted(), obligations };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states() };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -177,6 +205,8 @@ export function renderStatusText(view: StatusView): string {
       const b = policy.budgets.default;
       lines.push(`  policy ${policy.name} v${policy.version}: default ${b.tokens} tok, ${b.turns} turns, ${b.attempts} attempts; models ${policy.models.default.primary}${policy.models.default.fallback.length ? ` → ${policy.models.default.fallback.join(" → ")}` : ""}`);
     }
+    for (const profile of d.profiles) lines.push(`  profile ${profile.name}: ${profile.tools.join(", ")}; writes ${profile.writablePaths.join(", ") || "nothing"}`);
+    lines.push(`  identity: ${d.identity.invariants.map((i) => i.id).join(", ") || "none"}${d.identity.problems.length ? ` (${d.identity.problems.length} problem(s))` : ""}`);
     for (const policy of d.recovery) lines.push(`  recovery ${policy.name} v${policy.version}: ${policy.rules.length} rule(s), fallback ${policy.fallback.join(" → ")}`);
     for (const policy of d.routing) lines.push(`  routing ${policy.name} v${policy.version}: ${policy.rules.map((r) => `${r.kind}≥${r.minSeverity}→${r.consumer}`).join(", ")}; veto at ${policy.blocksAtOrAbove}`);
     for (const problem of [...d.registry.problems.map((p) => `${p.file}: ${p.message}`), ...d.problems]) lines.push(`  ! ${problem}`);
@@ -197,6 +227,9 @@ export function renderStatusText(view: StatusView): string {
     const open = i.obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
     lines.push(`  obligations: ${open.length} open of ${i.obligations.length}`);
     for (const o of open) lines.push(`    ${o.status.padEnd(12)} ${o.consumer.padEnd(5)} ${o.severity.padEnd(8)} ${o.blocks ? "veto" : "    "}  ${o.id.slice(0, 8)}  ${o.concern}  ${o.subject}${o.unit ? `  (unit ${o.unit})` : ""}${o.question ? `  Q: ${o.question}` : ""}`);
+    const current = i.memory.filter((m) => m.status === "current");
+    lines.push(`  memory: ${current.length} current of ${i.memory.length}`);
+    for (const m of current) lines.push(`    ${m.id.slice(0, 8)}  ${m.subject}: ${m.note}  (by ${m.recordedBy}${m.unit ? ` in ${m.unit}` : ""}; review by ${m.reviewBy.slice(0, 10)})`);
     lines.push(`  unrouted signals: ${i.signals.length}`);
     for (const signal of i.signals) lines.push(`    ${signal.kind}  ${signal.source}→${signal.destination}  ${signal.subject}${"unit" in signal && signal.unit ? `  (unit ${signal.unit})` : ""}`);
   }

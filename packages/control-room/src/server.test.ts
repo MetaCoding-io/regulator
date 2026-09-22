@@ -4,7 +4,7 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { ExecutionStore, LeaseStore, ObligationLedger, appendSignal } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, LeaseStore, MemoryStore, ObligationLedger, appendSignal } from "@metacoding/vsm-pi-core";
 import type { WorkContract } from "@metacoding/vsm-pi-protocol";
 import { createControlRoomServer, readControlRoom } from "./server.js";
 
@@ -47,6 +47,7 @@ async function fixture(t: TestContext) {
     severity: "advisory", subject: "src/a.js", unit: "u2", coordination: "oscillation", observation: "4 edits", evidence: [],
   });
   await new ObligationLedger(b, () => clock).openObligation({ subject: "unit u2: clarify (oscillation)", unit: "u2", concern: "recovery-decision", sources: ["d1"], severity: "blocking", consumer: "human", blocks: true });
+  await new MemoryStore(b, () => clock).record({ subject: "runner", note: "lacks docker", evidence: [], recordedBy: "alice", reviewBy: new Date(clock + 86_400_000).toISOString() });
   return { definition, a, b, clock };
 }
 
@@ -59,6 +60,8 @@ test("readControlRoom projects one definition and any number of instances, from 
   assert.deepEqual(view.instances[1]?.leases.map((l) => [l.lease.unitId, l.live]), [["u2", true]]);
   assert.equal(view.instances[1]?.signals[0]?.kind, "coordination-signal");
   assert.deepEqual(view.instances[1]?.obligations.map((o) => [o.consumer, o.status, o.blocks]), [["human", "open", true]]);
+  assert.deepEqual(view.instances[1]?.memory.map((m) => [m.subject, m.status]), [["runner", "current"]]);
+  assert.deepEqual(view.definition?.pending, ["policies", "profiles", "identity"], "a definition without policies, profiles or identity says so");
   const none = await readControlRoom({ instanceDirs: [], now: () => clock });
   assert.equal(none.definition, undefined);
   assert.deepEqual(none.instances, []);

@@ -1,9 +1,10 @@
 /** Test helper: a throwaway git repository with one commit. Not part of any checkpoint. */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { TestContext } from "node:test";
 import { realExec, type Exec } from "./exec.js";
+import { IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR } from "./unit.js";
 
 const IDENTITY = ["-c", "user.name=lab", "-c", "user.email=lab@example.invalid", "-c", "commit.gpgsign=false"];
 
@@ -28,6 +29,8 @@ export async function initRepo(t: TestContext, files: Record<string, string> = D
     await writeFile(path.join(dir, name), content);
   }
   await writeFile(path.join(dir, ".gitignore"), ".regulator/\n");
+  // Every instance carries the definition's identity (lesson 10), as `regulator fixture` seeds it.
+  await cp(IDENTITY_SEED_DIR, path.join(dir, IDENTITY_RELATIVE_DIR), { recursive: true });
   for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) {
     const r = await gitExec("git", args, { cwd: dir });
     if (r.code !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`);

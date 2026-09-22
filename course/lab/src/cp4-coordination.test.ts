@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { createCoordinationExtension } from "./cp4-coordination.js";
+import { createCoordinationExtension, oscillationThreshold } from "./cp4-coordination.js";
 import { gitExec, initRepo } from "./git-support.js";
 import { ctxFor, mockPi } from "./test-support.js";
 import { SIGNALS_RELATIVE_PATH, startUnit } from "./unit.js";
@@ -136,4 +136,21 @@ test("Pi 0.87.0 loads the built checkpoint; the native hook refuses a write outs
   assert.equal(refused?.block, true);
   assert.match(refused?.reason ?? "", /no live lease/);
   assert.equal((await inBase("read", { path: "src.txt" }))?.block, undefined);
+});
+
+test("the oscillation threshold is the policy's, not a constant (lesson 12): the definition's default declares it; a policy without one, or none at all, falls back to 4", async (t) => {
+  const { POLICY_PATH } = await import("./policy.js");
+  const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const path = await import("node:path");
+  assert.equal(await oscillationThreshold(POLICY_PATH), 4);
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-threshold-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const policy = JSON.parse(await (await import("node:fs/promises")).readFile(POLICY_PATH, "utf8")) as { coordination?: unknown };
+  await writeFile(path.join(dir, "six.json"), JSON.stringify({ ...policy, coordination: { oscillationThreshold: 6 } }));
+  assert.equal(await oscillationThreshold(path.join(dir, "six.json")), 6);
+  delete policy.coordination;
+  await writeFile(path.join(dir, "none.json"), JSON.stringify(policy));
+  assert.equal(await oscillationThreshold(path.join(dir, "none.json")), 4);
+  assert.equal(await oscillationThreshold(path.join(dir, "missing.json")), 4);
 });

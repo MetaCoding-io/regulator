@@ -1,0 +1,31 @@
+{
+  "id": "reg.identity.definition-check.v1",
+  "name": "Definition check",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.",
+  "absorbs": {
+    "failureClass": "assembled-not-declared",
+    "description": "A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/registry-cli.ts",
+    "enforcementPoints": ["regulator check (checkDefinition, under pnpm check)"]
+  },
+  "channels": { "consumes": ["profiles/*.json", "workload/*.json", "policies/*.json", "identity/*.md"], "emits": ["definition problems (exit 1)"] },
+  "scope": { "subjects": ["definition"], "resources": ["course/lab"] },
+  "cost": { "description": "One pass over the definition's files in CI; no model calls." },
+  "authority": {
+    "may": ["refuse a definition whose parts do not resolve", "report what is missing"],
+    "mayNot": ["change a file", "check an instance (that is the read model's)", "judge whether a policy is wise"]
+  },
+  "evidence": { "tests": ["../../packages/core/src/definition.test.ts", "src/registry.test.ts"] },
+  "limitations": [
+    "Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.",
+    "It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.",
+    "The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "introducedIn": "M12"
+}
