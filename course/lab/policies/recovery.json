@@ -1,0 +1,19 @@
+{
+  "name": "recovery",
+  "version": 1,
+  "description": "What S3 does with a blocked unit, by normalized cause and occurrence. The Nth failure of a cause on one unit takes the Nth action; the last action repeats. Retry and repair spend attempts and become escalate when the unit's attempt ceiling is reached.",
+  "rules": [
+    { "cause": "no-report", "actions": ["retry", "retry", "escalate"] },
+    { "cause": "invalid-report", "actions": ["repair", "repair", "escalate"] },
+    { "cause": "budget-exhausted", "actions": ["retry", "replan"] },
+    { "cause": "check-failure", "actions": ["repair", "repair", "replan"] },
+    { "cause": "tool-error", "actions": ["retry", "remediate", "escalate"] },
+    { "cause": "timeout", "actions": ["retry", "retry", "escalate"] },
+    { "cause": "environment", "actions": ["remediate", "escalate"] },
+    { "cause": "conflict", "actions": ["repair", "escalate"] },
+    { "cause": "oscillation", "actions": ["clarify"] },
+    { "cause": "ambiguity", "actions": ["clarify"] },
+    { "cause": "dispatch-error", "actions": ["retry", "remediate", "escalate"] }
+  ],
+  "fallback": ["pause"]
+}

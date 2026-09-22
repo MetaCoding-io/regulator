@@ -19,12 +19,12 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import {
-  ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, routeFor,
+  ATTEMPT_ACTIONS, ExecutionStore, LeaseHeldError, UNITS_RELATIVE_DIR, appendSignal, ceilingFor, checkContract, checkResultReport, readSignals, routeBlockedUnit, routeFor,
   type ContractProblem, type ReportProblem,
 } from "@metacoding/vsm-pi-core";
-import type { ModelRoute, OperationalSignal, PolicyDefinition, ResultReport, WorkContract, WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
+import type { AlgedonicSignal, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, WorkContract, WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
-import { finishUnit, resumeUnit, startUnit } from "./unit.js";
+import { abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 
 export interface DispatchRequest {
@@ -41,6 +41,8 @@ export interface DispatchRequest {
   route: ModelRoute;
   /** Absolute path of the policy file the session meters itself against. */
   policyPath: string;
+  /** What the recovery router told this attempt about the previous one, when there was one. */
+  hint?: string;
 }
 
 export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string }>;
@@ -55,6 +57,8 @@ export interface RunUnitOptions {
   owner: string;
   now?: () => number;
   ttlMs?: number;
+  /** Carried into the dispatch request: the router's hint for this attempt. */
+  hint?: string;
 }
 
 export type RunUnitOutcome =
@@ -112,6 +116,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     ({ sessionId } = await options.dispatcher({
       unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile,
       attempt: attemptNumber, route: routeFor(policy, contract.unitType), policyPath: options.policyPath,
+      ...(options.hint === undefined ? {} : { hint: options.hint }),
     }));
   } catch (error) {
     const detail = (error as Error).message;
@@ -181,4 +186,71 @@ async function emitReportSignals(repo: string, contract: WorkContract, report: R
   }
   for (const signal of signals) await appendSignal(repo, signal);
   return signals.length;
+}
+
+/**
+ * route — S3 decides what a blocked unit gets. Classifies the failure from
+ * the records, applies the versioned recovery policy, records the decision
+ * immutably, and *applies* only what the loop can apply on its own:
+ *
+ *   abort      release the lease, remove the worktree; the unit is aborted
+ *   escalate   an algedonic signal to S5 with the evidence; the unit stays blocked
+ *   others     recorded; retry/repair are applied by `driveUnit`, replan/
+ *              remediate/clarify/pause wait for a decision from outside the loop
+ */
+export async function routeUnit(exec: Exec, options: { repo: string; unitId: string; policy: PolicyDefinition; recovery: RecoveryPolicy; now?: () => number }): Promise<RecoveryDecision | undefined> {
+  const now = options.now ?? Date.now;
+  const store = new ExecutionStore(options.repo, now);
+  const unit = await store.getUnit(options.unitId);
+  if (!unit) throw new Error(`no unit "${options.unitId}"`);
+  const decision = await routeBlockedUnit(store, {
+    policy: options.recovery, unitId: options.unitId, attemptCeiling: ceilingFor(options.policy, unit.unitType).attempts,
+    signals: await readSignals(options.repo), now,
+  });
+  if (!decision) return undefined;
+  if (decision.action === "abort") {
+    await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
+    await store.setStatus(options.unitId, "aborted", `aborted under ${decision.policy.name} v${decision.policy.version}: ${decision.cause}`);
+  } else if (decision.action === "escalate") {
+    const signal: AlgedonicSignal = {
+      id: decision.id, timestamp: decision.decidedAt, source: "S3", kind: "algedonic-signal", channel: "algedonic", destination: "S5",
+      severity: "blocking", subject: `unit ${options.unitId}: recovery policy exhausted`, unit: options.unitId,
+      observation: `${decision.rationale}. Evidence: ${decision.evidence.join("; ") || "none recorded"}`,
+      evidence: [{ class: "file", ref: `.regulator/units/${options.unitId}/decisions.ndjson` }],
+      requiresHumanAttention: true,
+    };
+    await appendSignal(options.repo, signal);
+    await store.setStatus(options.unitId, "blocked", `escalated to S5: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
+  } else if (!ATTEMPT_ACTIONS.has(decision.action)) {
+    await store.setStatus(options.unitId, "blocked", `awaiting ${decision.action}: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
+  }
+  return decision;
+}
+
+export interface DriveUnitOptions extends Omit<RunUnitOptions, "hint"> {
+  recovery: RecoveryPolicy;
+}
+
+export type DriveUnitOutcome = {
+  final: RunUnitOutcome;
+  decisions: RecoveryDecision[];
+};
+
+/**
+ * The autoloop: run, and while the router says retry or repair, run again
+ * with its hint. Stops at the first decision the loop cannot apply itself,
+ * or when the unit closes or is refused.
+ */
+export async function driveUnit(exec: Exec, options: DriveUnitOptions): Promise<DriveUnitOutcome> {
+  const decisions: RecoveryDecision[] = [];
+  let hint: string | undefined;
+  for (;;) {
+    const outcome = await runUnit(exec, { ...options, ...(hint === undefined ? {} : { hint }) });
+    if (outcome.status !== "blocked") return { final: outcome, decisions };
+    const decision = await routeUnit(exec, { repo: options.repo, unitId: options.contract.unitId, policy: options.policy, recovery: options.recovery, ...(options.now ? { now: options.now } : {}) });
+    if (!decision) return { final: outcome, decisions };
+    decisions.push(decision);
+    if (!ATTEMPT_ACTIONS.has(decision.action)) return { final: outcome, decisions };
+    hint = decision.hint;
+  }
 }

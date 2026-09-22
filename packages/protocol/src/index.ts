@@ -338,3 +338,9 @@ export {
   type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
+export {
+  EffectJournalEntrySchema, EffectStatusSchema, FailureCauseSchema, FailureObservationSchema, RecoveryActionSchema, RecoveryDecisionSchema,
+  RecoveryPolicySchema, RecoveryRuleSchema, isRecoveryDecision, isRecoveryPolicy,
+  type EffectJournalEntry, type EffectStatus, type FailureCause, type FailureObservation, type RecoveryAction, type RecoveryDecision,
+  type RecoveryPolicy, type RecoveryRule,
+} from "./recovery.js";

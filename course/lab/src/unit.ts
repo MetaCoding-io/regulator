@@ -133,6 +133,25 @@ export async function finishUnit(exec: Exec, options: FinishUnitOptions): Promis
   return { result, released: false, signal };
 }
 
+/**
+ * Give a unit up: release its lease and remove its worktree and branch. The
+ * unit's record, attempts and decisions stay; only the claim on the
+ * repository goes. S3's abort, never a session's.
+ */
+export async function abandonUnit(exec: Exec, options: { repo: string; unitId: string; now?: () => number }): Promise<{ released: boolean; removed: boolean }> {
+  const repo = await assertBaseCheckout(exec, options.repo);
+  const store = leaseStoreFor(repo, options.now);
+  const worktree: UnitWorktree = { unitId: options.unitId, branch: unitBranch(options.unitId), path: path.join(repo, WORKTREES_RELATIVE_DIR, options.unitId) };
+  let removed = false;
+  try {
+    await removeUnitWorktree(exec, repo, worktree, { deleteBranch: true });
+    removed = true;
+  } catch {
+    removed = false;
+  }
+  return { released: await store.release(options.unitId), removed };
+}
+
 export interface UnitStatus {
   lease: Lease;
   live: boolean;

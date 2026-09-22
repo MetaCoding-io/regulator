@@ -7,6 +7,8 @@
  *   report.v<N>.json       the result report against that version; never overwritten
  *   attempts.ndjson        one immutable record per attempt
  *   budget.a<N>.json       the running ledger of attempt N (a counter: rewritten, never merged)
+ *   observations.ndjson    normalized failures the session observed, append-only
+ *   decisions.ndjson       one immutable recovery decision per routed failure
  *
  * Nothing here is regulatory state and nothing is inferred from the domain
  * (the repository): the orchestrator knows what it dispatched because it
@@ -15,8 +17,8 @@
 import { mkdir, readdir, readFile, appendFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  AttemptRecordSchema, BudgetLedgerSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
-  type AttemptRecord, type BudgetLedger, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
+  AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
+  type AttemptRecord, type BudgetLedger, type FailureObservation, type RecoveryDecision, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
 } from "@metacoding/vsm-pi-protocol";
 import { UNITS_RELATIVE_DIR } from "./paths.js";
 
@@ -170,6 +172,46 @@ export class ExecutionStore {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw error;
     }
+  }
+
+  async #appendLine(unitId: string, file: string, value: unknown): Promise<void> {
+    const dir = this.#unitDir(unitId);
+    await mkdir(dir, { recursive: true });
+    await appendFile(path.join(dir, file), `${JSON.stringify(value)}\n`, "utf8");
+  }
+
+  async #readLines<T>(unitId: string, file: string, check: (value: unknown) => asserts value is T): Promise<T[]> {
+    try {
+      const text = await readFile(path.join(this.#unitDir(unitId), file), "utf8");
+      return text.split("\n").filter(Boolean).map((line) => {
+        const value: unknown = JSON.parse(line);
+        check(value);
+        return value;
+      });
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return [];
+      throw error;
+    }
+  }
+
+  /** The session's observer appends normalized failures as they happen. */
+  async recordObservation(observation: FailureObservation): Promise<void> {
+    assertValid(FailureObservationSchema, observation, "failure observation");
+    await this.#appendLine(observation.unitId, "observations.ndjson", observation);
+  }
+
+  async listObservations(unitId: string): Promise<FailureObservation[]> {
+    return this.#readLines(unitId, "observations.ndjson", (v): asserts v is FailureObservation => assertValid(FailureObservationSchema, v, "failure observation"));
+  }
+
+  /** Recovery decisions are immutable: append only, never revised. */
+  async recordDecision(decision: RecoveryDecision): Promise<void> {
+    assertValid(RecoveryDecisionSchema, decision, "recovery decision");
+    await this.#appendLine(decision.unitId, "decisions.ndjson", decision);
+  }
+
+  async listDecisions(unitId: string): Promise<RecoveryDecision[]> {
+    return this.#readLines(unitId, "decisions.ndjson", (v): asserts v is RecoveryDecision => assertValid(RecoveryDecisionSchema, v, "recovery decision"));
   }
 
   async getReport(unitId: string, version: number): Promise<ResultReport | undefined> {

@@ -7,8 +7,11 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
+| `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.model-router.v1` | Model router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.recovery-router.v1` | Recovery router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
@@ -118,6 +121,76 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
+## Effect journal
+
+`reg.coordination.effect-journal.v1` · S2 · deterministic-gate · active · introduced in M08
+
+**Purpose.** Make a side-effecting tool durable: write `intended` under an idempotency key before the effect and `committed` after; refuse to act again on a key that is committed or confirmed; on every session start reconcile each `intended` with no outcome against the world (confirmed or absent) before any new effect. A harness that loses its process between an effect and its record neither repeats the effect nor forgets it.
+
+**Absorbs.** `duplicated-effect` — The notification was sent, the process died before it wrote that down, the retry sends it again; or the sandbox vanished mid-unit and nobody knows whether the external operation happened.
+
+**Mechanism.** `src/cp7-recovery.ts` at `notify_owner (execute: begin/commit)`, `session_start (reconcile)`
+
+**Channels.** consumes `tool call (notify_owner)`, `outbox (the world)` · emits `effect journal (.regulator/effects.ndjson)`
+
+**Scope.** subjects unit, effect · resources outbox
+
+**Cost.** Two journal appends per effect and one outbox read per pending intention at start; no model calls.
+
+**May.**
+- refuse a duplicate effect and return the recorded result
+- mark a pending intention confirmed or absent from what the world shows
+
+**May not.**
+- undo an effect
+- decide whether an effect should happen (the model asks; the contract and profile decide)
+- reconcile effects it has no way to observe
+
+**Evidence.** `src/cp7-recovery.test.ts`, `../../packages/core/src/recovery.test.ts`
+
+**Limitations.**
+- Reconciliation needs an observable world: notify_owner's outbox is keyed so it can be read back. An effect with no observable trace can only be recorded as absent, which is a guess.
+- The idempotency key is the unit, the tool and the arguments; the same message sent on purpose twice is refused. Vary the message.
+- Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration (lesson 03), and nothing here can journal what it cannot name.
+- The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
+## Failure observer
+
+`reg.control.failure-observer.v1` · S3 · deterministic-gate · active · introduced in M08
+
+**Purpose.** Normalize every tool error and provider error in a session to a cause (environment, timeout, tool-error; a refused report_result is invalid-report) and append it to the unit's observations, so that an attempt that ends without a report is routed by what went wrong rather than by the fact that it went silent.
+
+**Absorbs.** `opaque-failure` — The transcript knows the tests could not load a module; the orchestrator only knows the unit did not report. Retrying is the wrong action and nothing in the record says so.
+
+**Mechanism.** `src/cp7-recovery.ts` at `tool_execution_end (isError)`, `agent_end (stopReason error)`
+
+**Channels.** consumes `tool_execution_end`, `agent_end` · emits `failure observation (execution store)`
+
+**Scope.** subjects unit, attempt · resources observations
+
+**Cost.** One append per failed tool call; no model calls.
+
+**May.**
+- record an observation
+
+**May not.**
+- decide anything
+- rewrite a tool result the model sees
+- halt the attempt
+
+**Evidence.** `src/cp7-recovery.test.ts`, `../../packages/core/src/recovery.test.ts`
+
+**Limitations.**
+- Normalization is a regular expression over the error text (flattened to one line, first 300 characters); an environment problem phrased unusually is recorded as a plain tool error. Only a refused report_result is typed without the regex, as invalid-report.
+- Only errors the tool layer reports as errors are observed: a test that fails is not an error, and a bash command that exits non-zero without the tool flagging it is invisible.
+- The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
+
+
 ## Model router
 
 `reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
@@ -180,6 +253,46 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Lexical path check only, as for the vendor write gate.
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
+
+
+## Recovery router
+
+`reg.control.recovery-router.v1` · S3 · deterministic-gate · active · introduced in M08
+
+**Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
+
+**Absorbs.** `naive-retry` — A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why.
+
+**Mechanism.** `src/controller.ts` at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)`
+
+**Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`
+
+**Scope.** subjects unit, attempt · resources attempts, lease, worktree
+
+**Cost.** No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them.
+
+**May.**
+- classify a failure
+- select the policy's action
+- re-dispatch with a hint
+- abort a unit and release its claim
+- escalate to S5
+
+**May not.**
+- change the recovery policy
+- issue a new contract version (replan is S3 planning, not routing)
+- answer a clarification (that is the owner's)
+- resolve an obligation on the unit's behalf
+
+**Evidence.** `../../packages/core/src/recovery.test.ts`, `src/controller.test.ts`
+
+**Limitations.**
+- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds, and check-failure is not yet produced because harness-run verification arrives in lesson 09.
+- Remediate, replan, clarify and pause are recorded and the unit waits; nothing in the loop performs them, and nothing yet reminds anyone that they are waiting (lesson 11's obligations).
+- Occurrences are counted per cause per unit; a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling instead.
+- Escalation is an algedonic signal in the signal sink; until obligations exist it is exposed by the read model, not delivered.
+
+**Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
 
 ## Reintegration guard

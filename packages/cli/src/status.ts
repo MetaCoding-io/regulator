@@ -16,7 +16,7 @@ import {
 } from "@metacoding/vsm-pi-core";
 import {
   PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid,
-  type AttemptRecord, type BudgetLedger, type Lease, type PolicyDefinition, type RegulatorRecord, type ResultReport, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
+  type AttemptRecord, type BudgetLedger, type Lease, type PolicyDefinition, type RecoveryDecision, type RegulatorRecord, type ResultReport, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding/vsm-pi-protocol";
 
 export interface DefinitionView {
@@ -37,6 +37,8 @@ export interface UnitView {
   attemptRecords: AttemptRecord[];
   /** The latest attempt's budget ledger, when the guard wrote one. */
   budget: BudgetLedger | undefined;
+  /** Every recovery decision S3 recorded for the unit, oldest first. */
+  decisions: RecoveryDecision[];
 }
 
 export interface InstanceView {
@@ -117,6 +119,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
       report: await store.getReport(unit.unitId, unit.contract.version),
       attemptRecords: await store.listAttempts(unit.unitId),
       budget: unit.attempts > 0 ? await store.getBudget(unit.unitId, unit.attempts) : await store.getBudget(unit.unitId, 1),
+      decisions: await store.listDecisions(unit.unitId),
     });
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
@@ -154,9 +157,10 @@ export function renderStatusText(view: StatusView): string {
     const i = view.instance;
     lines.push(`instance ${i.dir}`);
     lines.push(`  units: ${i.units.length}`);
-    for (const { unit, report, attemptRecords, budget } of i.units) {
+    for (const { unit, report, attemptRecords, budget, decisions } of i.units) {
       const last = attemptRecords.at(-1);
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      const routed = decisions.at(-1);
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);

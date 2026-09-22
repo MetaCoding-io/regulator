@@ -12,3 +12,4 @@ export const LEASES_RELATIVE_DIR = path.join(REGULATOR_DIR, "leases");
 export const WORKTREES_RELATIVE_DIR = path.join(REGULATOR_DIR, "worktrees");
 export const SIGNALS_RELATIVE_PATH = path.join(REGULATOR_DIR, "signals.ndjson");
 export const TRACE_RELATIVE_PATH = path.join(REGULATOR_DIR, "trace.ndjson");
+export const EFFECTS_RELATIVE_PATH = path.join(REGULATOR_DIR, "effects.ndjson");
