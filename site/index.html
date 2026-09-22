@@ -292,6 +292,8 @@
     background:var(--alarm-soft);padding:4px 10px;border-radius:20px;margin-bottom:16px;
   }
   .fake-tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--alarm);}
+  .fake-tag.ok{color:var(--signal);border-color:var(--signal);background:var(--signal-soft);}
+  .fake-tag.ok::before{background:var(--signal);}
   .crframe{border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface);margin-top:18px;box-shadow:0 1px 0 var(--line);}
   .crframe .chrome{
     display:flex;align-items:center;gap:8px;padding:0 12px;height:38px;
@@ -625,7 +627,7 @@
 
 <section id="control-room" class="wrap">
   <div class="kicker">The maintainer's interface<span class="tick"></span></div>
-  <span class="fake-tag">Illustrative — the first page is built</span>
+  <span class="fake-tag ok">Definition &amp; Instances ship today — recreated below</span>
   <h2 class="title">The control room</h2>
   <p class="lede">A projection of <em>registry ∪ execution store ∪ regulatory state</em>.
     It owns no state of its own — every screen is read from records that already exist
@@ -640,11 +642,11 @@
     <div class="chrome">
       <span class="wdot"></span><span class="wdot"></span><span class="wdot"></span>
       <div class="tabs">
-        <span class="tab active">Topology</span>
-        <span class="tab">Live</span>
-        <span class="tab">Assurance</span>
-        <span class="tab">Lifecycle</span>
-        <span class="tab">Replay</span>
+        <span class="tab active">Definition</span>
+        <span class="tab">Instances</span>
+        <span class="tab">Assurance*</span>
+        <span class="tab">Lifecycle*</span>
+        <span class="tab">Replay*</span>
       </div>
     </div>
     <div class="body cr-topo">
@@ -659,32 +661,32 @@
         <div class="cr-node"><span class="d"></span>S1 — migration</div>
       </div>
       <div class="cr-inspector">
-        <div class="id">reg.authority.vendor-write-gate.v1</div>
+        <div class="id">reg.authority.identity-write-gate.v1</div>
         <div class="cr-field"><div class="k">Function</div><div class="v">S5 — write authority</div></div>
-        <div class="cr-field"><div class="k">Absorbs</div><div class="v">protected-path mutation from operational code</div></div>
-        <div class="cr-field"><div class="k">Mechanism</div><div class="v">deterministic-gate · <code>tool_call</code></div></div>
-        <div class="cr-field"><div class="k">Authority</div><div class="v">may block a write · may not approve a proposal</div></div>
-        <div class="cr-field"><div class="k">Evidence</div><div class="v">3 tests · last verified rev 4b0e567</div></div>
-        <div class="cr-field"><div class="k">Boundary</div><div class="v">lexical path check only; superseded by the identity write gate's filesystem walk when both load</div></div>
-        <div class="cr-field"><div class="k">Owner</div><div class="v">reviewBy 2026-12-01</div></div>
+        <div class="cr-field"><div class="k">Absorbs</div><div class="v">identity mutation from operational code, by any route the hook sees</div></div>
+        <div class="cr-field"><div class="k">Mechanism</div><div class="v">deterministic-gate · <code>tool_call</code> (write, edit, bash snapshot) · <code>tool_result</code> (bash restore)</div></div>
+        <div class="cr-field"><div class="k">Authority</div><div class="v">may refuse a write, restore a protected file, record a finding · may not grant s5-authority or undo a commit</div></div>
+        <div class="cr-field"><div class="k">Evidence</div><div class="v">3 test files cited · authority.test.ts, cp9-authority.test.ts, the Pi extension's suite</div></div>
+        <div class="cr-field"><div class="k">Boundary</div><div class="v">a protected change committed by one shell command survives the bash watch (DEBT.md row 17)</div></div>
+        <div class="cr-field"><div class="k">Owner</div><div class="v">course-lab · reviewBy 2026-12-01</div></div>
       </div>
     </div>
   </div>
-  <div class="cr-caption">Topology, built from the registry alone — selecting a node opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it. (Built.)</div>
+  <div class="cr-caption">Definition — S5→S1 columns, one card per regulator, each declaring the channels it consumes and emits. Selecting a card opens its record: purpose, mechanism, authority, evidence, boundary, cost, owner, retirement condition. Never a summary of it.</div>
 
   <div class="crframe">
     <div class="chrome">
       <span class="wdot"></span><span class="wdot"></span><span class="wdot"></span>
       <div class="tabs">
-        <span class="tab">Topology</span>
-        <span class="tab active">Live</span>
-        <span class="tab">Assurance</span>
-        <span class="tab">Lifecycle</span>
-        <span class="tab">Replay</span>
+        <span class="tab">Definition</span>
+        <span class="tab active">Instances</span>
+        <span class="tab">Assurance*</span>
+        <span class="tab">Lifecycle*</span>
+        <span class="tab">Replay*</span>
       </div>
     </div>
     <div class="body">
-      <div class="cr-banner"><span class="d"></span>ALGEDONIC · unit-0402 requests consent for a force-push to main — pending 00:04:12, no timeout-as-approval</div>
+      <div class="cr-banner"><span class="d"></span>UNROUTED SIGNAL · unit-0402 blocked — recovery policy chose "clarify"; nothing has delivered the question to a person yet (lesson 11)</div>
       <div style="overflow-x:auto;">
         <table class="cr-table">
           <thead><tr><th>Unit</th><th>Type</th><th>Lease</th><th>Attempt</th><th>Budget</th><th>Status</th></tr></thead>
@@ -692,26 +694,27 @@
             <tr><td class="unit">unit-0417</td><td>implement</td><td>worker-3 · 4m</td><td>2 / 6</td><td>62% tokens</td><td><span class="cr-status run">Running</span></td></tr>
             <tr><td class="unit">unit-0415</td><td>verify</td><td>worker-1 · 1m</td><td>1 / 6</td><td>18% tokens</td><td><span class="cr-status run">Verifying</span></td></tr>
             <tr><td class="unit">unit-0409</td><td>integrate</td><td>expired</td><td>3 / 6</td><td>91% tokens</td><td><span class="cr-status block">Blocked — lease reclaimed</span></td></tr>
-            <tr><td class="unit">unit-0402</td><td>close</td><td>worker-2 · 9m</td><td>1 / 6</td><td>34% tokens</td><td><span class="cr-status block">Awaiting consent</span></td></tr>
+            <tr><td class="unit">unit-0402</td><td>close</td><td>worker-2 · 9m</td><td>1 / 6</td><td>34% tokens</td><td><span class="cr-status block">Blocked — clarify</span></td></tr>
           </tbody>
         </table>
       </div>
     </div>
   </div>
-  <div class="cr-caption">Instances, built from the execution store, the signal sink and the audit log — "healthy" means evidenced and current, never merely no errors reported. (Built, without the consent banner: that is lesson 13.)</div>
+  <div class="cr-caption">Instances — units, leases and unrouted signals per instance, read from the execution store, the lease store, the signal sink and the audit log; the page refreshes every five seconds and nothing here reads the repository. "Healthy" means evidenced and current, never merely no errors reported.</div>
 
   <div class="cr-next">
-    <div class="cr-next-card"><div class="t">Assurance</div><div class="d">Which regulators have fresh evidence, which acceptance criteria are uncovered, which claims rest only on self-report.</div></div>
-    <div class="cr-next-card"><div class="t">Lifecycle</div><div class="d">Which regulators are expensive, overdue for review, ineffective in ablation, or candidates for retirement.</div></div>
-    <div class="cr-next-card"><div class="t">Replay</div><div class="d">Scrub one run end to end: contract → dispatch → tool calls → failure → recovery → evidence → obligation → escalation → closeout.</div></div>
+    <div class="cr-next-card"><div class="t">Assurance*</div><div class="d">Which regulators have fresh evidence, which acceptance criteria are uncovered, which claims rest only on self-report.</div></div>
+    <div class="cr-next-card"><div class="t">Lifecycle*</div><div class="d">Which regulators are expensive, overdue for review, ineffective in ablation, or candidates for retirement.</div></div>
+    <div class="cr-next-card"><div class="t">Replay*</div><div class="d">Scrub one run end to end: contract → dispatch → tool calls → failure → recovery → evidence → obligation → escalation → closeout.</div></div>
   </div>
 
   <p style="font-size:13px;color:var(--ink-dim);margin-top:22px;max-width:64ch;">
     <strong>Read-only first.</strong> This is an S3&#42;/S4 observation surface. The moment
     it grows a "raise budget" or "dismiss obligation" button, it has quietly become an
     S3/S5 authority surface — actions land later only as typed proposals or explicitly
-    authorized commands with their own audit trail. Every non-GET request the page receives
-    is refused with 405.
+    authorized commands with their own audit trail. That is already true of what ships:
+    <code>packages/control-room</code> refuses every non-GET request with 405. The three
+    starred views remain design only.
   </p>
 </section>
 
