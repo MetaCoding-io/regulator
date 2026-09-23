@@ -146,6 +146,17 @@ the authority, the evidence, and the failure mode it does not cover.
 
 See [ASSESSMENT.md](ASSESSMENT.md).
 
+## Worked example: a second domain
+
+The control plane is generic over workloads, and the quickest way to see which parts of
+the design are the learner's to make is a domain that is not software.
+[examples/personal-finance.md](examples/personal-finance.md) puts a household ledger
+under `regulator`: the six regulatory questions answered for a monthly close, then the
+declaration that answers them — the `personal-finance` workload, the `bookkeeper` and
+`auditor` profiles, a budget policy, five contracts, the ledger fixture with its own
+checks — and the close run end to end, scripted, under `pnpm check`
+([`lab/src/finance.test.ts`](lab/src/finance.test.ts)).
+
 ## Lessons written so far
 
 | Lesson | Checkpoint | Lab code |

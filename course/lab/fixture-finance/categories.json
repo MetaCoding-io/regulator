@@ -1,0 +1,5 @@
+{
+  "categories": ["income", "housing", "groceries", "utilities", "transport", "dining", "leisure", "transfer", "uncategorized"],
+  "holding": "uncategorized",
+  "note": "A row lands in the holding category at ingest and leaves it at categorize. A merchant the statement does not explain stays there and is surfaced; a unit never guesses."
+}

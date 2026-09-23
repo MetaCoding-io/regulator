@@ -18,6 +18,24 @@ export async function loadWorkload(file: string = WORKLOAD_PATH): Promise<Worklo
   return value;
 }
 
+export function workloadPath(name: string, root: string = LAB_ROOT): string {
+  return path.join(root, "workload", `${name}.json`);
+}
+
+/** The workload a contract names, from the definition's `workload/` directory: the loop is generic over workloads, so the contract says which one (lesson 06; the second workload arrives with the worked example). */
+export async function loadWorkloadFor(name: string, root: string = LAB_ROOT): Promise<WorkloadDefinition> {
+  const file = workloadPath(name, root);
+  let workload: WorkloadDefinition;
+  try {
+    workload = await loadWorkload(file);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error(`the definition declares no workload "${name}" (no ${path.relative(root, file)})`);
+    throw error;
+  }
+  if (workload.name !== name) throw new Error(`${path.relative(root, file)} declares workload "${workload.name}", not "${name}"; the file name must match`);
+  return workload;
+}
+
 export function unitTypeOf(workload: WorkloadDefinition, name: string): UnitType | undefined {
   return workload.unitTypes.find((type) => type.name === name);
 }

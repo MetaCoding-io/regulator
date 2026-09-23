@@ -1,0 +1,58 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "personal-finance",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-23T00:00:00.000Z"
+  },
+  "id": "tc-f1-ingest",
+  "unitId": "f1-ingest",
+  "unitType": "ingest",
+  "objective": "Ingest August 2026: create ledger/2026-08.csv with one row per row of statements/2026-08-checking.csv (date, description, amount), every row in the holding category, memo empty.",
+  "contribution": "The first unit of the August close. Nothing is judged yet; the ledger must simply be the statement.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.identity-untouched-check.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-statement",
+      "subject": "the statement",
+      "decision": "statements/ is the bank's record and is not edited; when the ledger and the statement disagree, the ledger changes.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-holding",
+      "subject": "categories at ingest",
+      "decision": "Every ingested row carries the holding category; categorization is the next unit's.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-format",
+      "subject": "row order and formatting",
+      "bounds": "Rows in statement order; amounts as the statement prints them; the header is date,description,amount,category,memo."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-ledger-checks",
+      "description": "run_tests: the ledger's own suite passes at the committed revision \u2014 the period balances to its statement row for row and in total",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

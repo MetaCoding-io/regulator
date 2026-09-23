@@ -49,6 +49,12 @@ fixture's layout is a declaration here or a discovered convention:
 | `npm test` or `node --test` | discovered from `package.json` scripts or a `test/` directory (`packages/checks/src/conventions.ts`) |
 | the glossary's words | `regulator/identity/GLOSSARY.md`, "Words this instance does not use", read by `glossary-lint` |
 
+For a domain that is not software, the same steps with different prefixes:
+`regulator fixture ~/ledger --finance`, then `init --writable ledger/,reports/,payments/pending/
+--protected statements/,payments/executed/` — the worked example in
+[`course/examples/personal-finance.md`](../examples/personal-finance.md) walks the design
+and the declaration.
+
 The manifest is harness-owned and written by a person. The project's own files —
 `.pi/`, `AGENTS.md`, extensions, skills — still say nothing to the harness (the trust
 rule, lesson 10).

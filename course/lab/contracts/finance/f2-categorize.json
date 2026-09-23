@@ -1,0 +1,69 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "personal-finance",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-23T00:00:00.000Z"
+  },
+  "id": "tc-f2-categorize",
+  "unitId": "f2-categorize",
+  "unitType": "categorize",
+  "objective": "Categorize August 2026: give every row of ledger/2026-08.csv a category from categories.json, using July's ledger as the precedent for recurring merchants.",
+  "contribution": "The judgment step of the close: categories are chosen, within the taxonomy, with the choices reported.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-statement",
+      "subject": "the statement",
+      "decision": "statements/ is the bank's record and is not edited; when the ledger and the statement disagree, the ledger changes.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-taxonomy",
+      "subject": "the taxonomy",
+      "decision": "A category is one of categories.json; the taxonomy is not extended by a unit.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-categories",
+      "subject": "the category of each row",
+      "bounds": "Any category in categories.json; a recurring merchant keeps July's category; report the choice for every merchant July does not have."
+    },
+    {
+      "id": "d-memos",
+      "subject": "memos",
+      "bounds": "Short, factual, optional."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-unknown-merchant",
+      "subject": "UNKNOWN MERCHANT 8831 on 2026-08-28",
+      "reason": "Nobody knows what this 120.00 debit was; the statement does not say and no earlier period has it.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-ledger-checks",
+      "description": "run_tests: the ledger's own suite passes at the committed revision \u2014 the period balances to its statement row for row and in total",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}
