@@ -12,3 +12,8 @@ registry records.
 - **Learn it:** the course under [`../modules/`](../modules/), one lesson per checkpoint.
 - **Check it:** `pnpm check` from the repository root; `node dist/registry-cli.js
   check` for the definition alone.
+- **Second workload:** `workload/personal-finance.json` over `fixture-finance/`, with
+  the `bookkeeper` and `auditor` profiles, `policies/finance.json` and
+  `contracts/finance/`; the worked example is
+  [`../examples/personal-finance.md`](../examples/personal-finance.md) and
+  `src/finance.test.ts` runs its August close scripted.

@@ -1,0 +1,9 @@
+date,description,amount,category,memo
+2026-07-01,ACME PAYROLL,3200.00,income,salary
+2026-07-04,GREENGROCER 114,-210.55,groceries,
+2026-07-05,RENT 14 ELM ST,-1450.00,housing,rent
+2026-07-08,POWERCO ELECTRIC,-88.30,utilities,electricity
+2026-07-11,METRO TRANSIT,-49.00,transport,monthly pass
+2026-07-15,TRANSFER TO SAVINGS,-400.00,transfer,savings
+2026-07-19,CAFE LUNA,-42.15,dining,
+2026-07-22,CITY WATER,-36.20,utilities,water

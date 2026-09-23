@@ -1,0 +1,58 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "personal-finance",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-23T00:00:00.000Z"
+  },
+  "id": "tc-f4-report",
+  "unitId": "f4-report",
+  "unitType": "report",
+  "objective": "Write reports/2026-08.md in the shape of reports/2026-07.md: the account line, the totals table by category, and the open items \u2014 the holding-category rows the close carries forward.",
+  "contribution": "The close itself. Its numbers are checked against the ledger by the host; the report's claims satisfy nothing.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1",
+    "reg.audit.glossary-lint.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-taxonomy",
+      "subject": "the taxonomy",
+      "decision": "A category is one of categories.json; the taxonomy is not extended by a unit.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-open-items",
+      "subject": "open items",
+      "decision": "A row still in the holding category is listed under Open items with its date and amount; the close does not settle it.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-prose",
+      "subject": "the account line's wording",
+      "bounds": "One or two sentences; the numbers are the ledger's."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-ledger-checks",
+      "description": "run_tests: the ledger's own suite passes at the committed revision \u2014 the period balances to its statement row for row and in total",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

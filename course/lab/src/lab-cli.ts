@@ -2,7 +2,7 @@
 /**
  * `regulator` for the course lab.
  *
- *   node dist/lab-cli.js fixture <dest> [--oscillation | --injection]   copy a fixture into its own git repo (identity seeded, canaries recorded)
+ *   node dist/lab-cli.js fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
  *   node dist/lab-cli.js unit start <id> [--ttl <min>]    lease + worktree + branch (run in the base checkout)
  *   node dist/lab-cli.js unit finish <id>                 reintegrate, or surface the conflict
  *   node dist/lab-cli.js unit status                      leases and their liveness
@@ -65,7 +65,7 @@ import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
-import { loadWorkload } from "./workload.js";
+import { loadWorkloadFor } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const [command, sub, ...rest] = process.argv.slice(2);
@@ -74,7 +74,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator fixture <dest> [--oscillation | --injection] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
+  console.error("usage: regulator fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -173,7 +173,7 @@ ${rationale}`]]) {
     const sha = await headRevision(realExec, definitionRoot);
     console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's file, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
   } else if (command === "fixture" && sub) {
-    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : "fixture");
+    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : rest.includes("--finance") ? "fixture-finance" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
     console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity seeded at regulator/identity/)`);
   } else if (command === "unit" && sub === "start" && rest[0]) {
@@ -200,7 +200,7 @@ ${rationale}`]]) {
     console.log(`contract ${contract.id} v${contract.version} for unit ${contract.unitId} (${contract.unitType}): ${contract.fixed.length} fixed, ${contract.delegated.length} delegated, ${contract.unresolved.length} unresolved; dispatchable`);
   } else if (command === "unit" && sub === "dispatch" && rest[0]) {
     const contract = await loadContract(path.resolve(rest[0]));
-    const workload = await loadWorkload();
+    const workload = await loadWorkloadFor(contract.workload.name);
     const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
     const policy = await loadPolicy(policyPath);
     const routing = await routingP();
@@ -220,7 +220,7 @@ ${rationale}`]]) {
     }
   } else if (command === "unit" && sub === "drive" && rest[0]) {
     const contract = await loadContract(path.resolve(rest[0]));
-    const workload = await loadWorkload();
+    const workload = await loadWorkloadFor(contract.workload.name);
     const policyPath = path.resolve(flag("policy") ?? POLICY_PATH);
     const policy = await loadPolicy(policyPath);
     const recovery = await loadRecoveryPolicy(path.resolve(flag("recovery") ?? RECOVERY_POLICY_PATH));
@@ -271,7 +271,9 @@ ${rationale}`]]) {
     console.log(owed.length ? `  obligations:` : "  obligations: none");
     for (const o of owed) console.log(`    ${describe(o)}`);
   } else if (command === "unit" && sub === "close" && rest[0]) {
-    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkload(), routing: await routingP(), interaction: await interactionP() });
+    const closing = await new ExecutionStore(process.cwd()).getUnit(rest[0]);
+    if (!closing) throw new Error(`no unit "${rest[0]}"`);
+    const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkloadFor(closing.workload.name), routing: await routingP(), interaction: await interactionP() });
     if (outcome.status === "closed") console.log(`unit ${rest[0]}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }

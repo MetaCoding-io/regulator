@@ -175,6 +175,11 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   `course/lab/fixture-injection/` — **exists**. Whether it is realistic enough that an
   ungated agent sometimes follows it is what drill 2 measures; a drill nobody fails
   teaches nothing.
+- **Finance fixture** — a household ledger (`course/lab/fixture-finance/`): the bank's
+  statements as a protected source of truth, a categorized ledger, a monthly close, a
+  pending-payments directory a person acts on, and the ledger's own checks outside every
+  write grant. The domain of the second workload, `personal-finance`, and of the worked
+  example [examples/personal-finance.md](examples/personal-finance.md) — **exists**.
 - **Drift fixture** — a longitudinal scenario (a sequence of related tasks) whose
   architectural conformance can be measured after N units, for M12 and M14.
 - **Lab grader** — deterministic checks per checkpoint, runnable locally and in CI,

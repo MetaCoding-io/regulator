@@ -1,0 +1,10 @@
+{
+  "name": "household-ledger",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Course fixture: a plain-text household ledger with its own checks. The domain of the personal-finance workload.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

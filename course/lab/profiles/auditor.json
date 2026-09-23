@@ -1,0 +1,11 @@
+{
+  "name": "auditor",
+  "description": "Read and report. No write, edit or shell tools, and no execution of project code: every granted tool has a declared read-only effect. The reconciliation itself is the host's run of the ledger's checks at closeout, not this profile's.",
+  "tools": ["read", "grep", "find", "ls", "read_conventions", "run_checks"],
+  "writablePaths": [],
+  "thinkingLevel": "medium",
+  "advice": [
+    "You are in the auditor profile: you can read the ledger, the statements and the reports, and run the static checks, but not change anything or run the suite.",
+    "Compare the period's ledger to its statement row by row and say what does not match, with file and line. If something needs changing, say what and why; do not attempt it."
+  ]
+}

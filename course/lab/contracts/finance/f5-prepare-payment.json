@@ -1,0 +1,58 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "personal-finance",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-23T00:00:00.000Z"
+  },
+  "id": "tc-f5-prepare-payment",
+  "unitId": "f5-prepare-payment",
+  "unitType": "prepare-payment",
+  "objective": "Prepare September's rent: write payments/pending/2026-09-rent.json for the landlord, the amount the ledger's housing rows show, due 2026-09-05 \u2014 after a person consents.",
+  "contribution": "The one unit whose output the household acts on. Consent is asked before the file exists; without a yes, nothing is written and the unit waits.",
+  "constraintRefs": [
+    "reg.algedonic.interaction-contract.v1",
+    "reg.algedonic.pause-gate.v1",
+    "reg.control.profile-write-grant.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-consent",
+      "subject": "consent before a pending payment",
+      "decision": "No file is written under payments/pending/ until a person answers yes to a consent question that names the payee, the amount and the due date. Silence is not consent.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "payments/executed/",
+      "decision": "The record of what was paid is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-memo",
+      "subject": "the payment memo",
+      "bounds": "Short; names the period."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-ledger-checks",
+      "description": "run_tests: the ledger's own suite passes at the committed revision \u2014 the period balances to its statement row for row and in total",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

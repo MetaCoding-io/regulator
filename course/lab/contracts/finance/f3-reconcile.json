@@ -1,0 +1,38 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "personal-finance",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-09-23T00:00:00.000Z"
+  },
+  "id": "tc-f3-reconcile",
+  "unitId": "f3-reconcile",
+  "unitType": "reconcile",
+  "objective": "Reconcile August 2026: read ledger/2026-08.csv against statements/2026-08-checking.csv and the summary, and report every row that does not match and whether opening plus net equals closing.",
+  "contribution": "An independent reading before the report is written. The host runs the ledger's checks at closeout; this unit's report is the human-readable account of the same comparison.",
+  "constraintRefs": [
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-statement",
+      "subject": "the statement",
+      "decision": "statements/ is the bank's record and is not edited; when the ledger and the statement disagree, the ledger changes.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-ledger-checks",
+      "description": "run_tests: the ledger's own suite passes at the committed revision \u2014 the period balances to its statement row for row and in total",
+      "class": "test",
+      "required": true
+    }
+  ]
+}
