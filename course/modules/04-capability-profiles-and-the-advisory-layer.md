@@ -358,8 +358,8 @@ use to do it*. Notice, too, that `subagent` is honoured by prompt injection rath
 by framework selection — GSD is explicit about which of its phases is mechanism and
 which is advice.
 
-**VSM-Pi.** Read sections 4–6 of
-[`docs/GSD-VSM-FUNCTIONAL-MAP.md`](../../docs/GSD-VSM-FUNCTIONAL-MAP.md): capabilities,
+**VSM-Pi.** Read sections 4–6 of the archived design record
+[`GSD-VSM-FUNCTIONAL-MAP.md`](../../docs/archive/2026-09/GSD-VSM-FUNCTIONAL-MAP.md): capabilities,
 their derivation, and separation of duty. Two sentences to take away. Capabilities are
 derived from *trusted context* — the unit, the phase, and a separation-of-duty policy —
 never from what the model says about itself. And membership may be many-to-many, but

@@ -1,9 +1,10 @@
 {
   "name": "@metacoding/vsm-pi-course-lab",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
-  "description": "Reference build for the Viable Agents course: `regulator`, one checkpoint per lesson. Installable as a pi package (the checkpoints load as extensions) and as the `regulator` CLI; the definition — registry, identity, profiles, policies, workload, evals — ships beside the code. See OPERATING.md.",
+  "description": "Reference build for the Viable Agents course: `regulator`, one checkpoint per lesson. Installable as a pi package (the checkpoints load as extensions) and as the `regulator` CLI; the definition \u2014 registry, identity, profiles, policies, workload, evals \u2014 ships beside the code. See OPERATING.md.",
   "bin": {
     "regulator": "./dist/lab-cli.js"
   },

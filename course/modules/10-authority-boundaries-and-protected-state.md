@@ -297,6 +297,6 @@ You have finished checkpoint 9 when:
 - OWASP Top 10 for Agentic Applications (2026); the Agent Control Standard's
   runtime-policy model.
 - This repository's [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md) INV-001 and INV-002,
-  [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+  [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
   §12 rule 7 (model-supplied authority fields cannot override host policy), and
   [`docs/DEBT.md`](../../docs/DEBT.md).

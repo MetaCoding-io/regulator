@@ -330,7 +330,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
 
-**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`
+**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`
 
 **Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
 
@@ -991,7 +991,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Limitations.**
 - A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
-- Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.
+- A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`, lesson 15), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.
 - Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
@@ -1712,7 +1712,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `implicit-delegation` — A task description hands S1 every decision the planner did not think of; the unit settles them by omission and the choices disappear into the diff.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (cp5-contract)`
+**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (cp5-contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)`
 
 **Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
 

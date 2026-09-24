@@ -6,8 +6,8 @@ page and every extension API area is listed with the module that teaches it, or 
 explicit statement that it is out of scope. A blank cell is a gap, not an oversight to
 be discovered by a learner mid-lab.
 
-It also serves as the upgrade checklist from [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
-when the pinned Pi version moves, walk the rows.
+It also serves as the upgrade checklist (`course/lab/OPERATING.md`, "Upgrading"): when
+the pinned Pi version moves, walk the rows.
 
 Source of truth for the left-hand column: `packages/coding-agent/docs/` in
 `earendil-works/pi`, at the version pinned in the course starter repo.

@@ -13,7 +13,7 @@ VSM-Pi is a coding-agent harness on Pi with its own orchestrator and an explicit
 - `packages/cli` — operator-facing inspection and setup.
 - `course/lab` — the reference build (`regulator`); its Pi-free modules promote into `protocol`/`core` as they stabilize.
 - `vsm/` — committed S5 identity and policy.
-- `.gsd/vsm-runtime/` — generated runtime evidence (path name retained from the earlier scope; a rename is a code change, not a policy change).
+- `.regulator/` — an instance's generated runtime records: the execution store, the regulatory log, the audit log, the effect journal, the outbox, the memory store and the reporting tools' SQLite event store (`events.db`). Never identity.
 
 ## Dependency direction
 

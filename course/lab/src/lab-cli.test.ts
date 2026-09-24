@@ -287,3 +287,16 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote GLOSSARY\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned a word/);
   assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
 });
+
+test("the contract-less path (lesson 05) honours the workload's requiresContract (lesson 06): `unit start --type` refuses a type that requires a contract, refuses a type the workload does not declare, and starts a contract-less type bare", async (t) => {
+  const repo = await initRepo(t);
+  const refused = await regulator(repo, "unit", "start", "u1", "--type", "implement");
+  assert.equal(refused.code, 1);
+  assert.match(refused.stderr, /unit type "implement" requires a contract: dispatch it with `regulator unit dispatch <contract.json>`/);
+  const unknown = await regulator(repo, "unit", "start", "u1", "--type", "deploy");
+  assert.equal(unknown.code, 1);
+  assert.match(unknown.stderr, /unit type "deploy" is not a unit type of workload software-development/);
+  const started = await regulator(repo, "unit", "start", "u1", "--type", "plan");
+  assert.equal(started.code, 0, started.stderr);
+  assert.match(started.stdout, /unit u1: branch/);
+});

@@ -2,11 +2,11 @@
 
 ## Purpose
 
-VSM-Pi augments Pi/GSD with explicit cybernetic control structures for agentic software development. It does **not** attempt to replace GSD's orchestration kernel. The initial design assumes GSD remains authoritative for lifecycle, task/slice/milestone state, attempts, verification, retries, recovery, and isolation.
+VSM-Pi is a coding-agent harness on Pi with an explicit cybernetic control plane. It provides its own orchestrator — the S3 loop, generic over workloads — and regulates it ([ADR 0001](decisions/0001-own-orchestrator.md)). GSD-Pi is comparison material in the course, not a dependency.
 
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 
-VSM-Pi therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. Instead, it projects VSM functions onto GSD's existing units and mechanisms. That projection is host-derived, may be many-to-many, and determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
+VSM-Pi therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
 
 ## Core rule
 
@@ -101,20 +101,18 @@ Cybernetically, these reports preserve information about variety that S1 could n
 
 ### S2 — Coordination
 
-S2 is primarily mechanism rather than a conversational agent. Initial S2 responsibilities are expected to remain largely inside GSD:
+S2 is primarily mechanism rather than a conversational agent. The orchestrator supplies it:
 
-- lifecycle/unit contracts;
-- worktree/branch isolation;
-- leases and claims;
-- tool-surface restrictions;
-- sequencing and dependency control;
-- anti-oscillation behavior.
+- worktree/branch isolation and reintegration;
+- unit leases with expiry;
+- tool-surface restrictions by profile;
+- the thrash detector (anti-oscillation within a unit).
+
+Sequencing between units and semantic commitments across them are not built (issue #14).
 
 ### S3 — Control
 
-S3 is the operational controller. GSD already supplies much of this function through planning, dispatch, retries, recovery, budgets, and authoritative project state.
-
-VSM-Pi should feed S3 typed signals and audit findings rather than creating a competing controller.
+S3 is the operational controller: the orchestrator's loop — contract → dispatch → verify → route → close — with budgets, the versioned recovery policy, and authority over execution state. It is the only thing that schedules; regulators feed it typed signals and audit findings and can veto progression, never dispatch.
 
 S3 should treat S1 uncertainty reports as routing information rather than self-certification. Low-consequence uncertainty may simply be recorded; consequential architectural uncertainty may trigger targeted S3* inspection, replanning, research, or human escalation.
 
@@ -171,7 +169,7 @@ Planning should therefore prefer work units with:
 
 Horizontal work is not forbidden. Shared infrastructure, migrations, cross-cutting refactors, and enabling platform changes can be legitimate horizontal units. When used, their plan should state why an end-to-end slice is impractical and what integration proof will close the feedback loop.
 
-GSD already uses the word *slice* as a workflow unit; VSM-Pi should not assume every GSD slice is automatically vertical. The distinction should eventually become explicit planning metadata or a planning invariant rather than a naming convention.
+The distinction should eventually become explicit planning metadata or a planning invariant rather than a naming convention; today a contract's `contribution` is the only trace of it.
 
 ## Channel semantics
 
@@ -199,7 +197,7 @@ human-reviewed              machine-written
 S5 identity                 findings/traces/cache
 ```
 
-The exact runtime storage may evolve as integration with GSD deepens, but committed identity and ephemeral execution evidence must remain conceptually separate.
+Runtime records live under an instance's `.regulator/`; committed identity and ephemeral execution evidence remain conceptually separate.
 
 ## Mechanism hierarchy
 
@@ -213,27 +211,13 @@ For each requirement, ask in order:
 
 This ordering is deliberate. VSM-Pi should not encode deterministic authority as prose merely because an LLM is available.
 
-## M0 boundaries
-
-M0 proves the control-plane pattern only.
-
-In scope:
-
-- protocol types and schemas;
-- protected S5 paths;
-- typed policy proposal;
-- typed audit finding;
-- typed S1 uncertainty signal;
-- deterministic gate interface;
-- Pi/GSD extension seam;
-- traceable decisions/findings/signals;
-- one drift-oriented fixture.
-
-Out of scope:
+## Deliberately deferred
 
 - complete VSM recursion;
 - production-grade ontology extraction;
 - RDF/SHACL enforcement;
 - broad S4 integrations;
 - autonomous S5 mutation;
-- replacing GSD's scheduler/state machine.
+- production-grade benchmarks.
+
+What the build owes short of these is one row each in [DEBT.md](DEBT.md).

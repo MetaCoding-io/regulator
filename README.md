@@ -46,11 +46,11 @@ When adding a feature, prefer mechanisms in this order:
 
 ## Where it is
 
-Shipped in `packages/`: the typed VSM protocol and channel vocabulary, committed S5 artifacts, protected S5 write paths in a loadable Pi extension, typed policy-proposal / audit-finding / uncertainty tools, a SQLite regulatory event store — and, promoted from the course lab, the per-turn trace schema and writer, tool effect contracts, capability-profile checks, and the regulator registry schema with its `check`.
+Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi extension with the protected-path gate and the typed reporting tools (`pi-extension`); the `regulator status` read model (`cli`) and the read-only control room over it (`control-room`).
 
-Built in `course/lab` so far (checkpoints 0–3): a lifecycle event log; a schema-validated per-turn trace with the first gate and the regulator registry seed; typed tools with error and effect contracts; capability profiles as positive grants over declared effects.
+Built in `course/lab`, one checkpoint per lesson: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
-Next, in course order: coordination (leases, reintegration, anti-oscillation), the orchestrator (work contracts, budgets, recovery), independent audit, then intelligence, identity, escalation, evals and packaging. The one experiment the whole project answers to—does regulation slow architectural drift?—runs as the orchestrator with regulators ablated versus enabled.
+The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
 
 No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the control-plane pattern proves useful.
 
@@ -67,7 +67,7 @@ packages/
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
 course/           The "Viable Agents" course; course/lab is the reference build
-docs/             Architecture, roadmap, design notes, and DEBT.md (what the build owes, and where it is paid)
+docs/             ARCHITECTURE.md, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), archive/
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments
 vsm/example/      Example committed S5 artifacts
@@ -81,16 +81,19 @@ build—and acquire Pi's feature base as the answer to successive regulatory que
 GSD-Pi is read throughout as the comparison case.
 
 Start with [the course overview](course/README.md); module specifications are in
-[course/CURRICULUM.md](course/CURRICULUM.md); lessons 01–04 are written and their
-checkpoints run under `pnpm check`. Production status is in
-[course/PRODUCTION-PLAN.md](course/PRODUCTION-PLAN.md).
+[course/CURRICULUM.md](course/CURRICULUM.md); all fifteen lessons are written and their
+checkpoints run under `pnpm check`. A second workload, personal finance, is worked
+through in [course/examples/personal-finance.md](course/examples/personal-finance.md).
 
 ## Status
 
-Early. The control-plane primitives exist and are tested; the orchestrator does not
-exist yet and is the next thing the course builds. The decision to provide our own
-orchestrator rather than integrate with GSD is recorded in
-[docs/DESIGN-ROADMAP.md](docs/DESIGN-ROADMAP.md).
+Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,
+host-run evidence at closeout, the algedonic path to a person, the eval harness with
+four committed drift reports, and `regulator init`/`doctor` into an existing repository.
+What the build still owes is one row each in [docs/DEBT.md](docs/DEBT.md). The decision
+to provide our own orchestrator rather than integrate with GSD is
+[ADR 0001](docs/decisions/0001-own-orchestrator.md); the design records that decision
+retired are archived under [docs/archive/](docs/archive/2026-09/README.md).
 
 ## Development
 
@@ -116,7 +119,7 @@ pnpm --filter @metacoding/vsm-pi-protocol test
 pnpm --filter @metacoding/vsm-pi-core test
 ```
 
-## Pi extension (M0.2)
+## Pi extension
 
 After `pnpm build`, run `pnpm pi` from the project root to load the native Pi
 extension. It mechanically blocks operational `write` and `edit` calls to
@@ -129,13 +132,13 @@ another project, SDK compatibility, path rules, and the native-hook enforcement
 boundary. Shell/custom tools and execution engines that bypass that hook require
 separate enforcement.
 
-## Typed reporting (M0.3)
+## Typed reporting
 
 Three content-only tools record policy proposals, independent audit findings,
 and operational uncertainty signals. A trusted host supplies reporting grants;
 the default context is unprivileged. Successful calls append to the separate
 `.regulator/events.db` SQLite event store and return committed event receipts.
-The store never opens `.gsd/gsd.db` or mutates S5 artifacts.
+The store never mutates S5 artifacts.
 
 Run `pnpm smoke:reporting` for model-free examples using the real Pi SDK and a
 temporary SQLite database. See [the reporting guide](docs/REPORTING.md) for the

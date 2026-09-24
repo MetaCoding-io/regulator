@@ -111,9 +111,11 @@ asserted; [PATHOLOGIES.md](PATHOLOGIES.md) catalogues the characteristic ways a 
 system fails as a whole — structural, functional, channel, and the agent-specific rows —
 and for each names what looks like it in an instance, the regulator that absorbs it, the
 fixture that reproduces it, and what nothing absorbs yet.
-[CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) specifies the third thread: a typed,
-CI-checked record per regulator the learner builds, and the read-only control room that
-projects those records and the runtime evidence for the harness's maintainer.
+The third thread — a typed, CI-checked record per regulator the learner builds, and the
+read-only control room that projects those records and the runtime evidence for the
+harness's maintainer — is built: `packages/protocol/src/registry.ts`, `regulator check`
+and `packages/control-room` (its original specification is archived as
+[CONTROL-REGISTRY.md](../docs/archive/2026-09/CONTROL-REGISTRY.md)).
 
 ## What the learner builds
 
@@ -192,6 +194,6 @@ target project the failure drills run against.
 This directory is a **course design** with all fifteen lessons written end to end
 as vertical slices, per the production plan. It specifies the
 offering, the module contracts, the reference build, and the assessment scheme so
-production can start against a fixed target. Build sequencing, dependencies on VSM-Pi
-milestones, risks, and open decisions are tracked in
-[PRODUCTION-PLAN.md](PRODUCTION-PLAN.md).
+production can start against a fixed target. What the build still owes is tracked in
+[`docs/DEBT.md`](../docs/DEBT.md); the original production plan is archived as
+[PRODUCTION-PLAN.md](../docs/archive/2026-09/PRODUCTION-PLAN.md).

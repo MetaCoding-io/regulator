@@ -21,7 +21,7 @@ Terms are defined in [GLOSSARY.md](GLOSSARY.md), which also carries the failure 
 mechanism diagnostic table. Pi feature coverage per module is tracked in
 [FEATURE-MATRIX.md](FEATURE-MATRIX.md). A cross-cutting thread — the **regulator
 registry**, one typed, CI-checked record per regulator the learner builds — is specified
-in [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) and grows one module at a time; each
+in the archived [CONTROL-REGISTRY.md](../docs/archive/2026-09/CONTROL-REGISTRY.md) and grows one module at a time; each
 module's build step names the fields it adds.
 
 ---
@@ -295,8 +295,8 @@ oscillate until the detector fires.
 
 **Field study.** GSD-Pi's worktree-aware git automation, milestone leases, and the
 release note about *reclaiming leases held by verifiably-dead local workers* — a real
-lease system needs a liveness story. VSM-Pi's S2 gap analysis
-(`docs/S2-COORDINATION-GAP-ANALYSIS.md`).
+lease system needs a liveness story. VSM-Pi's archived S2 gap analysis
+(`docs/archive/2026-09/S2-COORDINATION-GAP-ANALYSIS.md`).
 
 **Checkpoint.** Lease acquired/released across a run; thrash detector fires on a seeded
 oscillation fixture; a seeded merge conflict is surfaced, not auto-resolved.
@@ -342,9 +342,11 @@ back silently settled).
 the results for unrequested scope, silent library choices, and schema changes nobody
 authorized.
 
-**Field study.** VSM-Pi `docs/OPERATIONAL-WORK-CONTRACT.md` (slice delivery vs task work
+**Field study.** VSM-Pi's archived design records
+`docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md` (slice delivery vs task work
 contract, decision allocation, result report, validation rules) and
-`docs/PLANNER-CONTRACT-COMPOSITION.md`. GSD-Pi's milestone → slice → task decomposition
+`docs/archive/2026-09/PLANNER-CONTRACT-COMPOSITION.md`, against the shipped
+`packages/protocol/src/contracts.ts`. GSD-Pi's milestone → slice → task decomposition
 and its Open Question vocabulary (recommendation, rationale, alternatives, uncertainty,
 revisit condition).
 
@@ -743,7 +745,7 @@ OpenTelemetry GenAI conventions — `invoke_agent`, inference, `execute_tool`, s
 invocation, memory and retrieval — correlated by `regulatorId`, `unitId`, `attemptId`,
 `evidenceId` and policy version, with redaction rules, since prompts and tool output can
 carry credentials. Registry: `ablation`, `reviewBy`, `retirement.condition`. Begin the
-**control room** ([CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) §6): assurance and lifecycle
+**control room** (archived [CONTROL-REGISTRY.md](../docs/archive/2026-09/CONTROL-REGISTRY.md) §6): assurance and lifecycle
 views over registry ∪ events ∪ eval results, read-only.
 
 **Break it.** Find a fixture where the gated arm loses. Discuss honestly: over-regulation

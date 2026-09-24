@@ -115,7 +115,7 @@ To see each test's result directly after building:
 node packages/pi-extension/dist/index.test.js
 ```
 
-## Typed reporting tools (M0.3)
+## Typed reporting tools
 
 The extension also registers `vsm_propose_policy_change`,
 `vsm_report_audit_finding`, and `vsm_report_uncertainty`. The default host context

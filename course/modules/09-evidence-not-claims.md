@@ -331,9 +331,9 @@ You have finished checkpoint 8 when:
 
 - Pi docs at `v0.87.0`: `extensions.md` on `tool_call` (block), `tool_result`
   (middleware), `appendEntry`, and the session entry types; `session-format.md`.
-- This repository's [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+- This repository's [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
   §12 (separation of duty) and §13 (revision and staleness semantics), and
-  [`course/CONTROL-REGISTRY.md`](../CONTROL-REGISTRY.md) on the assurance view the audit
+  the archived [`CONTROL-REGISTRY.md`](../../docs/archive/2026-09/CONTROL-REGISTRY.md) on the assurance view the audit
   log will feed.
 - Beer, *Brain of the Firm*, on the "sympathetic and parasympathetic" audit channel:
   why S3\* must reach S1 directly and not through S3's own reports.

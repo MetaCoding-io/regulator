@@ -332,8 +332,8 @@ You have finished checkpoint 6 when:
   scoped models and providers.
 - Upstream examples: `custom-compaction.ts`, `trigger-compact.ts`, `summarize.ts`,
   `provider-payload.ts`; `sdk/02-custom-model.ts`.
-- This repository's [`docs/DESIGN-ROADMAP.md`](../../docs/DESIGN-ROADMAP.md) §0 on the
-  loop's size, and [`course/CONTROL-REGISTRY.md`](../CONTROL-REGISTRY.md) §2 on the
+- This repository's [ADR 0001](../../docs/decisions/0001-own-orchestrator.md) on the
+  loop's size, and the archived [`CONTROL-REGISTRY.md`](../../docs/archive/2026-09/CONTROL-REGISTRY.md) §2 on the
   `cost` field.
 - Ashby, *An Introduction to Cybernetics*, chapter 11, on the regulator's own capacity
   as a channel.

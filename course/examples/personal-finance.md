@@ -203,7 +203,7 @@ declared or whose check the host does not run.
 ```json
 {
   "name": "bookkeeper",
-  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human"],
+  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human", "notify_owner", "propose_policy_change"],
   "writablePaths": ["ledger/", "reports/", "payments/pending/"],
   "thinkingLevel": "medium",
   "advice": [

@@ -250,7 +250,7 @@ pnpm --filter @metacoding/vsm-pi-course-lab registry:check
 that states no limitation. `docs --check` refuses a `REGULATORS.md` that has drifted
 from the records. Both run under `pnpm check`, so a regulator cannot land with a stale
 card. Why this is a registry and not a folder of notes, and how the card grows with each
-lesson, is in [CONTROL-REGISTRY.md](../CONTROL-REGISTRY.md). For now: fill in
+lesson, is in the archived [CONTROL-REGISTRY.md](../../docs/archive/2026-09/CONTROL-REGISTRY.md). For now: fill in
 `limitations` honestly. You will discover the first one in section 5.
 
 ### Run it
