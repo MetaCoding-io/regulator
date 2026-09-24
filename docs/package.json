@@ -1,0 +1,16 @@
+{
+  "name": "regulator-docs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The documentation site for regulator, built with VitePress from docs/.",
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "dev": "node scripts/generate.mjs && vitepress dev",
+    "build": "node scripts/generate.mjs && vitepress build",
+    "preview": "vitepress preview"
+  },
+  "devDependencies": {
+    "vitepress": "1.6.4"
+  }
+}

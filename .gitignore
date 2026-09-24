@@ -13,3 +13,8 @@ experiments/runs/
 
 # Course lab runtime output (lessons 01+)
 .regulator/
+
+# The docs site: generated pages and the VitePress build
+docs/generated/
+docs/.vitepress/cache/
+docs/.vitepress/dist/

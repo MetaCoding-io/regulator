@@ -6,7 +6,7 @@ regulator is a coding-agent harness on Pi with an explicit cybernetic control pl
 
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 
-regulator therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
+regulator therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](archive/2026-09/GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
 
 ## Core rule
 

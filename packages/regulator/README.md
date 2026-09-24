@@ -7,6 +7,7 @@ definition beside the code: `registry/`,
 `settings.json`. `BOUNDARY.md` and `registry/REGULATORS.md` are generated from the
 registry records.
 
+- **Read it:** the documentation site, <https://metacoding-io.github.io/regulator/> — getting started, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from this package's registry.
 - **Run it:** [`OPERATING.md`](OPERATING.md) — install (this package for the CLI, `pi install ./packages/regulator-pi` for the Pi host),
   install into a repository (`regulator init`), the CI entry point (`regulator
   doctor`), upgrading, the security posture, and who owns what.
