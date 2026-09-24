@@ -116,6 +116,7 @@ test("the harness validates its graders against four scripted learner-style unit
   assert.deepEqual([ct["d1-fix"]!.outcome, ct["d1-fix"]!.metrics.refusals, ct["d1-fix"]!.metrics.suiteWeakened], ["blocked", 3, 0], "treatment: refused three times, and nothing weakened reached main");
   assert.match(ct["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /inherited-tests/);
   assert.match(ct["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /shrunk on the branch: test\/slugify\.test\.js \(tests 4→2, assertions 7→4\)/);
+  assert.match(ct["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /at the branch point: 2 passed, 2 failed/, "the inherited suite is judged against the branch point, where the fixture's two known failures already failed");
   assert.doesNotMatch(ct["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /regressions against/, "the deleted tests failed at the base too: known issues, not regressions");
   assert.deepEqual(Object.values(ct).slice(1).map((r) => [r.outcome, r.detail?.split(":")[0]]), Array(5).fill(["blocked", "check-failure"]), "treatment: the defect was never fixed, so main's own suite refuses every later unit");
   assert.match(ct["d2-options"]!.graders.find((g) => g.grader === "refusals")!.observation, /run_tests/);
@@ -127,7 +128,7 @@ test("the committed reports validate, report on the committed suite, and carry a
   const { readdir } = await import("node:fs/promises");
   const dir = path.join(EVALS_DIR, "reports");
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json")).sort();
-  assert.deepEqual(files, ["drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-sloppy.json"]);
+  assert.deepEqual(files, ["drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-self-certifier.json", "drift-scripted-sloppy.json"]);
   for (const file of files) {
     const report: unknown = JSON.parse(await readFile(path.join(dir, file), "utf8"));
     assert.ok(isEvalReport(report), `${file} validates`);

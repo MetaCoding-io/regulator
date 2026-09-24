@@ -242,7 +242,7 @@ test("inherited-tests: the base's suite judges the unit's tree — a regression 
   assert.equal((await run(undefined, null)).verdict, "inconclusive");
   let r = await run();
   assert.equal(r.verdict, "pass", r.observation);
-  assert.match(r.observation, /no regression and no shrink: 1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the base: 1 passed, 1 failed\)/);
+  assert.match(r.observation, /no regression and no shrink: 1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the branch point: 1 passed, 1 failed\)/);
   // Adding a test is fine.
   await writeFile(path.join(cwd, "test", "c.test.js"), 'import test from "node:test"; test("c", () => {});\n');
   await git(cwd, "add", "-A");
@@ -262,7 +262,7 @@ test("inherited-tests: the base's suite judges the unit's tree — a regression 
   r = await run();
   assert.equal(r.verdict, "fail");
   assert.match(r.observation, /regressions against the inherited suite from main: not ok: a/);
-  assert.match(r.observation, /1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the base: 1 passed, 1 failed\)/, "the base's copies of both files run: a fails now (the regression), b passes now (a is 2) — a known failure that started passing is not a regression either");
+  assert.match(r.observation, /1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the branch point: 1 passed, 1 failed\)/, "the base's copies of both files run: a fails now (the regression), b passes now (a is 2) — a known failure that started passing is not a regression either");
   // The contract exempts both files: the unit's a.test.js runs instead and the deletion of b is not a shrink.
   const exempting: WorkContract["expectedEvidence"] = [{ id: "e-inherited", description: "the inherited suite, with a and b changed on purpose", class: "test", required: true, check: { kind: "inherited-tests", exempt: ["test/a.test.js", "test/b.test.js"] } }];
   r = await run(exempting);

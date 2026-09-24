@@ -340,7 +340,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
   assert.match(hints[1] ?? "", /Host-run verification refused closeout.*not ok: answer.*The evidence the harness produced, not the report, decides/s);
   const audit = await new AuditLog(repo).forUnit("u1");
   assert.deepEqual(audit.verdicts.map((v) => [v.attempt, v.verdict]), [[1, "fail"], [2, "pass"]]);
-  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["identity-untouched", "pass"], ["export-signature", "inconclusive"], ["glossary-lint", "pass"]], "in the order the workload names the checks; a signature check with no expectation carrying one is inconclusive, and binds to nothing");
+  assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["inherited-tests", "fail"], ["identity-untouched", "pass"], ["export-signature", "inconclusive"], ["glossary-lint", "pass"]], "in the order the workload names the checks; the inherited suite fails too, because the unit broke a test it inherited; a signature check with no expectation carrying one is inconclusive, and binds to nothing");
   assert.equal(audit.evidence[0]?.producedBy, "S3*");
   assert.notEqual(audit.evidence[0]?.revision, audit.evidence.at(-1)?.revision, "each attempt's evidence binds to its own revision");
   assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.id), "the passing verdict considered only the fresh records (the post-merge records come after it)");
@@ -348,7 +348,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
   assert.equal(findings.length, 1);
   assert.equal(findings[0]?.source, "S3*");
   assert.equal((findings[0] as { severity: string }).severity, "blocking");
-  assert.match((findings[0] as { observation: string }).observation, /report cites test evidence "run_tests" but the host found run_tests failing/);
+  assert.match((findings[0] as { observation: string }).observation, /report cites test evidence "run_tests" but the host found run_tests, inherited-tests failing/);
   assert.equal(await readFile(path.join(repo, "src", "index.js"), "utf8"), "export const answer = 42;\n", "only the repaired revision was reintegrated");
 });
 
@@ -625,12 +625,14 @@ test("post-merge evidence (lesson 15): two units change disjoint files and break
   const reportFor2 = (c: WorkContract, attempt: number) => reportFor(c, { attempt });
   const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
 
-  // A renames the export and updates the only test.
-  const a = await runUnit(gitExec, { ...base, contract: contractFor("a"), dispatcher: unitThat(async (r, s) => {
+  // A renames the export and updates the only test — a behaviour change on purpose, so its contract exempts that file from
+  // the inherited suite; without the exemption inherited-tests would refuse A for the very rewrite it was asked to make.
+  const aContract: WorkContract = { ...contractFor("a"), expectedEvidence: [...contractFor("a").expectedEvidence, { id: "e-inherited", description: "the inherited suite, except the test this contract rewrites", class: "test", required: true, check: { kind: "inherited-tests", exempt: ["test/index.test.js"] } }] };
+  const a = await runUnit(gitExec, { ...base, contract: aContract, dispatcher: unitThat(async (r, s) => {
     await writeFile(path.join(r.worktree, "src", "index.js"), "export const theAnswer = 42;\n");
     await writeFile(path.join(r.worktree, "test", "index.test.js"), 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { theAnswer } from "../src/index.js";\ntest("answer", () => { assert.equal(theAnswer, 42); });\n');
     await gitExec("git", ["commit", "-qam", "a: rename"], { cwd: r.worktree });
-    await s.writeReport(reportFor2(contractFor("a"), r.attempt));
+    await s.writeReport(reportFor2(aContract, r.attempt));
   }, repo) });
   assert.equal(a.status, "closed", JSON.stringify(a));
   assert.deepEqual(a.status === "closed" ? a.postMerge : undefined, { verdict: "pass", sha: a.status === "closed" ? a.sha : "", reasons: [] });

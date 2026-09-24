@@ -68,7 +68,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.equal(byName.node!.ok, true);
   assert.equal(byName.registry!.ok, true);
   assert.equal(byName.definition!.ok, true);
-  assert.match(byName.definition!.detail, /1 eval suite\(s\), 3 report\(s\)/);
+  assert.match(byName.definition!.detail, /1 eval suite\(s\), 4 report\(s\)/);
   assert.equal(byName.reviews!.ok, true);
   assert.equal(byName.manifest!.ok, true);
   assert.match(byName.manifest!.detail, /writable lib\/, test\/; protected config\//);

@@ -173,7 +173,7 @@ Not covered:
 
 ## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
 
-Enforced at `runHostChecks (inherited-tests: git ls-tree and git show at the base, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
+Enforced at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 

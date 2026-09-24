@@ -218,7 +218,14 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
       const carrying = (options.expectations ?? []).filter((e) => e.check?.kind === "inherited-tests");
       const exempt = new Set(carrying.flatMap((e) => (e.check?.kind === "inherited-tests" ? e.check.exempt : [])));
       const criterion = carrying.length === 1 ? { criterion: carrying[0]!.id } : {};
-      const listed = await exec("git", ["ls-tree", "-r", "--name-only", options.base, "--", "test/"], { cwd: options.cwd, timeout });
+      // What the unit inherited is the suite at the point it branched — the merge base — not whatever the base has become
+      // since; a change that landed on the base after the branch is the post-merge check's business (lesson 15).
+      const mergeBase = await exec("git", ["merge-base", options.base, "HEAD"], { cwd: options.cwd, timeout });
+      const baseHead = await exec("git", ["rev-parse", options.base], { cwd: options.cwd, timeout });
+      const inheritedRef = mergeBase.code === 0 && mergeBase.stdout.trim() ? mergeBase.stdout.trim() : options.base;
+      const baseMoved = baseHead.code === 0 && baseHead.stdout.trim() !== inheritedRef;
+      const inheritedName = baseMoved ? `${options.base} at ${inheritedRef.slice(0, 7)} (the branch point; ${options.base} has moved since)` : options.base;
+      const listed = await exec("git", ["ls-tree", "-r", "--name-only", inheritedRef, "--", "test/"], { cwd: options.cwd, timeout });
       if (listed.code !== 0) {
         results.push({ check: name, class: "test", verdict: "inconclusive", observation: `git failed: ${boundedTail(listed.stderr.trim(), max).text}`, ...criterion });
         continue;
@@ -226,13 +233,13 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
       const inheritedFiles = listed.stdout.split("\n").filter(Boolean);
       const judging = inheritedFiles.filter((f) => !exempt.has(f));
       if (!judging.length) {
-        results.push({ check: name, class: "test", verdict: "pass", observation: `nothing inherited: no test file under test/ at ${options.base}${exempt.size ? ` outside the exempt ${[...exempt].join(", ")}` : ""}`, ...criterion });
+        results.push({ check: name, class: "test", verdict: "pass", observation: `nothing inherited: no test file under test/ at ${inheritedName}${exempt.size ? ` outside the exempt ${[...exempt].join(", ")}` : ""}`, ...criterion });
         continue;
       }
       // Shrinkage: each inherited file at HEAD versus the base, by test and assertion lines.
       const shrunk: string[] = [];
       for (const file of judging) {
-        const before = await exec("git", ["show", `${options.base}:${file}`], { cwd: options.cwd, timeout });
+        const before = await exec("git", ["show", `${inheritedRef}:${file}`], { cwd: options.cwd, timeout });
         const after = await exec("git", ["show", `HEAD:${file}`], { cwd: options.cwd, timeout });
         if (after.code !== 0) { shrunk.push(`${file} deleted`); continue; }
         const b = countTestLines(before.stdout), a = countTestLines(after.stdout);
@@ -242,13 +249,13 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
       const stageBase = await mkdtemp(path.join(tmpdir(), "regulator-inherited-base-"));
       const stageUnit = await mkdtemp(path.join(tmpdir(), "regulator-inherited-unit-"));
       try {
-        await stageTree(exec, options.cwd, options.base, stageBase, () => true, timeout);
+        await stageTree(exec, options.cwd, inheritedRef, stageBase, () => true, timeout);
         await stageTree(exec, options.cwd, "HEAD", stageUnit, (f) => f !== "package.json" && (!f.startsWith("test/") || exempt.has(f)), timeout);
-        await stageTree(exec, options.cwd, options.base, stageUnit, (f) => f === "package.json" || (f.startsWith("test/") && !exempt.has(f)), timeout);
+        await stageTree(exec, options.cwd, inheritedRef, stageUnit, (f) => f === "package.json" || (f.startsWith("test/") && !exempt.has(f)), timeout);
         for (const stage of [stageBase, stageUnit]) await symlink(path.join(options.cwd, "node_modules"), path.join(stage, "node_modules"), "dir").catch(() => undefined);
         const command = (await discoverConventions(stageUnit)).testCommand;
         if (!command.length) {
-          results.push({ check: name, class: "test", verdict: "inconclusive", observation: `no test command at ${options.base}: nothing inherited can be run`, ...criterion });
+          results.push({ check: name, class: "test", verdict: "inconclusive", observation: `no test command at ${inheritedName}: nothing inherited can be run`, ...criterion });
           continue;
         }
         const argv = [...command];
@@ -266,10 +273,10 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
         const known = new Set(base.summary.failures);
         const regressions = unit.summary.failures.filter((f) => !known.has(f));
         const lines: string[] = [];
-        if (regressions.length) lines.push(`regressions against the inherited suite from ${options.base}: ${regressions.map((f) => `not ok: ${f}`).join("; ")}`);
+        if (regressions.length) lines.push(`regressions against the inherited suite from ${inheritedName}: ${regressions.map((f) => `not ok: ${f}`).join("; ")}`);
         if (shrunk.length) lines.push(`inherited test files shrunk on the branch: ${shrunk.join("; ")}`);
         const ok = !regressions.length && !shrunk.length;
-        const summary = `${unit.summary.pass} passed, ${unit.summary.fail} failed against the ${judging.length} inherited test file(s) from ${options.base} (at the base: ${base.summary.pass} passed, ${base.summary.fail} failed)${exempt.size ? `; exempt: ${[...exempt].join(", ")}` : ""}`;
+        const summary = `${unit.summary.pass} passed, ${unit.summary.fail} failed against the ${judging.length} inherited test file(s) from ${inheritedName} (at the branch point: ${base.summary.pass} passed, ${base.summary.fail} failed)${exempt.size ? `; exempt: ${[...exempt].join(", ")}` : ""}`;
         results.push({ check: name, class: "test", verdict: ok ? "pass" : "fail", command: argv, observation: boundedTail(ok ? `no regression and no shrink: ${summary}` : `${lines.join("; ")} — ${summary}`, max).text, ...criterion });
       } finally {
         await rm(stageBase, { recursive: true, force: true });

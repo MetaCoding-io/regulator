@@ -131,11 +131,13 @@ defect as fixed. Independence of the *runner* is not independence of the *suite*
 
 The `inherited-tests` check (added after lesson 15, prompted by the pathology catalog's
 "S3\* that reads what S1 wrote" row) makes the judging suite the one the unit inherited.
-The host stages the base's `test/` and `package.json` over the unit's committed tree and
-runs them, and runs the same suite against the base's own tree: a test that fails on both
-is the project's known issue, one that passed at the base and fails now is the unit's
-regression. It also compares each inherited test file at HEAD with the base by test and
-assertion lines: a file deleted or shrunk on the branch fails. A contract that changes
+The host stages the `test/` and `package.json` of the branch point — the merge base, what
+the unit inherited when it branched, not what the base has become since — over the
+unit's committed tree and runs them, and runs the same suite against the branch point's
+own tree: a test that fails on both is the project's known issue, one that passed there
+and fails now is the unit's regression. (A change that landed on the base after the
+branch belongs to the post-merge check, lesson 15.) It also compares each inherited test
+file at HEAD with the branch point by test and assertion lines: a file deleted or shrunk on the branch fails. A contract that changes
 behaviour on purpose exempts the files whose expectations it rewrites, by an evidence
 expectation carrying `{ "kind": "inherited-tests", "exempt": ["test/greet.test.js"] }`.
 The drift suite's fourth scripted unit, the **self-certifier**, deletes the two tests that

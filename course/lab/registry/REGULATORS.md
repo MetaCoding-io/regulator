@@ -799,17 +799,17 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 `reg.audit.inherited-tests-check.v1` · S3* · deterministic-gate · active · introduced in M09
 
-**Purpose.** The suite that judges a unit is the one it inherited. At closeout the host stages the base's test files and package.json over the unit's committed tree and runs them, and runs the same suite against the base's own tree: a test that fails on both is the project's known issue, one that passed at the base and fails now is the unit's regression. It also compares each inherited test file at HEAD with the base by test and assertion lines: a file deleted or shrunk on the branch is a failing check. A unit may add cases under test/; it may not weaken the cases that were there, and its own run_tests says nothing about them. A contract exempts, by an expectation carrying an inherited-tests check, the files whose expectations it changes on purpose.
+**Purpose.** The suite that judges a unit is the one it inherited: the test files and package.json at the branch point (the merge base of the unit's branch and the base), not whatever the base has become since — a change that landed after the branch is the post-merge check's business. At closeout the host stages that suite over the unit's committed tree and runs it, and runs the same suite against the branch point's own tree: a test that fails on both is the project's known issue, one that passed there and fails now is the unit's regression. It also compares each inherited test file at HEAD with the branch point by test and assertion lines: a file deleted or shrunk on the branch is a failing check. A unit may add cases under test/; it may not weaken the cases that were there, and its own run_tests says nothing about them. A contract exempts, by an expectation carrying an inherited-tests check, the files whose expectations it changes on purpose.
 
 **Absorbs.** `self-weakened-verification` — The unit cannot make the failing test pass, so it makes the test stop failing: an assertion rewritten to the current output, a case deleted, a file removed. Its report cites run_tests passing, which is true of the suite it left behind, and the closeout that trusts that run closes a defect as fixed.
 
-**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (inherited-tests: git ls-tree and git show at the base, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)`
+**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)`
 
 **Channels.** consumes `the base ref and its test/ tree`, `the unit's committed tree`, `expectations carrying an inherited-tests check (exemptions)` · emits `evidence record (class test; bound to the carrying criterion when the contract has one, else to every test criterion)`
 
 **Scope.** subjects evidence, unit · resources the unit's worktree, two temporary stage directories
 
-**Cost.** Two extra runs of the project's test suite per closeout (the base's suite against the base, and against the unit), plus one git show per inherited test file. For a suite that takes minutes this doubles the closeout; the base-side run is the same for every unit off the same base and is not cached.
+**Cost.** Two extra runs of the project's test suite per closeout (the inherited suite against the branch point, and against the unit), plus one git show per inherited test file. For a suite that takes minutes this doubles the closeout; the branch-point run is the same for every unit off the same revision and is not cached.
 
 **May.**
 - run the base's suite against the unit's tree
