@@ -60,7 +60,7 @@ unresolved decision quietly settled is a policy made by whoever happened to be t
 
 The contract carries other things — an objective, constraint references, expected
 evidence, provenance — but they are secondary. This repository's design record
-([`docs/OPERATIONAL-WORK-CONTRACT.md`](../../docs/OPERATIONAL-WORK-CONTRACT.md) §5) puts
+([`OPERATIONAL-WORK-CONTRACT.md`](../../docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md) §5, archived) puts
 it in one line: *the task tells S1 what work exists; the contract tells S1 what freedom
 it has, what must remain true, and how the rest of the system will know whether the
 work succeeded.*
@@ -218,8 +218,9 @@ protocol's message union.
 
 ### The workload — [`course/lab/workload/software-development.json`](../lab/workload/software-development.json)
 
-Five unit types: `plan` and `close` run under `research` (they never change the
-repository), `implement` and `integrate` under `implement`, `verify` under `research`.
+Six unit types: `plan` and `close` run under `research` (they never change the
+repository), `implement` and `integrate` under `implement`, `verify` under `research`,
+and `research` under `intelligence` (lesson 11).
 Only `implement` is dispatched in this lesson. The `checks` each type names are
 consumed from lesson 09; declaring them now is how the definition stays ahead of the
 loop rather than behind it. `workload.test.ts` asserts every profile named is one the
@@ -355,20 +356,27 @@ question, it has become a second source of truth.
 
 ## 6. Field study: two contract designs and one vocabulary
 
-**VSM-Pi.** [`docs/OPERATIONAL-WORK-CONTRACT.md`](../../docs/OPERATIONAL-WORK-CONTRACT.md)
+**VSM-Pi.** The archived design record
+[`OPERATIONAL-WORK-CONTRACT.md`](../../docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md),
 §5 (decision allocation), §8 (prospective versus residual uncertainty), §9 (the
 result report) and §14 (validation rules). Check your `checkResultReport` against §14's
 list: which rules does the build enforce, which does it enforce weaker than written
 (evidence by class, not content), and which are absent? Then §18's ten invariants —
 find the mechanism for each in checkpoint 5, or write down that there is none yet.
-Read the status banner: the document says "GSD unit" where the build says "unit", and
-its §10 point that contracts are versioned rather than lifecycle-managed is the reason
-`ExecutionStore` has no `contract.status`.
+The document says "GSD task" where the build says "unit", its field names differ from
+the schema's (`fixedDecisions` became `fixed`, `planningProvenance` became
+`provenance`), and its §10 point that contracts are versioned rather than
+lifecycle-managed is the reason `ExecutionStore` has no `contract.status`. Its slice
+level was never built.
 
-[`docs/PLANNER-CONTRACT-COMPOSITION.md`](../../docs/PLANNER-CONTRACT-COMPOSITION.md) §9,
-*Missing contract is a regulatory failure, not a second planner state*: the loop refuses
-to dispatch an `implement` unit without a contract, and the workload's `requiresContract`
-is where that is declared per unit type.
+The archived [`PLANNER-CONTRACT-COMPOSITION.md`](../../docs/archive/2026-09/PLANNER-CONTRACT-COMPOSITION.md)
+§17 states the invariant the build keeps: *S1 may not execute without an immutable,
+host-bound contract*. The loop takes a contract as its input, so there is nothing to
+refuse; what the workload's `requiresContract` declares is the other direction — a unit
+type marked contract-less (`plan`) must run under a read-only profile, which
+`regulator check` enforces, and `regulator unit start --type` refuses a type that
+requires one. Its §9, a missing-contract *obligation*, was never built: a design that
+the build made unnecessary.
 
 **GSD-Pi.** In `CONTEXT.md` at `cc8779f`, the runtime vocabulary entries for
 **Milestone**, **Slice**, **Task** and **Open Question**. GSD decomposes milestone →
@@ -404,7 +412,7 @@ You have finished checkpoint 5 when:
 
 ## Further reading
 
-- This repository's [`docs/DESIGN-ROADMAP.md`](../../docs/DESIGN-ROADMAP.md) §0 — the
+- This repository's [ADR 0001](../../docs/decisions/0001-own-orchestrator.md) — the
   orchestrator sized, and the definition/instance split.
 - [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md), INV-005 — execution state and
   regulatory state stay separate.

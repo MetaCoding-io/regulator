@@ -67,8 +67,8 @@ cheaper route — and on nothing else.
 
 ### Events are not obligations
 
-The design record for this — [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
-— has been in the repository since before the course. Its lifecycle is deliberately
+The design record for this — [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md),
+now archived — has been in the repository since before the course. Its lifecycle is deliberately
 small:
 
 ```text
@@ -216,7 +216,7 @@ show` lists what is owed on the unit; a refused dispatch prints the obligation. 
 status` shows obligations (open, by consumer, with the veto marked) and the recovery and
 routing policies; the control room gains the obligations table per instance, the two
 policies in the definition, and an obligations section in the unit inspector. Still
-read-only: the page has no resolve button, by the rule in `CONTROL-REGISTRY.md` §6.
+read-only: the page has no resolve button, by the rule the archived `CONTROL-REGISTRY.md` §6 set.
 
 ### Registry cards
 
@@ -279,7 +279,7 @@ commit.
 
 ## 6. Field study: two routers and one homeostat
 
-**VSM-Pi.** [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+**VSM-Pi.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
 §§1–8 against this checkpoint. Three things to check. The lifecycle shipped as written,
 including "no in-progress state" and "escalated only with a successor". The routing table
 in §8 has more columns than `routing.json` — required *mechanism*, exposure and
@@ -333,5 +333,5 @@ You have finished checkpoint 10 when:
   `file-trigger.ts`, `github-issue-autocomplete.ts`.
 - Stafford Beer, *The Heart of Enterprise*, on the S3–S4 homeostat and why S5 must
   arbitrate it rather than either side winning by default.
-- This repository's [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+- This repository's [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
   and [`docs/DEBT.md`](../../docs/DEBT.md).

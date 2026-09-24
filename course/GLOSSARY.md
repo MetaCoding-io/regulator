@@ -42,10 +42,10 @@ learners to build themselves.
 | **Proposal** | A request to change identity or policy. Proposing confers no mutation authority. | `vsm_propose_policy_change`; VSM-Pi INV-002. |
 | **Constraint** | S5's downward definition of the permitted operational space. | `constraint` channel; context files as advice, gates as enforcement. |
 | **Signal** | Ordinary upward operational feedback, including residual uncertainty. | VSM-Pi uncertainty signal tool. |
-| **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `docs/REGULATORY-STATE-AND-ROUTING.md` (M08, M11). |
+| **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `packages/core/src/obligations.ts` and `course/lab/policies/routing.json` (M08, M11); design record archived as `docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md`. |
 | **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/pi-extension/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
 | **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). |
-| **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `lab/registry/`; [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md). |
+| **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `lab/registry/`; `regulator check`; the specification is archived as [CONTROL-REGISTRY.md](../docs/archive/2026-09/CONTROL-REGISTRY.md). |
 | **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). |
 | **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
 | **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill (M10). |
@@ -56,13 +56,13 @@ learners to build themselves.
 | --- | --- | --- |
 | **Mechanism hierarchy** | Type → deterministic gate → typed tool → model judgment → prompt. An ordering by reliability under adversarial pressure. | VSM-Pi prime directive; M02. |
 | **Gate** | A deterministic check that can block. | `tool_call` preflight; closeout gate (M09). |
-| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | GSD phases as routing keys; VSM-Pi functional projection (M04). |
-| **Unit** | The smallest dispatched, executable workflow step. | GSD unit (`plan-slice`, `execute-task`, `complete-slice`). |
+| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`; `course/lab/profiles/*.json`, one per kind of work, named by the workload's unit types (M04). GSD phases are the comparison: routing keys, not grants. |
+| **Unit** | The smallest dispatched, executable workflow step: one contract, one worktree, one or more attempts. | The orchestrator's unit record (`packages/protocol/src/execution.ts`); a workload's unit types (`plan`, `implement`, …). GSD units (`plan-slice`, `execute-task`) are the comparison. |
 | **Phase** | A coarse routing bucket for model and reasoning selection. Not a unit. | GSD `research`, `planning`, `execution`, `validation`, `uat`… (M04, M07). |
-| **Work contract** | What S3 authorizes a unit to decide: FIXED / DELEGATED / UNRESOLVED. | `docs/OPERATIONAL-WORK-CONTRACT.md` (M06). |
-| **Result report** | The unit's closing record: delegated choices made, evidence, deviations, emergent decisions, residual uncertainty. | Operational Result Report (M06). |
+| **Work contract** | What S3 authorizes a unit to decide: FIXED / DELEGATED / UNRESOLVED. | `WorkContract` in `packages/protocol/src/contracts.ts` (M06); design record archived as `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md`. |
+| **Result report** | The unit's closing record: delegated choices made, evidence, deviations, emergent decisions, residual uncertainty. | `ResultReport` in `packages/protocol/src/contracts.ts`, written by `report_result` (M06). |
 | **Residual uncertainty** | Where the unit's model of the system became uncertain. Regulatory information, not a confidence score. | `docs/ARCHITECTURE.md`; uncertainty signal (M06). |
-| **Vertical slice** | The thinnest end-to-end path that produces an observable outcome and closes a feedback loop early. | Slice Delivery Contract (M06). |
+| **Vertical slice** | The thinnest end-to-end path that produces an observable outcome and closes a feedback loop early. | A planning principle (`docs/ARCHITECTURE.md`); the slice-level contract designed for M06 was never built — a unit's `contribution` is the only trace of it. |
 | **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard (M07). |
 | **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). |
 | **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result (M08). |

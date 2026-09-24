@@ -10,7 +10,8 @@
     "run_checks",
     "report_intelligence",
     "report_result",
-    "ask_human"
+    "ask_human",
+    "propose_policy_change"
   ],
   "writablePaths": [],
   "thinkingLevel": "medium",

@@ -11,22 +11,61 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["runUnit (before createUnit)", "session_start (cp5-contract)"]
+    "enforcementPoints": [
+      "runUnit (before createUnit)",
+      "session_start (cp5-contract)",
+      "unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)"
+    ]
   },
-  "channels": { "consumes": ["work contract (S3)", "workload definition"], "emits": [] },
-  "scope": { "subjects": ["unit", "contract"], "resources": ["execution store"] },
+  "channels": {
+    "consumes": [
+      "work contract (S3)",
+      "workload definition"
+    ],
+    "emits": []
+  },
+  "scope": {
+    "subjects": [
+      "unit",
+      "contract"
+    ],
+    "resources": [
+      "execution store"
+    ]
+  },
   "authority": {
-    "may": ["refuse dispatch", "record the contract version that governs execution"],
-    "mayNot": ["write or amend a contract (S3 planning does that; a change is a new version)", "reclassify an unresolved decision as delegated", "grant a unit any regulatory capability"]
+    "may": [
+      "refuse dispatch",
+      "record the contract version that governs execution"
+    ],
+    "mayNot": [
+      "write or amend a contract (S3 planning does that; a change is a new version)",
+      "reclassify an unresolved decision as delegated",
+      "grant a unit any regulatory capability"
+    ]
   },
-  "evidence": { "tests": ["src/controller.test.ts", "src/cp5-contract.test.ts"] },
+  "evidence": {
+    "tests": [
+      "src/controller.test.ts",
+      "src/cp5-contract.test.ts"
+    ]
+  },
   "limitations": [
     "Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.",
     "Authority references on fixed decisions resolve since lesson 12 — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).",
     "The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "loop:check-contract", "note": "The contract check runs before anything is claimed; not ablatable by the harness. An unsound contract with no gate is dispatched as written."},
-  "retirement": {"condition": "Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect."},
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "ablation": {
+    "switch": "loop:check-contract",
+    "note": "The contract check runs before anything is claimed; not ablatable by the harness. An unsound contract with no gate is dispatched as written."
+  },
+  "retirement": {
+    "condition": "Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect."
+  },
   "introducedIn": "M06"
 }

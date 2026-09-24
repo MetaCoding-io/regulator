@@ -21,6 +21,7 @@ export const UnitTypeSchema = Type.Object({
   /** Names of harness-run checks that verify a unit of this type (consumed from lesson 09). */
   checks: Type.Array(NonEmpty),
   /** Whether a unit of this type may be dispatched without a work contract. */
+  /** Whether the unit runs only under a work contract. A type declared contract-less must run under a read-only profile (checked by the definition check); the CLI refuses to start it without one otherwise. */
   requiresContract: Type.Boolean(),
 }, { additionalProperties: false });
 export type UnitType = Static<typeof UnitTypeSchema>;

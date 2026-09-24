@@ -1,4 +1,4 @@
-# Typed reporting and the VSM event store (M0.3)
+# Typed reporting and the VSM event store
 
 VSM-Pi registers three reporting tools alongside its native write/edit gate.
 Model inputs contain observations and requests. A trusted host supplies grants,
@@ -48,8 +48,8 @@ The closed host capability object supports only:
 
 An empty capability object denies all reporting. No capability grants S5
 mutation permission. The authority ID and grant snapshot are stored with each
-event. A later GSD adapter may supply trusted grants through this seam; this
-issue adds no functional projection or GSD lifecycle logic.
+event. A host that runs units (the course lab's orchestrator) supplies grants
+through this seam; the tools themselves add no routing.
 
 ## Payloads and internal messages
 
@@ -190,12 +190,11 @@ checks and SQLite triggers are not a sandbox against malicious concurrent
 filesystem writers or a process that can change the database schema. This issue
 does not expand the native write/edit gate into complete filesystem enforcement.
 
-The store never opens `.gsd/gsd.db`, reads GSD workflow state, or changes S5
-artifacts. Later obligation projections can consume these events without adding
-another authoritative history. Routing, obligations, and retry/pause control are
-not implemented here: the course lab's router and obligation ledger (lesson 11) fold
-the instance's regulatory log under `.regulator/`, not this store; consolidating the
-two histories is `docs/DEBT.md` row 1.
+The store never changes S5 artifacts. Routing, obligations, and retry/pause control
+are not implemented here: the course lab's router and obligation ledger (lesson 11)
+fold the instance's regulatory log (`.regulator/signals.ndjson`), not this store. The
+span projection (lesson 14) reads both into one set of spans, so the two histories are
+correlated rather than merged (`docs/DEBT.md` rows 1 and 31, paid).
 
 ## Reproduce the evidence without a model
 
@@ -214,7 +213,7 @@ The smoke command uses the real supported Pi SDK, explicit test-only grants,
 and a temporary project. It prints each accepted model payload, host-derived
 message in its reopened SQLite event, and matching receipt. It asserts ordinary
 context audit denial and `source: "S5"` payload rejection before recording the
-three events. The temporary database is removed afterward. No live model,
-credentials, or real GSD database are used. The same smoke function runs in CI.
+three events. The temporary database is removed afterward. No live model or
+credentials are used. The same smoke function runs in CI.
 
 The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project root for `.regulator/events.db`. It defaults to `ctx.cwd` for generic Pi. Git revision discovery continues to use execution `ctx.cwd` (or the explicit host `sourceRevision`), independently of the runtime root. Hosts running isolated units should bind the same canonical runtime root across contexts. Model payloads cannot select this root. Directory creation tolerates concurrent creators and retains post-create symlink checks.

@@ -4,7 +4,7 @@
  *
  * It owns no state and accepts no writes — every non-GET request is refused
  * with 405. The moment this grows a "raise budget" route it has become an
- * authority surface (course/CONTROL-REGISTRY.md §6), so it will not.
+ * authority surface (docs/archive/2026-09/CONTROL-REGISTRY.md §6), so it will not.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { readDefinition, readInstance, type DefinitionView, type InstanceView } from "@metacoding/vsm-pi-cli";

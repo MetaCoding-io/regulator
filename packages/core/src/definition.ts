@@ -14,6 +14,7 @@ import {
 } from "@metacoding/vsm-pi-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
+import { isReadOnlyProfile } from "./profiles.js";
 
 export interface DefinitionProblem {
   file: string;
@@ -70,7 +71,13 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       assertValid(WorkloadDefinitionSchema, value, `workload ${file}`);
       out.workloads.push(value);
       for (const type of value.unitTypes) {
-        if (!out.profiles.some((p) => p.name === type.profile)) problem(`workload/${file}`, `unit type "${type.name}" runs under profile "${type.profile}", which is not declared under profiles/`);
+        const profile = out.profiles.find((p) => p.name === type.profile);
+        if (!profile) problem(`workload/${file}`, `unit type "${type.name}" runs under profile "${type.profile}", which is not declared under profiles/`);
+        // A unit nothing bounds may not change anything: a unit type that runs without a contract must run under a
+        // profile whose every tool is read-only by declared effect. The flag is a grant, and this is where it is checked.
+        else if (!type.requiresContract && !isReadOnlyProfile(profile)) {
+          problem(`workload/${file}`, `unit type "${type.name}" runs without a contract but its profile "${type.profile}" grants ${readOnlyViolations(profile.tools).join(", ")}, whose effects are not read-only: a unit no contract bounds may not write`);
+        }
         for (const check of type.checks) {
           if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`workload/${file}`, `unit type "${type.name}" names check "${check}", which the host does not run (known: ${HOST_CHECK_NAMES.join(", ")})`);
         }

@@ -60,7 +60,7 @@ Not covered:
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
-Enforced at `regulator check (checkDefinition, under pnpm check)` in `src/registry-cli.ts`; S5, deterministic-gate.
+Enforced at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)` in `src/registry-cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -220,7 +220,7 @@ Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `
 Not covered:
 
 - A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
-- Facts are rendered to every unit of the instance, not scoped to the units they concern; a large store crowds the prompt before the 90-day limit retires anything.
+- A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`, lesson 15), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.
 - Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated.
 
 ## Model router (`reg.control.model-router.v1`)
@@ -408,7 +408,7 @@ Not covered:
 
 ## Work contract gate (`reg.control.work-contract-gate.v1`)
 
-Enforced at `runUnit (before createUnit)`, `session_start (cp5-contract)` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `runUnit (before createUnit)`, `session_start (cp5-contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)` in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 

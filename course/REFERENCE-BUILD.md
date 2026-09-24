@@ -41,7 +41,7 @@ regulator/
                      seeded in M10 with INV-001, completed in M12)
   memory/            operational memory: agent-writable, provenance + review-by date,
                      never identity
-  registry/          one typed JSON record per regulator (see CONTROL-REGISTRY.md);
+  registry/          one typed JSON record per regulator (schema in packages/protocol);
                      REGULATORS.md and TOPOLOGY.md generated from them, never edited
   decisions/         ADRs for policy and architecture choices
   evals/             fixture tasks, arms (including per-regulator ablation), report generator
@@ -84,7 +84,7 @@ without checking out history.
 
 ## What the course repo must ship
 
-Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
+What the course repository ships, and what of it is still owed (`docs/DEBT.md`):
 
 - **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
   `pi -e` and tested without a model. Checkpoints 0–14 exist. Their Pi-free modules have
@@ -159,8 +159,8 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   outbox watcher, the lab as a pi package with `OPERATING.md`, and six registry cards;
   the read model and the control room gain the replay view and the manifest.
 - **The regulator registry** — schema and check ship in `packages/`; the lab CLI and
-  forty-three records live under `course/lab/registry/`; the control room is design only, but its
-  read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
+  forty-three records live under `course/lab/registry/`; the read model (`regulator status
+  --json`) and the control room (`packages/control-room`) are built.
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a

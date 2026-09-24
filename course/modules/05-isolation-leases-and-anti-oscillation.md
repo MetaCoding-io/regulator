@@ -221,7 +221,7 @@ by unit id, and whether the lease's resource is the directory it is running in (
 
 ```
 regulator fixture <dest> [--oscillation]     copy a fixture and make it a repo on main
-regulator unit start <id> [--ttl <minutes>]  lease, branch, worktree; prints the pi command
+regulator unit start <id> [--type <unitType>] [--ttl <minutes>]  lease, branch, worktree; prints the pi command. A type that requires a contract is refused (lesson 06)
 regulator unit finish <id>                   reintegrate; release or signal
 regulator unit status                        every lease and whether it is live
 ```
@@ -341,7 +341,7 @@ could the model.
 **GSD-Pi.** In `README.md` at `cc8779f`, the release highlight *Reclaim milestone
 leases held by verifiably-dead local workers*; in `CHANGELOG.md` the corresponding
 entry. Then §1.1 of this repository's
-[`docs/S2-COORDINATION-GAP-ANALYSIS.md`](../../docs/S2-COORDINATION-GAP-ANALYSIS.md):
+[`S2-COORDINATION-GAP-ANALYSIS.md`](../../docs/archive/2026-09/S2-COORDINATION-GAP-ANALYSIS.md) (archived):
 GSD's coordination layer is a shared SQLite database with worker records, milestone
 leases *with fencing tokens*, unit dispatches and a command queue. Your lease store is
 the same shape without the fencing token and without the process check. Name what each
@@ -386,7 +386,7 @@ You have finished checkpoint 4 when:
 - This repository's [`AGENTS.md`](../../AGENTS.md), the S2 bullet: *mostly mechanisms
   … locks/leases, reintegration, and anti-oscillation behavior — not a coordinator
   roleplay persona.*
-- [`docs/S2-COORDINATION-GAP-ANALYSIS.md`](../../docs/S2-COORDINATION-GAP-ANALYSIS.md)
+- The archived [`S2-COORDINATION-GAP-ANALYSIS.md`](../../docs/archive/2026-09/S2-COORDINATION-GAP-ANALYSIS.md)
   §1.1–1.2, §2.5, §5.6, §6.
 - Pi docs at `v0.87.0`: `security.md` "No Built-in Sandbox"; `containerization.md` for
   the four isolation patterns; `extensions.md` on `pi.exec`, `tool_execution_start` /

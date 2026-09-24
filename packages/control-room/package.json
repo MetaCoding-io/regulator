@@ -1,6 +1,7 @@
 {
   "name": "@metacoding/vsm-pi-control-room",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "The maintainer's read-only control room: one page over the `regulator status` read model \u2014 definition topology, running instances, and what each unit is doing.",

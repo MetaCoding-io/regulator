@@ -1,6 +1,7 @@
 {
   "name": "@metacoding/vsm-pi-cli",
   "version": "0.0.0",
+  "license": "Apache-2.0",
   "private": true,
   "type": "module",
   "description": "User-facing CLI for VSM-Pi: the `regulator status` read model over a definition and an instance.",

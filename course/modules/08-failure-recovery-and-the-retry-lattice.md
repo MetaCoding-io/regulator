@@ -339,7 +339,7 @@ notes: GSD's kernel can route *verify* failures because it runs the verification
 this loop's `check-failure` cause produced today, and what does lesson 09 have to add
 before the router ever sees it?
 
-**VSM-Pi.** [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+**VSM-Pi.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
 §1–2 (events are not obligations; the lifecycle *open → acknowledged → resolved |
 escalated | superseded*, with no in-progress state), §8 (the routing table, which is
 "policy, not prompt advice"), §12 (separation of duty: S1 cannot resolve its own
@@ -383,7 +383,7 @@ You have finished checkpoint 7 when:
   the session tree.
 - Upstream examples: `tool-result-rewrite`-style handlers in the extensions guide;
   `sdk/` examples on running a session per attempt.
-- This repository's [`docs/REGULATORY-STATE-AND-ROUTING.md`](../../docs/REGULATORY-STATE-AND-ROUTING.md)
+- This repository's [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
   §17, the worked example on retry-state uncertainty, and [`course/GLOSSARY.md`](../GLOSSARY.md)
   rows for oscillation, six identical retries, and the repeated side effect.
 - Ashby, *An Introduction to Cybernetics*, chapter 12, on the regulator that must act

@@ -12,7 +12,9 @@
     "run_tests",
     "run_checks",
     "remember",
-    "ask_human"
+    "ask_human",
+    "notify_owner",
+    "propose_policy_change"
   ],
   "writablePaths": [
     "ledger/",

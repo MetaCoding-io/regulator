@@ -17,7 +17,8 @@ node packages/control-room/dist/cli.js --definition course/lab --instance /path/
 Then open `http://127.0.0.1:4321/`. The page refreshes every five seconds; `#reg=<id>` and
 `#unit=<instance index>/<unit id>` deep-link the inspector. Every non-GET request is
 refused with 405 — the moment this grows a button that changes anything it has become an
-authority surface, and it will not ([course/CONTROL-REGISTRY.md](../../course/CONTROL-REGISTRY.md) §6).
+authority surface, and it will not (the rule is from the archived
+[CONTROL-REGISTRY.md](../../docs/archive/2026-09/CONTROL-REGISTRY.md) §6).
 
 Nothing here reads the repository: units come from the execution store, leases from the
 lease store, signals from the signal sink, regulators from the registry files.

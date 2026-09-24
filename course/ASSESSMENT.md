@@ -24,8 +24,8 @@ adversarial graders described above, which must reject a range of plausible weak
 learner implementations — prompt-only enforcement, a path check that misses `..`,
 evidence taken from self-report, a permissive fallback on unknown input, a read-only
 profile that grants a tool with an undeclared effect. Producing those requires a library
-of deliberately weak implementations per checkpoint; it is production work, tracked in
-[PRODUCTION-PLAN.md](PRODUCTION-PLAN.md).
+of deliberately weak implementations per checkpoint; it is production work, owed by the
+project roadmap.
 
 ## 2. Viability Review rubric (design work)
 
