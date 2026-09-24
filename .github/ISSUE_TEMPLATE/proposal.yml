@@ -1,0 +1,42 @@
+name: Proposal
+description: A new regulator, workload, host or policy field.
+labels: ["proposal"]
+body:
+  - type: textarea
+    id: failure
+    attributes:
+      label: The failure class
+      description: What goes wrong without it, in an instance. Point at a pathology in `docs/PATHOLOGIES.md` if one fits.
+    validations:
+      required: true
+  - type: dropdown
+    id: level
+    attributes:
+      label: Mechanism level
+      description: The strongest level that can hold the rule.
+      options:
+        - Type or compile-time invariant
+        - Deterministic runtime gate
+        - Typed tool or protocol with schema validation
+        - Model judgment
+        - Prompt or context
+    validations:
+      required: true
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: The mechanism
+      description: Where it is enforced, what it consumes and emits, and what it would not cover (the first limitation on its card).
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: How it would be evidenced
+      description: The tests, the eval arm that switches it off, and the condition under which it could be retired.
+  - type: checkboxes
+    id: s5
+    attributes:
+      label: Identity
+      options:
+        - label: This proposal would change `vsm/` (the project's identity, architecture or invariants) and should be discussed before any code.

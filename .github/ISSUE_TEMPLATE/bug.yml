@@ -1,0 +1,39 @@
+name: Bug
+description: Something the harness did that it should not have, or did not do that it should.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: ran
+    attributes:
+      label: What you ran
+      description: The command and the contract or policy it ran under.
+      placeholder: regulator unit drive contracts/fix-known-issue.json
+    validations:
+      required: true
+  - type: textarea
+    id: recorded
+    attributes:
+      label: What the instance recorded
+      description: The relevant output of `regulator unit show <id>`, `unit evidence <id>`, `obligations` or `doctor --json`. Redact anything a canary would catch.
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: "`regulator doctor` prints the package, the Pi pin and the Node version."
+      placeholder: "@metacoding/regulator 0.1.0, pi 0.87.0, node 22.19.0"
+    validations:
+      required: true
+  - type: input
+    id: regulator
+    attributes:
+      label: Regulator involved, if you know it
+      description: The record id from `REGULATORS.md`, for example `reg.audit.closeout-gate.v1`.

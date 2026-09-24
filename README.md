@@ -91,7 +91,9 @@ same control plane.
 Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,
 host-run evidence at closeout, the algedonic path to a person, the eval harness with
 four committed drift reports, and `regulator init`/`doctor` into an existing repository.
-What the build still owes is one row each in [docs/DEBT.md](docs/DEBT.md). The decision
+What the build still owes is one row each in [docs/DEBT.md](docs/DEBT.md), mapped to
+milestones and issues in [ROADMAP.md](ROADMAP.md); [CONTRIBUTING.md](CONTRIBUTING.md)
+is how to pick one up. The decision
 to provide our own orchestrator rather than integrate with GSD is
 [ADR 0001](docs/decisions/0001-own-orchestrator.md); the design records that decision
 retired are archived under [docs/archive/](docs/archive/2026-09/README.md).

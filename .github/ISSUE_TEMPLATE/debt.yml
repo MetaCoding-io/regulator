@@ -1,0 +1,38 @@
+name: Debt
+description: A failure a regulator does not absorb, and the route around it.
+labels: ["debt"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A regulator's card lists what it does not catch; `BOUNDARY.md` lists the routes around every gate. Use this when you found a route that is not stated there, or a stated one that should be closed.
+  - type: input
+    id: regulator
+    attributes:
+      label: Regulator
+      description: The record id, from `REGULATORS.md`.
+      placeholder: reg.audit.identity-untouched-check.v1
+    validations:
+      required: true
+  - type: textarea
+    id: route
+    attributes:
+      label: The route around it
+      description: What a unit can do that reaches past the mechanism, and how you observed it.
+    validations:
+      required: true
+  - type: dropdown
+    id: whose
+    attributes:
+      label: Whose to close
+      options:
+        - The build's (a mechanism can absorb it)
+        - The deployment's (a container, an account, a channel)
+        - Unsure
+    validations:
+      required: true
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: The mechanism that would close it
+      description: At which level of the hierarchy (type, deterministic gate, typed tool, model judgment, prompt), and what it would cost.
