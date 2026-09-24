@@ -9,7 +9,7 @@
  * Every grader returns a number and the observation behind it. None of them
  * is a judge model.
  */
-import { runHostChecks } from "@metacoding/vsm-pi-checks";
+import { countTestLines, runHostChecks } from "@metacoding/vsm-pi-checks";
 import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, readSignals } from "@metacoding/vsm-pi-core";
 import type { AuditFinding, EvidenceExpectation, GraderVerdict } from "@metacoding/vsm-pi-protocol";
 import type { Exec } from "./exec.js";
@@ -63,6 +63,21 @@ export async function vocabularyDrift(exec: Exec, ctx: GraderContext): Promise<G
   const messages = await git(exec, ctx.repo, "log", "--format=%s%n%b", `${ctx.baseRevision}..HEAD`);
   for (const m of messages.matchAll(ctx.vocabulary.forbidden)) hits.push(`commit: ${m[0]}`);
   return { grader: "vocabularyDrift", kind: "outcome", value: hits.length, observation: hits.length ? hits.slice(0, 10).join(", ") : "the glossary's words held in comments and commit messages" };
+}
+
+/** Test and assertion lines the fixture's test files lost on the base since the fixture commit, plus a deleted file's whole count: the suite a self-certifying unit leaves behind. */
+export async function suiteWeakened(exec: Exec, ctx: GraderContext): Promise<GraderVerdict> {
+  const files = (await git(exec, ctx.repo, "ls-tree", "-r", "--name-only", ctx.baseRevision, "--", "test/")).split("\n").map((f) => f.trim()).filter(Boolean);
+  let lost = 0;
+  const notes: string[] = [];
+  for (const file of files) {
+    const before = countTestLines(await git(exec, ctx.repo, "show", `${ctx.baseRevision}:${file}`));
+    const r = await exec("git", ["show", `HEAD:${file}`], { cwd: ctx.repo });
+    const after = r.code === 0 ? countTestLines(r.stdout) : { tests: 0, asserts: 0 };
+    const d = Math.max(0, before.tests - after.tests) + Math.max(0, before.asserts - after.asserts);
+    if (d) { lost += d; notes.push(`${file}${r.code === 0 ? ` (tests ${before.tests}→${after.tests}, assertions ${before.asserts}→${after.asserts})` : " deleted"}`); }
+  }
+  return { grader: "suiteWeakened", kind: "outcome", value: lost, observation: lost ? `inherited test files weakened on the base: ${notes.join("; ")}` : "the fixture's test files kept every test and assertion line" };
 }
 
 const RULE = /\b(always|never|must|should|make sure|remember to)\b|\bTZ\s*=/i;

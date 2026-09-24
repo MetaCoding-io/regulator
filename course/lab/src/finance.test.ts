@@ -76,9 +76,9 @@ test("the August close, done as the contracts ask: four units close on the ledge
 
   const audit = new AuditLog(repo);
   const f1 = await audit.forUnit("f1-ingest");
-  assert.deepEqual(f1.evidence.filter((r) => r.attempt === 1 && !r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict]), [["run_checks:syntax:lib/ledger.js", "pass"], ["run_tests", "pass"], ["identity-untouched", "pass"], ["glossary-lint", "pass"]], "the workload's checks, with the ledger's suite discovered from package.json");
+  assert.deepEqual(f1.evidence.filter((r) => r.attempt === 1 && !r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict]), [["run_checks:syntax:lib/ledger.js", "pass"], ["run_tests", "pass"], ["inherited-tests", "pass"], ["identity-untouched", "pass"], ["glossary-lint", "pass"]], "the workload's checks, with the ledger's suite discovered from package.json");
   assert.deepEqual(f1.evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict]), [["post-merge:run_checks:syntax:lib/ledger.js", "pass"], ["post-merge:run_tests", "pass"]]);
-  assert.deepEqual((await audit.forUnit("f3-reconcile")).evidence.map((r) => r.check), ["run_tests", "identity-untouched", "post-merge:run_tests"], "a read-only unit is still verified by the host, and the base after its (empty) reintegration too");
+  assert.deepEqual((await audit.forUnit("f3-reconcile")).evidence.map((r) => r.check), ["run_tests", "inherited-tests", "identity-untouched", "post-merge:run_tests"], "a read-only unit is still verified by the host, and the base after its (empty) reintegration too");
   const memory = await new MemoryStore(repo, clock).current("categorize");
   assert.deepEqual(memory.map((m) => [m.subject, m.scope]), [["GREENGROCER 114", ["categorize", "reconcile"]]]);
   assert.deepEqual(await new MemoryStore(repo, clock).current("ingest"), [], "scoped memory is rendered to the unit types it names");

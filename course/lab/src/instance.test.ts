@@ -53,7 +53,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 42);
+  assert.equal(result.manifest.definition.registry, 43);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
@@ -110,7 +110,11 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
   const contract: WorkContract = {
     kind: "task", id: "tc-greet", version: 1, unitId: "g1", unitType: "implement", workload: { name: workload.name, version: workload.version },
     objective: "greet loudly", constraintRefs: [], fixed: [], delegated: [], unresolved: [],
-    expectedEvidence: [{ id: "e-tests", description: "the suite passes", class: "test", required: true }, { id: "e-checks", description: "checks pass", class: "command", required: true }],
+    expectedEvidence: [
+      { id: "e-tests", description: "the suite passes", class: "test", required: true }, { id: "e-checks", description: "checks pass", class: "command", required: true },
+      // The contract changes greet's behaviour, so the inherited test that pins the old behaviour is the unit's to rewrite: exempt, by declaration.
+      { id: "e-inherited", description: "the inherited suite, except the greet test this contract changes", class: "test", required: true, check: { kind: "inherited-tests", exempt: ["test/greet.test.js"] } },
+    ],
     provenance: { createdBy: "S3", createdAt: "t" },
   };
   const base = { policy: await loadPolicy(), policyPath: POLICY_PATH, routing: await loadRoutingPolicy(), interaction: await loadInteractionPolicy(), recovery: await loadRecoveryPolicy(), workload, repo, owner: "alice", now: () => clock };
@@ -138,6 +142,6 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
   assert.match(await readFile(path.join(repo, "lib", "greet.js"), "utf8"), /HI/);
   const evidence = (await new (await import("@metacoding/vsm-pi-core")).AuditLog(repo).forUnit("g1")).evidence;
   assert.deepEqual(evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict, r.revision === (outcome.status === "closed" ? outcome.sha : "")]), [["post-merge:run_checks:syntax:lib/greet.js", "pass", true], ["post-merge:run_tests", "pass", true]]);
-  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
+  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
   assert.equal((await new ObligationLedger(repo).open()).filter((o) => o.blocks).length, 0);
 });

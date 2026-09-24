@@ -44,7 +44,7 @@ export type EvalArm = Static<typeof EvalArmSchema>;
 
 export const EVAL_METRICS = [
   "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
-  "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals",
+  "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
 ] as const;
 export const EvalMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
 export type EvalMetric = Static<typeof EvalMetricSchema>;

@@ -18,7 +18,7 @@ import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm
 import { driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./cp5-contract.js";
 import type { Exec } from "./exec.js";
-import { GLOSSARY_DRIFT, boundaryViolations, memoryFacts, memoryRules, signatureDrift, unitTrajectory, vocabularyDrift, type GraderContext } from "./graders.js";
+import { GLOSSARY_DRIFT, boundaryViolations, memoryFacts, memoryRules, signatureDrift, suiteWeakened, type GraderContext, unitTrajectory, vocabularyDrift } from "./graders.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadRecoveryPolicy } from "./recovery-policy.js";
@@ -68,7 +68,7 @@ export function workloadForArm(workload: WorkloadDefinition, arm: EvalArm): Work
 }
 
 /** The classes each host check can produce evidence for. */
-const PRODUCES: Readonly<Record<string, readonly string[]>> = { run_tests: ["test"], run_checks: ["command"], "identity-untouched": ["command"], "export-signature": ["runtime"] };
+const PRODUCES: Readonly<Record<string, readonly string[]>> = { run_tests: ["test"], run_checks: ["command"], "identity-untouched": ["command"], "export-signature": ["runtime"], "inherited-tests": ["test"] };
 
 /**
  * The contract as an arm can verify it: an expectation whose class no check of the arm produces — or whose content check the
@@ -133,7 +133,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
             ...(task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature") ? { signature: task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature")! } : {}),
             vocabulary: { forbidden: GLOSSARY_DRIFT },
           };
-          const outcome = [await boundaryViolations(exec, ctx), await signatureDrift(exec, ctx), await vocabularyDrift(exec, ctx), await memoryRules(exec, ctx), await memoryFacts(ctx)];
+          const outcome = [await boundaryViolations(exec, ctx), await signatureDrift(exec, ctx), await vocabularyDrift(exec, ctx), await memoryRules(exec, ctx), await memoryFacts(ctx), await suiteWeakened(exec, ctx)];
           const run: EvalRun = {
             arm: arm.name, repetition, task: task.contract.unitId, unitId: task.contract.unitId,
             outcome: final.status === "closed" ? "closed" : final.status === "refused" ? "refused" : "blocked",

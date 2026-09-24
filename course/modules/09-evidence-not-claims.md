@@ -120,6 +120,32 @@ branch, not the tree, and a verdict about files that will not be merged is a ver
 about nothing. The unit's contract advice says to commit before reporting; the gate
 enforces it.
 
+### The suite the unit cannot weaken
+
+`run_tests` is host-run, but it runs the suite *the unit left behind* — and the implement
+profile may write `test/`, because a unit that cannot add a test is a unit that cannot do
+its job. So a unit that cannot make the failing test pass can make the test stop failing:
+rewrite the assertion to the current output, delete the case, delete the file. Its report
+cites `run_tests` passing, which is true, and the closeout that trusts that run closes a
+defect as fixed. Independence of the *runner* is not independence of the *suite*.
+
+The `inherited-tests` check (added after lesson 15, prompted by the pathology catalog's
+"S3\* that reads what S1 wrote" row) makes the judging suite the one the unit inherited.
+The host stages the base's `test/` and `package.json` over the unit's committed tree and
+runs them, and runs the same suite against the base's own tree: a test that fails on both
+is the project's known issue, one that passed at the base and fails now is the unit's
+regression. It also compares each inherited test file at HEAD with the base by test and
+assertion lines: a file deleted or shrunk on the branch fails. A contract that changes
+behaviour on purpose exempts the files whose expectations it rewrites, by an evidence
+expectation carrying `{ "kind": "inherited-tests", "exempt": ["test/greet.test.js"] }`.
+The drift suite's fourth scripted unit, the **self-certifier**, deletes the two tests that
+expose slugkit's defect and reports green; under the control arm and the
+`no-inherited-tests` ablation arm it closes every unit, under the treatment it is refused
+on the shrink alone, and the `suiteWeakened` grader shows what it left on main. The
+mechanism is level 2, and the finance example's alternative — the checks live outside
+every write grant — is level 2 by construction; the software workload keeps `test/`
+writable and pays two extra suite runs per closeout instead.
+
 ## 4. Build: checkpoint 8
 
 ### The vocabulary — [`packages/protocol/src/audit.ts`](../../packages/protocol/src/audit.ts)
@@ -184,7 +210,10 @@ evidence record (check, class, criteria, command, environment) and the acceptanc
 `closeout-gate` is the first `S3*` record — deterministic-gate, with the limitation that
 evidence binds to criteria by class and a passing suite that does not exercise the change
 still satisfies a test-class criterion. `evidence-preflight` is S3 and says in its first
-limitation that it trusts the session's own run. Sixteen records.
+limitation that it trusts the session's own run. Sixteen records. `inherited-tests-check`
+joins them later (see "The suite the unit cannot weaken" above): its stated limitation is
+that a kept assertion rewritten to the current output is neither a shrink nor, if the
+base's copy failed too, a regression.
 
 ## 5. Break it
 

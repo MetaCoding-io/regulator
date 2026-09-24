@@ -29,7 +29,7 @@
  *   node dist/lab-cli.js identity reject <obligation> --by <who> --rationale <text>
  *   node dist/lab-cli.js answer <obligation> --by <who> --answer <text>   answer a question a unit asked (lesson 13): recorded as the person's disposition; the next attempt carries it
  *   node dist/lab-cli.js remind                            deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
- *   node dist/lab-cli.js eval <suite.json> [--behaviour <reference|drifter|sloppy>] [--arm <name>]... [--reps <n>] [--out <file>]
+ *   node dist/lab-cli.js eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
  *                                 [--interpretation <file>] [--by <who>] [--keep]   run the suite (lesson 14): scripted units headlessly, or live units through the Pi dispatcher
  *   node dist/lab-cli.js spans [--json]                    the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
  *   node dist/lab-cli.js review [--due] [--within <days>]  the registry's review dates; --due lists what is overdue or due within the window
@@ -421,7 +421,7 @@ ${rationale}`]]) {
     // Evidence about the regulators (lesson 14). A behaviour names a scripted unit; without one the Pi dispatcher runs live units under each arm's extensions.
     const suite = await loadSuite(path.resolve(sub));
     const behaviour = flag("behaviour");
-    if (behaviour !== undefined && !isBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy)`);
+    if (behaviour !== undefined && !isBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy | self-certifier)`);
     const arms = rest.flatMap((a, i) => (a === "--arm" && rest[i + 1] ? [rest[i + 1]!] : []));
     const reps = flag("reps") ? Number(flag("reps")) : undefined;
     const interpretationFile = flag("interpretation");

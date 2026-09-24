@@ -145,8 +145,9 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   check name (`protocol`); the eval arithmetic, the span projection with redaction, the
   registry's lifecycle rules and the definition check over suites and reports (`core`); the
   `export-signature` check with content binding and host-first runtime verdicts
-  (`checks`); and in the lab the harness, the graders, three scripted learner-style units,
-  the six drift contracts, the drift suite and its three committed reports, `regulator
+  (`checks`); and in the lab the harness, the graders, the scripted learner-style units
+  (three at this lesson, four with the self-certifier after lesson 15), the six drift
+  contracts, the drift suite and its committed reports, `regulator
   eval | spans | review`, and `ablation` and `retirement` on every registry card; the read
   model and the control room gain the assurance and lifecycle views. Checkpoint 14 adds
   the instance manifest, memory scope, the `glossary-lint` check name and the events
@@ -158,7 +159,7 @@ Production dependencies, tracked in [PRODUCTION-PLAN.md](PRODUCTION-PLAN.md):
   outbox watcher, the lab as a pi package with `OPERATING.md`, and six registry cards;
   the read model and the control room gain the replay view and the manifest.
 - **The regulator registry** — schema and check ship in `packages/`; the lab CLI and
-  forty-two records live under `course/lab/registry/`; the control room is design only, but its
+  forty-three records live under `course/lab/registry/`; the control room is design only, but its
   read model exists (`regulator status --json`, [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md)).
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one

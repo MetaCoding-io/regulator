@@ -18,14 +18,17 @@
  * ask whether a cited file exists at the revision.
  */
 import { randomUUID } from "node:crypto";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import path from "node:path";
 import type {
-  EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
+  EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, ExpectationCheck, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
 } from "@metacoding/vsm-pi-protocol";
 import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectConventions } from "./conventions.js";
 import type { Exec } from "./exec.js";
 
 export interface HostCheckResult {
-  /** `run_tests`, `run_checks:<name>`, `file:<path>`, `identity-untouched` or `export-signature:<criterion>`. */
+  /** `run_tests`, `run_checks:<name>`, `file:<path>`, `identity-untouched`, `export-signature:<criterion>`, `glossary-lint` or `inherited-tests`. */
   check: string;
   class: EvidenceClass;
   verdict: Verdict;
@@ -68,6 +71,24 @@ import(modulePath).then((m) => {
   process.stdout.write(JSON.stringify({ present: name in m, type: typeof v, length: typeof v === "function" ? v.length : null, name: typeof v === "function" ? v.name : null }));
 }).catch((e) => { process.stdout.write(JSON.stringify({ error: String(e && e.message || e) })); });
 `;
+
+/** Test and assertion lines in a test file, for the shrink half of `inherited-tests`: a coarse count, deliberately — a weakened expectation inside a kept assertion is the registry's stated limitation. */
+export function countTestLines(source: string): { tests: number; asserts: number } {
+  return { tests: (source.match(/\b(?:test|it)\s*\(/g) ?? []).length, asserts: (source.match(/\bassert\b/g) ?? []).length };
+}
+
+/** Write the files of `ref` that `keep` selects into `stage`, read from the repository's objects (never the working tree). */
+async function stageTree(exec: Exec, cwd: string, ref: string, stage: string, keep: (file: string) => boolean, timeout: number): Promise<void> {
+  const listed = await exec("git", ["ls-tree", "-r", "--name-only", ref], { cwd, timeout });
+  if (listed.code !== 0) throw new Error(`git ls-tree ${ref}: ${listed.stderr.trim()}`);
+  for (const file of listed.stdout.split("\n").filter(Boolean)) {
+    if (!keep(file)) continue;
+    const shown = await exec("git", ["show", `${ref}:${file}`], { cwd, timeout });
+    if (shown.code !== 0) continue;
+    await mkdir(path.dirname(path.join(stage, file)), { recursive: true });
+    await writeFile(path.join(stage, file), shown.stdout, "utf8");
+  }
+}
 
 export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): Promise<HostCheckResult[]> {
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -133,7 +154,7 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
         continue;
       }
       for (const e of carrying) {
-        const spec = e.check!;
+        const spec = e.check as Extract<ExpectationCheck, { kind: "export-signature" }>;
         const argv = [process.execPath, "--input-type=module", "-e", SIGNATURE_PROBE, "--", `./${spec.module.replace(/^\.\//, "")}`, spec.export];
         const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
         const shown = ["node", "--input-type=module", "-e", "<signature probe>", "--", spec.module, spec.export];
@@ -183,6 +204,77 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
         for (const p of patterns) if (p.re.test(message)) hits.push(`commit "${message.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
       }
       results.push({ check: name, class: "command", verdict: hits.length ? "fail" : "pass", command: diffArgv, observation: hits.length ? boundedTail(`the glossary's words drifted on the branch: ${hits.join("; ")}`, max).text : `no refused word in added comments under ${prefixes.join(", ")} or in commit messages since ${options.base}` });
+    } else if (name === "inherited-tests") {
+      // The suite that judges a unit is the one it inherited (lesson 09, revisited): the base's test files and test
+      // configuration are run against the unit's committed tree, and compared with the same suite against the base's own
+      // tree — a test that fails on both is the project's known issue, a test that passed at the base and fails now is the
+      // unit's regression. And the suite the unit leaves behind must be at least the suite it inherited: an inherited test
+      // file that was deleted or lost test or assertion lines is a shrink. A unit may add cases; it may not weaken the cases
+      // that were there. The contract exempts the files whose expectations it changes on purpose.
+      if (!options.base) {
+        results.push({ check: name, class: "test", verdict: "inconclusive", observation: "no base ref given: the inherited suite cannot be found" });
+        continue;
+      }
+      const carrying = (options.expectations ?? []).filter((e) => e.check?.kind === "inherited-tests");
+      const exempt = new Set(carrying.flatMap((e) => (e.check?.kind === "inherited-tests" ? e.check.exempt : [])));
+      const criterion = carrying.length === 1 ? { criterion: carrying[0]!.id } : {};
+      const listed = await exec("git", ["ls-tree", "-r", "--name-only", options.base, "--", "test/"], { cwd: options.cwd, timeout });
+      if (listed.code !== 0) {
+        results.push({ check: name, class: "test", verdict: "inconclusive", observation: `git failed: ${boundedTail(listed.stderr.trim(), max).text}`, ...criterion });
+        continue;
+      }
+      const inheritedFiles = listed.stdout.split("\n").filter(Boolean);
+      const judging = inheritedFiles.filter((f) => !exempt.has(f));
+      if (!judging.length) {
+        results.push({ check: name, class: "test", verdict: "pass", observation: `nothing inherited: no test file under test/ at ${options.base}${exempt.size ? ` outside the exempt ${[...exempt].join(", ")}` : ""}`, ...criterion });
+        continue;
+      }
+      // Shrinkage: each inherited file at HEAD versus the base, by test and assertion lines.
+      const shrunk: string[] = [];
+      for (const file of judging) {
+        const before = await exec("git", ["show", `${options.base}:${file}`], { cwd: options.cwd, timeout });
+        const after = await exec("git", ["show", `HEAD:${file}`], { cwd: options.cwd, timeout });
+        if (after.code !== 0) { shrunk.push(`${file} deleted`); continue; }
+        const b = countTestLines(before.stdout), a = countTestLines(after.stdout);
+        if (a.tests < b.tests || a.asserts < b.asserts) shrunk.push(`${file} (tests ${b.tests}→${a.tests}, assertions ${b.asserts}→${a.asserts})`);
+      }
+      // Regressions: the base's suite (and package.json) against the unit's tree, compared with the same suite against the base's tree.
+      const stageBase = await mkdtemp(path.join(tmpdir(), "regulator-inherited-base-"));
+      const stageUnit = await mkdtemp(path.join(tmpdir(), "regulator-inherited-unit-"));
+      try {
+        await stageTree(exec, options.cwd, options.base, stageBase, () => true, timeout);
+        await stageTree(exec, options.cwd, "HEAD", stageUnit, (f) => f !== "package.json" && (!f.startsWith("test/") || exempt.has(f)), timeout);
+        await stageTree(exec, options.cwd, options.base, stageUnit, (f) => f === "package.json" || (f.startsWith("test/") && !exempt.has(f)), timeout);
+        for (const stage of [stageBase, stageUnit]) await symlink(path.join(options.cwd, "node_modules"), path.join(stage, "node_modules"), "dir").catch(() => undefined);
+        const command = (await discoverConventions(stageUnit)).testCommand;
+        if (!command.length) {
+          results.push({ check: name, class: "test", verdict: "inconclusive", observation: `no test command at ${options.base}: nothing inherited can be run`, ...criterion });
+          continue;
+        }
+        const argv = [...command];
+        if (argv[0] === "node" && argv.includes("--test")) argv.push("--test-reporter", "tap");
+        const runIn = async (cwd: string) => {
+          const r = await exec(argv[0]!, argv.slice(1), { cwd, timeout });
+          return { summary: parseNodeTestSummary(`${r.stdout}\n${r.stderr}`), output: `${r.stdout}\n${r.stderr}`, code: r.code };
+        };
+        const base = await runIn(stageBase);
+        const unit = await runIn(stageUnit);
+        if (!base.summary || !unit.summary) {
+          results.push({ check: name, class: "test", verdict: "inconclusive", command: argv, observation: `the inherited suite did not run (base exit ${base.code}, unit exit ${unit.code}): ${boundedTail((unit.summary ? base.output : unit.output).trim(), max).text}`, ...criterion });
+          continue;
+        }
+        const known = new Set(base.summary.failures);
+        const regressions = unit.summary.failures.filter((f) => !known.has(f));
+        const lines: string[] = [];
+        if (regressions.length) lines.push(`regressions against the inherited suite from ${options.base}: ${regressions.map((f) => `not ok: ${f}`).join("; ")}`);
+        if (shrunk.length) lines.push(`inherited test files shrunk on the branch: ${shrunk.join("; ")}`);
+        const ok = !regressions.length && !shrunk.length;
+        const summary = `${unit.summary.pass} passed, ${unit.summary.fail} failed against the ${judging.length} inherited test file(s) from ${options.base} (at the base: ${base.summary.pass} passed, ${base.summary.fail} failed)${exempt.size ? `; exempt: ${[...exempt].join(", ")}` : ""}`;
+        results.push({ check: name, class: "test", verdict: ok ? "pass" : "fail", command: argv, observation: boundedTail(ok ? `no regression and no shrink: ${summary}` : `${lines.join("; ")} — ${summary}`, max).text, ...criterion });
+      } finally {
+        await rm(stageBase, { recursive: true, force: true });
+        await rm(stageUnit, { recursive: true, force: true });
+      }
     } else {
       results.push({ check: name, class: "command", verdict: "inconclusive", observation: `no host check named "${name}"` });
     }
