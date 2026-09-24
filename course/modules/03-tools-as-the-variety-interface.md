@@ -210,7 +210,7 @@ the numbers wrong is worse than the bug.
 
 Two files. Read both in full before continuing.
 
-### Facts about a project — [`course/lab/src/conventions.ts`](../lab/src/conventions.ts)
+### Facts about a project — [`packages/checks/src/conventions.ts`](../../packages/checks/src/conventions.ts)
 
 No Pi dependency, same rule as `trace.ts`. `discoverConventions(cwd)` looks at the
 project and reports what can be known mechanically:
@@ -241,7 +241,7 @@ because a default is not a fact; and where it does not — a project's own `npm 
 script prints whatever it prints — the parser accepts both formats. A tool that reports
 facts must not quietly depend on a default that changes under it.
 
-### Three tools — [`course/lab/src/cp2-typed-tools.ts`](../lab/src/cp2-typed-tools.ts)
+### Three tools — [`packages/regulator-pi/src/tools.ts`](../../packages/regulator-pi/src/tools.ts)
 
 **`read_conventions`** — no parameters. Returns the conventions as four lines for the
 model and the full structure in `details`. Its guideline tells the model to call it
@@ -265,7 +265,7 @@ return { content: [{ type: "text", text: lines.join("\n") }], details: { …summ
 ```
 
 Two throws for "could not run"; one normal return for "ran, here is what happened,"
-whether or not tests passed. The tests in `cp2-typed-tools.test.ts` pin both sides.
+whether or not tests passed. The tests in `tools.test.ts` pin both sides.
 
 **`run_checks`** — no parameters. Runs every check the project defines and returns one
 verdict per check: `ok  syntax:src/slugify.js`, `FAIL protected-untouched — M vendor/left-pad.js`.
@@ -279,7 +279,7 @@ is the point.
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/vsm-pi-course-lab cp2
+pnpm --filter @metacoding/viable-agents-lab cp2
 ```
 
 Try, in order:
@@ -294,7 +294,7 @@ You should see `run_tests` called and a short structured answer come back. If yo
 the trace from checkpoint 1 alongside, Pi takes `-e` more than once:
 
 ```sh
-cd course/lab/fixture && pi -e ../dist/cp1-trace.js -e ../dist/cp2-typed-tools.js
+cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/tools.js
 ```
 
 **Exercise.** From the trace, compare the token usage of a turn that called `run_tests`
@@ -312,13 +312,13 @@ Two drills, both with checkpoint 1 loaded so you get per-turn token counts.
 Condition A — shell only, no typed tools:
 
 ```sh
-cd course/lab/fixture && pi -e ../dist/cp1-trace.js
+cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js
 ```
 
 Condition B — typed tools available:
 
 ```sh
-cd course/lab/fixture && pi -e ../dist/cp1-trace.js -e ../dist/cp2-typed-tools.js
+cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/tools.js
 ```
 
 Reset the fixture between runs (`git checkout -- .`). Three runs each. Record:
@@ -364,7 +364,7 @@ Both are level 3 in the hierarchy doing work that a persona prompt would have tr
 do at level 5. Notice that neither is generic. They are *domain operations*, shaped to
 GSD's lifecycle, and their names say what they are for.
 
-**VSM-Pi.** Open [`packages/pi-extension/src/reporting-tools.ts`](../../packages/pi-extension/src/reporting-tools.ts)
+**VSM-Pi.** Open [`packages/regulator-pi/src/reporting-tools.ts`](../../packages/regulator-pi/src/reporting-tools.ts)
 and read all three tools. Then notice:
 
 - their schemas are imported from `packages/protocol`, which has no Pi dependency —
@@ -384,7 +384,7 @@ ship the generic one in a real harness?
 
 You have finished checkpoint 2 when:
 
-1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
+1. `pnpm --filter @metacoding/regulator test` passes — including the test that
    loads the built checkpoint into a real Pi 0.87.0 session and executes
    `read_conventions` and `run_checks` through it with no model.
 2. A real run in the fixture shows the model using `run_tests` rather than `bash` to run

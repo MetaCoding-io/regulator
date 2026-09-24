@@ -7,7 +7,7 @@
  *
  * Load it from a project directory:
  *
- *   pi -e /path/to/course/lab/dist/cp0-event-log.js
+ *   pi -e /path/to/packages/regulator/dist/cp0-event-log.js
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";

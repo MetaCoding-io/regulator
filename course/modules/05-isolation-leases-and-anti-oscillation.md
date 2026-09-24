@@ -173,7 +173,7 @@ Checkpoint 4 is four Pi-free modules, one extension, and a small CLI that drives
 unit lifecycle from outside the session — because starting and finishing a unit is an
 orchestrator act, not something the session does to itself.
 
-### Leases and the detector — [`course/lab/src/coordination.ts`](../lab/src/coordination.ts)
+### Leases and the detector — [`packages/regulator/src/coordination.ts`](../../packages/regulator/src/coordination.ts)
 
 `LeaseStore` keeps one JSON file per unit under `.regulator/leases/` in the base
 checkout. `acquire` refuses a live lease held by another unit on the same resource,
@@ -186,7 +186,7 @@ names.
 threshold (default 4) and refuses a threshold under 2: one edit is work, not
 oscillation.
 
-### Isolation and reintegration — [`course/lab/src/worktree.ts`](../lab/src/worktree.ts)
+### Isolation and reintegration — [`packages/regulator/src/worktree.ts`](../../packages/regulator/src/worktree.ts)
 
 `createUnitWorktree` makes branch `unit/<id>` from the base and checks it out under
 `.regulator/worktrees/<id>`. `checkpoint` commits everything in the worktree.
@@ -195,7 +195,7 @@ checkout and returns a discriminated union — `merged`, `dirty-base`, `wrong-br
 or `conflict` with the conflicting paths — after `git merge --abort` has put the base
 back exactly as it was found. The result is data; the caller decides what it means.
 
-### The unit lifecycle — [`course/lab/src/unit.ts`](../lab/src/unit.ts)
+### The unit lifecycle — [`packages/regulator/src/unit.ts`](../../packages/regulator/src/unit.ts)
 
 `startUnit` takes the lease *first* and only then creates the worktree, so a refused
 claim leaves nothing behind. It refuses to run inside a worktree (the base checkout is
@@ -206,7 +206,7 @@ removes the worktree and branch and releases the lease; on conflict it writes a
 `.regulator/signals.ndjson`, and the unit keeps its lease and worktree, because the
 conflict is not resolved and the resource is still claimed.
 
-### The extension — [`course/lab/src/cp4-coordination.ts`](../lab/src/cp4-coordination.ts)
+### The extension — [`packages/regulator-pi/src/coordination.ts`](../../packages/regulator-pi/src/coordination.ts)
 
 `createCoordinationExtension({ now, ttlMs, threshold })` registers a `--unit` flag
 (with `REGULATOR_UNIT` as the fallback, which is how the headless test sets it), the
@@ -217,7 +217,7 @@ finds from `ctx.cwd`: the base checkout via `git rev-parse --git-common-dir`, th
 by unit id, and whether the lease's resource is the directory it is running in (by
 `realpath`, so a symlinked temp directory does not fool it).
 
-### The CLI — [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts)
+### The CLI — [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts)
 
 ```
 regulator fixture <dest> [--oscillation]     copy a fixture and make it a repo on main
@@ -226,21 +226,21 @@ regulator unit finish <id>                   reintegrate; release or signal
 regulator unit status                        every lease and whether it is live
 ```
 
-Run it as `pnpm --filter @metacoding/vsm-pi-course-lab regulator -- …`, or alias
-`regulator` to `node course/lab/dist/lab-cli.js`. A full cycle on the main fixture:
+Run it as `pnpm --filter @metacoding/regulator regulator -- …`, or alias
+`regulator` to `node packages/regulator/dist/cli.js`. A full cycle on the main fixture:
 
 ```
 regulator fixture /tmp/slugkit
 cd /tmp/slugkit
 regulator unit start u1
 # → unit u1: branch unit/u1 from main, worktree /tmp/slugkit/.regulator/worktrees/u1
-# → next: cd …/u1 && pi -e …/cp2-typed-tools.js -e …/cp4-coordination.js --unit u1
+# → next: cd …/u1 && pi -e …/tools.js -e …/coordination.js --unit u1
 #   (do the work; /checkpoint when it is worth keeping)
 regulator unit finish u1
 # → unit u1: reintegrated as <sha>; worktree and branch removed; lease released
 ```
 
-### The second fixture — [`course/lab/fixture-oscillation/`](../lab/fixture-oscillation/)
+### The second fixture — [`packages/regulator/fixture-oscillation/`](../../packages/regulator/fixture-oscillation/)
 
 The same slug helper with the known issue already fixed and two tests that cannot both
 pass: one says underscores in identifiers survive, the other says an underscore is a
@@ -249,7 +249,7 @@ Nobody has decided. That is the point.
 
 ### Registry cards
 
-Three records under `course/lab/registry/regulators/`, all S2, all
+Three records under `packages/regulator/registry/regulators/`, all S2, all
 `deterministic-gate`: `unit-lease.json`, `thrash-detector.json`, `reintegration.json`.
 Each fills the fields this lesson makes meaningful — `channels` (what it consumes and
 emits) and `scope` (which subjects and resources it coordinates) — and each states its
@@ -365,7 +365,7 @@ that neither unit's session can see the other?
 
 You have finished checkpoint 4 when:
 
-1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the lease
+1. `pnpm --filter @metacoding/regulator test` passes — including the lease
    store's refuse/reclaim/renew cases, the reintegration test that seeds a conflict and
    proves the base was left as found, the unit lifecycle test that refuses a second
    start, and the extension test that loads checkpoint 4 into a real Pi 0.87.0 session

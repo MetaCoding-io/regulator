@@ -1,0 +1,33 @@
+{
+  "id": "reg.audit.doctor.v1",
+  "name": "Doctor (the operating check)",
+  "status": "active",
+  "vsmFunction": "S3*",
+  "purpose": "One headless pass over everything a person would check before trusting an installation, machine-readable, exit 1 on any problem: the Node floor, git, the Pi pin against what is installed, the registry check (with review dates) and the definition check, reviews due within thirty days, and — in an instance — the manifest, whether the instance was initialized under this definition revision, the identity's presence, the base's cleanliness, and what is owed, undelivered or holding the whole instance. The CI entry point, and the first command of the day.",
+  "absorbs": {
+    "failureClass": "works-on-my-laptop",
+    "description": "The definition was upgraded, a card's review date passed, the base had a stray file and an obligation nobody delivered was holding every unit — four things four people knew, none of them written where the next run would read them."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/instance.ts",
+    "enforcementPoints": ["doctor (every check, ok or not, with its detail)", "regulator doctor (exit code)"]
+  },
+  "channels": { "consumes": ["the runtime", "the definition", "the instance's manifest, base and ledger"], "emits": ["doctor report (JSON or text)"] },
+  "scope": { "subjects": ["registry", "identity", "execution", "obligation"], "resources": ["the definition", ".regulator/"] },
+  "cost": { "description": "A registry and definition check plus a few reads; seconds." },
+  "authority": {
+    "may": ["report and refuse (exit 1)"],
+    "mayNot": ["fix anything", "dispatch, deliver or disposition", "silence a check"]
+  },
+  "evidence": { "tests": ["src/instance.test.ts", "src/cli.test.ts"] },
+  "limitations": [
+    "It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.",
+    "Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.",
+    "Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "A check a person or CI runs; it takes part in no unit's run." },
+  "retirement": { "condition": "Never as a mechanism; individual checks retire when what they check is checked earlier (a Pi pin enforced by the package manager retires the pin check)." },
+  "introducedIn": "M15"
+}

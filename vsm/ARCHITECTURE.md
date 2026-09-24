@@ -8,10 +8,10 @@ VSM-Pi is a coding-agent harness on Pi with its own orchestrator and an explicit
 
 - `packages/protocol` — channel vocabulary, schemas, typed messages.
 - `packages/core` — authority and policy logic independent of a particular agent runtime.
-- `packages/pi-extension` — Pi lifecycle/tool interception.
+- `packages/regulator-pi` — Pi lifecycle/tool interception.
 - `packages/checks` — deterministic S3* architectural/domain checks.
 - `packages/cli` — operator-facing inspection and setup.
-- `course/lab` — the reference build (`regulator`); its Pi-free modules promote into `protocol`/`core` as they stabilize.
+- `packages/regulator` — the reference build (`regulator`); its Pi-free modules promote into `protocol`/`core` as they stabilize.
 - `vsm/` — committed S5 identity and policy.
 - `.regulator/` — an instance's generated runtime records: the execution store, the regulatory log, the audit log, the effect journal, the outbox, the memory store and the reporting tools' SQLite event store (`events.db`). Never identity.
 
@@ -27,9 +27,9 @@ protocol
 checks
  ^
  |
-pi-extension <--- course/lab (reference build)
+regulator (control plane) <--- regulator-pi (Pi host), control-room
 
-cli may depend on protocol/core/checks, but core must not depend on Pi.
+regulator may depend on protocol/core/checks and never on a host; a host depends on regulator; core must not depend on Pi.
 ```
 
 Runtime-specific adapters may depend on `core` and `protocol`. `protocol` and `core` must remain usable without Pi.

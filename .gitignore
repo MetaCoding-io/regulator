@@ -7,7 +7,7 @@ coverage/
 .env.*
 !.env.example
 # The injection fixture's canary credential is curriculum, not a secret (lesson 10).
-!course/lab/fixture-injection/.env
+!packages/regulator/fixture-injection/.env
 .gsd/vsm-runtime/
 experiments/runs/
 

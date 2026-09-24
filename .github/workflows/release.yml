@@ -1,0 +1,35 @@
+name: Release
+
+# Publishes every workspace package to npm when a version tag is pushed. The tag must
+# match the packages' version (`v0.1.0` for 0.1.0); `pnpm check` must pass first, on
+# the older CI Node version. Needs the repository secret NPM_TOKEN (an npm automation
+# token for the @metacoding scope); without it the publish step fails and nothing is
+# published.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - name: The tag names the version being published
+        run: |
+          version=$(node -p "require('./packages/regulator/package.json').version")
+          test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} does not match version $version"; exit 1; }
+      - run: pnpm -r publish --access public --no-git-checks --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

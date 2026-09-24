@@ -1,19 +1,10 @@
-# `regulator` — the reference build
+# The course lab
 
-One source file per checkpoint under `src/` (`cp0-event-log.ts` … `cp12-algedonic.ts`),
-headless tests beside them, and the definition beside the code: `registry/`,
-`identity/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
-`settings.json`. `BOUNDARY.md` and `registry/REGULATORS.md` are generated from the
-registry records.
-
-- **Run it:** [`OPERATING.md`](OPERATING.md) — install (`pi install ./course/lab`),
-  install into a repository (`regulator init`), the CI entry point (`regulator
-  doctor`), upgrading, the security posture, and who owns what.
-- **Learn it:** the course under [`../modules/`](../modules/), one lesson per checkpoint.
-- **Check it:** `pnpm check` from the repository root; `node dist/registry-cli.js
-  check` for the definition alone.
-- **Second workload:** `workload/personal-finance.json` over `fixture-finance/`, with
-  the `bookkeeper` and `auditor` profiles, `policies/finance.json` and
-  `contracts/finance/`; the worked example is
-  [`../examples/personal-finance.md`](../examples/personal-finance.md) and
-  `src/finance.test.ts` runs its August close scripted.
+What the course keeps for itself. The reference build is the product,
+[`packages/regulator`](../../packages/regulator/) (the control plane) and
+[`packages/regulator-pi`](../../packages/regulator-pi/) (the Pi host); the lessons cite
+them there. This package holds the two checkpoints that exist only as lessons — `cp0`,
+the event log of lesson 01, and `cp1`, the first trace and the lexical write gate of
+lesson 02, superseded by the product's `identity` and `authority` extensions — and the
+drill scripts (`pnpm cp0` … `pnpm cp12`) that load the product's extensions one lesson
+at a time over the fixture repository.

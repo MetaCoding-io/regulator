@@ -183,26 +183,26 @@ routing event, or an interaction event.
 the obligation. The definition check requires an interaction policy that names someone.
 `ask_human` joins the effect table as irreversible. Tests in `interaction.test.ts`.
 
-### The session — [`course/lab/src/cp12-algedonic.ts`](../lab/src/cp12-algedonic.ts)
+### The session — [`packages/regulator-pi/src/algedonic.ts`](../../packages/regulator-pi/src/algedonic.ts)
 
 `ask_human`, the pause gate, the settle entry. The implement and intelligence profiles
 grant it; the research profile does not, because a research unit reports intelligence
 and asks nobody. The implement profile's advice says when: consent before the
 irreversible, a recap otherwise.
 
-### The policy — [`course/lab/policies/interaction.json`](../lab/policies/interaction.json)
+### The policy — [`packages/regulator/policies/interaction.json`](../../packages/regulator/policies/interaction.json)
 
 Timeouts per kind, two blocking interrupts per attempt, a reminder after an hour, three
 people. `regulator check` validates it with the rest of the definition; the read model
 declares it; the control room shows it with the people table.
 
-### Delivery and the loop — [`course/lab/src/deliver.ts`](../lab/src/deliver.ts), [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### Delivery and the loop — [`packages/regulator/src/deliver.ts`](../../packages/regulator/src/deliver.ts), [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `deliverPending` and `remindDue`. The loop routes and delivers at every step, records a
 paused attempt, holds the unit, refuses to route it, and carries the answer as the next
 hint. `routeUnit` returns nothing for a paused unit.
 
-### The CLI — [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts)
+### The CLI — [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts)
 
 `regulator answer <obligation> --by <who> --answer <text>`, `regulator remind`, the
 authority check before every `--by`, deliveries in `obligation show`, and
@@ -229,7 +229,7 @@ the transcript: `ask_human` with `kind: consent`, then `No answer (no person is
 present). Silence is not consent`, then every `bash` refused by the pause gate until the
 model calls `report_result`. `regulator unit show u1` says `paused: awaiting a person`,
 the attempt outcome is `paused`, and `regulator unit route u1` decides nothing. The
-outbox has one line. Now the measurement: copy `cp12-algedonic.ts`, make `unavailable`
+outbox has one line. Now the measurement: copy `algedonic.ts`, make `unavailable`
 resolve the obligation as accepted — the wrong design — and run the same contract. Read
 what the unit did to `main`. Record both transcripts side by side; this is the module's
 argument.
@@ -295,7 +295,7 @@ You have finished checkpoint 12 when:
 
 1. `pnpm check` passes — including `interaction.test.ts` in core (the fixed rule, the
    authority check, deliveries and interactions folded on the ledger),
-   `cp12-algedonic.test.ts` (headless consent pauses and records; the dialog path with the
+   `algedonic.test.ts` (headless consent pauses and records; the dialog path with the
    policy's timeouts; a recap never pauses; the attention budget; outside a repository
    the tool refuses), the lesson-13 controller test (paused attempt, not routed,
    delivered once, reminded on the interval, the answer as the next hint), the lesson-13
@@ -308,7 +308,7 @@ You have finished checkpoint 12 when:
    by name.
 4. Drill 5's second `remind` delivers nothing and its third delivers reminders, and row
    27's answer is written down.
-5. `regulator status --definition course/lab` shows the interaction policy and its
+5. `regulator status --definition packages/regulator` shows the interaction policy and its
    people.
 6. `docs/DEBT.md` has row 20 struck and rows 27–30 added.
 7. Your notes hold drills 1–5 and the field-study answers.
@@ -323,4 +323,4 @@ You have finished checkpoint 12 when:
   must bypass the hierarchy, and why it must be rare.
 - This repository's [`vsm/channels.yaml`](../../vsm/channels.yaml),
   [`docs/DEBT.md`](../../docs/DEBT.md), and the routing policy at
-  [`course/lab/policies/routing.json`](../lab/policies/routing.json).
+  [`packages/regulator/policies/routing.json`](../../packages/regulator/policies/routing.json).

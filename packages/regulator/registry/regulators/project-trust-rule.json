@@ -1,0 +1,70 @@
+{
+  "id": "reg.authority.project-trust-rule.v1",
+  "name": "Project trust rule",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Load into a unit's session the extensions the definition declares and nothing the project supplies. The SDK's resource loader discovers a project's own .pi/extensions, skills, prompt templates and themes from the working directory without asking — Pi's project_trust event is the CLI's, not the loader's — so the dispatcher builds every session with a loader that turns project resources off and filters the extensions it finds to the definition's list, recording what it refused. The CLI path answers project_trust with 'no' as well. A unit's project is data the unit works on, never a source of control for the harness.",
+  "absorbs": {
+    "failureClass": "trust-boundary-crossing",
+    "description": "The target repository ships .pi/extensions/helpful.ts, which registers a tool that widens the surface or rewrites results; the harness loads it because the directory looked like a project."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "../regulator-pi/src/dispatcher.ts",
+    "enforcementPoints": [
+      "definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)",
+      "project_trust (authority.ts, CLI sessions)"
+    ]
+  },
+  "channels": {
+    "consumes": [
+      "resource loader (discovered extensions)",
+      "project_trust"
+    ],
+    "emits": [
+      "refused extension list (dispatcher echo)"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "project"
+    ],
+    "resources": [
+      ".pi/",
+      ".agents/skills"
+    ]
+  },
+  "cost": {
+    "description": "None: one event handler that returns a constant."
+  },
+  "authority": {
+    "may": [
+      "refuse a discovered extension the definition does not declare",
+      "turn off project skills, prompt templates and themes for a session",
+      "decline project trust for a CLI session"
+    ],
+    "mayNot": [
+      "make untrusted content safe (trust is an input-loading guard, not a sandbox)",
+      "prevent the model from reading a project file that carries instructions"
+    ]
+  },
+  "evidence": {
+    "tests": [
+      "../regulator-pi/src/authority.test.ts"
+    ]
+  },
+  "limitations": [
+    "Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.",
+    "Since lesson 12 the loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.",
+    "The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.",
+    "The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves."
+  ],
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "ablation": {"switch": "loop:definition-loader", "note": "The dispatcher's loader would have to load the project's extensions, skills and context files; not ablatable without a code change. The injection fixture is the suite."},
+  "retirement": {"condition": "Never: a target repository is data. Retire only with a sandbox that makes loading project code harmless."},
+  "introducedIn": "M10"
+}

@@ -1,14 +1,27 @@
 {
   "name": "@metacoding/vsm-pi-checks",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "Apache-2.0",
-  "private": true,
-  "type": "module",
+  "private": false,
   "description": "Deterministic S3* checks: host-run verification bound to a revision, and the technical verdict derived from it.",
+  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "directory": "packages/checks"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
   "exports": {
     ".": "./dist/index.js"
   },
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

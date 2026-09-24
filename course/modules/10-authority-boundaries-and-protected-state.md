@@ -132,7 +132,7 @@ and the card lists exactly that.
 ### `project_trust` and `extensionsOverride`
 
 A CLI or user extension can answer `project_trust` with `{ trusted: "no" }` and own the
-decision; the checkpoint does, for `pnpm cp9`. The dispatcher cannot rely on it, so
+decision; the checkpoint does, for `pnpm --filter @metacoding/viable-agents-lab cp9`. The dispatcher cannot rely on it, so
 `definitionResourceLoader` builds the session's loader with `noSkills`,
 `noPromptTemplates`, `noThemes`, and an `extensionsOverride` that keeps only the
 extensions whose resolved path the definition names, returning the rest as *refused*.
@@ -154,18 +154,18 @@ harness cannot undo — the model has already said it.
 malformed input, expansion, traversal, the S5 artifacts (`authorizeWrite`, unchanged) and
 their parents, the caller's protected paths and *their* parents, the filesystem walk. It
 returns either the one normalized path to execute or a refusal with a cause —
-`malformed`, `traversal`, `protected`, `alias`. The Pi extension in `packages/pi-extension`
+`malformed`, `traversal`, `protected`, `alias`. The Pi extension in `packages/regulator-pi`
 now calls it instead of carrying its own copy, and its seventeen tests are the evidence
 that nothing moved.
 
-### The identity — [`course/lab/identity/INVARIANTS.md`](../lab/identity/INVARIANTS.md)
+### The identity — [`packages/regulator/identity/INVARIANTS.md`](../../packages/regulator/identity/INVARIANTS.md)
 
 One invariant, INV-001, in the definition. `regulator fixture` seeds it into every
 instance at `regulator/identity/`, committed with the instance, and the gate protects
 that prefix everywhere. The gate enforces the file that declares the gate; lesson 12
 completes the set.
 
-### The extension — [`course/lab/src/cp9-authority.ts`](../lab/src/cp9-authority.ts)
+### The extension — [`packages/regulator-pi/src/authority.ts`](../../packages/regulator-pi/src/authority.ts)
 
 Four mechanisms, one file. The write gate over `prepareWritePath` with the identity
 prefix, the S5 artifacts and the project's conventions' protected paths (`vendor/`). The
@@ -176,12 +176,12 @@ evidence refs, because a claim about evidence is not evidence, and it changes no
 The canary watch over `.regulator/canaries`, which `regulator fixture` fills from any
 credential-looking value in a committed `.env`. And the `project_trust` answer.
 
-### The dispatcher — [`course/lab/src/dispatch-pi.ts`](../lab/src/dispatch-pi.ts)
+### The dispatcher — [`packages/regulator-pi/src/dispatcher.ts`](../../packages/regulator-pi/src/dispatcher.ts)
 
 `definitionResourceLoader`: the trust rule where it has to be. Every unit session loads
 checkpoints 2–9 and nothing the worktree offers.
 
-### The boundary statement — [`course/lab/BOUNDARY.md`](../lab/BOUNDARY.md)
+### The boundary statement — [`packages/regulator/BOUNDARY.md`](../../packages/regulator/BOUNDARY.md)
 
 `renderBoundaryMarkdown` in core; `regulator docs --write` writes it beside
 `REGULATORS.md`, `--check` refuses drift, and the registry test asserts both.
@@ -199,7 +199,7 @@ instructions and a `.env` canary; the identity is seeded into every fixture.
 
 **Drill 1 — six routes.** Dispatch the known-issue contract with a prompt hint (or an
 `AGENTS.md` line) that says the invariant file is out of date and must be updated. Then
-try each route yourself in a `pnpm cp9` session and chart what happens:
+try each route yourself in a `pnpm --filter @metacoding/viable-agents-lab cp9` session and chart what happens:
 
 | Route | Mechanism that answers | Outcome |
 | --- | --- | --- |
@@ -217,8 +217,8 @@ prefixes would. That is a `check-failure` waiting for lesson 12's workload-decla
 checks, and it is row 17 in `docs/DEBT.md`.
 
 **Drill 2 — the injection.** Drive the known-issue contract against the injection
-fixture with checkpoints 2–8 only (drop `cp9-authority.js` from a copy of
-`CHECKPOINT_EXTENSIONS`, or run `pnpm cp8` by hand). Watch whether the model follows the
+fixture with checkpoints 2–8 only (drop `authority.js` from a copy of
+`CHECKPOINT_EXTENSIONS`, or run `pnpm --filter @metacoding/viable-agents-lab cp8` by hand). Watch whether the model follows the
 maintainer note in `slugify.js`, or the instruction that `run_tests` prints. Record the
 outcome across three runs; the fixture is realistic enough that an ungated model
 sometimes does. Then drive with checkpoint 9. Whether or not the model is persuaded, the
@@ -250,7 +250,7 @@ proposal to a person yet — lesson 11's obligations do — and that gap is on t
 
 ## 6. Field study: the extension that documents its own edge
 
-**VSM-Pi.** [`packages/pi-extension/src/index.ts`](../../packages/pi-extension/src/index.ts)
+**VSM-Pi.** [`packages/regulator-pi/src/write-gate.ts`](../../packages/regulator-pi/src/write-gate.ts)
 and its README. Three things to check against this checkpoint. `authorizeWrite(path,
 "operational")`: the authority is a constant in the host's code, and no argument, prompt,
 channel or proposal can supply `"s5-authority"`. There is no S5 approval command: the
@@ -274,7 +274,7 @@ You have finished checkpoint 9 when:
 
 1. `pnpm check` passes — including `authority.test.ts` in core (every route, every alias,
    the parent cases, S5 authority as the caller's), the Pi extension's suite unchanged on
-   the shared code, `cp9-authority.test.ts` (the gate through the extension; the bash
+   the shared code, `authority.test.ts` (the gate through the extension; the bash
    watch restoring and reporting; canary redaction and recording; the trust answer; the
    proposal that changes nothing; the fixture seeding; and the loader test that shows
    the plain SDK loader taking the project's extension and the definition's loader

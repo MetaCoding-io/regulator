@@ -166,7 +166,7 @@ correctness suite never needs a provider key. Two patterns, both using Node's bu
 real in-memory session with the SDK's `DefaultResourceLoader` and `createAgentSession`,
 then invoke the hook directly (for example `session.agent.beforeToolCall(...)`) with
 isolated temporary settings and no credentials. VSM-Pi's
-`packages/pi-extension/src/index.test.ts` is the worked reference. Live-model runs are
+`packages/regulator-pi/src/index.test.ts` is the worked reference. Live-model runs are
 for failure drills and evals, never for proving a handler correct.
 
 **Build.** Checkpoint 2: replace ad-hoc shell usage with three typed tools for the

@@ -216,7 +216,7 @@ consumers, which is the promotion rule — and the signal sink that lesson 05 wr
 inline is now `appendSignal` / `readSignals`, validating every line against the
 protocol's message union.
 
-### The workload — [`course/lab/workload/software-development.json`](../lab/workload/software-development.json)
+### The workload — [`packages/regulator/workload/software-development.json`](../../packages/regulator/workload/software-development.json)
 
 Six unit types: `plan` and `close` run under `research` (they never change the
 repository), `implement` and `integrate` under `implement`, `verify` under `research`,
@@ -226,7 +226,7 @@ consumed from lesson 09; declaring them now is how the definition stays ahead of
 loop rather than behind it. `workload.test.ts` asserts every profile named is one the
 lab declares.
 
-### The extension — [`course/lab/src/cp5-contract.ts`](../lab/src/cp5-contract.ts)
+### The extension — [`packages/regulator-pi/src/contract.ts`](../../packages/regulator-pi/src/contract.ts)
 
 `--contract <path>` (or `REGULATOR_CONTRACT`). On `session_start` it loads and checks
 the contract, appends it as a `regulator:contract` entry and puts `contract: tc-… v1` in
@@ -237,7 +237,7 @@ report to the execution store in the *base checkout* (found from the worktree th
 way lesson 05's gate found the lease). `agent_end` warns if a contracted session ends
 unreported.
 
-### The loop — [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### The loop — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `runUnit(exec, { repo, contract, workload, dispatcher, owner })`:
 
@@ -257,12 +257,12 @@ close      report = store.getReport(unit, version)     never the diff
 ```
 
 The `Dispatcher` is the one Pi-shaped step, injected so the loop is tested without a
-model and driven with one. [`dispatch-pi.ts`](../lab/src/dispatch-pi.ts) is the real
+model and driven with one. [`dispatcher.ts`](../../packages/regulator-pi/src/dispatcher.ts) is the real
 one: checkpoints 2–5 loaded into a session in the worktree, flags set on the runtime,
 `session.prompt(contract.objective)`, session persisted. Verify and route are missing
 from the loop on purpose; where they would go, it records what happened and stops.
 
-### The CLI — [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts) and [`packages/cli`](../../packages/cli)
+### The CLI — [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts) and [`status.ts`](../../packages/regulator/src/status.ts)
 
 ```text
 regulator contract check <file>          validate; say what it allocates
@@ -271,14 +271,13 @@ regulator unit show <id>                 the unit record, its attempts, whether 
 regulator status [--definition <dir>] [--instance <dir>] [--json]
 ```
 
-`status` is a separate package, `@metacoding/vsm-pi-cli`, and the first user-facing
-piece of VSM-Pi proper: a read model over a definition (registry, workloads; it says
+`status` is the read model over a definition (registry, workloads; it says
 plainly that profiles and policies are still declared in code) and an instance (units
 with contract, report and attempts; leases with liveness; unrouted signals). It owns no
 state, and it has no subcommand that changes anything. The control room will consume
 its `--json` output; that is the whole reason it exists before the control room does.
 
-### Example contracts — [`course/lab/contracts/`](../lab/contracts/)
+### Example contracts — [`packages/regulator/contracts/`](../../packages/regulator/contracts/)
 
 `fix-known-issue.json` for the main fixture: the public signature and the vendored
 helper are fixed, helper decomposition and added tests are delegated, non-ASCII input
@@ -295,7 +294,7 @@ repository each time.
 **Drill 1 — prose versus contract.** Make two fixtures. In the first, do what lesson 04
 did: start `u1`, launch `pi` in the worktree with checkpoints 2–4 and `--profile
 implement`, and prompt *"Fix the known issue described in the README."* In the second,
-run `regulator unit dispatch course/lab/contracts/fix-known-issue.json`. Same model,
+run `regulator unit dispatch packages/regulator/contracts/fix-known-issue.json`. Same model,
 same fixture, same objective. Now diff the two results — not the code, the *decisions*:
 
 | | Prose | Contract |
@@ -312,7 +311,7 @@ the diff and nowhere else. In the contract run it is in `report.v1.json`, named,
 the bounds it was made under. Same choice; only one of them is a record.
 
 **Drill 2 — the silent settlement.** `regulator fixture /tmp/osc --oscillation`, then
-`regulator unit dispatch course/lab/contracts/underscore-unresolved.json`. The objective
+`regulator unit dispatch packages/regulator/contracts/underscore-unresolved.json`. The objective
 tells the unit not to decide the underscore question; the section repeats it; and the
 fourth test cannot pass without deciding it. Watch what the model does with the report.
 The interesting outcomes, in rough order of how often they occur:
@@ -344,8 +343,8 @@ two? (Nothing. That is the gap between this lesson and lesson 09.)
 **Drill 4 — the read model.** With the instances from drills 1–3 still on disk:
 
 ```text
-regulator status --definition course/lab --instance /tmp/osc
-regulator status --definition course/lab --instance /tmp/osc --json | jq '.instance.units[].unit.status'
+regulator status --definition packages/regulator --instance /tmp/osc
+regulator status --definition packages/regulator --instance /tmp/osc --json | jq '.instance.units[].unit.status'
 ```
 
 Then try to find, from the status output alone, the answer to *"what did unit u2 decide
@@ -397,14 +396,14 @@ You have finished checkpoint 5 when:
    be closed silently; delegated choices must be reported; required evidence by class),
    the execution store's immutability tests, `controller.test.ts` (closed from a report;
    blocked on no report with the lease kept; blocked on an invalid report; refused before
-   anything is claimed; deviations become blocking signals), `cp5-contract.test.ts`
+   anything is claimed; deviations become blocking signals), `contract.test.ts`
    (typed entry, section, tool gate, and the real-session load with the contract as a
    flag), and `status.test.ts`.
 2. `regulator unit dispatch` runs a live unit against the main fixture to `closed`, and
    `regulator unit show u1` shows one attempt with outcome `reported`.
 3. The oscillation fixture under `underscore-unresolved.json` produces at least one
    refused report or one surfaced outcome in your three runs, and you have recorded which.
-4. `regulator status --definition course/lab --instance <repo> --json` validates as the
+4. `regulator status --definition packages/regulator --instance <repo> --json` validates as the
    view type and shows every unit you dispatched with its contract and report.
 5. The three registry cards pass `registry:check`; `REGULATORS.md` is regenerated; the
    `contract-advice` card is at level `prompt`.

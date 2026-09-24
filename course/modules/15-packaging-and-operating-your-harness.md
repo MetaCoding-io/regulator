@@ -132,11 +132,11 @@ lesson is a prompt.
 
 ## 3. Mechanism
 
-### `pi install ./course/lab`
+### `pi install ./packages/regulator-pi`
 
 A Pi package is a directory with a `package.json` that names its extensions under
-`pi.extensions`; the lab's names the eleven checkpoints, and its `bin` is the
-`regulator` CLI. `pi install <path>` records it in user settings (`-l` for project
+`pi.extensions`; the Pi host's (`packages/regulator-pi`) names the eleven session
+extensions, and the control plane's (`packages/regulator`) `bin` is the `regulator` CLI. `pi install <path>` records it in user settings (`-l` for project
 settings, shared with a team, installed on startup once the project is trusted);
 `pi -e` loads the same files for one session. Pi runs `npm install` for a package from
 npm or git; a workspace package is built where it lives.
@@ -179,7 +179,7 @@ gone from the code and the documents that described it.
 
 ## 4. Build: checkpoint 14
 
-### The manifest — [`packages/protocol/src/instance.ts`](../../packages/protocol/src/instance.ts), [`course/lab/src/instance.ts`](../lab/src/instance.ts)
+### The manifest — [`packages/protocol/src/instance.ts`](../../packages/protocol/src/instance.ts), [`packages/regulator/src/instance.ts`](../../packages/regulator/src/instance.ts)
 
 `InstanceManifestSchema`; `initInstance`, `readManifest`, `doctor`, `definitionPin`.
 `memory.ts` gains `scope`; `workload.ts` the `glossary-lint` check name;
@@ -192,20 +192,20 @@ gains `timelineFor` and reads the events store.
 
 `glossary-lint`, with `forbidden` and `writablePaths` options.
 
-### The loop and the session — [`course/lab/src/controller.ts`](../lab/src/controller.ts), [`cp3-profiles.ts`](../lab/src/cp3-profiles.ts), [`cp11-identity.ts`](../lab/src/cp11-identity.ts)
+### The loop and the session — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts), [`profiles.ts`](../../packages/regulator-pi/src/profiles.ts), [`identity.ts`](../../packages/regulator-pi/src/identity.ts)
 
 `verifyBase` after reintegration; protected and writable prefixes from the manifest at
 closeout; the glossary's terms from the worktree's identity; the profile grant reads the
 declaration; `remember` takes a scope and the memory section is filtered by the unit's
 type.
 
-### The processes — [`course/lab/src/deliver.ts`](../lab/src/deliver.ts), [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts)
+### The processes — [`packages/regulator/src/deliver.ts`](../../packages/regulator/src/deliver.ts), [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts)
 
 `watchOutbox`; `regulator init | doctor | watch | identity promote`; `regulator check
 --today`. The lab's `package.json` declares the extensions and the `bin`;
-[`OPERATING.md`](../lab/OPERATING.md) is the operating note.
+[`OPERATING.md`](../../packages/regulator/OPERATING.md) is the operating note.
 
-### The suite — [`course/lab/evals/drift.json`](../lab/evals/drift.json)
+### The suite — [`packages/regulator/evals/drift.json`](../../packages/regulator/evals/drift.json)
 
 `glossary-lint` on every arm but control; a `no-glossary-lint` ablation arm; the three
 reports regenerated with new interpretations. The workload's implement, verify and
@@ -247,7 +247,7 @@ rationale and watch the veto lift. Then answer row 37: what would a pre-merge tr
 cost, and would you pay it?
 
 **Drill 3 — the word.** Read the regenerated sloppy report's treatment column, then
-`regulator eval course/lab/evals/drift.json --behaviour sloppy --arm no-glossary-lint
+`regulator eval packages/regulator/evals/drift.json --behaviour sloppy --arm no-glossary-lint
 --reps 1`. Six units refused three times each for a commit message. Change the check in
 a copy of the lab so the commit-message half is advisory (an audit finding at `advisory`,
 not failing evidence) and the comment half blocking, run the suite again, and write the
@@ -270,7 +270,7 @@ mechanism would check it. This is the capstone's first page.
 
 **GSD-Pi.** Its distribution story — a scoped npm package, a guided installer, migration
 instructions for a shadowed global binary — and its extension surface for
-project-specific commands, tools, skills and UI. Compare with `pi install ./course/lab`
+project-specific commands, tools, skills and UI. Compare with `pi install ./packages/regulator-pi`
 and `regulator init`: what GSD installs into a project versus what this harness refuses
 to read from one, and why the second is a security posture rather than a limitation.
 
@@ -318,6 +318,6 @@ You have finished checkpoint 14 when:
   `environment-variables.md`, `json.md`, `rpc.md`, `sdk.md`.
 - Stafford Beer, *The Heart of Enterprise*, on recursion: the viable system that contains
   the one you built is the one that has to keep it viable.
-- This repository's [`course/lab/OPERATING.md`](../lab/OPERATING.md),
+- This repository's [`packages/regulator/OPERATING.md`](../../packages/regulator/OPERATING.md),
   [`docs/DEBT.md`](../../docs/DEBT.md), [`vsm/`](../../vsm/), and the capstone brief in
   [`course/ASSESSMENT.md`](../ASSESSMENT.md).

@@ -11,7 +11,7 @@
  *
  * The gate is deliberately simple. It normalizes the obvious things Pi itself
  * normalizes and nothing more; lesson 10 hardens it and explains why a lexical
- * check is not a filesystem boundary. See VSM-Pi's `packages/pi-extension` for
+ * check is not a filesystem boundary. See VSM-Pi's `packages/regulator-pi` for
  * the hardened version.
  */
 import path from "node:path";

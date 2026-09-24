@@ -136,11 +136,11 @@ in the next section you are going to instrument it.
 ## 4. Build: checkpoint 0
 
 The reference build for this course is called **`regulator`**. It lives in
-[`course/lab/`](../lab/) and grows by one checkpoint per lesson. Checkpoint 0 is a single
+[`packages/regulator/`](../../packages/regulator/) and grows by one checkpoint per lesson. Checkpoint 0 is a single
 extension file that subscribes to the agent loop and appends one JSON line per event to
 `.regulator/events.ndjson` in whatever project it is loaded into.
 
-Open [`course/lab/src/cp0-event-log.ts`](../lab/src/cp0-event-log.ts). It is short;
+Open [`course/lab/src/cp0-event-log.ts`](../../course/lab/src/cp0-event-log.ts). It is short;
 read the whole thing. Three things to notice.
 
 **An extension is a function that receives `pi`.**
@@ -190,10 +190,10 @@ From the repository root:
 ```sh
 pnpm install
 pnpm build
-pnpm --filter @metacoding/vsm-pi-course-lab cp0
+pnpm --filter @metacoding/viable-agents-lab cp0
 ```
 
-The last command changes into the fixture project at `course/lab/fixture/` and runs
+The last command changes into the fixture project at `packages/regulator/fixture/` and runs
 `pi -e ../dist/cp0-event-log.js`. (The lab loads the compiled `dist/` file rather than
 the `.ts` source so that what you run is exactly what the tests exercised.)
 
@@ -201,7 +201,7 @@ Give the agent something small — *"What does this project do?"* — and let it
 Then, in another terminal:
 
 ```sh
-cat course/lab/fixture/.regulator/events.ndjson
+cat packages/regulator/fixture/.regulator/events.ndjson
 ```
 
 You should see something like:
@@ -229,11 +229,11 @@ Lesson 02 turns this into typed records.
 
 The fixture project is a tiny slug helper called **slugkit**. Its README is wrong in two
 places on purpose, and two of its four tests fail on purpose. Read
-[`course/lab/fixture/README.md`](../lab/fixture/README.md) now, then look at the actual
+[`packages/regulator/fixture/README.md`](../../packages/regulator/fixture/README.md) now, then look at the actual
 layout and run the real test command:
 
 ```sh
-cd course/lab/fixture
+cd packages/regulator/fixture
 node --test
 ```
 
@@ -245,7 +245,7 @@ looks like after two years: partly right, partly stale, and nothing marks which 
 Now hand it to the un-augmented agent, with checkpoint 0 loaded so you get the log:
 
 ```sh
-pnpm --filter @metacoding/vsm-pi-course-lab cp0
+pnpm --filter @metacoding/viable-agents-lab cp0
 ```
 
 Prompt:
@@ -314,9 +314,9 @@ carry through the course.
 
 You have finished checkpoint 0 when:
 
-1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — three of its tests cover
+1. `pnpm --filter @metacoding/regulator test` passes — three of its tests cover
    this checkpoint (registration, one line per event, never blocks).
-2. `course/lab/fixture/.regulator/events.ndjson` from a real run contains a complete
+2. `packages/regulator/fixture/.regulator/events.ndjson` from a real run contains a complete
    cycle: `session_start` → `before_agent_start` → at least one `turn_start`/`turn_end`
    pair with a `tool_call` inside → `agent_end`.
 3. Your lab notes hold at least one filled-in drill record from section 5, with the

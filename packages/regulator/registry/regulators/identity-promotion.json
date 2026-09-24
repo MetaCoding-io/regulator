@@ -1,0 +1,33 @@
+{
+  "id": "reg.authority.identity-promotion.v1",
+  "name": "Identity promotion (the release path)",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "An identity decision accepted in an instance (`regulator identity accept`) changes that instance's copy; the definition's seed, which every later `init` starts from, is a file in the definition's repository. `regulator identity promote <file>.md` is the release path: run by a person the interaction policy lets act as S5, it copies the instance's identity file into the definition's seed, refuses a promotion that would leave the seed's identity set invalid or that changes nothing or that lands on a dirty definition, and commits in the definition's repository citing the instance and its revision. The S5 decision path (lesson 12) decides for an instance; this carries the decision to the definition, once, on the record.",
+  "absorbs": {
+    "failureClass": "decision-stays-in-one-instance",
+    "description": "INV-005 was proposed, decided and committed in one instance; the next fixture started from the seed without it, and the decision had to be made again — or was forgotten."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cli.ts",
+    "enforcementPoints": ["identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)"]
+  },
+  "channels": { "consumes": ["the instance's regulator/identity/<file>", "the definition's identity/ seed", "the interaction policy's people"], "emits": ["a commit in the definition's repository"] },
+  "scope": { "subjects": ["identity"], "resources": ["<definition>/identity/"] },
+  "cost": { "description": "One commit in the definition per promotion; no model calls." },
+  "authority": {
+    "may": ["write one seed file under S5 authority", "commit it in the definition citing the instance"],
+    "mayNot": ["promote without an S5-capable person", "leave the seed's identity set invalid", "promote into a dirty definition", "be called by a tool"]
+  },
+  "evidence": { "tests": ["src/cli.test.ts"] },
+  "limitations": [
+    "It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.",
+    "The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.",
+    "Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there)."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "A CLI command a person runs; the arm without it is a person copying a file by hand, which is lesson 12's row 24." },
+  "retirement": { "condition": "Retire when the definition is versioned and released (a package version per promotion) and the promotion is a pull request the release path already requires." },
+  "introducedIn": "M15"
+}

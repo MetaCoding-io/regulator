@@ -1,0 +1,33 @@
+{
+  "id": "reg.algedonic.interaction-contract.v1",
+  "name": "Interaction contract (ask_human)",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Give a unit one typed way to interrupt a person, `ask_human`, under an interaction kind whose contract is fixed in the protocol: a recap offers decisions for correction and continues; choice, clarification and uat wait; consent asks authorization for an irreversible action and nothing but a yes is a yes. Every call opens an obligation owed to a person before anything is asked, records the request and its outcome (answered, timed out, cancelled, unavailable) beside it, and — with a person present — asks through Pi's dialogs with the policy's timeout for the kind. An answer given in the dialog is recorded as that person's disposition on the spot; consent needs a stated action, choice needs options, and a blocking question past the policy's attention budget is refused. The algedonic channel of VSM: from the unit straight to the person, bypassing the loop, typed.",
+  "absorbs": {
+    "failureClass": "silence-as-consent",
+    "description": "A unit asks whether it may force-push, nobody is there, and it proceeds because the prompt said to 'use judgment' — or it asks five times per attempt until the person stops reading. The question and the non-answer were never a record anyone could act on."
+  },
+  "mechanism": {
+    "level": "typed-tool",
+    "implementation": "../regulator-pi/src/algedonic.ts",
+    "enforcementPoints": ["ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)", "ctx.ui.confirm / select / input with the policy's timeout"]
+  },
+  "channels": { "consumes": ["tool call (ask_human)", "interaction policy (timeouts, attention)", "lease (unit provenance)", "ctx.hasUI / ctx.mode (channel)"], "emits": ["obligation-opened (interaction, owed to a person)", "interaction-requested / interaction-answered", "obligation-resolved (answered in the session)", "regulator:interaction (session entry)"] },
+  "scope": { "subjects": ["interaction", "obligation"], "resources": [".regulator/signals.ndjson", "the session's dialogs"] },
+  "cost": { "description": "One obligation and two regulatory events per question; a dialog holds a person for up to the policy's timeout. Attention is the budget: the policy caps blocking questions per attempt." },
+  "authority": {
+    "may": ["open an obligation owed to a person", "ask through the session's dialogs", "record a dialog answer as the person's disposition", "refuse a question past the attention budget or without its required fields"],
+    "mayNot": ["treat a timeout, a cancel or an absent person as an answer", "continue a blocking question without one (the pause gate)", "ask outside a repository the orchestrator knows", "widen what a kind means: the rule is the protocol's, not the policy's"]
+  },
+  "evidence": { "tests": ["../regulator-pi/src/algedonic.test.ts", "../core/src/interaction.test.ts"] },
+  "limitations": [
+    "The dialog answer is attributed to the OS user of the session (or the `person` option), not to an authenticated identity; in a session run by hand that is the person at the keyboard, which is what the record says.",
+    "Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).",
+    "A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:algedonic", "note": "Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows."},
+  "retirement": {"condition": "Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads."},
+  "introducedIn": "M13"
+}

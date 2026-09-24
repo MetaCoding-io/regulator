@@ -1,0 +1,33 @@
+{
+  "id": "reg.authority.s5-decision.v1",
+  "name": "S5 decision path",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "The one path that changes an identity file: `regulator identity accept`, run by a named person, on an obligation owed to S5 that a proposal opened. It writes the proposed file under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a result that leaves the identity set invalid, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `identity reject` resolves it as rejected and changes nothing. INV-002 with a workflow: the right to ask is the proposal tool; the right to change is this, and only this.",
+  "absorbs": {
+    "failureClass": "proposal-with-no-decider",
+    "description": "A proposal is recorded and owed to S5, and then a person edits the identity file by hand with no link to what was asked, or never does, and the obligation sits open with no way to close it honestly."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cli.ts",
+    "enforcementPoints": ["identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)", "identity reject (ledger.resolve rejected)"]
+  },
+  "channels": { "consumes": ["obligation (policy-proposal, owed to S5)", "a proposed file"], "emits": ["commit on the base branch", "obligation-resolved (accepted | rejected)"] },
+  "scope": { "subjects": ["identity", "obligation"], "resources": ["regulator/identity/", "base branch"] },
+  "cost": { "description": "One commit per accepted proposal; no model calls." },
+  "authority": {
+    "may": ["write one identity file under S5 authority", "commit it citing the obligation", "resolve the proposal's obligation"],
+    "mayNot": ["accept a proposal a unit made for itself (a unit has no S5 authority)", "write outside regulator/identity/", "leave the identity set invalid", "be called by a tool"]
+  },
+  "evidence": { "tests": ["src/cli.test.ts"] },
+  "limitations": [
+    "Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write (lesson 13); the name on `--by` is asserted, not authenticated.",
+    "The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.",
+    "It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to packages/regulator/identity/ by hand."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "none", "note": "A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand."},
+  "retirement": {"condition": "Never: INV-002 names it as the only writer. Retire with the proposal path, not before."},
+  "introducedIn": "M12"
+}

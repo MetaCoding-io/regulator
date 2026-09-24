@@ -18,7 +18,7 @@ Each checkpoint has a grader that:
 A grader never asks the learner's agent whether it complied. Self-report is not evidence
 in the course either.
 
-**Status, stated plainly.** The tests that exist today under `course/lab/` are
+**Status, stated plainly.** The tests that exist today under `packages/regulator/` are
 *reference-build tests*: they prove the shipped checkpoints behave. They are not yet the
 adversarial graders described above, which must reject a range of plausible weak
 learner implementations — prompt-only enforcement, a path check that misses `..`,

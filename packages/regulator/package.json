@@ -1,0 +1,75 @@
+{
+  "name": "@metacoding/regulator",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": false,
+  "description": "regulator: a coding-agent harness with an explicit cybernetic control plane. The S3 loop (contract, dispatch, verify, route, close) with leases and budgets, host-run evidence at closeout, obligations owed to someone, an algedonic path to a person, and a registry of every regulator with its stated limitation. The `regulator` CLI and the definition (registry, identity, profiles, policies, workloads, evals) ship here; a host package (`@metacoding/regulator-pi` for Pi) runs the units.",
+  "keywords": [
+    "coding-agent",
+    "agent-harness",
+    "viable-system-model",
+    "cybernetics",
+    "control-plane",
+    "regulator"
+  ],
+  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "directory": "packages/regulator"
+  },
+  "bugs": "https://github.com/MetaCoding-io/vsm-pi/issues",
+  "publishConfig": {
+    "access": "public"
+  },
+  "type": "module",
+  "bin": {
+    "regulator": "./dist/cli.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./package.json": "./package.json"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "!dist/*.test.*",
+    "identity",
+    "profiles",
+    "policies",
+    "workload",
+    "registry",
+    "evals",
+    "contracts",
+    "fixture",
+    "fixture-finance",
+    "fixture-injection",
+    "fixture-oscillation",
+    "drift",
+    "settings.json",
+    "BOUNDARY.md",
+    "OPERATING.md",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && node --test dist/*.test.js",
+    "fixture:test": "cd fixture && node --test",
+    "registry:check": "pnpm build && node dist/registry-cli.js check && node dist/registry-cli.js docs --check",
+    "registry:docs": "pnpm build && node dist/registry-cli.js docs --write",
+    "regulator": "node dist/cli.js",
+    "fixture:injection:test": "cd fixture-injection && node --test",
+    "fixture:oscillation:test": "cd fixture-oscillation && node --test"
+  },
+  "dependencies": {
+    "@metacoding/vsm-pi-checks": "workspace:*",
+    "@metacoding/vsm-pi-core": "workspace:*",
+    "@metacoding/vsm-pi-protocol": "workspace:*",
+    "typebox": "1.3.27"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

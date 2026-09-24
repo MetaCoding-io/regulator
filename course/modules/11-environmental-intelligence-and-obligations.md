@@ -183,7 +183,7 @@ note; expired intelligence is noted; intelligence with affected units opens one
 obligation per unit. `progressionVeto(ledger, unitId)`: the open blocking ones.
 `dispositionByDecision`: S3's decision applied to S3's obligations. Four tests.
 
-### The loop — [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### The loop — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `runUnit` and `closeUnit` take the routing policy, route at their steps, and refuse on
 the veto with one problem per open blocking obligation. `routeUnit` routes before it
@@ -192,14 +192,14 @@ decides and dispositions after. A re-dispatch after a person resolved a
 decision, deviation and residual uncertainty in a report now becomes a signal; the
 policy decides which are obligations.
 
-### The extension — [`course/lab/src/cp10-intelligence.ts`](../lab/src/cp10-intelligence.ts)
+### The extension — [`packages/regulator-pi/src/intelligence.ts`](../../packages/regulator-pi/src/intelligence.ts)
 
 One tool. `report_intelligence` takes the finding, stamps unit (from the lease), revision
 (from the tree) and time, records the signal, appends a session entry, and tells the
 model that nothing has been applied. The test asserts the registered tool set is exactly
 that one name.
 
-### The definition — [`course/lab/policies/routing.json`](../lab/policies/routing.json), the workload, the profile
+### The definition — [`packages/regulator/policies/routing.json`](../../packages/regulator/policies/routing.json), the workload, the profile
 
 `routing` v1: algedonic and proposals always open (a person, S5); findings, operational
 and uncertainty signals at blocking; coordination and intelligence at advisory; the veto
@@ -228,10 +228,10 @@ and narrows rows 1 and 14; read the three new cards' limitations before the dril
 ## 5. Break it
 
 Five drills. Use the known-issue fixture and the research contract
-[`contracts/research-vendored-helper.json`](../lab/contracts/research-vendored-helper.json).
+[`contracts/research-vendored-helper.json`](../../packages/regulator/contracts/research-vendored-helper.json).
 
 **Drill 1 — auto-apply, then don't.** Before anything else, run the failure the module
-is about. Take a copy of `cp10-intelligence.ts` and make `report_intelligence` do what a
+is about. Take a copy of `intelligence.ts` and make `report_intelligence` do what a
 helpful tool would: when `affectedUnits` names a unit whose worktree exists, write the
 claim into that worktree's `NOTES.md` and commit. Dispatch the research contract, then
 the known-issue contract, and read the merged history. Then put the checkpoint back and
@@ -312,7 +312,7 @@ You have finished checkpoint 10 when:
 1. `pnpm check` passes — including `obligations.test.ts` in core (routing under policy
    with noting and idempotence, the lifecycle with terminal refusals and successors,
    intelligence with expiry and affected units, dispositions by decision),
-   `cp10-intelligence.test.ts` (provenance from the lease and the tree; the one-tool
+   `intelligence.test.ts` (provenance from the lease and the tree; the one-tool
    surface; refusal outside a known repository), the two new controller tests (the
    obligation flow through the loop with the veto and the hint; the research unit whose
    intelligence holds another unit until dispositioned and never touches the domain),

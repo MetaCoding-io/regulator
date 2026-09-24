@@ -14,7 +14,7 @@ An unmapped context fails closed. A trusted host can load an explicit wrapper
 using the same `pi -e /absolute/path/to/wrapper.js` mechanism:
 
 ```js
-import { createVsmPiExtension } from "/absolute/path/to/vsm-pi/packages/pi-extension/dist/index.js";
+import { createVsmPiExtension } from "/absolute/path/to/vsm-pi/packages/regulator-pi/dist/write-gate.js";
 
 // Example for a host session deliberately designated as operational S1.
 // These values are host configuration, never model input or inferred from prose.
@@ -203,7 +203,7 @@ pnpm install --frozen-lockfile
 pnpm typecheck
 pnpm --filter @metacoding/vsm-pi-protocol test
 pnpm --filter @metacoding/vsm-pi-core test
-pnpm --filter @metacoding/vsm-pi-extension test
+pnpm --filter @metacoding/regulator-pi test
 pnpm test
 pnpm check
 pnpm smoke:reporting

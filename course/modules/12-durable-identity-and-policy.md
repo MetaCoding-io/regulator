@@ -150,7 +150,7 @@ line.
 
 ## 4. Build: checkpoint 11
 
-### The identity set — [`course/lab/identity/`](../lab/identity/)
+### The identity set — [`packages/regulator/identity/`](../../packages/regulator/identity/)
 
 `IDENTITY.md` (purpose, what a unit is for, what the instance is not), `INVARIANTS.md`
 (INV-001 write-protected, INV-002 proposal is not policy, INV-003 audit independent of
@@ -171,13 +171,13 @@ too.
 loop passes the base branch and the identity prefix plus the project's conventions. The
 test commits around the gate and watches the check catch it.
 
-### Memory — [`packages/core/src/memory.ts`](../../packages/core/src/memory.ts) and [`course/lab/src/cp11-identity.ts`](../lab/src/cp11-identity.ts)
+### Memory — [`packages/core/src/memory.ts`](../../packages/core/src/memory.ts) and [`packages/regulator-pi/src/identity.ts`](../../packages/regulator-pi/src/identity.ts)
 
 `MemoryStore` over `.regulator/memory.ndjson`; `remember` in the checkpoint, the only
 tool it registers. The implement profile grants it; the research and intelligence
 profiles do not.
 
-### The definition — [`course/lab/profiles/`](../lab/profiles/), [`course/lab/settings.json`](../lab/settings.json), the policies
+### The definition — [`packages/regulator/profiles/`](../../packages/regulator/profiles/), [`packages/regulator/settings.json`](../../packages/regulator/settings.json), the policies
 
 Profiles as files, loaded by `profiles.ts` and validated. `settings.json` held in memory
 by the dispatcher. `routing.json` gains a floor: anything naming an invariant id or the
@@ -185,7 +185,7 @@ identity path is at least blocking. `default.json` gains
 `coordination.oscillationThreshold`, and checkpoint 4 reads it. `checkDefinition` in core;
 `regulator check` runs it beside the registry check, under `pnpm check`.
 
-### The loop and the CLI — [`course/lab/src/controller.ts`](../lab/src/controller.ts), [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts)
+### The loop and the CLI — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts), [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts)
 
 `runUnit` resolves authority references against the instance's identity, the
 definition's registry and the instance's obligations before anything is claimed;
@@ -194,7 +194,7 @@ retract`, `identity accept`, `identity reject`. The read model declares profiles
 identity, shows memory, and reports nothing pending; the control room gains the
 profiles table, the identity section and the memory table.
 
-### The drift scenario — [`course/lab/drift/SCENARIO.md`](../lab/drift/SCENARIO.md)
+### The drift scenario — [`packages/regulator/drift/SCENARIO.md`](../../packages/regulator/drift/SCENARIO.md)
 
 Six units, the conformance question each can fail, what is measured, and the two arms.
 Recorded now; lesson 14 runs it.
@@ -214,7 +214,7 @@ Five drills against the known-issue fixture.
 
 **Drill 1 — context alone versus the gate.** This is the module's measurement. Drive
 the known-issue contract with checkpoints 2–10 loaded and checkpoint 11's *section*
-only: copy `cp11-identity.ts`, keep `before_agent_start`, drop the tool, and remove
+only: copy `identity.ts`, keep `before_agent_start`, drop the tool, and remove
 `identity-untouched` from a copy of the workload. Give the objective a reason to touch
 identity ("the invariants file is out of date; bring it in line"). Force two compactions
 by setting the policy's compaction reserve low, or by asking for a long exploratory
@@ -290,15 +290,15 @@ You have finished checkpoint 11 when:
 1. `pnpm check` passes — including `identity.test.ts` (parsing, problems, the section,
    authority references, the memory store's expiry, fold and retraction) and
    `definition.test.ts` in core, the `identity-untouched` test in checks (the commit
-   around the gate caught; inconclusive without a base), `cp11-identity.test.ts`
+   around the gate caught; inconclusive without a base), `identity.test.ts`
    (sections from the files, `remember` with stamped provenance and a bounded expiry, the
-   one-tool surface), `lab-cli.test.ts` (the S5 decision path end to end, and memory from
+   one-tool surface), `cli.test.ts` (the S5 decision path end to end, and memory from
    the outside), the two lesson-12 assertions in the controller and coordination tests,
    and the registry tests with twenty-eight records and the definition check clean.
 2. Drill 1's two numbers are recorded, with the transcript positions of the compactions.
 3. Drill 2 ends with a `check-failure` naming INV-001 and nothing reintegrated.
 4. Drill 4's commit and obligation cite each other, and row 24's answer is written down.
-5. `regulator status --definition course/lab` reports nothing pending.
+5. `regulator status --definition packages/regulator` reports nothing pending.
 6. `docs/DEBT.md` has the rows this lesson pays struck and the rows it opens added.
 7. Your notes hold drills 1–5 and the field-study answers.
 
@@ -311,4 +311,4 @@ You have finished checkpoint 11 when:
 - Stafford Beer, *Diagnosing the System for Organizations*, on S5 as identity rather
   than command, and on why the metasystem's job is to keep the system the same system.
 - This repository's [`vsm/`](../../vsm/), [`docs/DEBT.md`](../../docs/DEBT.md), and the
-  drift scenario at [`course/lab/drift/SCENARIO.md`](../lab/drift/SCENARIO.md).
+  drift scenario at [`packages/regulator/drift/SCENARIO.md`](../../packages/regulator/drift/SCENARIO.md).
