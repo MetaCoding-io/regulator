@@ -48,6 +48,7 @@ fixture's layout is a declaration here or a discovered convention:
 | `vendor/` is protected | `regulator/identity/` always; `vendor/` when it exists (convention); `--protected` for the rest |
 | `npm test` or `node --test` | discovered from `package.json` scripts or a `test/` directory (`packages/checks/src/conventions.ts`) |
 | the glossary's words | `regulator/identity/GLOSSARY.md`, "Words this instance does not use", read by `glossary-lint` |
+| the tests a unit may not weaken | the base's `test/` and `package.json`, staged and run by `inherited-tests` against the unit's tree; a contract exempts the files it changes on purpose |
 
 For a domain that is not software, the same steps with different prefixes:
 `regulator fixture ~/ledger --finance`, then `init --writable ledger/,reports/,payments/pending/

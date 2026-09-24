@@ -1,7 +1,7 @@
 {
   "name": "personal-finance",
   "version": 1,
-  "description": "The monthly close of a household ledger: the second workload definition, and the worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output \u2014 the ledger's own test suite, run by the orchestrator, is the reconciliation. Nothing here moves money: a payment is a file a person executes, written only after consent.",
+  "description": "The monthly close of a household ledger: the second workload definition, and the worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the ledger's own test suite, run by the orchestrator, is the reconciliation. Nothing here moves money: a payment is a file a person executes, written only after consent.",
   "unitTypes": [
     {
       "name": "ingest",
