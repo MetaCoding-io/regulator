@@ -77,7 +77,7 @@ absorbs is a row for `docs/DEBT.md`.
   rows, and the drift suite's four scripted behaviours (reference, drifter, sloppy,
   self-certifier) are the rows with a committed report. A learner's harness is diagnosed
   by walking sections 1–3 and naming, for each row, the mechanism or the DEBT row.
-- **In the capstone.** The viability case's boundary statement (`ASSESSMENT.md`,
+- **In the capstone.** The viability case's boundary statement (the course's `ASSESSMENT.md`,
   Artifact B item 4) is generated from the registry's limitations; this page is the
   list of pathologies a reviewer attacks from in the crit's adversarial twelve minutes.
 - **In an instance.** The control room's lifecycle and assurance views show which rows

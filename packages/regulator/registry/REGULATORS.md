@@ -1680,7 +1680,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `protected-path-mutation` — The smallest diff for a request is often inside a vendored file; a rule stated only in prose holds inconsistently under pressure.
 
-**Mechanism.** `../../course/lab/src/cp1-trace.ts` at `tool_call`
+**Mechanism.** `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)` at `tool_call`
 
 **May.**
 - block a write or edit whose normalized path is under vendor/
@@ -1691,7 +1691,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - modify any file
 - change what counts as protected
 
-**Evidence.** `../../course/lab/src/cp1-trace.test.ts`
+**Evidence.** `lab/src/cp1-trace.test.ts (Viable Agents course)`
 
 **Limitations.**
 - Lexical path check only: no symlink, hard-link or TOCTOU protection. Checkpoint 9's identity write gate (lesson 10) supersedes it with the filesystem walk when both are loaded; this gate stays as the lesson 02 baseline.

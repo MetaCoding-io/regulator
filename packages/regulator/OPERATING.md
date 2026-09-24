@@ -3,7 +3,7 @@
 How a team runs the reference build on Monday, and who owns it in three months. The
 harness is infrastructure: it has a distribution, a version, a settings scope, an
 upgrade path, a security posture and an owner. This file is the operating note the
-package ships with; the course's lesson 15 is the long version.
+package ships with; the course's lesson 15 (Viable Agents) is the long version.
 
 ## Install
 
@@ -55,7 +55,7 @@ fixture's layout is a declaration here or a discovered convention:
 For a domain that is not software, the same steps with different prefixes:
 `regulator fixture ~/ledger --finance`, then `init --writable ledger/,reports/,payments/pending/
 --protected statements/,payments/executed/` — the worked example in
-[`course/examples/personal-finance.md`](../../course/examples/personal-finance.md) walks the design
+[`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) walks the design
 and the declaration.
 
 The manifest is harness-owned and written by a person. The project's own files —
@@ -99,7 +99,7 @@ The Pi version is pinned (`peerDependencies` in `package.json`; `doctor` compare
 with what is installed). An upgrade is a change with evidence:
 
 1. Bump the pin; run `pnpm install`.
-2. Walk `course/FEATURE-MATRIX.md`: every surface a checkpoint uses is a row.
+2. Walk the course's feature matrix (`FEATURE-MATRIX.md` in the Viable Agents repository): every Pi surface a module uses is a row.
 3. `pnpm check` on both CI Node versions.
 4. Run the drift suite headlessly (`regulator eval packages/regulator/evals/drift.json
    --behaviour reference`) and, with a model, live; commit the live report with an

@@ -10,11 +10,11 @@ registry records.
 - **Run it:** [`OPERATING.md`](OPERATING.md) — install (this package for the CLI, `pi install ./packages/regulator-pi` for the Pi host),
   install into a repository (`regulator init`), the CI entry point (`regulator
   doctor`), upgrading, the security posture, and who owns what.
-- **Learn it:** the course under [`../../course/modules/`](../../course/modules/), one lesson per checkpoint.
+- **Learn it:** the course, [Viable Agents](https://github.com/MetaCoding-io/viable-agents-course), one lesson per module; the [glossary](../../docs/GLOSSARY.md) and the [pathology catalog](../../docs/PATHOLOGIES.md) are public.
 - **Check it:** `pnpm check` from the repository root; `node dist/registry-cli.js
   check` for the definition alone.
 - **Second workload:** `workload/personal-finance.json` over `fixture-finance/`, with
   the `bookkeeper` and `auditor` profiles, `policies/finance.json` and
   `contracts/finance/`; the worked example is
-  [`../../course/examples/personal-finance.md`](../../course/examples/personal-finance.md) and
+  [`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) and
   `src/finance.test.ts` runs its August close scripted.

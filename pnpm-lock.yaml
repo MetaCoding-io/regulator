@@ -24,18 +24,6 @@ importers:
         specifier: 5.9.2
         version: 5.9.2
 
-  course/lab:
-    dependencies:
-      '@earendil-works/pi-coding-agent':
-        specifier: 0.87.0
-        version: 0.87.0(ws@8.21.3)(zod@4.5.4)
-      '@metacoding/regulator-core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@metacoding/regulator-protocol':
-        specifier: workspace:*
-        version: link:../../packages/protocol
-
   packages/checks:
     dependencies:
       '@metacoding/regulator-protocol':
