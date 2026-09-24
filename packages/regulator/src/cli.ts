@@ -1,47 +1,57 @@
-#!/usr/bin/env node
 /**
- * `regulator` for the course lab.
+ * `regulator` — the control plane's CLI. The usage table below is the source of the CLI reference in `docs/`.
  *
- *   node dist/cli.js fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
- *   node dist/cli.js unit start <id> [--ttl <min>]    lease + worktree + branch (run in the base checkout)
- *   node dist/cli.js unit finish <id>                 reintegrate, or surface the conflict
- *   node dist/cli.js unit status                      leases and their liveness
- *   node dist/cli.js contract check <file>            validate a work contract (lesson 06)
- *   node dist/cli.js unit dispatch <contract.json> [--policy <file>]   run one unit through the S3 loop with a live Pi session
- *   node dist/cli.js unit show <id>                   the unit record, attempts, decisions, report and obligations
- *   node dist/cli.js unit drive <contract.json>       the autoloop: run, route, and run again while the policy says so (lesson 08)
- *   node dist/cli.js unit route <id>                  route one blocked unit and print the decision
- *   node dist/cli.js effects                          the effect journal
- *   node dist/cli.js unit close <id>                  re-audit a blocked unit without an attempt and close it if the verdict is pass (lesson 09)
- *   node dist/cli.js unit accept <id> <criterion> --by <who> [--reject] [--note <text>]   a human disposition of a criterion no check can observe
- *   node dist/cli.js unit evidence <id>               replay the unit's audit log: evidence, verdicts, acceptances
- *   node dist/cli.js obligations [--all]              what is owed and to whom (lesson 11); --all includes closed ones
- *   node dist/cli.js obligation show <id>             one obligation with its history (id or unique prefix)
- *   node dist/cli.js obligation ack <id> --by <who> [--note <text>]
- *   node dist/cli.js obligation resolve <id> --by <who> --disposition <d> --rationale <text>
- *   node dist/cli.js obligation escalate <id> --by <who> --to <consumer> --rationale <text>
- *   node dist/cli.js signals route                    route every unrouted message under the routing policy (for sessions run by hand)
- *   node dist/cli.js memory [--all]                   operational memory: current facts (lesson 12); --all includes expired and retracted
- *   node dist/cli.js memory retract <id> --by <who> --reason <text>
- *   node dist/cli.js identity accept <obligation> --by <who> --file <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --from <path> --rationale <text>
+ * Instance
+ *   regulator init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository:
+ *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
+ *   regulator doctor [--json] [--today <date>]   the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
+ *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
+ *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
+ *   regulator fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
+ *
+ * Units
+ *   regulator unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>]   the autoloop: run, route, and run again while the policy says so
+ *   regulator unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet]   run one unit through the S3 loop with a live host session
+ *   regulator unit start <id> [--type <unitType>] [--workload <name>] [--ttl <min>]   lease + worktree + branch by hand (run in the base checkout)
+ *   regulator unit finish <id>                 reintegrate a unit started by hand, or surface the conflict
+ *   regulator unit status                      leases and their liveness
+ *   regulator unit show <id>                   the unit record, attempts, decisions, report and obligations
+ *   regulator unit route <id>                  route one blocked unit under the recovery policy and print the decision
+ *   regulator unit close <id>                  re-audit a blocked unit without an attempt and close it if the verdict is pass
+ *   regulator unit accept <id> <criterion> --by <who> [--reject] [--note <text>]   a human disposition of a criterion no check can observe
+ *   regulator unit evidence <id>               replay the unit's audit log: evidence, verdicts, acceptances
+ *   regulator contract check <file>            validate a work contract against the schema and the workload
+ *
+ * Obligations
+ *   regulator obligations [--all]              what is owed and to whom; --all includes closed ones
+ *   regulator obligation show <id>             one obligation with its history (id or unique prefix)
+ *   regulator obligation ack <id> --by <who> [--note <text>]   acknowledge without resolving
+ *   regulator obligation resolve <id> --by <who> --disposition <d> --rationale <text>   close it: accepted, rejected, accepted-risk, remediated, superseded
+ *   regulator obligation escalate <id> --by <who> --to <consumer> --rationale <text>   hand it to another consumer; the successor inherits the veto
+ *   regulator answer <obligation> --by <who> --answer <text>   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it
+ *   regulator remind                           deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
+ *   regulator signals route                    route every unrouted message under the routing policy (for sessions run by hand)
+ *
+ * Identity and memory
+ *   regulator identity accept <obligation> --by <who> --file <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --from <path> --rationale <text>
  *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
  *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
- *   node dist/cli.js identity reject <obligation> --by <who> --rationale <text>
- *   node dist/cli.js answer <obligation> --by <who> --answer <text>   answer a question a unit asked (lesson 13): recorded as the person's disposition; the next attempt carries it
- *   node dist/cli.js remind                            deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
- *   node dist/cli.js eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
- *                                 [--interpretation <file>] [--by <who>] [--keep]   run the suite (lesson 14): scripted units headlessly, or live units through the Pi dispatcher
- *   node dist/cli.js spans [--json]                    the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
- *   node dist/cli.js review [--due] [--within <days>]  the registry's review dates; --due lists what is overdue or due within the window
- *   node dist/cli.js init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository (lesson 15):
- *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
- *   node dist/cli.js doctor [--json] [--today <date>]  the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
- *   node dist/cli.js watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
- *   node dist/cli.js identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text>
+ *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
+ *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text>
  *                                                         the release path: copy the instance's accepted identity file into the definition's seed and commit it there
+ *   regulator memory [--all]                   operational memory: current facts; --all includes expired and retracted
+ *   regulator memory retract <id> --by <who> --reason <text>   retract a fact; the retraction is appended, nothing is deleted
+ *
+ * Evidence
+ *   regulator effects                          the effect journal: every side-effecting tool call, its outcome and its reconciliation
+ *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
+ *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
+ *                                 [--interpretation <file>] [--by <who>] [--keep]   run a suite: scripted units headlessly, or live units through the host's dispatcher
+ *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
  * Every `--by` is checked against the interaction policy's people: a name not listed may disposition nothing, and what a
  * listed person may do (severity, accepted-risk, S5) is declared there. The name itself is asserted, not authenticated.
+ * `regulator check` and `regulator docs` (the definition check and the generated registry documents) live in `registry-cli.ts`.
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";

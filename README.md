@@ -44,9 +44,13 @@ When adding a feature, prefer mechanisms in this order:
 4. **Does this require interpretation or judgment?** Use an LLM.
 5. **Does the LLM need additional context?** Apply prompt/context engineering.
 
+## Documentation
+
+The user documentation is a VitePress site built from `docs/`: <https://metacoding-io.github.io/regulator/> — getting started, running units, operating, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from the registry, the concepts, the glossary and the pathology catalog. `pnpm --filter regulator-docs dev` serves it locally; the reference pages are generated from the product by `docs/scripts/generate.mjs`, so the site never carries a second copy of what the code states. `docs/archive/` is design history and is not part of the site.
+
 ## Where it is
 
-Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`cli`) and the read-only control room over it (`control-room`).
+Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`regulator`) and the read-only control room over it (`control-room`).
 
 Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
