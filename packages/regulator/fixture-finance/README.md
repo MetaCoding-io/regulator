@@ -1,7 +1,7 @@
 # household-ledger
 
 A plain-text ledger for one household's checking account, used by the course's
-worked example ([`course/examples/personal-finance.md`](../../examples/personal-finance.md)).
+worked example ([`docs/examples/personal-finance.md`](../../../docs/examples/personal-finance.md)).
 It is the *domain* the finance workload works on: the harness never reads its own
 progress off these files.
 

@@ -1,5 +1,5 @@
 /**
- * Scripted units for the worked example (`course/examples/personal-finance.md`):
+ * Scripted units for the worked example (`docs/examples/personal-finance.md`):
  * the August close of the household ledger under the personal-finance
  * workload, done without a model so the example runs under CI and the
  * closeout checks can be watched doing their work.

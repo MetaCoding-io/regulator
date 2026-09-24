@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "../../course/lab/src/cp1-trace.ts",
+    "implementation": "lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)",
     "enforcementPoints": [
       "tool_call"
     ]
@@ -28,7 +28,7 @@
   },
   "evidence": {
     "tests": [
-      "../../course/lab/src/cp1-trace.test.ts"
+      "lab/src/cp1-trace.test.ts (Viable Agents course)"
     ]
   },
   "limitations": [

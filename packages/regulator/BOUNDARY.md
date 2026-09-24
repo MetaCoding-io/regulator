@@ -399,7 +399,7 @@ Not covered:
 
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
 
-Enforced at `tool_call` in `../../course/lab/src/cp1-trace.ts`; S5, deterministic-gate.
+Enforced at `tool_call` in `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)`; S5, deterministic-gate.
 
 Not covered:
 
