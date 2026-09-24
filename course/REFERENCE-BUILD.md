@@ -74,8 +74,8 @@ call, and it is a teaching point that this is achievable.
 | 15 | Capstone | Viability case | Rubric in `ASSESSMENT.md` |
 
 `regulator` is not a teaching copy of VSM-Pi; it *is* VSM-Pi's reference build. It
-lives in this repository at [`course/lab/`](lab/) as the workspace package
-`@metacoding/vsm-pi-course-lab`, one source file per checkpoint (`cp0-event-log.ts`,
+lives in this repository at [`packages/regulator/`](../packages/regulator/) as the workspace package
+`@metacoding/regulator`, one source file per checkpoint (`cp0-event-log.ts`,
 `cp1-trace.ts`, …) with headless tests beside them. A checkpoint's Pi-free modules move
 into `packages/` once two lessons depend on them, and the lab imports them from there. Keeping each checkpoint as its own
 file rather than mutating one `regulator.ts` means a learner can diff checkpoint N
@@ -86,7 +86,7 @@ without checking out history.
 
 What the course repository ships, and what of it is still owed (`docs/DEBT.md`):
 
-- **Checkpoint files** under `course/lab/src/`, one per lesson, each loadable with
+- **Checkpoint files** under `packages/regulator/src/`, one per lesson, each loadable with
   `pi -e` and tested without a model. Checkpoints 0–14 exist. Their Pi-free modules have
   been promoted: trace, effect, profile and registry vocabulary to `packages/protocol`;
   the tracker/writer, effect declarations, profile checks and registry check to
@@ -159,24 +159,24 @@ What the course repository ships, and what of it is still owed (`docs/DEBT.md`):
   outbox watcher, the lab as a pi package with `OPERATING.md`, and six registry cards;
   the read model and the control room gain the replay view and the manifest.
 - **The regulator registry** — schema and check ship in `packages/`; the lab CLI and
-  forty-three records live under `course/lab/registry/`; the read model (`regulator status
+  forty-three records live under `packages/regulator/registry/`; the read model (`regulator status
   --json`) and the control room (`packages/control-room`) are built.
 - **Target repository fixture** — a small but *realistically messy* app the learner
   automates against: a misleading README, a non-obvious test command, one flaky test, one
   genuinely ambiguous requirement, a `vendor/` directory that must not be edited, and a
   migration that must not be re-run. The fixture is where the failure drills live, so its
-  defects are curriculum, not accident. `course/lab/fixture/` (slugkit) is the seed: a
+  defects are curriculum, not accident. `packages/regulator/fixture/` (slugkit) is the seed: a
   README wrong in two places, two failing tests, and a vendored helper. The flaky test,
   the ambiguous requirement and the migration are still to add.
 - **Oscillation fixture** — two coupled tests that can be alternately satisfied, for M05.
-  `course/lab/fixture-oscillation/` (slugkit with the known issue fixed and two
+  `packages/regulator/fixture-oscillation/` (slugkit with the known issue fixed and two
   contradictory underscore tests) — **exists**.
 - **Injection fixture** — a planted instruction in a source comment and another in a
   tool result, for M10, with a canary credential in a committed `.env`.
-  `course/lab/fixture-injection/` — **exists**. Whether it is realistic enough that an
+  `packages/regulator/fixture-injection/` — **exists**. Whether it is realistic enough that an
   ungated agent sometimes follows it is what drill 2 measures; a drill nobody fails
   teaches nothing.
-- **Finance fixture** — a household ledger (`course/lab/fixture-finance/`): the bank's
+- **Finance fixture** — a household ledger (`packages/regulator/fixture-finance/`): the bank's
   statements as a protected source of truth, a categorized ledger, a monthly close, a
   pending-payments directory a person acts on, and the ledger's own checks outside every
   write grant. The domain of the second workload, `personal-finance`, and of the worked

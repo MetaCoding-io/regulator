@@ -1,0 +1,33 @@
+{
+  "id": "reg.authority.disposition-authority.v1",
+  "name": "Disposition authority",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Check who may disposition what before anything is written. The interaction policy names people with three grants — the highest severity they may disposition, whether they may resolve as accepted-risk, whether they may act as S5 — and every `--by` on the CLI (`answer`, `obligation ack|resolve|escalate`, `memory retract`, `unit accept`, `identity accept|reject`) is checked against it: a name not listed may disposition nothing, and a listed person is refused above their severity, for a risk they may not accept, or for an S5 decision they may not make. `answer` additionally refuses an option the question did not offer, and turns a consent answer into accepted or rejected by the protocol's rule, never by the person's wording.",
+  "absorbs": {
+    "failureClass": "disposition-by-anyone",
+    "description": "A critical algedonic obligation is resolved as accepted-risk by `--by intern`, honestly recorded and wrong: the record said who, and nothing said whether they could."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cli.ts",
+    "enforcementPoints": ["authorized() before every write that takes --by (checkDispositionAuthority)", "answer (options check, dispositionForAnswer)"]
+  },
+  "channels": { "consumes": ["interaction policy (people)", "the obligation's severity and concern"], "emits": ["refusal (nothing written)", "interaction-answered (channel cli)", "obligation-resolved / acknowledged / escalated by a named, authorized person"] },
+  "scope": { "subjects": ["obligation", "interaction", "identity", "memory"], "resources": [".regulator/signals.ndjson"] },
+  "cost": { "description": "One policy read per command; no model calls." },
+  "authority": {
+    "may": ["refuse a disposition the policy does not grant", "record an authorized one under the person's name"],
+    "mayNot": ["grant itself anything: the people are declared in the definition", "authenticate: the name is asserted", "disposition on anyone's behalf"]
+  },
+  "evidence": { "tests": ["src/cli.test.ts", "../core/src/interaction.test.ts"] },
+  "limitations": [
+    "`--by` is asserted, not authenticated: the check is whether the named person may, not whether the caller is that person. Authentication is the deployment's (an OS user, a signed request) and is out of the lab's scope; the record stays honest about the claim.",
+    "The grants are three booleans and a severity; an obligation-specific grant (bob may answer questions on units he owns) is not expressible, and the policy is one file for the instance.",
+    "The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "policy:interaction.people", "note": "A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything."},
+  "retirement": {"condition": "Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts."},
+  "introducedIn": "M13"
+}

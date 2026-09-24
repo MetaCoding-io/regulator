@@ -158,14 +158,14 @@ returns either the one normalized path to execute or a refusal with a cause —
 now calls it instead of carrying its own copy, and its seventeen tests are the evidence
 that nothing moved.
 
-### The identity — [`course/lab/identity/INVARIANTS.md`](../lab/identity/INVARIANTS.md)
+### The identity — [`packages/regulator/identity/INVARIANTS.md`](../../packages/regulator/identity/INVARIANTS.md)
 
 One invariant, INV-001, in the definition. `regulator fixture` seeds it into every
 instance at `regulator/identity/`, committed with the instance, and the gate protects
 that prefix everywhere. The gate enforces the file that declares the gate; lesson 12
 completes the set.
 
-### The extension — [`course/lab/src/cp9-authority.ts`](../lab/src/cp9-authority.ts)
+### The extension — [`packages/regulator/src/cp9-authority.ts`](../../packages/regulator/src/cp9-authority.ts)
 
 Four mechanisms, one file. The write gate over `prepareWritePath` with the identity
 prefix, the S5 artifacts and the project's conventions' protected paths (`vendor/`). The
@@ -176,12 +176,12 @@ evidence refs, because a claim about evidence is not evidence, and it changes no
 The canary watch over `.regulator/canaries`, which `regulator fixture` fills from any
 credential-looking value in a committed `.env`. And the `project_trust` answer.
 
-### The dispatcher — [`course/lab/src/dispatch-pi.ts`](../lab/src/dispatch-pi.ts)
+### The dispatcher — [`packages/regulator/src/dispatch-pi.ts`](../../packages/regulator/src/dispatch-pi.ts)
 
 `definitionResourceLoader`: the trust rule where it has to be. Every unit session loads
 checkpoints 2–9 and nothing the worktree offers.
 
-### The boundary statement — [`course/lab/BOUNDARY.md`](../lab/BOUNDARY.md)
+### The boundary statement — [`packages/regulator/BOUNDARY.md`](../../packages/regulator/BOUNDARY.md)
 
 `renderBoundaryMarkdown` in core; `regulator docs --write` writes it beside
 `REGULATORS.md`, `--check` refuses drift, and the registry test asserts both.

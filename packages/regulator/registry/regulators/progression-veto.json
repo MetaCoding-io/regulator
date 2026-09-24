@@ -1,0 +1,33 @@
+{
+  "id": "reg.control.progression-veto.v1",
+  "name": "Progression veto",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Refuse to dispatch or close a unit while an obligation at or above the routing policy's blocking line is open on it, whoever it is owed to. The S3–S4 homeostat, mechanised: intelligence that names a unit holds that unit until S3 or a person dispositions the obligation it raised — it never replans, never edits, never applies itself. A clarification a person answered reaches the next attempt as the hint.",
+  "absorbs": {
+    "failureClass": "last-signal-wins",
+    "description": "An advisory arrives against a commitment and whichever came last decides: the unit is dispatched anyway because nothing stood in the loop's path, or the advisory rewrites working code because a prompt said it should."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/controller.ts",
+    "enforcementPoints": ["runUnit (before the lease is taken)", "closeUnit (before the re-audit)"]
+  },
+  "channels": { "consumes": ["open obligations naming the unit (regulatory log)", "routing policy (blocksAtOrAbove)"], "emits": ["contract problem: obligations (refusal)"] },
+  "scope": { "subjects": ["unit"], "resources": [".regulator/signals.ndjson"] },
+  "cost": { "description": "One fold of the regulatory log per dispatch and per close; no model calls. A unit held on a stale concern costs the wait — which is the point: the cost is visible, and owed to someone." },
+  "authority": {
+    "may": ["refuse dispatch", "refuse close", "carry a person's resolution to the next attempt as advice"],
+    "mayNot": ["resolve the obligation", "apply the intelligence", "replan the unit (a new contract version is S3 planning)", "hold a unit on an obligation below the policy's line"]
+  },
+  "evidence": { "tests": ["src/controller.test.ts", "../core/src/obligations.test.ts"] },
+  "limitations": [
+    "Checked at dispatch and at close only. A unit already running when the obligation opens finishes its attempt; the veto meets it at the next step.",
+    "Blocking is a function of severity and the policy's line; the obligation's consumer is not consulted. An S5 proposal at blocking severity on a unit would hold the unit, which may or may not be wanted — the routing policy decides by setting the line.",
+    "The veto names the unit id. Intelligence that affects a unit not yet contracted holds it once it exists; intelligence that affects a file, a dependency or a workload has no unit to hold and is an obligation for S3 to read."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:progression-veto", "note": "The veto is the loop's check on open obligations at dispatch and close; not ablatable by the harness."},
+  "retirement": {"condition": "Never: a blocking obligation that does not block is a note."},
+  "introducedIn": "M11"
+}

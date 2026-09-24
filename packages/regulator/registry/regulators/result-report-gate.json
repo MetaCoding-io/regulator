@@ -1,0 +1,32 @@
+{
+  "id": "reg.control.result-report-gate.v1",
+  "name": "Result report gate",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Close a unit only from a result report that honours the exact contract version: every delegated choice reported, every unresolved decision preserved or surfaced (never settled), required evidence present, fixed-decision deviations referenced. Refuses the report at the tool and again at close; a unit with no report or an invalid one is blocked, not closed.",
+  "absorbs": {
+    "failureClass": "silent-closure",
+    "description": "A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp5-contract.ts",
+    "enforcementPoints": ["report_result (tool execute)", "runUnit (close)"]
+  },
+  "channels": { "consumes": ["result report (S1, via report_result)"], "emits": ["operational-signal → S3 (high-consequence emergent decisions, deviations)"] },
+  "scope": { "subjects": ["unit", "contract"], "resources": ["execution store"] },
+  "authority": {
+    "may": ["refuse a report with reasons", "block a unit that ends without a valid report", "record emergent decisions and deviations as typed signals for S3"],
+    "mayNot": ["certify that the work is correct (verification and audit do that)", "resolve an unresolved decision", "decide what to do about a blocked unit (lesson 08)"]
+  },
+  "evidence": { "tests": ["src/cp5-contract.test.ts", "src/controller.test.ts", "../core/src/contracts.test.ts"] },
+  "limitations": [
+    "Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.",
+    "A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.",
+    "Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp5-contract", "note": "Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report."},
+  "retirement": {"condition": "Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them."},
+  "introducedIn": "M06"
+}

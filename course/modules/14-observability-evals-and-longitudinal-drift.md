@@ -176,7 +176,7 @@ content when a result names its criterion; `technicalVerdict` takes host evidenc
 acceptance for a runtime criterion. `checkResultReport` no longer asks the unit to cite
 evidence the host will produce.
 
-### The harness — [`course/lab/src/evals.ts`](../lab/src/evals.ts), [`graders.ts`](../lab/src/graders.ts), [`evals-scripted.ts`](../lab/src/evals-scripted.ts)
+### The harness — [`packages/regulator/src/evals.ts`](../../packages/regulator/src/evals.ts), [`graders.ts`](../../packages/regulator/src/graders.ts), [`evals-scripted.ts`](../../packages/regulator/src/evals-scripted.ts)
 
 `runSuite` (one instance per arm × repetition, the tasks through `driveUnit`),
 `contractForArm`, `workloadForArm`, `fingerprintFor`, `ablationCoverage`; the outcome
@@ -184,7 +184,7 @@ graders and the trajectory counts; the scripted learner-style units — referenc
 drifter, sloppy at this lesson; the self-certifier joins after lesson 15, with the
 `suiteWeakened` grader — that the graders are validated against.
 
-### The suite and the reports — [`course/lab/evals/drift.json`](../lab/evals/drift.json), [`course/lab/evals/reports/`](../lab/evals/reports/)
+### The suite and the reports — [`packages/regulator/evals/drift.json`](../../packages/regulator/evals/drift.json), [`packages/regulator/evals/reports/`](../../packages/regulator/evals/reports/)
 
 Six contracts under `contracts/drift/`, in order; four arms at this lesson (six now:
 lesson 15 adds `no-glossary-lint`, and `no-inherited-tests` follows it); three
@@ -192,7 +192,7 @@ repetitions; the pre-registered metrics. One committed report per scripted unit,
 with its interpretation under `evals/interpretations/`, each stamped `scripted:` in its
 fingerprint. `regulator check` validates all of it.
 
-### The CLI — [`course/lab/src/lab-cli.ts`](../lab/src/lab-cli.ts)
+### The CLI — [`packages/regulator/src/cli.ts`](../../packages/regulator/src/cli.ts)
 
 `regulator eval <suite> [--behaviour …] [--arm …] [--reps n] [--out file]
 [--interpretation file] [--by who] [--keep]`, headless with a scripted unit or live
@@ -217,7 +217,7 @@ narrows 26, reschedules 11 and 15 with reasons, and opens 31–35.
 
 Five drills.
 
-**Drill 1 — read the committed reports.** `regulator status --definition course/lab`
+**Drill 1 — read the committed reports.** `regulator status --definition packages/regulator`
 and the control room's assurance view. For each of the three reports, find the row where
 the gated arm loses and check the interpretation's claim against the numbers: the
 drifter's zero closed at eighteen attempts, the sloppy unit's identical vocabulary drift
@@ -225,7 +225,7 @@ in both arms, the config file no closeout check refused. Then read the intervals
 lifts separate, and what n each one rests on. Write down the one you would not have
 believed from the mean alone.
 
-**Drill 2 — the live run.** `regulator eval course/lab/evals/drift.json --arm treatment
+**Drill 2 — the live run.** `regulator eval packages/regulator/evals/drift.json --arm treatment
 --reps 1 --keep` with a model configured: no `--behaviour`, so the Pi dispatcher runs
 each unit under the arm's extensions. Read the report against the scripted one: does the
 model drift where the drifter did, or where the sloppy unit did, or somewhere no scripted
@@ -254,7 +254,7 @@ to `retired` in a copy of the card and run `regulator check`: the record stays, 
 
 ## 6. Field study: publishing a cost claim with its measurement
 
-**VSM-Pi.** The drift scenario under [`course/lab/drift/SCENARIO.md`](../lab/drift/SCENARIO.md)
+**VSM-Pi.** The drift scenario under [`packages/regulator/drift/SCENARIO.md`](../../packages/regulator/drift/SCENARIO.md)
 against what the committed reports actually measured. Three of the five measures have a
 grader; cost has the budget's numbers only in a live run; memory hygiene has the
 rules grader and the memory store's count. For your notes: which measure in the scenario
@@ -298,5 +298,5 @@ You have finished checkpoint 13 when:
 - Student's t and why small-n intervals are wide; pass@k versus reliability across
   repeated trials.
 - This repository's [`docs/DEBT.md`](../../docs/DEBT.md), the committed reports under
-  [`course/lab/evals/reports/`](../lab/evals/reports/), and the registry's
-  ablation and retirement fields in [`course/lab/registry/REGULATORS.md`](../lab/registry/REGULATORS.md).
+  [`packages/regulator/evals/reports/`](../../packages/regulator/evals/reports/), and the registry's
+  ablation and retirement fields in [`packages/regulator/registry/REGULATORS.md`](../../packages/regulator/registry/REGULATORS.md).

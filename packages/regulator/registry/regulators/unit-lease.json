@@ -1,0 +1,32 @@
+{
+  "id": "reg.coordination.unit-lease.v1",
+  "name": "Unit lease gate",
+  "status": "active",
+  "vsmFunction": "S2",
+  "purpose": "Refuse every tool with a non-read-only effect unless the session's unit holds a live lease on the worktree it runs in, so two units cannot write the same checkout and a dead session cannot hold a claim forever.",
+  "absorbs": {
+    "failureClass": "write-collision",
+    "description": "Two sessions writing one checkout corrupt each other's work; a session that died mid-unit blocks the resource until someone notices."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp4-coordination.ts",
+    "enforcementPoints": ["session_start", "tool_call", "turn_end"]
+  },
+  "channels": { "consumes": ["lease (.regulator/leases)"], "emits": [] },
+  "scope": { "subjects": ["unit", "session"], "resources": ["worktree"] },
+  "authority": {
+    "may": ["refuse any non-read-only tool call while no live lease covers the working directory", "renew the unit's lease at each turn end"],
+    "mayNot": ["acquire or release a lease (the unit lifecycle does that)", "resolve which unit should hold a contested resource", "block read-only tools"]
+  },
+  "evidence": { "tests": ["src/cp4-coordination.test.ts", "../core/src/coordination.test.ts"] },
+  "limitations": [
+    "Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.",
+    "The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — checkpoint 9's write gate refuses absolute paths, but bash is not path-gated.",
+    "Leases are files on one machine; nothing coordinates across hosts."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "loop:lease", "note": "Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm."},
+  "retirement": {"condition": "Never while two sessions can target one worktree."},
+  "introducedIn": "M05"
+}

@@ -1,0 +1,33 @@
+{
+  "id": "reg.control.failure-observer.v1",
+  "name": "Failure observer",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Normalize every tool error and provider error in a session to a cause (environment, timeout, tool-error; a refused report_result is invalid-report) and append it to the unit's observations, so that an attempt that ends without a report is routed by what went wrong rather than by the fact that it went silent.",
+  "absorbs": {
+    "failureClass": "opaque-failure",
+    "description": "The transcript knows the tests could not load a module; the orchestrator only knows the unit did not report. Retrying is the wrong action and nothing in the record says so."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp7-recovery.ts",
+    "enforcementPoints": ["tool_execution_end (isError)", "agent_end (stopReason error)"]
+  },
+  "channels": { "consumes": ["tool_execution_end", "agent_end"], "emits": ["failure observation (execution store)"] },
+  "scope": { "subjects": ["unit", "attempt"], "resources": ["observations"] },
+  "cost": { "description": "One append per failed tool call; no model calls." },
+  "authority": {
+    "may": ["record an observation"],
+    "mayNot": ["decide anything", "rewrite a tool result the model sees", "halt the attempt"]
+  },
+  "evidence": { "tests": ["src/cp7-recovery.test.ts", "../core/src/recovery.test.ts"] },
+  "limitations": [
+    "Normalization is a regular expression over the error text (flattened to one line, first 300 characters); an environment problem phrased unusually is recorded as a plain tool error. Only a refused report_result is typed without the regex, as invalid-report.",
+    "Only errors the tool layer reports as errors are observed: a test that fails is not an error, and a bash command that exits non-zero without the tool flagging it is invisible.",
+    "The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp7-recovery", "note": "Shares checkpoint 7 with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures."},
+  "retirement": {"condition": "The router's decisions in the recovery drills match the observer's causes for three model versions when the observer is off, because the orchestrator's records alone name them."},
+  "introducedIn": "M08"
+}

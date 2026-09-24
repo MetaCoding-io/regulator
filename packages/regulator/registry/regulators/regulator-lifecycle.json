@@ -1,0 +1,33 @@
+{
+  "id": "reg.identity.regulator-lifecycle.v1",
+  "name": "Regulator lifecycle",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Every regulator was added to absorb a failure a particular model produced on a particular day, and models change. Every active record now carries an ablation switch — the arm that turns it off, or `none` with the reason the harness cannot — and a retirement condition, or `regulator check` refuses it. `regulator review --due` lists what is overdue for review by the date each record carries; the read model and the control room's lifecycle view show, per record, the switch, whether a committed eval report covers it, and the condition under which it may go. Retiring a regulator is a recorded decision: the record's status becomes `retired` and it keeps its history.",
+  "absorbs": {
+    "failureClass": "control-system-that-only-grows",
+    "description": "A workaround for one model's habit, still costing latency and attention on every run three model versions later, because nothing ever asked whether the habit persisted and nobody owned the question."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "../core/src/registry.ts",
+    "enforcementPoints": ["checkRegistry (active record without ablation or retirement is a problem)", "reviewDue", "regulator review --due (CLI)", "the lifecycle view (read model, control room)"]
+  },
+  "channels": { "consumes": ["registry records", "eval suites and committed reports"], "emits": ["registry problems", "the lifecycle view"] },
+  "scope": { "subjects": ["registry"], "resources": ["registry/regulators/", "evals/"] },
+  "cost": { "description": "Two fields per record and a date check; the eval runs that pay a retirement condition are the harness's cost." },
+  "authority": {
+    "may": ["refuse a record without a switch or a condition", "list what is due", "show what an eval covers"],
+    "mayNot": ["retire anything", "run an ablation", "change a review date"]
+  },
+  "evidence": { "tests": ["../core/src/control-plane.test.ts", "src/cli.test.ts", "src/registry.test.ts"] },
+  "limitations": [
+    "A retirement condition is prose; nothing checks that a committed report satisfies it. The lifecycle view shows coverage (an ablation arm exists for the record), not satisfaction; a person reads the report against the condition.",
+    "Review dates are checked on demand, not scheduled: `regulator review --due` runs when someone runs it, and nothing under CI fails on an overdue record (docs/DEBT.md row 32).",
+    "Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "A check on the registry; there is no run it participates in." },
+  "retirement": { "condition": "Never: the record that decides retirement cannot retire before the last regulator does." },
+  "introducedIn": "M14"
+}

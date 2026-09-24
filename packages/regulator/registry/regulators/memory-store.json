@@ -1,0 +1,77 @@
+{
+  "id": "reg.control.memory-store.v1",
+  "name": "Operational memory store",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "Give units one typed way to record what they learn about the environment — remember — into an append-only store separate from identity and from evidence. Every entry carries host-stamped provenance (unit, revision, time) and a required review-by date within the store's limit, after which it is expired: shown by the read model, rendered to no unit. A retraction is an appended event by a named person. Nothing here can reach an identity file (INV-004).",
+  "absorbs": {
+    "failureClass": "memory-becomes-policy",
+    "description": "A note that tests need FOO=1 is written into AGENTS.md as a temporary reminder; a year later it is an undocumented rule nobody can date, source or retire."
+  },
+  "mechanism": {
+    "level": "typed-tool",
+    "implementation": "src/cp11-identity.ts",
+    "enforcementPoints": [
+      "remember (tool execute)",
+      "MemoryStore.record (expiry bounds)"
+    ]
+  },
+  "channels": {
+    "consumes": [
+      "tool call (remember)",
+      "lease (unit provenance)",
+      "worktree HEAD (revision)"
+    ],
+    "emits": [
+      "memory-recorded / memory-retracted (.regulator/memory.ndjson)",
+      "regulator:memory (session entry)"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "memory"
+    ],
+    "resources": [
+      ".regulator/memory.ndjson"
+    ]
+  },
+  "cost": {
+    "description": "One appended line per fact; current facts ride in every prompt of every unit, so the review-by limit is also a context budget."
+  },
+  "authority": {
+    "may": [
+      "record a fact with provenance and an expiry",
+      "render current facts to later units"
+    ],
+    "mayNot": [
+      "write identity or policy",
+      "record a fact without an expiry, or with one beyond the limit",
+      "retract (a person does, by name)",
+      "treat a fact as a rule"
+    ]
+  },
+  "evidence": {
+    "tests": [
+      "src/cp11-identity.test.ts",
+      "../core/src/identity.test.ts"
+    ]
+  },
+  "limitations": [
+    "A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.",
+    "A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`, lesson 15), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.",
+    "Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated."
+  ],
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "ablation": {
+    "switch": "extension:cp11-identity",
+    "note": "Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead."
+  },
+  "retirement": {
+    "condition": "The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact."
+  },
+  "introducedIn": "M12"
+}

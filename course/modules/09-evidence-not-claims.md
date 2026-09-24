@@ -179,7 +179,7 @@ form (`fail@35c471f (failed e-tests; contradicted run_tests)`).
 replays a unit's history with `forUnit`. Regulatory state, beside the signal sink, apart
 from the execution store — INV-005 in a directory listing.
 
-### The gate — [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### The gate — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `auditUnit` runs after the report check and before reintegration: it refuses a dirty
 worktree, reads the revision, runs the workload's checks, appends the records, derives
@@ -192,7 +192,7 @@ router's hint carries the failing checks by name. `closeUnit` re-audits a blocke
 *without* an attempt — after a human acceptance, or after missing evidence can be
 produced — and closes it on `pass`. The attempt history is untouched by a re-audit.
 
-### The extension — [`course/lab/src/cp8-evidence.ts`](../lab/src/cp8-evidence.ts)
+### The extension — [`packages/regulator/src/cp8-evidence.ts`](../../packages/regulator/src/cp8-evidence.ts)
 
 Provenance on `tool_result` and the preflight on `tool_call`, as in section 3. The status
 line shows what has run and at what: `evidence: run_tests@35c471f ok, run_checks@35c471f+

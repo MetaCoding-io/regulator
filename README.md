@@ -48,7 +48,7 @@ When adding a feature, prefer mechanisms in this order:
 
 Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi extension with the protected-path gate and the typed reporting tools (`pi-extension`); the `regulator status` read model (`cli`) and the read-only control room over it (`control-room`).
 
-Built in `course/lab`, one checkpoint per lesson: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
+Built in `packages/regulator`, one checkpoint per lesson: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
 The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
 
@@ -62,11 +62,11 @@ packages/
   core/           Authority, routing, policy, and finding logic
   pi-extension/   Pi lifecycle integration
   checks/         Deterministic S3* checks: host-run verification bound to a revision, the technical verdict
-  cli/            regulator status: the read model over a definition and an instance
+  regulator/      the product: the `regulator` CLI, the checkpoints as Pi extensions, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding/regulator
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
-course/           The "Viable Agents" course; course/lab is the reference build
+course/           The "Viable Agents" course, one lesson per checkpoint of packages/regulator
 docs/             ARCHITECTURE.md, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), archive/
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments

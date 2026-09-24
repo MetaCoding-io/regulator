@@ -1,0 +1,34 @@
+{
+  "id": "reg.assurance.span-projection.v1",
+  "name": "Span projection (OpenTelemetry GenAI)",
+  "status": "active",
+  "vsmFunction": "S3*",
+  "purpose": "One read of every append-only record an instance keeps — units, attempts, budgets, evidence, verdicts, decisions, effects, obligations, interactions, memory — as OpenTelemetry GenAI spans (`invoke_agent` per attempt, `execute_tool` for checks, effects and deliveries, `chat` for what the budget ledger knows of the model calls), correlated by `vsm.unit.id`, `vsm.attempt`, `vsm.evidence.id`, `vsm.obligation.id`, `vsm.regulator.id` and the policy version, so a tracing backend joins runtime events to registry records without a vendor adapter. Every string attribute passes redaction — the instance's canaries and credential shapes — before it leaves the store, and a span that had something redacted says so. The transcript is never projected.",
+  "absorbs": {
+    "failureClass": "evidence-nobody-can-join",
+    "description": "Six NDJSON logs and a SQLite store, each honest on its own, and no way to ask which regulator fired on which attempt of which unit without reading them all by hand — or a way that shipped the API key in the tool output."
+  },
+  "mechanism": {
+    "level": "type",
+    "implementation": "../core/src/spans.ts",
+    "enforcementPoints": ["projectSpans (schema-validated SpanRecord per record; redact on every string attribute)", "reportSpans (one span per eval run)", "regulator spans (CLI)"]
+  },
+  "channels": { "consumes": [".regulator/units/", "audit.ndjson", "signals.ndjson", "effects.ndjson", "memory.ndjson", ".regulator/canaries"], "emits": ["span records (NDJSON)"] },
+  "scope": { "subjects": ["evidence", "execution", "obligation"], "resources": ["the instance's .regulator/"] },
+  "cost": { "description": "A full read of the instance's logs per projection; no model calls, nothing written." },
+  "authority": {
+    "may": ["read every store", "redact", "emit spans"],
+    "mayNot": ["read the transcript", "write to any store", "emit an attribute that failed redaction", "invent a correlation the records do not carry"]
+  },
+  "evidence": { "tests": ["../core/src/spans.test.ts", "src/cli.test.ts"] },
+  "limitations": [
+    "Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.",
+    "Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.",
+    "The reporting tools' SQLite store (`.regulator/events.db` since lesson 15) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.",
+    "Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "A read model over the stores; switching it off changes no run." },
+  "retirement": { "condition": "Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate." },
+  "introducedIn": "M14"
+}

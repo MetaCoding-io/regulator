@@ -199,7 +199,7 @@ committed or confirmed key and returns the prior state; `commit` records the res
 `pending` lists intentions with no outcome; `reconcile(verify)` asks the world about each
 one and records `confirmed` or `absent`. An `absent` key may be intended again.
 
-### The loop — [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### The loop — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `routeUnit` routes one blocked unit and applies what the loop may apply: `abort` calls
 `abandonUnit` (release the lease, remove the worktree, delete the branch) and sets
@@ -210,7 +210,7 @@ blocked, route; if the action spends an attempt, run again with the hint; otherw
 and return every decision made. `runUnit` accepts the hint and the dispatcher appends it
 to the prompt.
 
-### The policy — [`course/lab/policies/recovery.json`](../lab/policies/recovery.json)
+### The policy — [`packages/regulator/policies/recovery.json`](../../packages/regulator/policies/recovery.json)
 
 Version 1. `no-report` retries twice then escalates; `invalid-report` repairs twice then
 escalates; `budget-exhausted` retries once then replans; `environment` remediates then
@@ -218,7 +218,7 @@ escalates; `oscillation` and `ambiguity` clarify; `conflict` repairs then escala
 anything unruled pauses. Read it with the attempt ceiling in mind: `implement` has three
 attempts, so a second `no-report` retry is the last thing the loop does on its own.
 
-### The extension — [`course/lab/src/cp7-recovery.ts`](../lab/src/cp7-recovery.ts)
+### The extension — [`packages/regulator/src/cp7-recovery.ts`](../../packages/regulator/src/cp7-recovery.ts)
 
 The session's two contributions. On `tool_execution_end` with `isError`, the error text is
 flattened to one line and appended as an observation with its normalized cause; a refused

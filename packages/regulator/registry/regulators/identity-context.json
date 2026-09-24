@@ -1,0 +1,33 @@
+{
+  "id": "reg.identity.identity-context.v1",
+  "name": "Identity context",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Render the instance's identity set — IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md under regulator/identity/ — into every unit's system prompt from the files on each run, and current operational memory beside it as facts that expire. Identity never lives in the transcript: compaction cannot lose it, a fork cannot diverge from it, a model version cannot reinterpret it from memory. The dispatcher loads no context files from the worktree, so this is the identity a unit sees.",
+  "absorbs": {
+    "failureClass": "identity-in-context",
+    "description": "The rules the system runs by exist as a paragraph in a context window that gets compacted, forked and re-read by a different model; six months later the same harness is a different system and nobody changed a file."
+  },
+  "mechanism": {
+    "level": "prompt",
+    "implementation": "src/cp11-identity.ts",
+    "enforcementPoints": ["before_agent_start (sections regulator_identity, regulator_memory)"]
+  },
+  "channels": { "consumes": ["regulator/identity/* (worktree)", "memory store (current entries)"], "emits": ["system-prompt sections"] },
+  "scope": { "subjects": ["identity", "memory"], "resources": ["regulator/identity/", ".regulator/memory.ndjson"] },
+  "cost": { "description": "The identity's length in every prompt, capped at 6000 characters; Pi diffs sections, so an unchanged identity is a cache hit." },
+  "authority": {
+    "may": ["render identity and memory as prompt sections", "report problems in the identity set"],
+    "mayNot": ["change identity", "make identity binding (the gate and the closeout check do)", "render expired memory"]
+  },
+  "evidence": { "tests": ["src/cp11-identity.test.ts", "../core/src/identity.test.ts"] },
+  "limitations": [
+    "Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.",
+    "The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.",
+    "Rendering is truncated at 6000 characters; an identity set longer than that is partly advice the model never sees, and the status line does not say so."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp11-identity", "note": "Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement."},
+  "retirement": {"condition": "Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone."},
+  "introducedIn": "M12"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "reg.coordination.effect-journal.v1",
+  "name": "Effect journal",
+  "status": "active",
+  "vsmFunction": "S2",
+  "purpose": "Make a side-effecting tool durable: write `intended` under an idempotency key before the effect and `committed` after; refuse to act again on a key that is committed or confirmed; on every session start reconcile each `intended` with no outcome against the world (confirmed or absent) before any new effect. A harness that loses its process between an effect and its record neither repeats the effect nor forgets it.",
+  "absorbs": {
+    "failureClass": "duplicated-effect",
+    "description": "The notification was sent, the process died before it wrote that down, the retry sends it again; or the sandbox vanished mid-unit and nobody knows whether the external operation happened."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/cp7-recovery.ts",
+    "enforcementPoints": ["notify_owner (execute: begin/commit)", "session_start (reconcile)"]
+  },
+  "channels": { "consumes": ["tool call (notify_owner)", "outbox (the world)"], "emits": ["effect journal (.regulator/effects.ndjson)"] },
+  "scope": { "subjects": ["unit", "effect"], "resources": ["outbox"] },
+  "cost": { "description": "Two journal appends per effect and one outbox read per pending intention at start; no model calls." },
+  "authority": {
+    "may": ["refuse a duplicate effect and return the recorded result", "mark a pending intention confirmed or absent from what the world shows"],
+    "mayNot": ["undo an effect", "decide whether an effect should happen (the model asks; the contract and profile decide)", "reconcile effects it has no way to observe"]
+  },
+  "evidence": { "tests": ["src/cp7-recovery.test.ts", "../core/src/recovery.test.ts"] },
+  "limitations": [
+    "Reconciliation needs an observable world: notify_owner's outbox is keyed so it can be read back. An effect with no observable trace can only be recorded as absent, which is a guess.",
+    "The idempotency key is the unit, the tool and the arguments; the same message sent on purpose twice is refused. Vary the message.",
+    "Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration (lesson 03), and nothing here can journal what it cannot name.",
+    "The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions."
+  ],
+  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:cp7-recovery", "note": "Shares checkpoint 7 with the failure observer; delivery (lesson 13) uses the same journal from the loop and is not ablated with the extension."},
+  "retirement": {"condition": "No side-effecting tool is invoked twice for one intention across the recovery drills and three model versions with the journal off — which is to say never, because a restart is not a model behaviour."},
+  "introducedIn": "M08"
+}

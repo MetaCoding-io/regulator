@@ -16,8 +16,8 @@ without judgment (does the ledger balance to the statement?) — which is the me
 hierarchy in miniature.
 
 Everything below runs today: the fixture, the workload, the profiles, the contracts and
-a scripted bookkeeper are in [`course/lab`](../lab/), and
-[`course/lab/src/finance.test.ts`](../lab/src/finance.test.ts) drives the August close
+a scripted bookkeeper are in [`packages/regulator`](../../packages/regulator/), and
+[`packages/regulator/src/finance.test.ts`](../../packages/regulator/src/finance.test.ts) drives the August close
 end to end under `pnpm check`. The first half of this page is the part you do before
 writing any of that.
 
@@ -159,7 +159,7 @@ A control plane is declared, not assembled. This is the whole declaration, file 
 Nothing in the orchestrator changed for it except one line: the CLI now loads the
 workload the contract names (`workload/<name>.json`) instead of the software one.
 
-### The domain: [`course/lab/fixture-finance/`](../lab/fixture-finance/)
+### The domain: [`packages/regulator/fixture-finance/`](../../packages/regulator/fixture-finance/)
 
 ```
 household-ledger/
@@ -178,7 +178,7 @@ household-ledger/
 `test/ledger.test.js` is the reconciliation. It is what the harness runs — not what the
 unit says it ran.
 
-### The workload: [`course/lab/workload/personal-finance.json`](../lab/workload/personal-finance.json)
+### The workload: [`packages/regulator/workload/personal-finance.json`](../../packages/regulator/workload/personal-finance.json)
 
 ```json
 {
@@ -198,7 +198,7 @@ unit says it ran.
 (Descriptions elided.) `regulator check` refuses a unit type whose profile is not
 declared or whose check the host does not run.
 
-### The profiles: [`bookkeeper.json`](../lab/profiles/bookkeeper.json), [`auditor.json`](../lab/profiles/auditor.json)
+### The profiles: [`bookkeeper.json`](../../packages/regulator/profiles/bookkeeper.json), [`auditor.json`](../../packages/regulator/profiles/auditor.json)
 
 ```json
 {
@@ -218,14 +218,14 @@ The `auditor` grants `read`, `grep`, `find`, `ls`, `read_conventions`, `run_chec
 nothing else; the definition check verifies that a profile which calls itself read-only
 grants only tools whose declared effect is read-only.
 
-### The policy: [`course/lab/policies/finance.json`](../lab/policies/finance.json)
+### The policy: [`packages/regulator/policies/finance.json`](../../packages/regulator/policies/finance.json)
 
 Budgets per unit type (tokens, turns, wall-clock, attempts — `reconcile` and `close`
 get one attempt) and model routes (`categorize` on the cheaper route, with its declared
 fallback). Recovery, routing and interaction are the lab's own policies, unchanged: what
 S3 does with a blocked unit, what becomes an obligation for whom, who may answer.
 
-### The contracts: [`course/lab/contracts/finance/`](../lab/contracts/finance/)
+### The contracts: [`packages/regulator/contracts/finance/`](../../packages/regulator/contracts/finance/)
 
 Five, one per unit of the August close. The one that carries the consent rule:
 
@@ -300,7 +300,7 @@ regulator init --writable ledger/,reports/,payments/pending/ \
                --protected statements/,payments/executed/ --by alice
 regulator doctor                              # exit 1 on any problem
 
-L=course/lab/contracts/finance; P=course/lab/policies/finance.json
+L=packages/regulator/contracts/finance; P=packages/regulator/policies/finance.json
 regulator unit drive $L/f1-ingest.json --policy $P
 regulator unit drive $L/f2-categorize.json --policy $P
 regulator unit drive $L/f3-reconcile.json --policy $P
@@ -310,11 +310,11 @@ regulator obligations                          # consent: September rent — owe
 regulator answer <obligation> --by alice --answer yes
 regulator unit drive $L/f5-prepare-payment.json --policy $P   # the next attempt carries the answer
 regulator unit evidence f4-report              # the ledger's checks, bound to the revision
-regulator status --definition course/lab --instance .
-node packages/control-room/dist/cli.js --definition course/lab --instance ~/ledger
+regulator status --definition packages/regulator --instance .
+node packages/control-room/dist/cli.js --definition packages/regulator --instance ~/ledger
 ```
 
-Without a model, the same close runs scripted: `node --test course/lab/dist/finance.test.js`
+Without a model, the same close runs scripted: `node --test packages/regulator/dist/finance.test.js`
 drives it with the `bookkeeper` behaviour (does what the contracts ask) and the
 `careless` one (edits the statement, invents a category, and takes the router's repair).
 What the test asserts is what you would look for in the control room:

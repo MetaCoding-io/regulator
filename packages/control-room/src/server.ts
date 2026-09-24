@@ -7,7 +7,7 @@
  * authority surface (docs/archive/2026-09/CONTROL-REGISTRY.md §6), so it will not.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { readDefinition, readInstance, type DefinitionView, type InstanceView } from "@metacoding/vsm-pi-cli";
+import { readDefinition, readInstance, type DefinitionView, type InstanceView } from "@metacoding/regulator";
 import { renderPage } from "./page.js";
 
 export interface ControlRoomOptions {

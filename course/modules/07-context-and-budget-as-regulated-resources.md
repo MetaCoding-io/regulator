@@ -142,7 +142,7 @@ said.
 
 ## 4. Build: checkpoint 6
 
-### The policy — [`packages/protocol/src/policy.ts`](../../packages/protocol/src/policy.ts), [`course/lab/policies/default.json`](../lab/policies/default.json)
+### The policy — [`packages/protocol/src/policy.ts`](../../packages/protocol/src/policy.ts), [`packages/regulator/policies/default.json`](../../packages/regulator/policies/default.json)
 
 `PolicyDefinitionSchema`: budgets (a default ceiling and per-unit-type overrides, field
 by field) and models (a default route and per-unit-type routes). A ceiling is `tokens`,
@@ -164,7 +164,7 @@ consumed, models, compactions, and `exhausted` once set. The execution store gai
 `budget.a<N>.json` per attempt — a counter, rewritten, unlike the immutable contract and
 report.
 
-### The extension — [`course/lab/src/cp6-budget.ts`](../lab/src/cp6-budget.ts)
+### The extension — [`packages/regulator/src/cp6-budget.ts`](../../packages/regulator/src/cp6-budget.ts)
 
 `--policy <file>` (default: the lab's). On `session_start` it finds the unit from the
 lease on the current worktree, loads the unit's contract from the store, builds the
@@ -177,7 +177,7 @@ records a one-line evidence pointer for each successful `run_tests` or `run_chec
 preserved block followed by the model summary — or by a stated gap when the summarizer
 has no model or fails. `/budget` shows the ledger.
 
-### The loop — [`course/lab/src/controller.ts`](../lab/src/controller.ts)
+### The loop — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts)
 
 `runUnit` takes a policy. Before dispatch it resolves the ceiling, and if the unit
 already exists it accepts it only when *blocked*, under the *same contract version*,
@@ -188,7 +188,7 @@ dispatch, a missing report with an `exhausted` ledger records the attempt as
 `budget-exhausted` and blocks the unit on that dimension. The dispatch request now
 carries the attempt number, the route, and the policy path.
 
-### The dispatcher — [`course/lab/src/dispatch-pi.ts`](../lab/src/dispatch-pi.ts)
+### The dispatcher — [`packages/regulator/src/dispatch-pi.ts`](../../packages/regulator/src/dispatch-pi.ts)
 
 Filters the route by `ModelRuntime.getAvailable()`, runs the first candidate with
 checkpoints 2–6 loaded, and on an assistant message with `stopReason: "error"` moves to
@@ -265,7 +265,7 @@ model. Two things to record: what the fallback session knew (the contract, nothi
 else — it is a fresh session), and what the first session's ledger cost. That cost is
 the price of failover, and it belongs in the router's `cost` field.
 
-**Drill 4 — the read model.** `regulator status --definition course/lab --instance
+**Drill 4 — the read model.** `regulator status --definition packages/regulator --instance
 <repo>` now prints the policy line and, per unit, `budget 12400/400000 tok (3%), 4/60
 turns`. The control room shows the same in the units table and a budget section in the
 unit inspector, including which models the attempt ran on and whether each compaction

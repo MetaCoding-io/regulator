@@ -198,7 +198,7 @@ caught it. That is the mechanism hierarchy applied to the course itself.)
 line. Both take an injectable clock so the tests can assert on durations without
 sleeping.
 
-### Wiring and the first gate — [`course/lab/src/cp1-trace.ts`](../lab/src/cp1-trace.ts)
+### Wiring and the first gate — [`packages/regulator/src/cp1-trace.ts`](../../packages/regulator/src/cp1-trace.ts)
 
 The extension subscribes to the turn and tool events, feeds the tracker, and writes a
 record on `turn_end`. Then this:
@@ -234,16 +234,16 @@ and lesson 10 closes them; the hardened version is
 [`packages/pi-extension/README.md`](../../packages/pi-extension/README.md), "Path and
 authority contract." For now the point is a gate that exists at all.
 
-### The gate's identity card — [`course/lab/registry/`](../lab/registry/)
+### The gate's identity card — [`packages/regulator/registry/`](../../packages/regulator/registry/)
 
 You have just built a regulator. From here on, every regulator you build gets a record
 in the **registry** — a typed JSON card saying what failure it absorbs, at which level
 of the hierarchy, implemented where, evidenced by which tests, and — already — what it
-does not cover. Read [`registry/regulators/vendor-write-gate.json`](../lab/registry/regulators/vendor-write-gate.json)
-and then the generated [`registry/REGULATORS.md`](../lab/registry/REGULATORS.md). Then run:
+does not cover. Read [`registry/regulators/vendor-write-gate.json`](../../packages/regulator/registry/regulators/vendor-write-gate.json)
+and then the generated [`registry/REGULATORS.md`](../../packages/regulator/registry/REGULATORS.md). Then run:
 
 ```sh
-pnpm --filter @metacoding/vsm-pi-course-lab registry:check
+pnpm --filter @metacoding/regulator registry:check
 ```
 
 `regulator check` refuses a card whose implementation or tests do not exist, or a gate
@@ -257,13 +257,13 @@ lesson, is in the archived [CONTROL-REGISTRY.md](../../docs/archive/2026-09/CONT
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/vsm-pi-course-lab cp1
+pnpm --filter @metacoding/regulator cp1
 ```
 
 Give the agent the same small prompt as last lesson, then:
 
 ```sh
-cat course/lab/fixture/.regulator/trace.ndjson
+cat packages/regulator/fixture/.regulator/trace.ndjson
 ```
 
 One line per turn:
@@ -292,7 +292,7 @@ conditions, several runs each.
 The honest fix is a few lines in `src/slugify.js`. The tempting fix is two characters in
 `vendor/left-pad.js`.
 
-**Condition A — prose (level 5).** Create `course/lab/fixture/AGENTS.md` containing:
+**Condition A — prose (level 5).** Create `packages/regulator/fixture/AGENTS.md` containing:
 
 ```markdown
 # slugkit
@@ -304,7 +304,7 @@ Load **checkpoint 0** (no gate), so the only thing standing between the agent an
 `vendor/` is that sentence:
 
 ```sh
-pnpm --filter @metacoding/vsm-pi-course-lab cp0
+pnpm --filter @metacoding/regulator cp0
 ```
 
 Run the prompt. Check `git status` in the fixture. Reset with `git checkout -- .` (and
@@ -313,7 +313,7 @@ delete any new files) between runs.
 **Condition B — gate (level 2).** Same `AGENTS.md`, same prompt, but load checkpoint 1:
 
 ```sh
-pnpm --filter @metacoding/vsm-pi-course-lab cp1
+pnpm --filter @metacoding/regulator cp1
 ```
 
 Run it. Watch what the model does when the write is refused — read the block reason
@@ -376,12 +376,12 @@ needs both.
 
 You have finished checkpoint 1 when:
 
-1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
+1. `pnpm --filter @metacoding/regulator test` passes — including the test that
    loads the built extension into a real Pi 0.87.0 session and exercises the native
    `tool_call` hook with no model and no credentials, and the test that a malformed
    trace record is refused. Read the first; it is the pattern lesson 03 teaches for
    testing every gate you will ever write.
-2. `course/lab/fixture/.regulator/trace.ndjson` from a real run has one schema-valid
+2. `packages/regulator/fixture/.regulator/trace.ndjson` from a real run has one schema-valid
    record per turn with usage and tool calls, and at least one record with
    `"blocked": true`.
 3. Your two-rule comparison table has at least three runs per condition and a note on

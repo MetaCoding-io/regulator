@@ -186,7 +186,7 @@ the lab.
 
 Two files, then one you write yourself.
 
-### The record — [`packages/protocol/src/profiles.ts`](../../packages/protocol/src/profiles.ts), [`packages/core/src/profiles.ts`](../../packages/core/src/profiles.ts), [`course/lab/src/profiles.ts`](../lab/src/profiles.ts)
+### The record — [`packages/protocol/src/profiles.ts`](../../packages/protocol/src/profiles.ts), [`packages/core/src/profiles.ts`](../../packages/core/src/profiles.ts), [`packages/regulator/src/profiles.ts`](../../packages/regulator/src/profiles.ts)
 
 No Pi dependency anywhere in this trio. The profile *type* is protocol vocabulary; the
 checks (`isWritableUnder`, `isReadOnlyProfile`, `renderProfileSection`) are core
@@ -244,13 +244,13 @@ job only level 5 can do — carrying a rule the gates cannot reach — and being
 it is doing so.
 
 The profile gate has a registry card too:
-[`registry/regulators/profile-write-grant.json`](../lab/registry/regulators/profile-write-grant.json).
+[`registry/regulators/profile-write-grant.json`](../../packages/regulator/registry/regulators/profile-write-grant.json).
 This lesson adds `authority.may` and `authority.mayNot`. Read them and check each line
 against the code: the card claims the gate may set the tool surface and block ungranted
 writes, and may *not* select a profile without a user command, block shell commands, or
 grant a tool the host does not have.
 
-### The extension — [`course/lab/src/cp3-profiles.ts`](../lab/src/cp3-profiles.ts)
+### The extension — [`packages/regulator/src/cp3-profiles.ts`](../../packages/regulator/src/cp3-profiles.ts)
 
 Four documented Pi APIs and nothing else, each labelled with its hierarchy level in the
 source. `apply()` sets the tool surface and the thinking level and shows the profile in
@@ -262,20 +262,20 @@ Load it with checkpoint 2, so the typed tools the profiles name exist:
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/vsm-pi-course-lab cp3
+pnpm --filter @metacoding/regulator cp3
 ```
 
 You start in `implement`. Try `/profile`, then `/profile research`, and watch the
 footer and the tool list in the system prompt change. To start in research:
 
 ```sh
-cd course/lab/fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js --profile research
+cd packages/regulator/fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js --profile research
 ```
 
-### The file you write — `course/lab/fixture/AGENTS.md`
+### The file you write — `packages/regulator/fixture/AGENTS.md`
 
 Now the advisory layer for the *project*, as opposed to the profile. Write
-`course/lab/fixture/AGENTS.md` containing only what no gate can enforce. A reference
+`packages/regulator/fixture/AGENTS.md` containing only what no gate can enforce. A reference
 version:
 
 ```markdown
@@ -329,7 +329,7 @@ accident: the implement profile grants a tool that can bypass the profile's own 
 grant. Write down what you think the right answer is — remove `bash`? wrap it? sandbox
 it? — before lessons 05 and 10 give you theirs.
 
-**Drill 3 — the inverse: gates without advice.** Delete `course/lab/fixture/AGENTS.md`.
+**Drill 3 — the inverse: gates without advice.** Delete `packages/regulator/fixture/AGENTS.md`.
 Stay in `implement`. Prompt:
 
 > Fix the known issue described in the README.
@@ -376,13 +376,13 @@ would have to be trusted for that to be safe?
 
 You have finished checkpoint 3 when:
 
-1. `pnpm --filter @metacoding/vsm-pi-course-lab test` passes — including the test that
+1. `pnpm --filter @metacoding/regulator test` passes — including the test that
    loads checkpoints 2 and 3 together into a real Pi 0.87.0 session and shows the native
    hook refusing a write outside the default profile's grant, and the test that
    `research` is read-only by effect while `run_tests` would disqualify it.
 2. A real run shows the profile in the footer and the profile section in the system
    prompt; the research profile cannot write.
-3. `course/lab/fixture/AGENTS.md` exists and contains nothing a gate already enforces.
+3. `packages/regulator/fixture/AGENTS.md` exists and contains nothing a gate already enforces.
 4. Your lab notes hold the three drill records, including your own answer to drill 2.
 5. The profile gate's registry card passes `registry:check` with `authority` filled in.
 
