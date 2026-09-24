@@ -1,16 +1,16 @@
-# VSM-Pi
+# regulator
 
 **Cybernetic control for agentic software development.**
 
-VSM-Pi is a coding-agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane. It asks whether Stafford Beer's Viable System Model can be made operational inside an autonomous software-development system—not as five chatbot personas, but as explicit functions, authority boundaries, typed channels, verification gates, and feedback loops—and it provides its own orchestrator to find out.
+regulator (formerly VSM-Pi) is a coding-agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane. It asks whether Stafford Beer's Viable System Model can be made operational inside an autonomous software-development system—not as five chatbot personas, but as explicit functions, authority boundaries, typed channels, verification gates, and feedback loops—and it provides its own orchestrator to find out.
 
-The course under [`course/`](course/) builds VSM-Pi lesson by lesson: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
+The course under [`course/`](course/) builds regulator lesson by lesson: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
 
 The project starts from a simple premise:
 
 > **Prompts advise. Types describe. Gates enforce.**
 
-Prompt engineering remains useful where judgment is required, but VSM-Pi prefers TypeScript types, runtime schemas, deterministic checks, narrow tool contracts, and host-owned verification whenever the system can know or enforce something mechanically.
+Prompt engineering remains useful where judgment is required, but regulator prefers TypeScript types, runtime schemas, deterministic checks, narrow tool contracts, and host-owned verification whenever the system can know or enforce something mechanically.
 
 ## Design goals
 
@@ -25,7 +25,7 @@ Prompt engineering remains useful where judgment is required, but VSM-Pi prefers
 
 ## Working VSM mapping
 
-| VSM function | Initial VSM-Pi interpretation |
+| VSM function | Initial regulator interpretation |
 | --- | --- |
 | **S1 — Operations** | Coding, data, UI, infrastructure, migration, and integration capability profiles |
 | **S2 — Coordination** | Tool contracts, worktree isolation, leases with liveness, reintegration, and anti-oscillation mechanisms |
@@ -75,8 +75,8 @@ vsm/example/      Example committed S5 artifacts
 
 ## Course: Viable Agents
 
-`course/` is where VSM-Pi gets built. Instead of a feature-by-feature tour of Pi,
-learners build their own agent harness—`regulator`, which *is* VSM-Pi's reference
+`course/` is where regulator gets built. Instead of a feature-by-feature tour of Pi,
+learners build their own agent harness—`regulator`, which *is* the product's reference
 build—and acquire Pi's feature base as the answer to successive regulatory questions.
 GSD-Pi is read throughout as the comparison case.
 
@@ -115,8 +115,8 @@ and runs `pnpm check` on Node 22.19.0 and 24 for pushes and pull requests.
 After `pnpm build`, run either focused suite with:
 
 ```sh
-pnpm --filter @metacoding/vsm-pi-protocol test
-pnpm --filter @metacoding/vsm-pi-core test
+pnpm --filter @metacoding/regulator-protocol test
+pnpm --filter @metacoding/regulator-core test
 ```
 
 ## Pi extension

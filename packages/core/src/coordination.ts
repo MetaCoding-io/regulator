@@ -14,9 +14,9 @@
  */
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { LeaseSchema, assertValid, type Lease } from "@metacoding/vsm-pi-protocol";
+import { LeaseSchema, assertValid, type Lease } from "@metacoding/regulator-protocol";
 
-export type { Lease } from "@metacoding/vsm-pi-protocol";
+export type { Lease } from "@metacoding/regulator-protocol";
 
 
 export class LeaseHeldError extends Error {

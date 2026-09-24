@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { CONTINUES_WITHOUT_ANSWER, type InteractionKind, type InteractionPolicy } from "@metacoding/vsm-pi-protocol";
+import { CONTINUES_WITHOUT_ANSWER, type InteractionKind, type InteractionPolicy } from "@metacoding/regulator-protocol";
 import { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered } from "./interaction.js";
 import { ObligationLedger } from "./obligations.js";
 

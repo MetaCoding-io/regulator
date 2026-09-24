@@ -11,7 +11,7 @@ import path from "node:path";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { isReadOnlyProfile } from "./profiles.js";

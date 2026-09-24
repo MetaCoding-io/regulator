@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readSignals } from "@metacoding/vsm-pi-core";
+import { readSignals } from "@metacoding/regulator-core";
 import { INTELLIGENCE_ENTRY_TYPE, createIntelligenceExtension } from "./intelligence.js";
 import { gitExec, initRepo } from "@metacoding/regulator";
 import { ctxFor, mockPi } from "./test-support.js";

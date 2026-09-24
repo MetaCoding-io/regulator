@@ -48,7 +48,7 @@ regulator/
   BOUNDARY.md        enforcement boundary statement, generated from registry limitations
 ```
 
-`protocol/` has no Pi dependency — the same discipline VSM-Pi applies with INV-007. It
+`protocol/` has no Pi dependency — the same discipline regulator applies with INV-007. It
 should be possible to reason about the control plane without reading a single harness API
 call, and it is a teaching point that this is achievable.
 
@@ -73,7 +73,7 @@ call, and it is a teaching point that this is achievable.
 | 14 | M15 | Packaged pi package | Installs and runs one unit in a clean second repo |
 | 15 | Capstone | Viability case | Rubric in `ASSESSMENT.md` |
 
-`regulator` is not a teaching copy of VSM-Pi; it *is* VSM-Pi's reference build. It
+`regulator` is not a teaching copy of the product; it *is* the product. It
 lives in this repository at [`packages/regulator/`](../packages/regulator/) as the workspace package
 `@metacoding/regulator`, one source file per checkpoint (`cp0-event-log.ts`,
 `cp1-trace.ts`, …) with headless tests beside them. A checkpoint's Pi-free modules move

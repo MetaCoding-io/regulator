@@ -11,13 +11,13 @@
     "agent-harness",
     "regulator"
   ],
-  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "homepage": "https://github.com/MetaCoding-io/regulator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "url": "git+https://github.com/MetaCoding-io/regulator.git",
     "directory": "packages/regulator-pi"
   },
-  "bugs": "https://github.com/MetaCoding-io/vsm-pi/issues",
+  "bugs": "https://github.com/MetaCoding-io/regulator/issues",
   "publishConfig": {
     "access": "public"
   },
@@ -55,9 +55,9 @@
   },
   "dependencies": {
     "@metacoding/regulator": "workspace:*",
-    "@metacoding/vsm-pi-checks": "workspace:*",
-    "@metacoding/vsm-pi-core": "workspace:*",
-    "@metacoding/vsm-pi-protocol": "workspace:*",
+    "@metacoding/regulator-checks": "workspace:*",
+    "@metacoding/regulator-core": "workspace:*",
+    "@metacoding/regulator-protocol": "workspace:*",
     "typebox": "1.3.27"
   },
   "peerDependencies": {

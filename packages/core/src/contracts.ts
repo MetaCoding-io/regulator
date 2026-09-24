@@ -12,7 +12,7 @@
 import {
   ResultReportSchema, WorkContractSchema, assertValid,
   type EvidenceClass, type ResultReport, type WorkContract,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 
 export interface ContractProblem {
   /** Which part of the contract the problem is about. */

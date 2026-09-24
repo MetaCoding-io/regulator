@@ -364,7 +364,7 @@ Both are level 3 in the hierarchy doing work that a persona prompt would have tr
 do at level 5. Notice that neither is generic. They are *domain operations*, shaped to
 GSD's lifecycle, and their names say what they are for.
 
-**VSM-Pi.** Open [`packages/regulator-pi/src/reporting-tools.ts`](../../packages/regulator-pi/src/reporting-tools.ts)
+**regulator.** Open [`packages/regulator-pi/src/reporting-tools.ts`](../../packages/regulator-pi/src/reporting-tools.ts)
 and read all three tools. Then notice:
 
 - their schemas are imported from `packages/protocol`, which has no Pi dependency —

@@ -13,7 +13,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { isRegulatorRecord, type RegulatorRecord } from "@metacoding/vsm-pi-protocol";
+import { isRegulatorRecord, type RegulatorRecord } from "@metacoding/regulator-protocol";
 
 export interface RegistryProblem {
   file: string;

@@ -22,8 +22,8 @@
  */
 import { readFile, realpath } from "node:fs/promises";
 import { convertToLlm, serializeConversation, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { PolicyDefinitionSchema, assertValid, type PolicyDefinition, type TokenUsage, type WorkContract } from "@metacoding/vsm-pi-protocol";
-import { BudgetMeter, ExecutionStore, TOOL_EFFECTS, ceilingFor, isReadOnlyEffect, renderPreservedContext, summarizeLedger } from "@metacoding/vsm-pi-core";
+import { PolicyDefinitionSchema, assertValid, type PolicyDefinition, type TokenUsage, type WorkContract } from "@metacoding/regulator-protocol";
+import { BudgetMeter, ExecutionStore, TOOL_EFFECTS, ceilingFor, isReadOnlyEffect, renderPreservedContext, summarizeLedger } from "@metacoding/regulator-core";
 import type { Exec } from "@metacoding/regulator";
 import { POLICY_PATH } from "@metacoding/regulator";
 import { leaseStoreFor } from "@metacoding/regulator";

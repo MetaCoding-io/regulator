@@ -7,7 +7,7 @@
  */
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { RegulatoryEntrySchema, assertValid, type RegulatoryEntry, type VsmMessage } from "@metacoding/vsm-pi-protocol";
+import { RegulatoryEntrySchema, assertValid, type RegulatoryEntry, type VsmMessage } from "@metacoding/regulator-protocol";
 import { SIGNALS_RELATIVE_PATH } from "./paths.js";
 
 export function isMessage(entry: RegulatoryEntry): entry is VsmMessage {

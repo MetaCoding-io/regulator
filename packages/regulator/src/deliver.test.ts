@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
-import { ObligationLedger } from "@metacoding/vsm-pi-core";
+import { ObligationLedger } from "@metacoding/regulator-core";
 import { OUTBOX_RELATIVE_PATH } from "./deliver.js";
 import { watchOutbox } from "./deliver.js";
 import { initRepo } from "./git-support.js";

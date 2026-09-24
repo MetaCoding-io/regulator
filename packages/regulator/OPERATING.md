@@ -15,7 +15,7 @@ that runs a unit's session. The CLI finds the host by name — in the project, t
 beside itself — and needs none for `doctor`, `status`, `check` or a scripted run.
 
 ```sh
-git clone <this repository> && cd vsm-pi
+git clone <this repository> && cd regulator
 pnpm install && pnpm build          # both Node versions CI runs are fine: >= 22.19
 pi install ./packages/regulator-pi          # every session extension, into user settings; -l for project settings
 # or, for one session without installing:
@@ -130,7 +130,7 @@ the definition's repository so every later `init` starts from it.
 
 Apply the model to the harness itself:
 
-- **Identity (S5):** this repository's `vsm/` for VSM-Pi; the lab's `identity/` for the
+- **Identity (S5):** this repository's `vsm/` for regulator; the lab's `identity/` for the
   definition. Changed by proposal and a person's decision, never by a unit.
 - **Policy:** the four policy files; a change is a pull request with `pnpm check`
   green on both Node versions.

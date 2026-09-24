@@ -44,7 +44,7 @@ the showing.
 
 ### Intelligence is not authority
 
-A research finding is an input to a decision, not the decision. VSM-Pi's channel
+A research finding is an input to a decision, not the decision. regulator's channel
 vocabulary has said so since lesson 02: the `intelligence` channel carries S4 → S3 advice,
 and `channelCanMutateS5` returns `false` for every channel. What this lesson adds is the
 mechanism that makes the sentence true under pressure. Intelligence is produced by a
@@ -279,7 +279,7 @@ commit.
 
 ## 6. Field study: two routers and one homeostat
 
-**VSM-Pi.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
+**regulator.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
 §§1–8 against this checkpoint. Three things to check. The lifecycle shipped as written,
 including "no in-progress state" and "escalated only with a successor". The routing table
 in §8 has more columns than `routing.json` — required *mechanism*, exposure and

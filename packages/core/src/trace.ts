@@ -7,7 +7,7 @@
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "@metacoding/vsm-pi-protocol";
+import { isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "@metacoding/regulator-protocol";
 
 /** Accumulates one turn's worth of events into a single `TurnRecord`. */
 export class TurnTracker {
@@ -79,7 +79,7 @@ export class TraceWriter {
 
   async append(record: TurnRecord): Promise<void> {
     if (!isTurnRecord(record)) {
-      throw new Error(`vsm-pi: refusing to write a malformed trace record: ${JSON.stringify(record)}`);
+      throw new Error(`regulator: refusing to write a malformed trace record: ${JSON.stringify(record)}`);
     }
     this.#ready ??= mkdir(path.dirname(this.filePath), { recursive: true }).then(() => undefined);
     await this.#ready;

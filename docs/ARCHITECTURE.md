@@ -1,12 +1,12 @@
-# VSM-Pi Architecture
+# regulator Architecture
 
 ## Purpose
 
-VSM-Pi is a coding-agent harness on Pi with an explicit cybernetic control plane. It provides its own orchestrator — the S3 loop, generic over workloads — and regulates it ([ADR 0001](decisions/0001-own-orchestrator.md)). GSD-Pi is comparison material in the course, not a dependency.
+regulator is a coding-agent harness on Pi with an explicit cybernetic control plane. It provides its own orchestrator — the S3 loop, generic over workloads — and regulates it ([ADR 0001](decisions/0001-own-orchestrator.md)). GSD-Pi is comparison material in the course, not a dependency.
 
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 
-VSM-Pi therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
+regulator therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
 
 ## Core rule
 
@@ -142,7 +142,7 @@ Agents may propose S5 changes through a typed proposal channel. The act of propo
 
 ## Operational decomposition: prefer closed-loop vertical slices
 
-For feature work, VSM-Pi should generally prefer **thin vertical slices** over broad horizontal sweeps. A vertical slice crosses the minimum set of layers needed to produce an observable end-to-end behavior: for example, a stubbed UI wired to a mock endpoint before the full database, service, API, and UI layers are independently completed.
+For feature work, regulator should generally prefer **thin vertical slices** over broad horizontal sweeps. A vertical slice crosses the minimum set of layers needed to produce an observable end-to-end behavior: for example, a stubbed UI wired to a mock endpoint before the full database, service, API, and UI layers are independently completed.
 
 This is not a claim that a vertical slice literally *is* an S1. It is a decomposition strategy that tends to produce a better S1 work packet because the operation can close a feedback loop sooner:
 
@@ -209,7 +209,7 @@ For each requirement, ask in order:
 4. Does it require model judgment?
 5. What prompt/context does that judgment require?
 
-This ordering is deliberate. VSM-Pi should not encode deterministic authority as prose merely because an LLM is available.
+This ordering is deliberate. regulator should not encode deterministic authority as prose merely because an LLM is available.
 
 ## Deliberately deferred
 

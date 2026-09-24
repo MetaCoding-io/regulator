@@ -1,10 +1,10 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { createRegulatoryEvent, RegulatoryEventStore } from "@metacoding/vsm-pi-core";
+import { createRegulatoryEvent, RegulatoryEventStore } from "@metacoding/regulator-core";
 import {
   PolicyProposalInputSchema, AuditFindingInputSchema, UncertaintyInputSchema,
   type ReportingAuthority,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import { VERSION, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 export interface HostReportingContext {

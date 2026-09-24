@@ -162,7 +162,7 @@ Two additions to `regulator`. Open both files and read them fully before continu
 Checkpoint 0's log was one line per event, untyped, with whatever fields seemed
 interesting. Checkpoint 1 replaces it with a claim about each turn. The claim's shape
 lives in `protocol`; the tracker and writer live in `core`; the checkpoint imports both —
-this is the first checkpoint whose pieces are VSM-Pi's own packages rather than lab
+this is the first checkpoint whose pieces are regulator's own packages rather than lab
 files, which is what "the course builds the product" means in practice:
 
 ```ts

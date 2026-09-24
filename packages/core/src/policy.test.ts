@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { PolicyDefinition, WorkContract } from "@metacoding/vsm-pi-protocol";
+import type { PolicyDefinition, WorkContract } from "@metacoding/regulator-protocol";
 import { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger } from "./policy.js";
 
 const policy: PolicyDefinition = {

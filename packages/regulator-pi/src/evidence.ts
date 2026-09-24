@@ -21,7 +21,7 @@
  * closeout gate does not read anything this extension records.
  */
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { EvidenceRef } from "@metacoding/vsm-pi-protocol";
+import type { EvidenceRef } from "@metacoding/regulator-protocol";
 
 export const PROVENANCE_ENTRY_TYPE = "regulator:evidence-provenance";
 export const EVIDENCE_TOOLS: Record<string, "test" | "command"> = { run_tests: "test", run_checks: "command" };

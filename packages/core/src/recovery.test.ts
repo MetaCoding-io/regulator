@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { RecoveryPolicy, UnitRecord, WorkContract } from "@metacoding/vsm-pi-protocol";
+import type { RecoveryPolicy, UnitRecord, WorkContract } from "@metacoding/regulator-protocol";
 import { EffectJournal, effectKey } from "./effect-journal.js";
 import { ExecutionStore } from "./execution-store.js";
 import { causeFromError, classifyFailure, decideRecovery, hintFor, routeBlockedUnit } from "./recovery.js";

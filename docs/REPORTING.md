@@ -1,6 +1,6 @@
 # Typed reporting and the VSM event store
 
-VSM-Pi registers three reporting tools alongside its native write/edit gate.
+regulator registers three reporting tools alongside its native write/edit gate.
 Model inputs contain observations and requests. A trusted host supplies grants,
 source/destination/channel, UUID, UTC timestamp, session/unit provenance, and
 source revision. Every successful call commits one event to the separate
@@ -14,11 +14,11 @@ An unmapped context fails closed. A trusted host can load an explicit wrapper
 using the same `pi -e /absolute/path/to/wrapper.js` mechanism:
 
 ```js
-import { createVsmPiExtension } from "/absolute/path/to/vsm-pi/packages/regulator-pi/dist/write-gate.js";
+import { createRegulatorPiExtension } from "/absolute/path/to/vsm-pi/packages/regulator-pi/dist/write-gate.js";
 
 // Example for a host session deliberately designated as operational S1.
 // These values are host configuration, never model input or inferred from prose.
-export default createVsmPiExtension({
+export default createRegulatorPiExtension({
   resolveReportingContext: (ctx) => ({
     authority: {
       id: "owner-designated-s1",
@@ -201,8 +201,8 @@ correlated rather than merged (`docs/DEBT.md` rows 1 and 31, paid).
 ```sh
 pnpm install --frozen-lockfile
 pnpm typecheck
-pnpm --filter @metacoding/vsm-pi-protocol test
-pnpm --filter @metacoding/vsm-pi-core test
+pnpm --filter @metacoding/regulator-protocol test
+pnpm --filter @metacoding/regulator-core test
 pnpm --filter @metacoding/regulator-pi test
 pnpm test
 pnpm check

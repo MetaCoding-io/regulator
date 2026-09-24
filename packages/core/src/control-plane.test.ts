@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { isTurnRecord, type CapabilityProfile } from "@metacoding/vsm-pi-protocol";
+import { isTurnRecord, type CapabilityProfile } from "@metacoding/regulator-protocol";
 import {
   checkRegistry, isReadOnlyProfile, isWritableUnder, readOnlyViolations, renderBoundaryMarkdown, renderProfileSection, renderRegistryMarkdown,
   TraceWriter, TurnTracker,
@@ -34,7 +34,7 @@ test("TurnTracker builds one record per turn from the event sequence", () => {
 });
 
 test("TraceWriter validates at runtime, not only by type: malformed records are refused", async (t) => {
-  const dir = await tempDir(t, "vsm-pi-trace-");
+  const dir = await tempDir(t, "regulator-trace-");
   const writer = new TraceWriter(path.join(dir, "nested", "trace.ndjson"));
   const good = { turnIndex: 0, startedAt: 1, endedAt: 2, durationMs: 1, toolCalls: [] };
   assert.equal(isTurnRecord(good), true);
@@ -96,7 +96,7 @@ const record = {
 };
 
 test("checkRegistry accepts a record that shows what it claims and renders it", async (t) => {
-  const root = await tempDir(t, "vsm-pi-registry-ok-");
+  const root = await tempDir(t, "regulator-registry-ok-");
   await mkdir(path.join(root, "registry/regulators"), { recursive: true });
   await mkdir(path.join(root, "src"));
   await writeFile(path.join(root, "src/gate.ts"), "");
@@ -120,7 +120,7 @@ test("checkRegistry accepts a record that shows what it claims and renders it", 
 });
 
 test("checkRegistry rejects a record that claims what it cannot show", async (t) => {
-  const root = await tempDir(t, "vsm-pi-registry-bad-");
+  const root = await tempDir(t, "regulator-registry-bad-");
   await mkdir(path.join(root, "registry/regulators"), { recursive: true });
   await writeFile(path.join(root, "registry/regulators/example.json"), JSON.stringify({ ...record, limitations: [] }));
   await writeFile(path.join(root, "registry/regulators/dupe.json"), JSON.stringify({ ...record, limitations: [] }));

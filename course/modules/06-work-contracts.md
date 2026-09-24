@@ -355,7 +355,7 @@ question, it has become a second source of truth.
 
 ## 6. Field study: two contract designs and one vocabulary
 
-**VSM-Pi.** The archived design record
+**regulator.** The archived design record
 [`OPERATIONAL-WORK-CONTRACT.md`](../../docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md),
 §5 (decision allocation), §8 (prospective versus residual uncertainty), §9 (the
 result report) and §14 (validation rules). Check your `checkResultReport` against §14's

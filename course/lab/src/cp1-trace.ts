@@ -11,13 +11,13 @@
  *
  * The gate is deliberately simple. It normalizes the obvious things Pi itself
  * normalizes and nothing more; lesson 10 hardens it and explains why a lexical
- * check is not a filesystem boundary. See VSM-Pi's `packages/regulator-pi` for
+ * check is not a filesystem boundary. See regulator's `packages/regulator-pi` for
  * the hardened version.
  */
 import path from "node:path";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import type { TokenUsage } from "@metacoding/vsm-pi-protocol";
-import { TraceWriter, TurnTracker } from "@metacoding/vsm-pi-core";
+import type { TokenUsage } from "@metacoding/regulator-protocol";
+import { TraceWriter, TurnTracker } from "@metacoding/regulator-core";
 
 export const TRACE_RELATIVE_PATH = path.join(".regulator", "trace.ndjson");
 export const PROTECTED_PREFIX = "vendor/";

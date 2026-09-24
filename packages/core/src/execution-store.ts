@@ -19,7 +19,7 @@ import path from "node:path";
 import {
   AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
   type AttemptRecord, type BudgetLedger, type FailureObservation, type RecoveryDecision, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import { UNITS_RELATIVE_DIR } from "./paths.js";
 
 function assertUnitId(unitId: string): void {

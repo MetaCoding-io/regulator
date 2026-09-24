@@ -113,7 +113,7 @@ research units is rendered to research units, not to every unit of the instance.
 
 ### The harness as a viable system
 
-Apply the model to the thing you built. Its identity is `vsm/` for VSM-Pi and the lab's
+Apply the model to the thing you built. Its identity is `vsm/` for regulator and the lab's
 `identity/` for the definition, changed by proposal and a person's decision. Its policy
 is four files, changed by a pull request with `pnpm check` green on both Node versions.
 Its audit is `pnpm check`, `regulator check`, the committed eval reports and the review

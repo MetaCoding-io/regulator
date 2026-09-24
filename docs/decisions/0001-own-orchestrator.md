@@ -1,6 +1,6 @@
-# ADR 0001 — VSM-Pi provides its own orchestrator
+# ADR 0001 — regulator provides its own orchestrator
 
-- **Status:** accepted, 2026-09-22
+- **Status:** accepted, 2026-09-22 (the project was named VSM-Pi then; it became `regulator` on 2026-09-24, with the repository)
 - **Deciders:** the maintainer
 - **Supersedes:** the GSD-hosted scope recorded in
   [`docs/archive/2026-09/`](../archive/2026-09/README.md)
@@ -8,13 +8,13 @@
 ## Context
 
 Until 22 September 2026 the project was scoped as a regulation layer *on* GSD-Pi: GSD
-would own the workflow kernel and VSM-Pi would project VSM functions onto its units.
+would own the workflow kernel and regulator would project VSM functions onto its units.
 Four course checkpoints of gates, effects, profiles, trace and registry had by then run
 on bare Pi without GSD.
 
 ## Decision
 
-VSM-Pi provides its own orchestrator. It is the production form of `regulator`, the
+regulator provides its own orchestrator. It is the production form of `regulator`, the
 harness the course builds. GSD-Pi remains in the course as comparison material; there is
 no GSD adapter and `packages/` has no GSD dependency.
 
@@ -28,7 +28,7 @@ no GSD adapter and `packages/` has no GSD dependency.
   GSD's.
 - The research question — does regulation slow architectural drift? — is cleaner as
   *our orchestrator with regulators ablated versus enabled* than as GSD versus
-  GSD+VSM-Pi.
+  GSD+regulator.
 
 ## Consequences
 

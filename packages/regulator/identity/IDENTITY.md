@@ -1,6 +1,6 @@
 # Identity — what this instance is
 
-This is an instance of `regulator`, VSM-Pi's reference build: a harness that dispatches
+This is an instance of `regulator`: a harness that dispatches
 units of software work against this repository under an explicit control plane. Its
 purpose is to raise the autonomy and throughput of coding agents on this project without
 letting architectural drift rise at the same rate.

@@ -2,7 +2,7 @@
  * The definition's capability profiles, declared as files under `profiles/`
  * and validated on load (lesson 12). The profile type, the effect
  * declarations and the checks (`isWritableUnder`, `isReadOnlyProfile`,
- * `renderProfileSection`) ship in VSM-Pi's packages; the lab only declares
+ * `renderProfileSection`) ship in regulator's packages; the lab only declares
  * the profiles it uses. Loaded synchronously so the checkpoints can bind the
  * default at registration time.
  *
@@ -12,10 +12,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CapabilityProfileSchema, assertValid, type CapabilityProfile } from "@metacoding/vsm-pi-protocol";
+import { CapabilityProfileSchema, assertValid, type CapabilityProfile } from "@metacoding/regulator-protocol";
 
-export type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
-export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "@metacoding/vsm-pi-core";
+export type { CapabilityProfile } from "@metacoding/regulator-protocol";
+export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "@metacoding/regulator-core";
 
 export const PROFILES_DIR = fileURLToPath(new URL("../profiles/", import.meta.url));
 /** The names the workload and the checkpoints rely on; the definition check refuses a workload that names another. */

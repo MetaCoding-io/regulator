@@ -15,8 +15,8 @@
  *   pi -e ../dist/tools.js -e ../dist/profiles.js
  */
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
-import { isWritableUnder, renderProfileSection } from "@metacoding/vsm-pi-core";
+import type { CapabilityProfile } from "@metacoding/regulator-protocol";
+import { isWritableUnder, renderProfileSection } from "@metacoding/regulator-core";
 import type { Exec } from "@metacoding/regulator";
 import { readManifest } from "@metacoding/regulator";
 import { isProfileName, PROFILES, type ProfileName } from "@metacoding/regulator";

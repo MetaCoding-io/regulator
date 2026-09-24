@@ -12,7 +12,7 @@ import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   AuditEntrySchema, assertValid, type AuditEntry, type EvidenceRecord, type HumanAcceptance, type TechnicalVerdict,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import { AUDIT_RELATIVE_PATH } from "./paths.js";
 
 export interface UnitAudit {

@@ -29,16 +29,16 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: 0.87.0
         version: 0.87.0(ws@8.21.3)(zod@4.5.4)
-      '@metacoding/vsm-pi-core':
+      '@metacoding/regulator-core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../../packages/protocol
 
   packages/checks:
     dependencies:
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
@@ -47,16 +47,16 @@ importers:
       '@metacoding/regulator':
         specifier: workspace:*
         version: link:../regulator
-      '@metacoding/vsm-pi-core':
+      '@metacoding/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/core:
     dependencies:
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
@@ -68,13 +68,13 @@ importers:
 
   packages/regulator:
     dependencies:
-      '@metacoding/vsm-pi-checks':
+      '@metacoding/regulator-checks':
         specifier: workspace:*
         version: link:../checks
-      '@metacoding/vsm-pi-core':
+      '@metacoding/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
       typebox:
@@ -89,13 +89,13 @@ importers:
       '@metacoding/regulator':
         specifier: workspace:*
         version: link:../regulator
-      '@metacoding/vsm-pi-checks':
+      '@metacoding/regulator-checks':
         specifier: workspace:*
         version: link:../checks
-      '@metacoding/vsm-pi-core':
+      '@metacoding/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/vsm-pi-protocol':
+      '@metacoding/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
       typebox:

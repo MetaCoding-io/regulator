@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
 } from "@earendil-works/pi-coding-agent";
-import { createVsmPiExtension } from "../packages/regulator-pi/dist/write-gate.js";
+import { createRegulatorPiExtension } from "../packages/regulator-pi/dist/write-gate.js";
 import { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "../packages/core/dist/index.js";
 
 const examples = JSON.parse(await readFile(new URL("../fixtures/reporting/examples.json", import.meta.url), "utf8"));
@@ -21,7 +21,7 @@ export async function runReportingSmoke() {
     let authority = examples[0].authority;
     const loader = new DefaultResourceLoader({
       cwd, agentDir, settingsManager,
-      extensionFactories: [createVsmPiExtension({
+      extensionFactories: [createRegulatorPiExtension({
         resolveReportingContext: () => ({ authority, unit: "example-unit", sourceRevision: "example-revision" }),
       })],
       noSkills: true, noPromptTemplates: true, noThemes: true, noContextFiles: true,

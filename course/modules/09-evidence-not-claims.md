@@ -36,7 +36,7 @@ how long ago: evidence from three commits back is a memory, not a measurement.
 
 ### Independence is structural
 
-VSM-Pi's INV-003 states it plainly: *an S1 executor's claim that work is correct cannot,
+regulator's INV-003 states it plainly: *an S1 executor's claim that work is correct cannot,
 by itself, satisfy S3\* audit.* This is separation of duty applied to a harness, and it is
 not satisfied by a second persona. A "reviewer" prompt that reads the diff is still the
 same process, the same tools, the same session; it can be told the same lie. Independence
@@ -295,7 +295,7 @@ adds the environment. For your notes: GSD's verdict is produced inside the run b
 same kernel that executed; this one is produced by the orchestrator after the session.
 Which of the two can be lied to by the unit, and about what?
 
-**VSM-Pi.** [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md) INV-003 and INV-005, and
+**regulator.** [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md) INV-003 and INV-005, and
 [`docs/ARCHITECTURE.md`](../../docs/ARCHITECTURE.md) on S3\*'s three intended layers:
 deterministic structural checks, semantic/domain checks, LLM judgment for residual
 architectural questions. This checkpoint is layer one, and human acceptance stands in for

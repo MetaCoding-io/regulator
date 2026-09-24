@@ -1,13 +1,13 @@
 {
-  "name": "@metacoding/vsm-pi-control-room",
+  "name": "@metacoding/regulator-control-room",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": false,
   "description": "The maintainer's read-only control room: one page over the `regulator status` read model — definition topology, running instances, and what each unit is doing.",
-  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "homepage": "https://github.com/MetaCoding-io/regulator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "url": "git+https://github.com/MetaCoding-io/regulator.git",
     "directory": "packages/control-room"
   },
   "publishConfig": {
@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@metacoding/regulator": "workspace:*",
-    "@metacoding/vsm-pi-core": "workspace:*",
-    "@metacoding/vsm-pi-protocol": "workspace:*"
+    "@metacoding/regulator-core": "workspace:*",
+    "@metacoding/regulator-protocol": "workspace:*"
   }
 }

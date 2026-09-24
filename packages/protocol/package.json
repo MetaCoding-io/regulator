@@ -1,12 +1,12 @@
 {
-  "name": "@metacoding/vsm-pi-protocol",
+  "name": "@metacoding/regulator-protocol",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": false,
-  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "homepage": "https://github.com/MetaCoding-io/regulator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "url": "git+https://github.com/MetaCoding-io/regulator.git",
     "directory": "packages/protocol"
   },
   "publishConfig": {

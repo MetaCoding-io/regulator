@@ -21,8 +21,8 @@ import { loadContract } from "@metacoding/regulator";
 export { loadContract } from "@metacoding/regulator";
 import { readFile } from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { ResultReportInputSchema, WorkContractSchema, assertValid, type ResultReport, type WorkContract } from "@metacoding/vsm-pi-protocol";
-import { ExecutionStore, checkContract, checkResultReport, renderContractSection } from "@metacoding/vsm-pi-core";
+import { ResultReportInputSchema, WorkContractSchema, assertValid, type ResultReport, type WorkContract } from "@metacoding/regulator-protocol";
+import { ExecutionStore, checkContract, checkResultReport, renderContractSection } from "@metacoding/regulator-core";
 import type { Exec } from "@metacoding/regulator";
 import { baseRoot } from "@metacoding/regulator";
 

@@ -17,7 +17,7 @@
 import { randomUUID } from "node:crypto";
 import type {
   AttemptRecord, FailureCause, FailureObservation, RecoveryAction, RecoveryDecision, RecoveryPolicy, UnitRecord, VsmMessage,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import type { ExecutionStore } from "./execution-store.js";
 
 export interface FailureContext {

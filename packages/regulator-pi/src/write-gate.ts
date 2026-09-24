@@ -1,11 +1,11 @@
-import { prepareWritePath } from "@metacoding/vsm-pi-core";
+import { prepareWritePath } from "@metacoding/regulator-core";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 
 import { registerReportingTools, type ReportingToolOptions } from "./reporting-tools.js";
 export type { HostReportingContext, ReportingToolOptions } from "./reporting-tools.js";
 
 function block(reason: string): ToolCallEventResult {
-  return { block: true, reason: `VSM-Pi: ${reason}` };
+  return { block: true, reason: `regulator: ${reason}` };
 }
 
 /**
@@ -35,10 +35,10 @@ function registerWriteGate(pi: ExtensionAPI): void {
 }
 
 /** Explicit host binding; the default extension has no reporting grants. */
-export function createVsmPiExtension(options: ReportingToolOptions = {}): (pi: ExtensionAPI) => void {
+export function createRegulatorPiExtension(options: ReportingToolOptions = {}): (pi: ExtensionAPI) => void {
   return (pi) => {
     registerWriteGate(pi);
     registerReportingTools(pi, options);
   };
 }
-export default createVsmPiExtension();
+export default createRegulatorPiExtension();

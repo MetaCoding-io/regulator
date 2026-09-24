@@ -1,18 +1,18 @@
-# VSM-Pi Identity
+# regulator Identity
 
 ## Purpose
 
-VSM-Pi is a TypeScript augmentation layer for Pi/GSD that explores whether explicit cybernetic regulation can increase coding-agent autonomy and throughput without allowing architectural drift to increase at the same rate.
+regulator (formerly VSM-Pi) is a coding-agent harness on Pi with its own orchestrator and an explicit cybernetic control plane. It exists to find out whether explicit cybernetic regulation can increase coding-agent autonomy and throughput without allowing architectural drift to increase at the same rate.
 
 ## Identity
 
-VSM-Pi treats Stafford Beer's Viable System Model as a **control architecture**, not a cast of five AI personas.
+regulator treats Stafford Beer's Viable System Model as a **control architecture**, not a cast of five AI personas.
 
 The project exists to make authority, feedback, audit, environmental intelligence, and system identity more explicit and mechanically enforceable inside agentic software development.
 
 ## Non-goals
 
-VSM-Pi is not:
+regulator is not:
 
 - a replacement coding-agent runtime;
 - a fork of GSD unless a missing kernel primitive makes one unavoidable;

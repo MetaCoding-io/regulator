@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test, { type TestContext } from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { readSignals } from "@metacoding/vsm-pi-core";
+import { readSignals } from "@metacoding/regulator-core";
 import { REDACTION, createAuthorityExtension } from "./authority.js";
 import { definitionResourceLoader } from "./dispatcher.js";
 import { gitExec, initRepo , LAB_ROOT } from "@metacoding/regulator";
