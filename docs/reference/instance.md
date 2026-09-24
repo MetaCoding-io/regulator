@@ -55,7 +55,7 @@ goes into, and it is not edited by hand: re-run `init` to change it.
 | --- | --- |
 | `REGULATOR_OUTBOX` | where `notify_owner` and delivery write; default `<repo>/.regulator/outbox` |
 | `REGULATOR_INTERACTION_POLICY` | a different interaction policy for a session run by hand |
-| `REGULATOR_HOST` | the host package `unit dispatch` and `unit drive` load; default `@metacoding/regulator-pi`; `--host` overrides it for one run |
+| `REGULATOR_HOST` | the host package `unit dispatch` and `unit drive` load; default `@metacoding.io/regulator-pi`; `--host` overrides it for one run |
 | `PI_*`, provider keys | Pi's own environment; the harness reads none of them |
 
 Nothing else in the instance is configuration. The Pi settings a unit's session runs

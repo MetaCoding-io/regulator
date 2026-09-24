@@ -24,8 +24,8 @@
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ExecutionStore, MemoryStore } from "@metacoding/regulator-core";
-import type { EvalArm, ResultReport, WorkContract } from "@metacoding/regulator-protocol";
+import { ExecutionStore, MemoryStore } from "@metacoding.io/regulator-core";
+import type { EvalArm, ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
 import type { DispatchRequest, Dispatcher } from "./controller.js";
 import type { Exec } from "./exec.js";
 import type { DispatcherFactory } from "./evals.js";

@@ -3,8 +3,8 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { AuditLog, ExecutionStore, LeaseStore, MemoryStore, ObligationLedger, appendSignal } from "@metacoding/regulator-core";
-import type { WorkContract } from "@metacoding/regulator-protocol";
+import { AuditLog, ExecutionStore, LeaseStore, MemoryStore, ObligationLedger, appendSignal } from "@metacoding.io/regulator-core";
+import type { WorkContract } from "@metacoding.io/regulator-protocol";
 import { readStatus, renderStatusText } from "./status.js";
 
 const contract: WorkContract = {

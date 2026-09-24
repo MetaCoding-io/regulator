@@ -2,9 +2,12 @@ name: Release
 
 # Publishes every workspace package to npm when a version tag is pushed. The tag must
 # match the packages' version (`v0.1.0` for 0.1.0); `pnpm check` must pass first, on
-# the older CI Node version. Needs the repository secret NPM_TOKEN (an npm automation
-# token for the @metacoding scope); without it the publish step fails and nothing is
-# published.
+# the older CI Node version. Needs the repository secret NPM_TOKEN: an npm granular
+# access token for the @metacoding.io scope (the organization; the bare name is taken on npm) with read-write on packages and "bypass
+# two-factor authentication" enabled. A token that still asks for a one-time password
+# fails the publish step with EOTP, and nothing is published. Publishing is not atomic
+# across packages: a failure part-way leaves the earlier packages published, so a
+# re-run of the failed job at the same tag is the recovery, never a new version.
 on:
   push:
     tags: ["v*"]

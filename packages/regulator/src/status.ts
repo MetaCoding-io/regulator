@@ -11,17 +11,17 @@
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { summarizeVerdict } from "@metacoding/regulator-checks";
+import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import {
   AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor,
   type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit,
-} from "@metacoding/regulator-core";
+} from "@metacoding.io/regulator-core";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   InstanceManifestSchema,
   type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 
 export interface DefinitionView {
   dir: string;

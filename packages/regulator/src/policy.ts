@@ -5,7 +5,7 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { PolicyDefinitionSchema, assertValid, type PolicyDefinition } from "@metacoding/regulator-protocol";
+import { PolicyDefinitionSchema, assertValid, type PolicyDefinition } from "@metacoding.io/regulator-protocol";
 import { LAB_ROOT } from "./workload.js";
 
 export const POLICY_PATH = path.join(LAB_ROOT, "policies", "default.json");

@@ -25,11 +25,11 @@
 import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { ReportedEvidenceSchema } from "@metacoding/regulator-protocol";
-import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding/regulator";
-import { baseRoot, headRevision } from "@metacoding/regulator";
+import { ReportedEvidenceSchema } from "@metacoding.io/regulator-protocol";
+import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding.io/regulator";
+import { baseRoot, headRevision } from "@metacoding.io/regulator";
 
 export const IDENTITY_SECTION_TAG = "regulator_identity";
 export const MEMORY_SECTION_TAG = "regulator_memory";

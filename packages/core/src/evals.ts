@@ -5,7 +5,7 @@
  * intervals separate — a screen, not a significance test. Nothing here
  * interprets a number; a person does, in the report.
  */
-import type { ArmSummary, EvalRun, Lift, MetricSummary } from "@metacoding/regulator-protocol";
+import type { ArmSummary, EvalRun, Lift, MetricSummary } from "@metacoding.io/regulator-protocol";
 
 /** Two-sided 97.5% quantiles of Student's t by degrees of freedom; beyond the table the normal value is close enough. */
 const T_975: Record<number, number> = {

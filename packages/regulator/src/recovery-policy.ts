@@ -6,7 +6,7 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { RecoveryPolicySchema, assertValid, type RecoveryPolicy } from "@metacoding/regulator-protocol";
+import { RecoveryPolicySchema, assertValid, type RecoveryPolicy } from "@metacoding.io/regulator-protocol";
 import { LAB_ROOT } from "./workload.js";
 
 export const RECOVERY_POLICY_PATH = path.join(LAB_ROOT, "policies", "recovery.json");

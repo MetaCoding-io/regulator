@@ -8,7 +8,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/regulator-core";
+import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding.io/regulator-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");

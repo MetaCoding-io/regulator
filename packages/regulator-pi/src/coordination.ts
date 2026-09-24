@@ -22,15 +22,15 @@
 import { randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import type { ExtensionAPI, ExtensionContext, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import type { CoordinationSignal } from "@metacoding/regulator-protocol";
-import { isReadOnlyEffect, TOOL_EFFECTS } from "@metacoding/regulator-core";
+import type { CoordinationSignal } from "@metacoding.io/regulator-protocol";
+import { isReadOnlyEffect, TOOL_EFFECTS } from "@metacoding.io/regulator-core";
 import { readFile } from "node:fs/promises";
-import { PolicyDefinitionSchema, assertValid } from "@metacoding/regulator-protocol";
-import { LeaseStore, ThrashDetector, type Lease, type ThrashSignal } from "@metacoding/regulator";
-import type { Exec } from "@metacoding/regulator";
-import { POLICY_PATH } from "@metacoding/regulator";
-import { appendSignal, DEFAULT_LEASE_TTL_MS, leaseStoreFor } from "@metacoding/regulator";
-import { baseRoot, checkpoint } from "@metacoding/regulator";
+import { PolicyDefinitionSchema, assertValid } from "@metacoding.io/regulator-protocol";
+import { LeaseStore, ThrashDetector, type Lease, type ThrashSignal } from "@metacoding.io/regulator";
+import type { Exec } from "@metacoding.io/regulator";
+import { POLICY_PATH } from "@metacoding.io/regulator";
+import { appendSignal, DEFAULT_LEASE_TTL_MS, leaseStoreFor } from "@metacoding.io/regulator";
+import { baseRoot, checkpoint } from "@metacoding.io/regulator";
 
 export interface CoordinationExtensionOptions {
   now?: () => number;

@@ -15,7 +15,7 @@
 import {
   CONTINUES_WITHOUT_ANSWER, severityAtLeast,
   type Disposition, type InteractionKind, type InteractionPolicy, type ObligationState, type Person, type Severity,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 
 export function continuesWithoutAnswer(kind: InteractionKind): boolean {
   return CONTINUES_WITHOUT_ANSWER[kind];

@@ -30,12 +30,12 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises"
 import path from "node:path";
 import { Type } from "typebox";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { SeveritySchema, type AuditFinding, type PolicyProposal } from "@metacoding/regulator-protocol";
-import { discoverConventions } from "@metacoding/regulator-checks";
-import { PROTECTED_S5_PATHS, appendSignal, prepareWritePath } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding/regulator";
-import { baseRoot } from "@metacoding/regulator";
+import { SeveritySchema, type AuditFinding, type PolicyProposal } from "@metacoding.io/regulator-protocol";
+import { discoverConventions } from "@metacoding.io/regulator-checks";
+import { PROTECTED_S5_PATHS, appendSignal, prepareWritePath } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding.io/regulator";
+import { baseRoot } from "@metacoding.io/regulator";
 
 export interface AuthorityExtensionOptions {
   now?: () => number;

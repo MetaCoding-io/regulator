@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { PROVENANCE_ENTRY_TYPE, createEvidenceExtension } from "./evidence.js";
-import { gitExec, initRepo } from "@metacoding/regulator";
+import { gitExec, initRepo } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
 
 const rev = async (cwd: string) => (await gitExec("git", ["rev-parse", "HEAD"], { cwd })).stdout.trim();

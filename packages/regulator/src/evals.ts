@@ -13,8 +13,8 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { lifts, loadRegistry, summarizeArms } from "@metacoding/regulator-core";
-import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition } from "@metacoding/regulator-protocol";
+import { lifts, loadRegistry, summarizeArms } from "@metacoding.io/regulator-core";
+import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";

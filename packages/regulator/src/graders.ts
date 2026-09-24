@@ -9,9 +9,9 @@
  * Every grader returns a number and the observation behind it. None of them
  * is a judge model.
  */
-import { countTestLines, runHostChecks } from "@metacoding/regulator-checks";
-import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, readSignals } from "@metacoding/regulator-core";
-import type { AuditFinding, EvidenceExpectation, GraderVerdict } from "@metacoding/regulator-protocol";
+import { countTestLines, runHostChecks } from "@metacoding.io/regulator-checks";
+import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, readSignals } from "@metacoding.io/regulator-core";
+import type { AuditFinding, EvidenceExpectation, GraderVerdict } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 
 export interface GraderContext {

@@ -57,10 +57,10 @@ import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { summarizeVerdict } from "@metacoding/regulator-checks";
+import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding/regulator-core";
-import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding/regulator-protocol";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
+import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -170,7 +170,7 @@ try {
     if (content === (await readFile(seedFile, "utf8").catch(() => ""))) throw new Error(`${file} in this instance is identical to the definition's seed; nothing to promote`);
     const decision = authorizeWrite(path.posix.join(IDENTITY_RELATIVE_DIR, file), "s5-authority");
     if (!decision.allowed) throw new Error(decision.reason ?? "refused");
-    const { readIdentity: readSet } = await import("@metacoding/regulator-core");
+    const { readIdentity: readSet } = await import("@metacoding.io/regulator-core");
     const { mkdtemp, cp, rm } = await import("node:fs/promises");
     const { tmpdir } = await import("node:os");
     const trial = await mkdtemp(path.join(tmpdir(), "regulator-promote-"));
@@ -475,7 +475,7 @@ ${rationale}`]]) {
       console.log(`report written to ${path.resolve(out)}${path.resolve(out).startsWith(REPORTS_DIR) ? " (committed reports are checked by `regulator check`)" : ""}`);
     }
   } else if (command === "spans") {
-    const { projectSpans } = await import("@metacoding/regulator-core");
+    const { projectSpans } = await import("@metacoding.io/regulator-core");
     const spans = await projectSpans(process.cwd());
     if (rest.includes("--json") || sub === "--json") for (const s of spans) console.log(JSON.stringify(s));
     else {
@@ -483,7 +483,7 @@ ${rationale}`]]) {
       console.log(`${spans.length} span(s), ${new Set(spans.map((s) => s.traceId)).size} trace(s)`);
     }
   } else if (command === "review") {
-    const { reviewDue } = await import("@metacoding/regulator-core");
+    const { reviewDue } = await import("@metacoding.io/regulator-core");
     const { records } = await loadRegistry(path.join(labRoot, "registry"));
     const today = new Date().toISOString().slice(0, 10);
     const within = flag("within") ? Number(flag("within")) : 0;

@@ -10,8 +10,8 @@ import { randomUUID } from "node:crypto";
 import { cp, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import type { CoordinationSignal } from "@metacoding/regulator-protocol";
-import { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding/regulator-core";
+import type { CoordinationSignal } from "@metacoding.io/regulator-protocol";
+import { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding.io/regulator-core";
 import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
 import {
@@ -19,7 +19,7 @@ import {
   type ReintegrationResult, type UnitWorktree,
 } from "./worktree.js";
 
-export { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, appendSignal } from "@metacoding/regulator-core";
+export { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, appendSignal } from "@metacoding.io/regulator-core";
 export const DEFAULT_LEASE_TTL_MS = 10 * 60 * 1000;
 
 export function leaseStoreFor(repo: string, now?: () => number): LeaseStore {

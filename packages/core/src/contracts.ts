@@ -12,7 +12,7 @@
 import {
   ResultReportSchema, WorkContractSchema, assertValid,
   type EvidenceClass, type ResultReport, type WorkContract,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 
 export interface ContractProblem {
   /** Which part of the contract the problem is about. */

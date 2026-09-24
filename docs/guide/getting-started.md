@@ -17,20 +17,20 @@ This page takes you from an empty shell to a first closed unit.
 
 ## Install
 
-Two packages. `@metacoding/regulator` is the control plane: the `regulator` CLI and the
+Two packages. `@metacoding.io/regulator` is the control plane: the `regulator` CLI and the
 definition (registry, identity, profiles, policies, workload) beside the code.
-`@metacoding/regulator-pi` is the Pi host: the session extensions and the dispatcher
+`@metacoding.io/regulator-pi` is the Pi host: the session extensions and the dispatcher
 that runs a unit's session. The CLI finds the host by name and needs none for `doctor`,
 `status` or a scripted eval.
 
 ```sh
-pnpm add -D @metacoding/regulator @metacoding/regulator-pi
+pnpm add -D @metacoding.io/regulator @metacoding.io/regulator-pi
 ```
 
-::: tip Until 0.1.0 is on npm
+::: tip From source
 Clone the repository, `pnpm install && pnpm build`, and link the two packages
-(`pnpm link --global` in `packages/regulator` and `packages/regulator-pi`). Everything
-below is the same.
+(`pnpm link --global` in `packages/regulator` and `packages/regulator-pi`) to run the
+unreleased head. Everything below is the same.
 :::
 
 ## Install into your repository

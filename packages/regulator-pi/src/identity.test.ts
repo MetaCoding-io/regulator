@@ -3,11 +3,11 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { MemoryStore } from "@metacoding/regulator-core";
+import { MemoryStore } from "@metacoding.io/regulator-core";
 import { IDENTITY_SECTION_TAG, MEMORY_ENTRY_TYPE, MEMORY_SECTION_TAG, createIdentityExtension } from "./identity.js";
-import { gitExec, initRepo , LAB_ROOT } from "@metacoding/regulator";
+import { gitExec, initRepo , LAB_ROOT } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { startUnit } from "@metacoding/regulator";
+import { startUnit } from "@metacoding.io/regulator";
 
 const DAY = 86_400_000;
 
@@ -77,7 +77,7 @@ test("with a problem in the identity set the session says so; outside a reposito
 
 test("memory scope (lesson 15): a fact recorded for research units is rendered to a research unit and not to an implement unit; the tool records the scope with the fact", async (t) => {
   const repo = await initRepo(t);
-  const { ExecutionStore } = await import("@metacoding/regulator-core");
+  const { ExecutionStore } = await import("@metacoding.io/regulator-core");
   const { loadContract } = await import("./contract.js");
   const store = new ExecutionStore(repo);
   const base = await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json"));

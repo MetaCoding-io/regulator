@@ -20,7 +20,7 @@
     "@types/node": "22.18.0",
     "typescript": "5.9.2",
     "@earendil-works/pi-coding-agent": "0.87.0",
-    "@metacoding/regulator": "workspace:*",
-    "@metacoding/regulator-pi": "workspace:*"
+    "@metacoding.io/regulator": "workspace:*",
+    "@metacoding.io/regulator-pi": "workspace:*"
   }
 }

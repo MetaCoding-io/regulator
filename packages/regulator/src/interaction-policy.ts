@@ -6,7 +6,7 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { InteractionPolicySchema, assertValid, type InteractionPolicy } from "@metacoding/regulator-protocol";
+import { InteractionPolicySchema, assertValid, type InteractionPolicy } from "@metacoding.io/regulator-protocol";
 import { LAB_ROOT } from "./workload.js";
 
 export const INTERACTION_POLICY_PATH = path.join(LAB_ROOT, "policies", "interaction.json");

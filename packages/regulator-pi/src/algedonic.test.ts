@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ObligationLedger } from "@metacoding/regulator-core";
-import type { InteractionPolicy } from "@metacoding/regulator-protocol";
+import { ObligationLedger } from "@metacoding.io/regulator-core";
+import type { InteractionPolicy } from "@metacoding.io/regulator-protocol";
 import { INTERACTION_ENTRY_TYPE, PAUSED_ENTRY_TYPE, createAlgedonicExtension } from "./algedonic.js";
-import { gitExec, initRepo } from "@metacoding/regulator";
+import { gitExec, initRepo } from "@metacoding.io/regulator";
 import { ctxFor, mockPi, type Dialogs } from "./test-support.js";
-import { startUnit } from "@metacoding/regulator";
+import { startUnit } from "@metacoding.io/regulator";
 
 const policy: InteractionPolicy = {
   name: "interaction", version: 1, description: "d",

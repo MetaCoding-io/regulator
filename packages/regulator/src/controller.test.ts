@@ -3,8 +3,8 @@ import { readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { ExecutionStore, SIGNALS_RELATIVE_PATH, loadRegistry, readSignals } from "@metacoding/regulator-core";
-import type { ResultReport, WorkContract } from "@metacoding/regulator-protocol";
+import { ExecutionStore, SIGNALS_RELATIVE_PATH, loadRegistry, readSignals } from "@metacoding.io/regulator-core";
+import type { ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
 import { runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { gitExec, initRepo } from "./git-support.js";
@@ -259,7 +259,7 @@ test("recovery: the autoloop retries a silent unit under the policy, repairs a r
 test("recovery: oscillation routes to clarify with a question and stops; environment routes to remediate; abort releases the claim and the unit is aborted, not deleted", async (t) => {
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit, routeUnit } = await import("./controller.js");
-  const { appendSignal } = await import("@metacoding/regulator-core");
+  const { appendSignal } = await import("@metacoding.io/regulator-core");
   const repo = await initRepo(t);
   const contract = await loadContract(contractFile);
   const workload = await loadWorkload();
@@ -308,7 +308,7 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
 });
 
 test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
-  const { AuditLog } = await import("@metacoding/regulator-core");
+  const { AuditLog } = await import("@metacoding.io/regulator-core");
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit } = await import("./controller.js");
   const repo = await initRepo(t);
@@ -353,7 +353,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
 });
 
 test("closeout is inconclusive on an uncommitted tree or a criterion no check can observe; a human acceptance at that revision lets `close` finish it without spending an attempt", async (t) => {
-  const { AuditLog } = await import("@metacoding/regulator-core");
+  const { AuditLog } = await import("@metacoding.io/regulator-core");
   const { closeUnit } = await import("./controller.js");
   const repo = await initRepo(t);
   const base = await loadContract(contractFile);
@@ -399,7 +399,7 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
 });
 
 test("obligations: what a unit records is routed at the loop's steps under the routing policy; S3's recovery decision dispositions what S3 was routed; a waiting action becomes an obligation owed to a person that vetoes re-dispatch until it is resolved, and the resolution reaches the next attempt as the hint", async (t) => {
-  const { ObligationLedger, appendSignal } = await import("@metacoding/regulator-core");
+  const { ObligationLedger, appendSignal } = await import("@metacoding.io/regulator-core");
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit } = await import("./controller.js");
   const repo = await initRepo(t);
@@ -466,7 +466,7 @@ test("obligations: what a unit records is routed at the loop's steps under the r
 });
 
 test("intelligence: a research unit runs under its own profile, budget and route; its report is verified by the files it cites; the intelligence it recorded is routed into an obligation per affected unit that vetoes their dispatch until dispositioned — never applied, never replanned; expired intelligence is noted", async (t) => {
-  const { ObligationLedger, appendSignal } = await import("@metacoding/regulator-core");
+  const { ObligationLedger, appendSignal } = await import("@metacoding.io/regulator-core");
   const repo = await initRepo(t);
   const research = await loadContract(path.join(LAB_ROOT, "contracts", "research-vendored-helper.json"));
   const implement = await loadContract(contractFile);
@@ -508,7 +508,7 @@ test("intelligence: a research unit runs under its own profile, budget and route
 });
 
 test("identity in code (lesson 12): a fixed decision must cite an authority that exists, and a unit that commits a change under a protected prefix on its branch fails the identity-untouched check at closeout — INV-001 as evidence, not as a sentence", async (t) => {
-  const { AuditLog, ObligationLedger } = await import("@metacoding/regulator-core");
+  const { AuditLog, ObligationLedger } = await import("@metacoding.io/regulator-core");
   const repo = await initRepo(t);
   const base = await loadContract(contractFile);
   const workload = await loadWorkload();
@@ -544,7 +544,7 @@ test("identity in code (lesson 12): a fixed decision must cite an authority that
 });
 
 test("algedonic (lesson 13): a unit that asked a person and got no answer is recorded as paused, not routed and not retried; what is owed to a person is delivered to the outbox once; `answer` is the person's disposition and the next attempt carries it as the hint", async (t) => {
-  const { EffectJournal, ObligationLedger } = await import("@metacoding/regulator-core");
+  const { EffectJournal, ObligationLedger } = await import("@metacoding.io/regulator-core");
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit, routeUnit } = await import("./controller.js");
   const { deliverPending, remindDue } = await import("./deliver.js");
@@ -616,7 +616,7 @@ test("algedonic (lesson 13): a unit that asked a person and got no answer is rec
 });
 
 test("post-merge evidence (lesson 15): two units change disjoint files and break each other; each closes on fresh evidence at its own HEAD, the merged base fails its checks, and the failure is an obligation on the instance itself that holds every dispatch until S3 dispositions it", async (t) => {
-  const { AuditLog, ObligationLedger } = await import("@metacoding/regulator-core");
+  const { AuditLog, ObligationLedger } = await import("@metacoding.io/regulator-core");
   const repo = await initRepo(t);
   const workload = await loadWorkload();
   const base = { ...(await withPolicy()), repo, workload, owner: "alice" };

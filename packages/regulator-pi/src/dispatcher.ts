@@ -27,8 +27,8 @@ import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { chooseModels } from "@metacoding/regulator-core";
-import { LAB_ROOT, type Dispatcher, type Host, type HostDispatcherOptions } from "@metacoding/regulator";
+import { chooseModels } from "@metacoding.io/regulator-core";
+import { LAB_ROOT, type Dispatcher, type Host, type HostDispatcherOptions } from "@metacoding.io/regulator";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
 export const SETTINGS_PATH = path.join(LAB_ROOT, "settings.json");

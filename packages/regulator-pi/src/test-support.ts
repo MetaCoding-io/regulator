@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { TestContext } from "node:test";
 import type { ExtensionAPI, ToolDefinition } from "@earendil-works/pi-coding-agent";
-import { LAB_ROOT, realExec } from "@metacoding/regulator";
+import { LAB_ROOT, realExec } from "@metacoding.io/regulator";
 
 export type Handler = (event: unknown, ctx: unknown) => unknown;
 
@@ -48,7 +48,7 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
   return state;
 }
 
-export { realExec } from "@metacoding/regulator";
+export { realExec } from "@metacoding.io/regulator";
 
 export interface Dialogs {
   confirm?: (title: string, message: string, opts?: { timeout?: number }) => Promise<boolean>;

@@ -7,22 +7,29 @@ package ships with; the course's lesson 15 (Viable Agents) is the long version.
 
 ## Install
 
-Two packages. `@metacoding/regulator` is the control plane: the `regulator` CLI is its
+Two packages. `@metacoding.io/regulator` is the control plane: the `regulator` CLI is its
 `bin`, and the definition — registry, identity, profiles, policies, workload, evals —
-ships beside the code. `@metacoding/regulator-pi` is the Pi host: the session
+ships beside the code. `@metacoding.io/regulator-pi` is the Pi host: the session
 extensions (declared in its `package.json` under `pi.extensions`) and the dispatcher
 that runs a unit's session. The CLI finds the host by name — in the project, then
 beside itself — and needs none for `doctor`, `status`, `check` or a scripted run.
 
 ```sh
-git clone <this repository> && cd regulator
+pnpm add -D @metacoding.io/regulator @metacoding.io/regulator-pi   # released; `regulator` is on the path via pnpm
+pnpm regulator doctor
+```
+
+From source, for the unreleased head:
+
+```sh
+git clone https://github.com/MetaCoding-io/regulator && cd regulator
 pnpm install && pnpm build          # both Node versions CI runs are fine: >= 22.19
 pi install ./packages/regulator-pi          # every session extension, into user settings; -l for project settings
 # or, for one session without installing:
 pi -e ./packages/regulator-pi/dist/tools.js -e … -e ./packages/regulator-pi/dist/algedonic.js
 ```
 
-`pnpm --filter @metacoding/regulator regulator -- <command>` runs the CLI from
+`pnpm --filter @metacoding.io/regulator regulator -- <command>` runs the CLI from
 the workspace; a global link (`pnpm link --global` in `packages/regulator`) gives `regulator`
 on the path.
 

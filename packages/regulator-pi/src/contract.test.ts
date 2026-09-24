@@ -4,12 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import type { ResultReportInput, WorkContract } from "@metacoding/regulator-protocol";
-import { ExecutionStore, UNITS_RELATIVE_DIR } from "@metacoding/regulator-core";
+import type { ResultReportInput, WorkContract } from "@metacoding.io/regulator-protocol";
+import { ExecutionStore, UNITS_RELATIVE_DIR } from "@metacoding.io/regulator-core";
 import { CONTRACT_ENTRY_TYPE, CONTRACT_SECTION_TAG, REPORT_ENTRY_TYPE, createContractExtension, loadContract } from "./contract.js";
-import { gitExec, initRepo , LAB_ROOT } from "@metacoding/regulator";
+import { gitExec, initRepo , LAB_ROOT } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { startUnit } from "@metacoding/regulator";
+import { startUnit } from "@metacoding.io/regulator";
 
 
 

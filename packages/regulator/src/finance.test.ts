@@ -4,7 +4,7 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { AuditLog, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile } from "@metacoding/regulator-core";
+import { AuditLog, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile } from "@metacoding.io/regulator-core";
 import { driveUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { financeDispatcher, type FinanceBehaviour } from "./finance-scripted.js";

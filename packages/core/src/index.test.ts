@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { channelCanMutateS5 } from "@metacoding/regulator-protocol";
+import { channelCanMutateS5 } from "@metacoding.io/regulator-protocol";
 
 import { authorizeWrite, isProtectedS5Path, PROTECTED_S5_PATHS } from "./index.js";
 

@@ -15,7 +15,7 @@
  */
 import { Type } from "typebox";
 import type { ExecOptions, ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { boundedTail, discoverConventions, parseNodeTestSummary, type Check } from "@metacoding/regulator-checks";
+import { boundedTail, discoverConventions, parseNodeTestSummary, type Check } from "@metacoding.io/regulator-checks";
 
 export const TOOL_NAMES = ["read_conventions", "run_tests", "run_checks"] as const;
 

@@ -9,7 +9,7 @@ import test, { type TestContext } from "node:test";
 import {
   assertValid, ReportingAuthoritySchema, ReportingToolNameSchema,
   type ReportingContext,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 import { createRegulatoryEvent, RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "./index.js";
 
 const examples = JSON.parse(readFileSync(new URL("../../../fixtures/reporting/examples.json", import.meta.url), "utf8"));

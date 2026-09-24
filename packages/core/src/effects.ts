@@ -6,7 +6,7 @@
  * reasons about effects, not schemas: `run_tests` has a one-string schema and
  * runs whatever the project's test suite does.
  */
-import type { ToolEffect } from "@metacoding/regulator-protocol";
+import type { ToolEffect } from "@metacoding.io/regulator-protocol";
 
 const READ_ONLY: ToolEffect = { filesystem: "read", execution: "none", network: "none", sideEffects: "none" };
 

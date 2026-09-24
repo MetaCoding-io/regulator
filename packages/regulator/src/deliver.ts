@@ -9,9 +9,9 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { EffectJournal, ObligationLedger, remindable, undelivered } from "@metacoding/regulator-core";
-import type { InteractionPolicy, ObligationState } from "@metacoding/regulator-protocol";
-import { REGULATOR_DIR } from "@metacoding/regulator-core";
+import { EffectJournal, ObligationLedger, remindable, undelivered } from "@metacoding.io/regulator-core";
+import type { InteractionPolicy, ObligationState } from "@metacoding.io/regulator-protocol";
+import { REGULATOR_DIR } from "@metacoding.io/regulator-core";
 
 /** The outbox: one line per delivery to a person, keyed so reconciliation can read it back (lesson 08). */
 export const OUTBOX_RELATIVE_PATH = path.join(REGULATOR_DIR, "outbox");
