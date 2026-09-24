@@ -139,7 +139,7 @@ The boundary grader reads what changed outside the writable prefixes on the base
 every surviving unit branch, so drift a blocked unit left on its branch is counted even
 though it never landed. The vocabulary grader reads added comment lines and commit
 messages; the rules grader reads added lines of the root's prose files. Patterns and
-structure, validated against three scripted units, not against a model's actual drift.
+structure, validated against scripted units, not against a model's actual drift.
 
 ### Redaction before projection
 
@@ -179,14 +179,16 @@ evidence the host will produce.
 ### The harness — [`course/lab/src/evals.ts`](../lab/src/evals.ts), [`graders.ts`](../lab/src/graders.ts), [`evals-scripted.ts`](../lab/src/evals-scripted.ts)
 
 `runSuite` (one instance per arm × repetition, the tasks through `driveUnit`),
-`contractForArm`, `workloadForArm`, `fingerprintFor`, `ablationCoverage`; the five
-outcome graders and the trajectory counts; three scripted learner-style units —
-reference, drifter, sloppy — that the graders are validated against.
+`contractForArm`, `workloadForArm`, `fingerprintFor`, `ablationCoverage`; the outcome
+graders and the trajectory counts; the scripted learner-style units — reference,
+drifter, sloppy at this lesson; the self-certifier joins after lesson 15, with the
+`suiteWeakened` grader — that the graders are validated against.
 
 ### The suite and the reports — [`course/lab/evals/drift.json`](../lab/evals/drift.json), [`course/lab/evals/reports/`](../lab/evals/reports/)
 
-Six contracts under `contracts/drift/`, in order; four arms; three repetitions;
-fourteen pre-registered metrics. Three committed reports, one per scripted unit, each
+Six contracts under `contracts/drift/`, in order; four arms at this lesson (six now:
+lesson 15 adds `no-glossary-lint`, and `no-inherited-tests` follows it); three
+repetitions; the pre-registered metrics. One committed report per scripted unit, each
 with its interpretation under `evals/interpretations/`, each stamped `scripted:` in its
 fingerprint. `regulator check` validates all of it.
 

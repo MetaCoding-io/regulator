@@ -171,6 +171,17 @@ Not covered:
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
 - Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
+## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
+
+Enforced at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)` in `../../packages/checks/src/verify.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The shrink half counts test and assertion lines; a kept assertion whose expected value was changed to the current output is not a shrink, and it is a regression only if the base's copy of that test passed. A test weakened inside a file the contract exempted is not seen at all.
+- The base's package.json is staged with the base's tests, so a unit that legitimately adds a test dependency or changes the test script fails until the contract exempts package.json or the base takes the change first.
+- Only test/ is inherited: a project whose tests live elsewhere (a src/**/*.test.js layout) inherits nothing and the check passes vacuously, with an observation saying so.
+- Regressions are matched by test name; two tests with the same name are one, and a renamed test that fails looks like a new failure of a test the base never had.
+
 ## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
 
 Enforced at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)` in `src/instance.ts`; S5, deterministic-gate.

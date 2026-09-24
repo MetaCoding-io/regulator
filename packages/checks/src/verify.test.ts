@@ -229,3 +229,44 @@ test("glossary-lint (lesson 15): the words the glossary refuses are read off the
   r = await run("main");
   assert.doesNotMatch(r.observation, /vendored task runner/, "only the writable prefixes are read");
 });
+
+test("inherited-tests: the base's suite judges the unit's tree — a regression is a test that passed at the base and fails now, a shrink is an inherited file deleted or short of test or assertion lines; a known failure at the base is neither; the contract's exemption lifts both for the files it names; adding tests is fine; no base is inconclusive", async (t) => {
+  const { cwd } = await project(t);
+  // A second test that fails at the base: the project's known issue.
+  await writeFile(path.join(cwd, "test", "b.test.js"), 'import test from "node:test"; import assert from "node:assert/strict"; import { a } from "../src/a.js"; test("b known issue", () => assert.equal(a, 2));\n');
+  await git(cwd, "add", "-A");
+  await git(cwd, "commit", "--quiet", "-m", "known issue");
+  await git(cwd, "checkout", "--quiet", "-b", "unit/u1");
+  const run = async (expectations?: WorkContract["expectedEvidence"], base: string | null = "main") =>
+    (await runHostChecks(realExec, { cwd, checks: ["inherited-tests"], ...(base === null ? {} : { base }), ...(expectations ? { expectations } : {}) }))[0]!;
+  assert.equal((await run(undefined, null)).verdict, "inconclusive");
+  let r = await run();
+  assert.equal(r.verdict, "pass", r.observation);
+  assert.match(r.observation, /no regression and no shrink: 1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the branch point: 1 passed, 1 failed\)/);
+  // Adding a test is fine.
+  await writeFile(path.join(cwd, "test", "c.test.js"), 'import test from "node:test"; test("c", () => {});\n');
+  await git(cwd, "add", "-A");
+  await git(cwd, "commit", "--quiet", "-m", "u1: add a test");
+  assert.equal((await run()).verdict, "pass");
+  // Deleting the known-issue test: no regression (it failed at the base), but a shrink.
+  await git(cwd, "rm", "--quiet", "test/b.test.js");
+  await git(cwd, "commit", "--quiet", "-m", "u1: the issue is gone");
+  r = await run();
+  assert.equal(r.verdict, "fail");
+  assert.match(r.observation, /inherited test files shrunk on the branch: test\/b\.test\.js deleted/);
+  assert.doesNotMatch(r.observation, /regressions against/);
+  // A regression: the source changes so the base's passing test fails, while the unit's copy of that test is rewritten to agree.
+  await writeFile(path.join(cwd, "src", "a.js"), "export const a = 2;\n");
+  await writeFile(path.join(cwd, "test", "a.test.js"), 'import test from "node:test"; import assert from "node:assert/strict"; import { a } from "../src/a.js"; test("a", () => assert.equal(a, 2));\n');
+  await git(cwd, "commit", "--quiet", "-am", "u1: a is 2 now");
+  r = await run();
+  assert.equal(r.verdict, "fail");
+  assert.match(r.observation, /regressions against the inherited suite from main: not ok: a/);
+  assert.match(r.observation, /1 passed, 1 failed against the 2 inherited test file\(s\) from main \(at the branch point: 1 passed, 1 failed\)/, "the base's copies of both files run: a fails now (the regression), b passes now (a is 2) — a known failure that started passing is not a regression either");
+  // The contract exempts both files: the unit's a.test.js runs instead and the deletion of b is not a shrink.
+  const exempting: WorkContract["expectedEvidence"] = [{ id: "e-inherited", description: "the inherited suite, with a and b changed on purpose", class: "test", required: true, check: { kind: "inherited-tests", exempt: ["test/a.test.js", "test/b.test.js"] } }];
+  r = await run(exempting);
+  assert.equal(r.verdict, "pass", r.observation);
+  assert.equal(r.criterion, "e-inherited", "bound to the carrying criterion");
+  assert.match(r.observation, /nothing inherited: no test file under test\/ at main outside the exempt/);
+});

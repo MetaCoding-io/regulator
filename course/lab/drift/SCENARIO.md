@@ -45,8 +45,9 @@ For each arm, after all six units:
   `no-identity-check`, `no-behaviour-check` and `no-glossary-lint` — so a regulator's
   contribution is its own row.
 
-The committed reports under `evals/reports/` ran the suite with three scripted
-learner-style units (reference, drifter, sloppy) and say so in their fingerprint; a live
+The committed reports under `evals/reports/` ran the suite with four scripted
+learner-style units (reference, drifter, sloppy, self-certifier) and say so in their
+fingerprint; a live
 run with a model is lesson 14's drill 2, and its report is the one that counts.
 
 The honest result is the one lesson 14's plan asks for: at least one row where the

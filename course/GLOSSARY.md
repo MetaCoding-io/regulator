@@ -88,7 +88,8 @@ learners to build themselves.
 
 Use this in the order written: name the failure, diagnose it as a variety problem, then
 reach for the mechanism. Reaching for the mechanism first is how harnesses accumulate
-gates nobody can explain.
+gates nobody can explain. For the ways the *whole arrangement* fails — a function
+missing, absorbed by its neighbour, or disconnected — see [PATHOLOGIES.md](PATHOLOGIES.md).
 
 | You observed… | Variety diagnosis | Reach for | Module |
 | --- | --- | --- | --- |
@@ -106,6 +107,7 @@ gates nobody can explain.
 | Everything stops when the provider hiccups | Single model; zero regulatory variety | Per-phase routing with fallback | M07 |
 | Six identical retries of an environment failure | Retry as the only recovery action | Failure classification → recovery lattice | M08 |
 | "Tests pass" with no tests run | Self-report accepted as evidence | Host-owned, criterion-bound, fresh evidence | M09 |
+| Tests pass, and the unit wrote the tests | The auditor runs the suite the executor edited | `inherited-tests`: the base's suite judges the unit's tree; shrinkage fails | M09 |
 | Green CI, changed behaviour untested | Evidence not bound to the criterion | Criterion-bound evidence, not "CI is green" | M09 |
 | Agent edits an identity or policy file | Authority by role label, not mechanism | Protected paths, proposal-not-mutation | M10 |
 | A "read-only" profile still changes the world | Read-only judged by tool names, not effects | Effect contracts; `isReadOnlyProfile` | M03, M04 |

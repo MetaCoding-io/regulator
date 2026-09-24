@@ -55,9 +55,9 @@ over declared tool *effects*:
 
 | Unit type | Profile | May write | Checks the host runs at closeout |
 | --- | --- | --- | --- |
-| `ingest` | bookkeeper | `ledger/`, `reports/`, `payments/pending/` | `run_checks`, `run_tests`, `identity-untouched`, `glossary-lint` |
+| `ingest` | bookkeeper | `ledger/`, `reports/`, `payments/pending/` | `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `glossary-lint` |
 | `categorize` | bookkeeper | same | same |
-| `reconcile` | auditor | nothing | `run_tests`, `identity-untouched` |
+| `reconcile` | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `report` | bookkeeper | same as ingest | same as ingest |
 | `prepare-payment` | bookkeeper | same as ingest | same as ingest |
 | `close` | auditor | nothing | — |
@@ -66,7 +66,10 @@ Two decisions here are the ones that matter. The bookkeeper gets **no shell**: `
 and `edit` are path-gated, and without `bash` the grant is complete at the tool
 boundary (the software profile grants `bash` and accepts that the closeout diff is what
 catches the rest). And `lib/` and `test/` — the ledger's own checks — are under no
-profile's writable prefixes, so a unit cannot weaken the check that will judge it.
+profile's writable prefixes, so a unit cannot weaken the check that will judge it. The
+`inherited-tests` check (lesson 09) guards the same thing for a workload that must let
+units write tests: the base's suite judges the unit's tree, and a shrunk inherited test
+file is refused. Here it passes by construction, and is declared anyway.
 
 ### S2 — What stops units from tripping over each other?
 
@@ -182,11 +185,11 @@ unit says it ran.
   "name": "personal-finance",
   "version": 1,
   "unitTypes": [
-    { "name": "ingest",          "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
-    { "name": "categorize",      "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
-    { "name": "reconcile",       "profile": "auditor",    "checks": ["run_tests", "identity-untouched"], "requiresContract": true },
-    { "name": "report",          "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
-    { "name": "prepare-payment", "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
+    { "name": "ingest",          "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
+    { "name": "categorize",      "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
+    { "name": "reconcile",       "profile": "auditor",    "checks": ["run_tests", "inherited-tests", "identity-untouched"], "requiresContract": true },
+    { "name": "report",          "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
+    { "name": "prepare-payment", "profile": "bookkeeper", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
     { "name": "close",           "profile": "auditor",    "checks": [], "requiresContract": true }
   ]
 }
@@ -317,7 +320,7 @@ drives it with the `bookkeeper` behaviour (does what the contracts ask) and the
 What the test asserts is what you would look for in the control room:
 
 - **f1–f4 close** on evidence the host produced: `run_checks`, `run_tests` (the ledger's
-  suite, discovered from `package.json`), `identity-untouched`, `glossary-lint` — each
+  suite, discovered from `package.json`), `inherited-tests`, `identity-untouched`, `glossary-lint` — each
   bound to the unit's committed revision; and after each merge `post-merge:run_tests`
   on the base.
 - **The unknown merchant** is still `uncategorized` in the merged ledger, and the report

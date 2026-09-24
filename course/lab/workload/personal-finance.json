@@ -7,35 +7,63 @@
       "name": "ingest",
       "description": "Copy one period's statement rows into the ledger, every row in the holding category. The statement is the bank's and is never edited.",
       "profile": "bookkeeper",
-      "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
       "requiresContract": true
     },
     {
       "name": "categorize",
       "description": "Assign each ledger row a category from the taxonomy. A merchant the statement does not explain stays in the holding category and is surfaced, never guessed.",
       "profile": "bookkeeper",
-      "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
       "requiresContract": true
     },
     {
       "name": "reconcile",
       "description": "Read the period's ledger against its statement and say what does not match. Read-only: it reports, and the host's run of the ledger's checks is the evidence.",
       "profile": "auditor",
-      "checks": ["run_tests", "identity-untouched"],
+      "checks": [
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched"
+      ],
       "requiresContract": true
     },
     {
       "name": "report",
       "description": "Write the period's close under reports/: totals by category and open items. The totals are checked against the ledger by the host, not taken from the report.",
       "profile": "bookkeeper",
-      "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
       "requiresContract": true
     },
     {
       "name": "prepare-payment",
       "description": "Write a payment the household will make under payments/pending/, after consent from a person. Writing the file is the commitment; the transfer itself is the person's.",
       "profile": "bookkeeper",
-      "checks": ["run_checks", "run_tests", "identity-untouched", "glossary-lint"],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
       "requiresContract": true
     },
     {

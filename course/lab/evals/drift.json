@@ -1,7 +1,7 @@
 {
   "name": "drift",
   "version": 1,
-  "description": "The longitudinal drift scenario (course/lab/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
+  "description": "The longitudinal drift scenario (course/lab/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, inherited-tests, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
   "fixture": "fixture",
   "tasks": [
     "contracts/drift/d1-fix.json",
@@ -14,7 +14,7 @@
   "arms": [
     {
       "name": "control",
-      "description": "Checkpoints 2\u20138: tools, profiles, leases, contract, budget, recovery, evidence. No identity, no protected-path check, no signature check, no memory, no algedonic path.",
+      "description": "Checkpoints 2–8: tools, profiles, leases, contract, budget, recovery, evidence. No identity, no protected-path check, no signature check, no memory, no algedonic path.",
       "extensions": [
         "cp2-typed-tools",
         "cp3-profiles",
@@ -32,7 +32,7 @@
     },
     {
       "name": "treatment",
-      "description": "Checkpoints 2\u201312 with the full check list the workload declares.",
+      "description": "Checkpoints 2–12 with the full check list the workload declares.",
       "extensions": [
         "cp2-typed-tools",
         "cp3-profiles",
@@ -49,6 +49,7 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "export-signature",
         "glossary-lint"
@@ -74,6 +75,7 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "export-signature",
         "glossary-lint"
       ],
@@ -100,6 +102,7 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "glossary-lint"
       ],
@@ -126,12 +129,40 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "export-signature"
       ],
       "identity": true,
       "ablates": "reg.audit.glossary-lint.v1",
       "switch": "check:glossary-lint"
+    },
+    {
+      "name": "no-inherited-tests",
+      "description": "Treatment with the inherited-tests host check off: the unit's own run of its own suite is the only test evidence, so a unit that weakens the tests that expose a defect closes green.",
+      "extensions": [
+        "cp2-typed-tools",
+        "cp3-profiles",
+        "cp4-coordination",
+        "cp5-contract",
+        "cp6-budget",
+        "cp7-recovery",
+        "cp8-evidence",
+        "cp9-authority",
+        "cp10-intelligence",
+        "cp11-identity",
+        "cp12-algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "identity-untouched",
+        "export-signature",
+        "glossary-lint"
+      ],
+      "identity": true,
+      "ablates": "reg.audit.inherited-tests-check.v1",
+      "switch": "check:inherited-tests"
     }
   ],
   "repetitions": 3,
@@ -149,7 +180,8 @@
     "memoryFacts",
     "tokens",
     "turns",
-    "wallClockMs"
+    "wallClockMs",
+    "suiteWeakened"
   ],
   "baseline": "control"
 }

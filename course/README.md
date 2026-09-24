@@ -101,13 +101,17 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 | 15 | Packaging and operating | How does my team run this on Monday? | pi packages, SDK embed, RPC, CI/headless |
 | — | Capstone | Present a viability case for your harness | everything |
 
-Full module specs: [CURRICULUM.md](CURRICULUM.md). Two reference documents sit
+Full module specs: [CURRICULUM.md](CURRICULUM.md). Three reference documents sit
 alongside them: [GLOSSARY.md](GLOSSARY.md) maps each cybernetic term to its harness
 meaning and to where it already exists as mechanism in Pi, GSD-Pi or VSM-Pi, and ends
 with a *failure → diagnosis → mechanism* table; [FEATURE-MATRIX.md](FEATURE-MATRIX.md)
 lists every Pi documentation page and extension API area against the module that
 teaches it, so the "you learn the feature base anyway" claim is checkable rather than
-asserted. [CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) specifies the third thread: a typed,
+asserted; [PATHOLOGIES.md](PATHOLOGIES.md) catalogues the characteristic ways a viable
+system fails as a whole — structural, functional, channel, and the agent-specific rows —
+and for each names what looks like it in an instance, the regulator that absorbs it, the
+fixture that reproduces it, and what nothing absorbs yet.
+[CONTROL-REGISTRY.md](CONTROL-REGISTRY.md) specifies the third thread: a typed,
 CI-checked record per regulator the learner builds, and the read-only control room that
 projects those records and the runtime evidence for the harness's maintainer.
 

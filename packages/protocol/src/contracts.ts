@@ -68,6 +68,11 @@ export const ExpectationCheckSchema = Type.Union([
     /** The declared parameter count the export must keep. */
     arity: Type.Integer({ minimum: 0 }),
   }, { additionalProperties: false }),
+  Type.Object({
+    kind: Type.Literal("inherited-tests"),
+    /** Inherited test files (relative to the worktree) this contract lets the unit change: their unit-side versions run instead of the base's, and their shrinkage is not a regression. */
+    exempt: Type.Array(NonEmpty),
+  }, { additionalProperties: false }),
 ]);
 export type ExpectationCheck = Static<typeof ExpectationCheckSchema>;
 

@@ -23,6 +23,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.authority.identity-promotion.v1` | Identity promotion (the release path) | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.identity-untouched-check.v1` | Identity-untouched check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.identity-write-gate.v1` | Identity write gate | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.inherited-tests-check.v1` | Inherited tests check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.identity.instance-manifest.v1` | Instance manifest (regulator init) | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.intelligence.intelligence-intake.v1` | Intelligence intake | S4 | typed-tool | active | 2026-12-01 |
 | `reg.algedonic.interaction-contract.v1` | Interaction contract (ask_human) | S5 | typed-tool | active | 2026-12-01 |
@@ -792,6 +793,48 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
 
 **Retirement condition.** No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable.
+
+
+## Inherited tests check
+
+`reg.audit.inherited-tests-check.v1` · S3* · deterministic-gate · active · introduced in M09
+
+**Purpose.** The suite that judges a unit is the one it inherited: the test files and package.json at the branch point (the merge base of the unit's branch and the base), not whatever the base has become since — a change that landed after the branch is the post-merge check's business. At closeout the host stages that suite over the unit's committed tree and runs it, and runs the same suite against the branch point's own tree: a test that fails on both is the project's known issue, one that passed there and fails now is the unit's regression. It also compares each inherited test file at HEAD with the branch point by test and assertion lines: a file deleted or shrunk on the branch is a failing check. A unit may add cases under test/; it may not weaken the cases that were there, and its own run_tests says nothing about them. A contract exempts, by an expectation carrying an inherited-tests check, the files whose expectations it changes on purpose.
+
+**Absorbs.** `self-weakened-verification` — The unit cannot make the failing test pass, so it makes the test stop failing: an assertion rewritten to the current output, a case deleted, a file removed. Its report cites run_tests passing, which is true of the suite it left behind, and the closeout that trusts that run closes a defect as fixed.
+
+**Mechanism.** `../../packages/checks/src/verify.ts` at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)`
+
+**Channels.** consumes `the base ref and its test/ tree`, `the unit's committed tree`, `expectations carrying an inherited-tests check (exemptions)` · emits `evidence record (class test; bound to the carrying criterion when the contract has one, else to every test criterion)`
+
+**Scope.** subjects evidence, unit · resources the unit's worktree, two temporary stage directories
+
+**Cost.** Two extra runs of the project's test suite per closeout (the inherited suite against the branch point, and against the unit), plus one git show per inherited test file. For a suite that takes minutes this doubles the closeout; the branch-point run is the same for every unit off the same revision and is not cached.
+
+**May.**
+- run the base's suite against the unit's tree
+- fail the test-class criteria
+- refuse a branch that deleted or shrank an inherited test file
+
+**May not.**
+- run a suite the base did not have
+- judge a test file the contract exempted
+- read the unit's report
+- edit anything in the worktree
+
+**Evidence.** `../../packages/checks/src/verify.test.ts`, `src/evals.test.ts`, `src/instance.test.ts`
+
+**Limitations.**
+- The shrink half counts test and assertion lines; a kept assertion whose expected value was changed to the current output is not a shrink, and it is a regression only if the base's copy of that test passed. A test weakened inside a file the contract exempted is not seen at all.
+- The base's package.json is staged with the base's tests, so a unit that legitimately adds a test dependency or changes the test script fails until the contract exempts package.json or the base takes the change first.
+- Only test/ is inherited: a project whose tests live elsewhere (a src/**/*.test.js layout) inherits nothing and the check passes vacuously, with an observation saying so.
+- Regressions are matched by test name; two tests with the same name are one, and a renamed test that fails looks like a new failure of a test the base never had.
+
+**Ownership.** course-lab · introduced 2026-09-24 · review by 2026-12-01
+
+**Ablation.** `check:inherited-tests` — Drop the check from the unit types' lists; the drift suite's no-inherited-tests arm is the treatment without it, and the self-certifier's committed report shows the unit closing green under that arm.
+
+**Retirement condition.** The suiteWeakened grader stays at zero across three model versions and the drift suite with the check off: no unit under this definition edits an inherited test to make it pass.
 
 
 ## Instance manifest (regulator init)

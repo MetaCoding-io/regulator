@@ -24,6 +24,7 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "export-signature",
         "glossary-lint"
@@ -37,6 +38,7 @@
       "checks": [
         "run_checks",
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "export-signature",
         "glossary-lint"
@@ -49,6 +51,7 @@
       "profile": "implement",
       "checks": [
         "run_tests",
+        "inherited-tests",
         "identity-untouched",
         "export-signature",
         "glossary-lint"
