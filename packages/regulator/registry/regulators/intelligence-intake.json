@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "typed-tool",
-    "implementation": "src/cp10-intelligence.ts",
+    "implementation": "../regulator-pi/src/intelligence.ts",
     "enforcementPoints": ["report_intelligence (tool execute)"]
   },
   "channels": { "consumes": ["tool call (report_intelligence)", "lease (unit provenance)", "worktree HEAD (revision provenance)"], "emits": ["intelligence-signal → S3 (regulatory log)", "regulator:intelligence (session entry)"] },
@@ -20,7 +20,7 @@
     "may": ["record a finding with host-stamped provenance", "name the units the finding bears on"],
     "mayNot": ["apply the finding", "open, resolve or route an obligation", "set the severity the router acts on (it reports; the router derives)", "write to the repository (the intelligence profile grants no write, edit or shell)"]
   },
-  "evidence": { "tests": ["src/cp10-intelligence.test.ts", "src/controller.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/intelligence.test.ts", "src/controller.test.ts"] },
   "limitations": [
     "The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.",
     "Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.",
@@ -28,7 +28,7 @@
     "One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp10-intelligence", "note": "A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on."},
+  "ablation": {"switch": "extension:intelligence", "note": "A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on."},
   "retirement": {"condition": "Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read."},
   "introducedIn": "M11"
 }

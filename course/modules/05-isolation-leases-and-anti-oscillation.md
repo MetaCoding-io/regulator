@@ -206,7 +206,7 @@ removes the worktree and branch and releases the lease; on conflict it writes a
 `.regulator/signals.ndjson`, and the unit keeps its lease and worktree, because the
 conflict is not resolved and the resource is still claimed.
 
-### The extension — [`packages/regulator/src/cp4-coordination.ts`](../../packages/regulator/src/cp4-coordination.ts)
+### The extension — [`packages/regulator-pi/src/coordination.ts`](../../packages/regulator-pi/src/coordination.ts)
 
 `createCoordinationExtension({ now, ttlMs, threshold })` registers a `--unit` flag
 (with `REGULATOR_UNIT` as the fallback, which is how the headless test sets it), the
@@ -234,7 +234,7 @@ regulator fixture /tmp/slugkit
 cd /tmp/slugkit
 regulator unit start u1
 # → unit u1: branch unit/u1 from main, worktree /tmp/slugkit/.regulator/worktrees/u1
-# → next: cd …/u1 && pi -e …/cp2-typed-tools.js -e …/cp4-coordination.js --unit u1
+# → next: cd …/u1 && pi -e …/tools.js -e …/coordination.js --unit u1
 #   (do the work; /checkpoint when it is worth keeping)
 regulator unit finish u1
 # → unit u1: reintegrated as <sha>; worktree and branch removed; lease released

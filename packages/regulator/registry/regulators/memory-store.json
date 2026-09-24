@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "typed-tool",
-    "implementation": "src/cp11-identity.ts",
+    "implementation": "../regulator-pi/src/identity.ts",
     "enforcementPoints": [
       "remember (tool execute)",
       "MemoryStore.record (expiry bounds)"
@@ -52,7 +52,7 @@
   },
   "evidence": {
     "tests": [
-      "src/cp11-identity.test.ts",
+      "../regulator-pi/src/identity.test.ts",
       "../core/src/identity.test.ts"
     ]
   },
@@ -67,7 +67,7 @@
     "reviewBy": "2026-12-01"
   },
   "ablation": {
-    "switch": "extension:cp11-identity",
+    "switch": "extension:identity",
     "note": "Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead."
   },
   "retirement": {

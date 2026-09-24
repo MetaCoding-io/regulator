@@ -45,7 +45,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.assurance.span-projection.v1` | Span projection (OpenTelemetry GenAI) | S3* | type | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
-| `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | retired | 2026-12-01 |
 | `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
 
 ## Algedonic delivery
@@ -135,7 +135,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
-**Mechanism.** `src/cp6-budget.ts` at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
 
 **Channels.** consumes `policy (budgets)`, `message_end usage`, `model_select` · emits `budget ledger (execution store)`
 
@@ -153,7 +153,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - decide what happens to a halted unit (lesson 08)
 - choose a model
 
-**Evidence.** `src/cp6-budget.test.ts`, `src/controller.test.ts`, `../core/src/policy.test.ts`
+**Evidence.** `../regulator-pi/src/budget.test.ts`, `src/controller.test.ts`, `../core/src/policy.test.ts`
 
 **Limitations.**
 - Ceilings are checked at turn end and tool call, so the turn that crosses one completes; a single very large response is not cut off mid-stream.
@@ -163,7 +163,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp6-budget` — The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries.
+**Ablation.** `extension:budget` — The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries.
 
 **Retirement condition.** No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models.
 
@@ -176,7 +176,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
-**Mechanism.** `src/cp9-authority.ts` at `tool_result (redact)`, `message_end (record)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_result (redact)`, `message_end (record)`
 
 **Channels.** consumes `tool_result`, `message_end`, `.regulator/canaries` · emits `audit-finding → S3 (secret-exposure, critical)`
 
@@ -192,7 +192,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - stop the model from reading the file (the read is the unit's; the exposure is what is watched)
 - recall text already sent to a provider
 
-**Evidence.** `src/cp9-authority.test.ts`
+**Evidence.** `../regulator-pi/src/authority.test.ts`
 
 **Limitations.**
 - It watches for known values only: a real secret the harness was not told about is not a canary. This measures whether the exposure path exists, not whether every secret is safe.
@@ -201,7 +201,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it.
+**Ablation.** `extension:authority` — Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it.
 
 **Retirement condition.** No canary reaches a tool result or the model's text in the injection fixture across three model versions with the watch off.
 
@@ -257,7 +257,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `uninformed-unit` — The gates refuse a bad report, but a unit that never saw the allocation produces one by accident and burns an attempt learning the contract from refusals.
 
-**Mechanism.** `src/cp5-contract.ts` at `before_agent_start`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `before_agent_start`
 
 **Channels.** consumes `work contract (S3)` · emits nothing
 
@@ -269,7 +269,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **May not.**
 - enforce anything; the result-report gate and the lease gate do
 
-**Evidence.** `src/cp5-contract.test.ts`
+**Evidence.** `../regulator-pi/src/contract.test.ts`
 
 **Limitations.**
 - Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
@@ -277,7 +277,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp5-contract` — Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all.
+**Ablation.** `extension:contract` — Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all.
 
 **Retirement condition.** Retire the advice when a contract-aware model needs no rendered section: units under three model versions report every delegated decision without it, with the gate still on.
 
@@ -290,7 +290,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `compaction-amnesia` — After a threshold compaction the unit no longer knows which decisions were fixed, which were unresolved, or what it already proved; it re-does settled work or quietly violates a constraint the summary dropped.
 
-**Mechanism.** `src/cp6-budget.ts` at `session_before_compact`, `session_compact`, `session_compact_failed`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `session_before_compact`, `session_compact`, `session_compact_failed`
 
 **Channels.** consumes `work contract`, `budget ledger`, `compaction preparation (messages, file ops)` · emits `compaction entry`
 
@@ -307,7 +307,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - change the contract
 - decide what is kept beyond the preserved block (Pi's cut point stands)
 
-**Evidence.** `src/cp6-budget.test.ts`, `../core/src/policy.test.ts`
+**Evidence.** `../regulator-pi/src/budget.test.ts`, `../core/src/policy.test.ts`
 
 **Limitations.**
 - The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
@@ -317,7 +317,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp6-budget` — Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried.
+**Ablation.** `extension:budget` — Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried.
 
 **Retirement condition.** No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction.
 
@@ -446,7 +446,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `duplicated-effect` — The notification was sent, the process died before it wrote that down, the retry sends it again; or the sandbox vanished mid-unit and nobody knows whether the external operation happened.
 
-**Mechanism.** `src/cp7-recovery.ts` at `notify_owner (execute: begin/commit)`, `session_start (reconcile)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `notify_owner (execute: begin/commit)`, `session_start (reconcile)`
 
 **Channels.** consumes `tool call (notify_owner)`, `outbox (the world)` · emits `effect journal (.regulator/effects.ndjson)`
 
@@ -463,7 +463,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - decide whether an effect should happen (the model asks; the contract and profile decide)
 - reconcile effects it has no way to observe
 
-**Evidence.** `src/cp7-recovery.test.ts`, `../core/src/recovery.test.ts`
+**Evidence.** `../regulator-pi/src/recovery.test.ts`, `../core/src/recovery.test.ts`
 
 **Limitations.**
 - Reconciliation needs an observable world: notify_owner's outbox is keyed so it can be read back. An effect with no observable trace can only be recorded as absent, which is a guess.
@@ -473,7 +473,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp7-recovery` — Shares checkpoint 7 with the failure observer; delivery (lesson 13) uses the same journal from the loop and is not ablated with the extension.
+**Ablation.** `extension:recovery` — Shares checkpoint 7 with the failure observer; delivery (lesson 13) uses the same journal from the loop and is not ablated with the extension.
 
 **Retirement condition.** No side-effecting tool is invoked twice for one intention across the recovery drills and three model versions with the journal off — which is to say never, because a restart is not a model behaviour.
 
@@ -528,7 +528,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `claimed-evidence` — The report cites run_tests; run_tests never ran, or ran before the last edit, or ran and failed. Without a preflight the lie costs a full closeout audit to catch.
 
-**Mechanism.** `src/cp8-evidence.ts` at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)`
+**Mechanism.** `../regulator-pi/src/evidence.ts` at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)`
 
 **Channels.** consumes `tool_result`, `tool_call (report_result)` · emits `evidence-provenance entry (session)`
 
@@ -545,7 +545,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - rewrite what a tool reported
 - block anything but report_result
 
-**Evidence.** `src/cp8-evidence.test.ts`
+**Evidence.** `../regulator-pi/src/evidence.test.ts`
 
 **Limitations.**
 - It trusts the session's own tool run: the session ran run_tests, and the session is what is being checked. Independence comes from the closeout gate, which reads nothing this extension records.
@@ -554,7 +554,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp8-evidence` — A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost.
+**Ablation.** `extension:evidence` — A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost.
 
 **Retirement condition.** Reports under three model versions cite only evidence the session produced, with the preflight off, and the closeout gate's contradicted count stays at zero.
 
@@ -567,7 +567,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `opaque-failure` — The transcript knows the tests could not load a module; the orchestrator only knows the unit did not report. Retrying is the wrong action and nothing in the record says so.
 
-**Mechanism.** `src/cp7-recovery.ts` at `tool_execution_end (isError)`, `agent_end (stopReason error)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `tool_execution_end (isError)`, `agent_end (stopReason error)`
 
 **Channels.** consumes `tool_execution_end`, `agent_end` · emits `failure observation (execution store)`
 
@@ -583,7 +583,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - rewrite a tool result the model sees
 - halt the attempt
 
-**Evidence.** `src/cp7-recovery.test.ts`, `../core/src/recovery.test.ts`
+**Evidence.** `../regulator-pi/src/recovery.test.ts`, `../core/src/recovery.test.ts`
 
 **Limitations.**
 - Normalization is a regular expression over the error text (flattened to one line, first 300 characters); an environment problem phrased unusually is recorded as a plain tool error. Only a refused report_result is typed without the regex, as invalid-report.
@@ -592,7 +592,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp7-recovery` — Shares checkpoint 7 with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures.
+**Ablation.** `extension:recovery` — Shares checkpoint 7 with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures.
 
 **Retirement condition.** The router's decisions in the recovery drills match the observer's causes for three model versions when the observer is off, because the orchestrator's records alone name them.
 
@@ -644,7 +644,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `identity-in-context` — The rules the system runs by exist as a paragraph in a context window that gets compacted, forked and re-read by a different model; six months later the same harness is a different system and nobody changed a file.
 
-**Mechanism.** `src/cp11-identity.ts` at `before_agent_start (sections regulator_identity, regulator_memory)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `before_agent_start (sections regulator_identity, regulator_memory)`
 
 **Channels.** consumes `regulator/identity/* (worktree)`, `memory store (current entries)` · emits `system-prompt sections`
 
@@ -661,7 +661,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - make identity binding (the gate and the closeout check do)
 - render expired memory
 
-**Evidence.** `src/cp11-identity.test.ts`, `../core/src/identity.test.ts`
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/identity.test.ts`
 
 **Limitations.**
 - Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.
@@ -670,7 +670,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp11-identity` — Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement.
+**Ablation.** `extension:identity` — Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement.
 
 **Retirement condition.** Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone.
 
@@ -761,7 +761,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `identity-mutation` — The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted.
 
-**Mechanism.** `src/cp9-authority.ts` at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)`
 
 **Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
 
@@ -780,7 +780,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - undo a commit, a push, or anything a shell did outside the working tree
 - sandbox a process
 
-**Evidence.** `../core/src/authority.test.ts`, `src/cp9-authority.test.ts`, `../pi-extension/src/index.test.ts`
+**Evidence.** `../core/src/authority.test.ts`, `../regulator-pi/src/authority.test.ts`, `../regulator-pi/src/write-gate.test.ts`
 
 **Limitations.**
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
@@ -790,7 +790,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
+**Ablation.** `extension:authority` — Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
 
 **Retirement condition.** No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable.
 
@@ -845,7 +845,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
-**Mechanism.** `src/instance.ts` at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)`
+**Mechanism.** `src/instance.ts` at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)`
 
 **Channels.** consumes `a git repository`, `the definition (registry, identity seed, package pin)`, `a person's declaration` · emits `.regulator/instance.json`, `a commit on the base branch (identity, .gitignore)`, `.regulator/canaries`
 
@@ -886,7 +886,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `intelligence-as-authority` — A research finding is written straight into the plan, the code or the policy: the advisory that was true last month rewrites working code this month, and nobody can say who decided.
 
-**Mechanism.** `src/cp10-intelligence.ts` at `report_intelligence (tool execute)`
+**Mechanism.** `../regulator-pi/src/intelligence.ts` at `report_intelligence (tool execute)`
 
 **Channels.** consumes `tool call (report_intelligence)`, `lease (unit provenance)`, `worktree HEAD (revision provenance)` · emits `intelligence-signal → S3 (regulatory log)`, `regulator:intelligence (session entry)`
 
@@ -904,7 +904,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - set the severity the router acts on (it reports; the router derives)
 - write to the repository (the intelligence profile grants no write, edit or shell)
 
-**Evidence.** `src/cp10-intelligence.test.ts`, `src/controller.test.ts`
+**Evidence.** `../regulator-pi/src/intelligence.test.ts`, `src/controller.test.ts`
 
 **Limitations.**
 - The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
@@ -914,7 +914,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp10-intelligence` — A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on.
+**Ablation.** `extension:intelligence` — A live arm without checkpoint 10 has no research unit that can report; the router has nothing to hold units on.
 
 **Retirement condition.** Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read.
 
@@ -927,7 +927,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `silence-as-consent` — A unit asks whether it may force-push, nobody is there, and it proceeds because the prompt said to 'use judgment' — or it asks five times per attempt until the person stops reading. The question and the non-answer were never a record anyone could act on.
 
-**Mechanism.** `src/cp12-algedonic.ts` at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout`
 
 **Channels.** consumes `tool call (ask_human)`, `interaction policy (timeouts, attention)`, `lease (unit provenance)`, `ctx.hasUI / ctx.mode (channel)` · emits `obligation-opened (interaction, owed to a person)`, `interaction-requested / interaction-answered`, `obligation-resolved (answered in the session)`, `regulator:interaction (session entry)`
 
@@ -947,7 +947,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - ask outside a repository the orchestrator knows
 - widen what a kind means: the rule is the protocol's, not the policy's
 
-**Evidence.** `src/cp12-algedonic.test.ts`, `../core/src/interaction.test.ts`
+**Evidence.** `../regulator-pi/src/algedonic.test.ts`, `../core/src/interaction.test.ts`
 
 **Limitations.**
 - The dialog answer is attributed to the OS user of the session (or the `person` option), not to an authenticated identity; in a session run by hand that is the person at the keyboard, which is what the record says.
@@ -956,7 +956,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp12-algedonic` — Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows.
+**Ablation.** `extension:algedonic` — Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows.
 
 **Retirement condition.** Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads.
 
@@ -969,7 +969,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `memory-becomes-policy` — A note that tests need FOO=1 is written into AGENTS.md as a temporary reminder; a year later it is an undocumented rule nobody can date, source or retire.
 
-**Mechanism.** `src/cp11-identity.ts` at `remember (tool execute)`, `MemoryStore.record (expiry bounds)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `remember (tool execute)`, `MemoryStore.record (expiry bounds)`
 
 **Channels.** consumes `tool call (remember)`, `lease (unit provenance)`, `worktree HEAD (revision)` · emits `memory-recorded / memory-retracted (.regulator/memory.ndjson)`, `regulator:memory (session entry)`
 
@@ -987,7 +987,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - retract (a person does, by name)
 - treat a fact as a rule
 
-**Evidence.** `src/cp11-identity.test.ts`, `../core/src/identity.test.ts`
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/identity.test.ts`
 
 **Limitations.**
 - A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
@@ -996,7 +996,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp11-identity` — Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead.
+**Ablation.** `extension:identity` — Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead.
 
 **Retirement condition.** The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact.
 
@@ -1009,7 +1009,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `single-model-dependence` — A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why.
 
-**Mechanism.** `src/dispatch-pi.ts` at `piDispatcher (model choice, failover)`, `model_select (ledger)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `piDispatcher (model choice, failover)`, `model_select (ledger)`
 
 **Channels.** consumes `policy (models)`, `model availability (ModelRuntime)` · emits `budget ledger models[]`
 
@@ -1131,7 +1131,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `waiting-in-name-only` — The tool told the model the question had no answer, and the model, with the tools still live, did the thing anyway — or the orchestrator, seeing an attempt with no close, retried the unit and it asked again, and again.
 
-**Mechanism.** `src/cp12-algedonic.ts` at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)`
 
 **Channels.** consumes `the session's own unanswered question`, `obligation ledger (open blocking interaction on the unit)` · emits `tool_call block`, `regulator:paused (session entry)`, `attempt record (paused)`, `unit status blocked: paused`
 
@@ -1150,7 +1150,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - route the unit through the recovery policy
 - release the unit without a disposition on the obligation
 
-**Evidence.** `src/cp12-algedonic.test.ts`, `src/controller.test.ts`
+**Evidence.** `../regulator-pi/src/algedonic.test.ts`, `src/controller.test.ts`
 
 **Limitations.**
 - The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
@@ -1159,7 +1159,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp12-algedonic` — Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence.
+**Ablation.** `extension:algedonic` — Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence.
 
 **Retirement condition.** Never while a question can go unanswered: the gate is the meaning of 'waits'.
 
@@ -1212,7 +1212,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `ungranted-capability-use` — Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise.
 
-**Mechanism.** `src/cp3-profiles.ts` at `session_start`, `tool_call`
+**Mechanism.** `../regulator-pi/src/profiles.ts` at `session_start`, `tool_call`
 
 **May.**
 - set the active tool set when a profile is applied
@@ -1223,7 +1223,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - block shell commands
 - grant a tool the host does not have
 
-**Evidence.** `src/cp3-profiles.test.ts`
+**Evidence.** `../regulator-pi/src/profiles.test.ts`
 
 **Limitations.**
 - Positive grant covers write and edit only; the implement profile grants bash, which is not path-gated.
@@ -1232,7 +1232,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-21 · review by 2026-12-01
 
-**Ablation.** `extension:cp3-profiles` — A live arm without checkpoint 3 lets a unit write anywhere its tools reach; the closeout checks catch protected prefixes only, and the boundary grader counts the rest.
+**Ablation.** `extension:profiles` — A live arm without checkpoint 3 lets a unit write anywhere its tools reach; the closeout checks catch protected prefixes only, and the boundary grader counts the rest.
 
 **Retirement condition.** The boundary grader stays at zero across three model versions and the drift suite with the grant off: units write under src/ and test/ because the contract says so.
 
@@ -1286,7 +1286,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `trust-boundary-crossing` — The target repository ships .pi/extensions/helpful.ts, which registers a tool that widens the surface or rewrites results; the harness loads it because the directory looked like a project.
 
-**Mechanism.** `src/dispatch-pi.ts` at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (cp9-authority.ts, CLI sessions)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (authority.ts, CLI sessions)`
 
 **Channels.** consumes `resource loader (discovered extensions)`, `project_trust` · emits `refused extension list (dispatcher echo)`
 
@@ -1303,7 +1303,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - make untrusted content safe (trust is an input-loading guard, not a sandbox)
 - prevent the model from reading a project file that carries instructions
 
-**Evidence.** `src/cp9-authority.test.ts`
+**Evidence.** `../regulator-pi/src/authority.test.ts`
 
 **Limitations.**
 - Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.
@@ -1326,7 +1326,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `proposal-as-policy` — A unit that cannot edit the invariant argues its case in the transcript and then edits the invariant; or a harness that lets a 'proposal' tool apply the change it proposes.
 
-**Mechanism.** `src/cp9-authority.ts` at `propose_policy_change (tool execute)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `propose_policy_change (tool execute)`
 
 **Channels.** consumes `tool call (propose_policy_change)` · emits `policy-proposal → S5 (regulatory log)`
 
@@ -1342,7 +1342,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - grant authority
 - decide the proposal (S5 or a person does, outside the loop)
 
-**Evidence.** `src/cp9-authority.test.ts`
+**Evidence.** `../regulator-pi/src/authority.test.ts`
 
 **Limitations.**
 - A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; the proposal's requestedChange is text a person turns into a file by hand. What is owed to S5 is not delivered to the outbox (lesson 13 delivers what is owed to a person): a person reads the read model for it.
@@ -1351,7 +1351,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp9-authority` — Shares checkpoint 9 with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal.
+**Ablation.** `extension:authority` — Shares checkpoint 9 with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal.
 
 **Retirement condition.** Retire when proposals arrive by another typed path (an S3 or S4 proposer) and units stop raising them.
 
@@ -1486,7 +1486,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `silent-closure` — A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript.
 
-**Mechanism.** `src/cp5-contract.ts` at `report_result (tool execute)`, `runUnit (close)`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `report_result (tool execute)`, `runUnit (close)`
 
 **Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
 
@@ -1502,7 +1502,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - resolve an unresolved decision
 - decide what to do about a blocked unit (lesson 08)
 
-**Evidence.** `src/cp5-contract.test.ts`, `src/controller.test.ts`, `../core/src/contracts.test.ts`
+**Evidence.** `../regulator-pi/src/contract.test.ts`, `src/controller.test.ts`, `../core/src/contracts.test.ts`
 
 **Limitations.**
 - Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
@@ -1511,7 +1511,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp5-contract` — Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report.
+**Ablation.** `extension:contract` — Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report.
 
 **Retirement condition.** Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them.
 
@@ -1607,7 +1607,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `oscillation` — Fix A breaks B, fix B breaks A; each individual edit is locally reasonable and nothing in the loop notices the pattern.
 
-**Mechanism.** `src/cp4-coordination.ts` at `tool_execution_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `tool_execution_end`
 
 **Channels.** consumes `tool_execution_end (write, edit)` · emits `coordination-signal (oscillation) → S3`
 
@@ -1621,7 +1621,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - pause or replan the unit (S3 decides, lesson 08)
 - decide which of two fixes is right
 
-**Evidence.** `src/cp4-coordination.test.ts`, `../core/src/coordination.test.ts`
+**Evidence.** `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts`
 
 **Limitations.**
 - Counts write and edit tool calls only; edits made through bash are invisible to it.
@@ -1630,7 +1630,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
-**Ablation.** `extension:cp4-coordination` — Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later.
+**Ablation.** `extension:coordination` — Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later.
 
 **Retirement condition.** No oscillation in the oscillation fixture across three model versions with the detector off: the models stop alternating on their own, or the ceiling catches it at acceptable cost.
 
@@ -1643,7 +1643,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `write-collision` — Two sessions writing one checkout corrupt each other's work; a session that died mid-unit blocks the resource until someone notices.
 
-**Mechanism.** `src/cp4-coordination.ts` at `session_start`, `tool_call`, `turn_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `session_start`, `tool_call`, `turn_end`
 
 **Channels.** consumes `lease (.regulator/leases)` · emits nothing
 
@@ -1658,7 +1658,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - resolve which unit should hold a contested resource
 - block read-only tools
 
-**Evidence.** `src/cp4-coordination.test.ts`, `../core/src/coordination.test.ts`
+**Evidence.** `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts`
 
 **Limitations.**
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
@@ -1674,13 +1674,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Vendor write gate
 
-`reg.authority.vendor-write-gate.v1` · S5 · deterministic-gate · active · introduced in M02
+`reg.authority.vendor-write-gate.v1` · S5 · deterministic-gate · retired · introduced in M02
 
-**Purpose.** Refuse write and edit calls under vendor/ so that vendored code stays upstream's, whatever the model is asked.
+**Purpose.** Retired in 0.1.0 — Every arm loads the authority extension (the identity write gate with the filesystem walk and the bash snapshot-and-restore), and the instance manifest's protected prefixes cover vendor/; the lexical gate of lesson 02 lives on only in the course's own lab. Originally: Refuse write and edit calls under vendor/ so that vendored code stays upstream's, whatever the model is asked.
 
 **Absorbs.** `protected-path-mutation` — The smallest diff for a request is often inside a vendored file; a rule stated only in prose holds inconsistently under pressure.
 
-**Mechanism.** `src/cp1-trace.ts` at `tool_call`
+**Mechanism.** `../../course/lab/src/cp1-trace.ts` at `tool_call`
 
 **May.**
 - block a write or edit whose normalized path is under vendor/
@@ -1691,7 +1691,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - modify any file
 - change what counts as protected
 
-**Evidence.** `src/cp1-trace.test.ts`
+**Evidence.** `../../course/lab/src/cp1-trace.test.ts`
 
 **Limitations.**
 - Lexical path check only: no symlink, hard-link or TOCTOU protection. Checkpoint 9's identity write gate (lesson 10) supersedes it with the filesystem walk when both are loaded; this gate stays as the lesson 02 baseline.
@@ -1712,7 +1712,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `implicit-delegation` — A task description hands S1 every decision the planner did not think of; the unit settles them by omission and the choices disappear into the diff.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (cp5-contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)`
+**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)`
 
 **Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
 
@@ -1727,7 +1727,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - reclassify an unresolved decision as delegated
 - grant a unit any regulatory capability
 
-**Evidence.** `src/controller.test.ts`, `src/cp5-contract.test.ts`
+**Evidence.** `src/controller.test.ts`, `../regulator-pi/src/contract.test.ts`
 
 **Limitations.**
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.

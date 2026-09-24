@@ -198,7 +198,7 @@ caught it. That is the mechanism hierarchy applied to the course itself.)
 line. Both take an injectable clock so the tests can assert on durations without
 sleeping.
 
-### Wiring and the first gate — [`packages/regulator/src/cp1-trace.ts`](../../packages/regulator/src/cp1-trace.ts)
+### Wiring and the first gate — [`course/lab/src/cp1-trace.ts`](../../course/lab/src/cp1-trace.ts)
 
 The extension subscribes to the turn and tool events, feeds the tracker, and writes a
 record on `turn_end`. Then this:
@@ -219,7 +219,7 @@ Three things to notice:
 
 - `isToolCallEventType("write", event)` narrows the event so `event.input.path` is typed.
   This repository's `AGENTS.md` asks for exactly this — typed narrowing over stringly
-  inspection — and you will find the same call in `packages/pi-extension/src/index.ts`.
+  inspection — and you will find the same call in `packages/regulator-pi/src/write-gate.ts`.
 - The block is recorded in the trace *as a block*, with its reason. A refusal is data.
   In lesson 09 you will want to know how often gates fire and why.
 - The reason text is written for the model to read. It says what was refused and what
@@ -231,7 +231,7 @@ slashes and `.` segments, refuse absolute paths and `..` outright, and ask wheth
 is left starts with `vendor/`. It does *not* follow symlinks, check hard links, or
 protect against the file changing between this check and the write. Those are real gaps
 and lesson 10 closes them; the hardened version is
-[`packages/pi-extension/README.md`](../../packages/pi-extension/README.md), "Path and
+[`packages/regulator-pi/README.md`](../../packages/regulator-pi/README.md), "Path and
 authority contract." For now the point is a gate that exists at all.
 
 ### The gate's identity card — [`packages/regulator/registry/`](../../packages/regulator/registry/)
@@ -257,7 +257,7 @@ lesson, is in the archived [CONTROL-REGISTRY.md](../../docs/archive/2026-09/CONT
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/regulator cp1
+pnpm --filter @metacoding/viable-agents-lab cp1
 ```
 
 Give the agent the same small prompt as last lesson, then:
@@ -304,7 +304,7 @@ Load **checkpoint 0** (no gate), so the only thing standing between the agent an
 `vendor/` is that sentence:
 
 ```sh
-pnpm --filter @metacoding/regulator cp0
+pnpm --filter @metacoding/viable-agents-lab cp0
 ```
 
 Run the prompt. Check `git status` in the fixture. Reset with `git checkout -- .` (and
@@ -313,7 +313,7 @@ delete any new files) between runs.
 **Condition B — gate (level 2).** Same `AGENTS.md`, same prompt, but load checkpoint 1:
 
 ```sh
-pnpm --filter @metacoding/regulator cp1
+pnpm --filter @metacoding/viable-agents-lab cp1
 ```
 
 Run it. Watch what the model does when the write is refused — read the block reason
@@ -361,7 +361,7 @@ Read three things in this repository, in this order:
    five questions in order, and the sentence after them: the ordering is deliberate;
    deterministic authority should not be encoded as prose merely because a model is
    available.
-3. [`packages/pi-extension/README.md`](../../packages/pi-extension/README.md),
+3. [`packages/regulator-pi/README.md`](../../packages/regulator-pi/README.md),
    "Enforcement boundary." This is your checkpoint-1 gate, grown up. Read it as a
    diff against what you just built: it handles symlinks, hard links, dangling links,
    absolute paths, Windows paths, file URLs, and it states in plain words that shell

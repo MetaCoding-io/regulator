@@ -28,6 +28,7 @@ import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@met
 import type { Exec } from "./exec.js";
 import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR, canariesFromEnv } from "./unit.js";
 import { LAB_ROOT } from "./workload.js";
+import { hostPin } from "./host.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
 export const DEFINITION_NAME = "regulator";
@@ -45,9 +46,9 @@ export async function readManifest(repo: string): Promise<InstanceManifest | und
   return value;
 }
 
+/** The runtime the host pins (Pi's version for regulator-pi), or "none" when no host is installed: what the manifest records. */
 export async function definitionPin(definitionRoot: string = LAB_ROOT): Promise<string> {
-  const pkg = JSON.parse(await readFile(path.join(definitionRoot, "package.json"), "utf8")) as { peerDependencies?: Record<string, string> };
-  return pkg.peerDependencies?.["@earendil-works/pi-coding-agent"] ?? "unknown";
+  return (await hostPin(undefined, definitionRoot))?.pin ?? "none";
 }
 
 export interface InitInstanceOptions {
@@ -168,11 +169,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
   check("git", git.code === 0, git.code === 0 ? git.stdout.trim() : `git not runnable: ${git.stderr.trim()}`);
 
   const pin = await definitionPin(definitionRoot);
-  let installed = "not installed";
-  try {
-    const pkg = JSON.parse(await readFile(path.join(definitionRoot, "node_modules", "@earendil-works", "pi-coding-agent", "package.json"), "utf8")) as { version?: string };
-    installed = pkg.version ?? "unknown";
-  } catch { /* not installed beside the definition */ }
+  const installed = (await hostPin(undefined, definitionRoot))?.installed ?? "not installed";
   check("pi", installed === pin, `definition pins ${pin}; installed ${installed}${installed === pin ? "" : " — an upgrade is a change with evidence (OPERATING.md)"}`);
 
   const registry = await checkRegistry(path.join(definitionRoot, "registry"), definitionRoot, { today });

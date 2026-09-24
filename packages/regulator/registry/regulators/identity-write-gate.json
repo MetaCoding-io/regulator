@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp9-authority.ts",
+    "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
       "tool_call (write, edit: prepareWritePath)",
       "tool_call (bash: snapshot)",
@@ -58,8 +58,8 @@
   "evidence": {
     "tests": [
       "../core/src/authority.test.ts",
-      "src/cp9-authority.test.ts",
-      "../pi-extension/src/index.test.ts"
+      "../regulator-pi/src/authority.test.ts",
+      "../regulator-pi/src/write-gate.test.ts"
     ]
   },
   "limitations": [
@@ -73,7 +73,7 @@
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
-  "ablation": {"switch": "extension:cp9-authority", "note": "Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
+  "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
   "retirement": {"condition": "No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable."},
   "introducedIn": "M10"
 }

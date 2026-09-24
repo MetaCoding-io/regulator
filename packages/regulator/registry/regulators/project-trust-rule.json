@@ -10,10 +10,10 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/dispatch-pi.ts",
+    "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
       "definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)",
-      "project_trust (cp9-authority.ts, CLI sessions)"
+      "project_trust (authority.ts, CLI sessions)"
     ]
   },
   "channels": {
@@ -50,7 +50,7 @@
   },
   "evidence": {
     "tests": [
-      "src/cp9-authority.test.ts"
+      "../regulator-pi/src/authority.test.ts"
     ]
   },
   "limitations": [

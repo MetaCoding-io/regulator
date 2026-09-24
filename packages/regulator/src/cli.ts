@@ -56,10 +56,10 @@ import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
-import { CHECKPOINT_EXTENSIONS, piDispatcher } from "./dispatch-pi.js";
+import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
-import { loadContract } from "./cp5-contract.js";
+import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
 import { IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
@@ -75,7 +75,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -202,7 +202,7 @@ ${rationale}`]]) {
     const started = await startUnit(realExec, ttlMs ? { repo: process.cwd(), unitId, owner, ttlMs } : { repo: process.cwd(), unitId, owner });
     console.log(`unit ${unitId}: branch ${started.worktree.branch} from ${started.base}, worktree ${started.worktree.path}`);
     console.log(`lease held by ${started.lease.owner} until ${new Date(started.lease.expiresAt).toISOString()}`);
-    console.log(`next: cd ${started.worktree.path} && pi -e ${path.join(labRoot, "dist/cp2-typed-tools.js")} -e ${path.join(labRoot, "dist/cp4-coordination.js")} --unit ${unitId}`);
+    console.log(`next: cd ${started.worktree.path} && pi -e ${path.join(labRoot, "dist/tools.js")} -e ${path.join(labRoot, "dist/coordination.js")} --unit ${unitId}`);
   } else if (command === "unit" && sub === "finish" && rest[0]) {
     const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0] });
     if (finished.result.merged) {
@@ -225,7 +225,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
@@ -246,7 +246,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: piDispatcher({ echo: !rest.includes("--quiet") }) });
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
@@ -448,10 +448,10 @@ ${rationale}`]]) {
     const coverage = ablationCoverage(suite, (await loadRegistry(path.join(labRoot, "registry"))).records.map((r) => r.id));
     if (coverage.unknown.length) throw new Error(`suite ablates ${coverage.unknown.join(", ")}, which the registry does not declare`);
     console.log(`suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s), ${arms.length ? arms.join(", ") : suite.arms.map((a) => a.name).join(", ")} × ${reps ?? suite.repetitions} repetition(s); ${behaviour ? `scripted ${behaviour}` : "live"}; ablation arms cover ${coverage.covered.length} of ${coverage.covered.length + coverage.uncovered.length} regulators`);
-    const dist = path.join(labRoot, "dist");
+    const live = behaviour ? undefined : await loadHost(flag("host"));
     const report = await runSuite(realExec, {
       suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
-      dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => piDispatcher({ echo: false, extensionPaths: arm.extensions.map((e) => path.join(dist, `${e}.js`)).filter((p) => CHECKPOINT_EXTENSIONS.includes(p)) }),
+      dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
       owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : "nobody yet"), keepInstances: rest.includes("--keep"),
       onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),

@@ -191,11 +191,11 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   r = await regulator(repo, "review");
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /reg\.audit\.behaviour-check\.v1 {2}ablation check:export-signature {2}retire when: Never as a mechanism/);
-  assert.match(r.stdout, /\n43 record\(s\)\n$/);
+  assert.match(r.stdout, /\n42 record\(s\)\n$/, "review lists the active records; the retired first gate is history");
   r = await regulator(repo, "review", "--due");
   assert.match(r.stdout, /^0 record\(s\) overdue or due within 0 day\(s\)\n$/, "nothing is overdue at the lesson's date");
   r = await regulator(repo, "review", "--due", "--within", "3650");
-  assert.match(r.stdout, /43 record\(s\) overdue or due within 3650 day\(s\)/);
+  assert.match(r.stdout, /42 record\(s\) overdue or due within 3650 day\(s\)/);
 
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);

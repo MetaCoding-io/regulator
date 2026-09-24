@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "prompt",
-    "implementation": "src/cp11-identity.ts",
+    "implementation": "../regulator-pi/src/identity.ts",
     "enforcementPoints": ["before_agent_start (sections regulator_identity, regulator_memory)"]
   },
   "channels": { "consumes": ["regulator/identity/* (worktree)", "memory store (current entries)"], "emits": ["system-prompt sections"] },
@@ -20,14 +20,14 @@
     "may": ["render identity and memory as prompt sections", "report problems in the identity set"],
     "mayNot": ["change identity", "make identity binding (the gate and the closeout check do)", "render expired memory"]
   },
-  "evidence": { "tests": ["src/cp11-identity.test.ts", "../core/src/identity.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/identity.test.ts", "../core/src/identity.test.ts"] },
   "limitations": [
     "Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.",
     "The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.",
     "Rendering is truncated at 6000 characters; an identity set longer than that is partly advice the model never sees, and the status line does not say so."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp11-identity", "note": "Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement."},
+  "ablation": {"switch": "extension:identity", "note": "Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement."},
   "retirement": {"condition": "Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone."},
   "introducedIn": "M12"
 }

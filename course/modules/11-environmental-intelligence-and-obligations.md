@@ -192,7 +192,7 @@ decides and dispositions after. A re-dispatch after a person resolved a
 decision, deviation and residual uncertainty in a report now becomes a signal; the
 policy decides which are obligations.
 
-### The extension — [`packages/regulator/src/cp10-intelligence.ts`](../../packages/regulator/src/cp10-intelligence.ts)
+### The extension — [`packages/regulator-pi/src/intelligence.ts`](../../packages/regulator-pi/src/intelligence.ts)
 
 One tool. `report_intelligence` takes the finding, stamps unit (from the lease), revision
 (from the tree) and time, records the signal, appends a session entry, and tells the
@@ -231,7 +231,7 @@ Five drills. Use the known-issue fixture and the research contract
 [`contracts/research-vendored-helper.json`](../../packages/regulator/contracts/research-vendored-helper.json).
 
 **Drill 1 — auto-apply, then don't.** Before anything else, run the failure the module
-is about. Take a copy of `cp10-intelligence.ts` and make `report_intelligence` do what a
+is about. Take a copy of `intelligence.ts` and make `report_intelligence` do what a
 helpful tool would: when `affectedUnits` names a unit whose worktree exists, write the
 claim into that worktree's `NOTES.md` and commit. Dispatch the research contract, then
 the known-issue contract, and read the merged history. Then put the checkpoint back and
@@ -312,7 +312,7 @@ You have finished checkpoint 10 when:
 1. `pnpm check` passes — including `obligations.test.ts` in core (routing under policy
    with noting and idempotence, the lifecycle with terminal refusals and successors,
    intelligence with expiry and affected units, dispositions by decision),
-   `cp10-intelligence.test.ts` (provenance from the lease and the tree; the one-tool
+   `intelligence.test.ts` (provenance from the lease and the tree; the one-tool
    surface; refusal outside a known repository), the two new controller tests (the
    obligation flow through the loop with the veto and the hint; the research unit whose
    intelligence holds another unit until dispositioned and never touches the domain),

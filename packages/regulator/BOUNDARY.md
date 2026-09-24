@@ -28,7 +28,7 @@ Not covered:
 
 ## Budget guard (`reg.control.budget-guard.v1`)
 
-Enforced at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `src/cp6-budget.ts`; S3, deterministic-gate.
+Enforced at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `../regulator-pi/src/budget.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -39,7 +39,7 @@ Not covered:
 
 ## Canary watch (`reg.audit.canary-watch.v1`)
 
-Enforced at `tool_result (redact)`, `message_end (record)` in `src/cp9-authority.ts`; S3*, deterministic-gate.
+Enforced at `tool_result (redact)`, `message_end (record)` in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -90,7 +90,7 @@ Not covered:
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
-Enforced at `notify_owner (execute: begin/commit)`, `session_start (reconcile)` in `src/cp7-recovery.ts`; S2, deterministic-gate.
+Enforced at `notify_owner (execute: begin/commit)`, `session_start (reconcile)` in `../regulator-pi/src/recovery.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -112,7 +112,7 @@ Not covered:
 
 ## Evidence preflight (`reg.control.evidence-preflight.v1`)
 
-Enforced at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)` in `src/cp8-evidence.ts`; S3, deterministic-gate.
+Enforced at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)` in `../regulator-pi/src/evidence.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -122,7 +122,7 @@ Not covered:
 
 ## Failure observer (`reg.control.failure-observer.v1`)
 
-Enforced at `tool_execution_end (isError)`, `agent_end (stopReason error)` in `src/cp7-recovery.ts`; S3, deterministic-gate.
+Enforced at `tool_execution_end (isError)`, `agent_end (stopReason error)` in `../regulator-pi/src/recovery.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -162,7 +162,7 @@ Not covered:
 
 ## Identity write gate (`reg.authority.identity-write-gate.v1`)
 
-Enforced at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)` in `src/cp9-authority.ts`; S5, deterministic-gate.
+Enforced at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)` in `../regulator-pi/src/authority.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -184,7 +184,7 @@ Not covered:
 
 ## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
 
-Enforced at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)` in `src/instance.ts`; S5, deterministic-gate.
+Enforced at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)` in `src/instance.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -194,7 +194,7 @@ Not covered:
 
 ## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)
 
-Enforced at `report_intelligence (tool execute)` in `src/cp10-intelligence.ts`; S4, typed-tool.
+Enforced at `report_intelligence (tool execute)` in `../regulator-pi/src/intelligence.ts`; S4, typed-tool.
 
 Not covered:
 
@@ -205,7 +205,7 @@ Not covered:
 
 ## Interaction contract (ask_human) (`reg.algedonic.interaction-contract.v1`)
 
-Enforced at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout` in `src/cp12-algedonic.ts`; S5, typed-tool.
+Enforced at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout` in `../regulator-pi/src/algedonic.ts`; S5, typed-tool.
 
 Not covered:
 
@@ -215,7 +215,7 @@ Not covered:
 
 ## Operational memory store (`reg.control.memory-store.v1`)
 
-Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `src/cp11-identity.ts`; S3, typed-tool.
+Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `../regulator-pi/src/identity.ts`; S3, typed-tool.
 
 Not covered:
 
@@ -225,7 +225,7 @@ Not covered:
 
 ## Model router (`reg.control.model-router.v1`)
 
-Enforced at `piDispatcher (model choice, failover)`, `model_select (ledger)` in `src/dispatch-pi.ts`; S3, deterministic-gate.
+Enforced at `piDispatcher (model choice, failover)`, `model_select (ledger)` in `../regulator-pi/src/dispatcher.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -256,7 +256,7 @@ Not covered:
 
 ## Pause gate (`reg.algedonic.pause-gate.v1`)
 
-Enforced at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)` in `src/cp12-algedonic.ts`; S3, deterministic-gate.
+Enforced at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)` in `../regulator-pi/src/algedonic.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -276,7 +276,7 @@ Not covered:
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
-Enforced at `session_start`, `tool_call` in `src/cp3-profiles.ts`; S3, deterministic-gate.
+Enforced at `session_start`, `tool_call` in `../regulator-pi/src/profiles.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -296,7 +296,7 @@ Not covered:
 
 ## Project trust rule (`reg.authority.project-trust-rule.v1`)
 
-Enforced at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (cp9-authority.ts, CLI sessions)` in `src/dispatch-pi.ts`; S5, deterministic-gate.
+Enforced at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (authority.ts, CLI sessions)` in `../regulator-pi/src/dispatcher.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -307,7 +307,7 @@ Not covered:
 
 ## Proposal intake (`reg.authority.proposal-intake.v1`)
 
-Enforced at `propose_policy_change (tool execute)` in `src/cp9-authority.ts`; S5, typed-tool.
+Enforced at `propose_policy_change (tool execute)` in `../regulator-pi/src/authority.ts`; S5, typed-tool.
 
 Not covered:
 
@@ -348,7 +348,7 @@ Not covered:
 
 ## Result report gate (`reg.control.result-report-gate.v1`)
 
-Enforced at `report_result (tool execute)`, `runUnit (close)` in `src/cp5-contract.ts`; S3, deterministic-gate.
+Enforced at `report_result (tool execute)`, `runUnit (close)` in `../regulator-pi/src/contract.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -379,7 +379,7 @@ Not covered:
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
 
-Enforced at `tool_execution_end` in `src/cp4-coordination.ts`; S2, deterministic-gate.
+Enforced at `tool_execution_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -389,7 +389,7 @@ Not covered:
 
 ## Unit lease gate (`reg.coordination.unit-lease.v1`)
 
-Enforced at `session_start`, `tool_call`, `turn_end` in `src/cp4-coordination.ts`; S2, deterministic-gate.
+Enforced at `session_start`, `tool_call`, `turn_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -399,7 +399,7 @@ Not covered:
 
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
 
-Enforced at `tool_call` in `src/cp1-trace.ts`; S5, deterministic-gate.
+Enforced at `tool_call` in `../../course/lab/src/cp1-trace.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -408,7 +408,7 @@ Not covered:
 
 ## Work contract gate (`reg.control.work-contract-gate.v1`)
 
-Enforced at `runUnit (before createUnit)`, `session_start (cp5-contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `runUnit (before createUnit)`, `session_start (contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)` in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 

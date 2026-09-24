@@ -140,7 +140,7 @@ The reference build for this course is called **`regulator`**. It lives in
 extension file that subscribes to the agent loop and appends one JSON line per event to
 `.regulator/events.ndjson` in whatever project it is loaded into.
 
-Open [`packages/regulator/src/cp0-event-log.ts`](../../packages/regulator/src/cp0-event-log.ts). It is short;
+Open [`course/lab/src/cp0-event-log.ts`](../../course/lab/src/cp0-event-log.ts). It is short;
 read the whole thing. Three things to notice.
 
 **An extension is a function that receives `pi`.**
@@ -190,7 +190,7 @@ From the repository root:
 ```sh
 pnpm install
 pnpm build
-pnpm --filter @metacoding/regulator cp0
+pnpm --filter @metacoding/viable-agents-lab cp0
 ```
 
 The last command changes into the fixture project at `packages/regulator/fixture/` and runs
@@ -245,7 +245,7 @@ looks like after two years: partly right, partly stale, and nothing marks which 
 Now hand it to the un-augmented agent, with checkpoint 0 loaded so you get the log:
 
 ```sh
-pnpm --filter @metacoding/regulator cp0
+pnpm --filter @metacoding/viable-agents-lab cp0
 ```
 
 Prompt:

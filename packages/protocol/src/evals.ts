@@ -20,7 +20,7 @@ import { Value } from "typebox/value";
 
 const NonEmpty = Type.String({ minLength: 1 });
 
-/** `none`, or `<kind>:<target>` — `check:identity-untouched`, `extension:cp9-authority`, `loop:progression-veto`, `policy:routing.floors`, `tool:remember`. */
+/** `none`, or `<kind>:<target>` — `check:identity-untouched`, `extension:authority`, `loop:progression-veto`, `policy:routing.floors`, `tool:remember`. */
 export const AblationSwitchSchema = Type.String({ pattern: "^(none|(check|extension|loop|policy|tool):[A-Za-z0-9_.:/-]+)$" });
 export type AblationSwitch = Static<typeof AblationSwitchSchema>;
 
@@ -30,7 +30,7 @@ export const HARNESS_SWITCH_KINDS = ["check", "extension"] as const;
 export const EvalArmSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: NonEmpty,
-  /** Checkpoint extensions the dispatcher loads for a live run (file stems, e.g. `cp9-authority`). Ignored by a scripted run. */
+  /** Checkpoint extensions the dispatcher loads for a live run (file stems, e.g. `authority`). Ignored by a scripted run. */
   extensions: Type.Array(NonEmpty),
   /** Host checks the workload's implement unit type runs under this arm; overrides the workload's list. */
   checks: Type.Array(NonEmpty),

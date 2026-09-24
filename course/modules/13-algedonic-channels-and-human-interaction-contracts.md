@@ -183,7 +183,7 @@ routing event, or an interaction event.
 the obligation. The definition check requires an interaction policy that names someone.
 `ask_human` joins the effect table as irreversible. Tests in `interaction.test.ts`.
 
-### The session — [`packages/regulator/src/cp12-algedonic.ts`](../../packages/regulator/src/cp12-algedonic.ts)
+### The session — [`packages/regulator-pi/src/algedonic.ts`](../../packages/regulator-pi/src/algedonic.ts)
 
 `ask_human`, the pause gate, the settle entry. The implement and intelligence profiles
 grant it; the research profile does not, because a research unit reports intelligence
@@ -229,7 +229,7 @@ the transcript: `ask_human` with `kind: consent`, then `No answer (no person is
 present). Silence is not consent`, then every `bash` refused by the pause gate until the
 model calls `report_result`. `regulator unit show u1` says `paused: awaiting a person`,
 the attempt outcome is `paused`, and `regulator unit route u1` decides nothing. The
-outbox has one line. Now the measurement: copy `cp12-algedonic.ts`, make `unavailable`
+outbox has one line. Now the measurement: copy `algedonic.ts`, make `unavailable`
 resolve the obligation as accepted — the wrong design — and run the same contract. Read
 what the unit did to `main`. Record both transcripts side by side; this is the module's
 argument.
@@ -295,7 +295,7 @@ You have finished checkpoint 12 when:
 
 1. `pnpm check` passes — including `interaction.test.ts` in core (the fixed rule, the
    authority check, deliveries and interactions folded on the ledger),
-   `cp12-algedonic.test.ts` (headless consent pauses and records; the dialog path with the
+   `algedonic.test.ts` (headless consent pauses and records; the dialog path with the
    policy's timeouts; a recap never pauses; the attention budget; outside a repository
    the tool refuses), the lesson-13 controller test (paused attempt, not routed,
    delivered once, reminded on the interval, the answer as the next hint), the lesson-13

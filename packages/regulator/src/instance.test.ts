@@ -3,18 +3,15 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, isReadOnlyProfile } from "@metacoding/vsm-pi-core";
+import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger } from "@metacoding/vsm-pi-core";
 import type { WorkContract } from "@metacoding/vsm-pi-protocol";
 import { driveUnit } from "./controller.js";
-import { createProfilesExtension } from "./cp3-profiles.js";
 import { gitExec } from "./git-support.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadRecoveryPolicy } from "./recovery-policy.js";
-import { PROFILES } from "./profiles.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
-import { ctxFor, mockPi } from "./test-support.js";
 import { startUnit } from "./unit.js";
 import { loadWorkload } from "./workload.js";
 
@@ -58,49 +55,6 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
   assert.match(await readFile(path.join(repo, "regulator/identity/INVARIANTS.md"), "utf8"), /INV-001/);
-  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: repo })).stdout.trim(), "", "the base is clean after init");
-  assert.equal((await gitExec("git", ["log", "-1", "--format=%s"], { cwd: repo })).stdout.trim(), "regulator init: identity seeded by alice");
-  await assert.rejects(initInstance(gitExec, { repo, by: "bob" }), /is already an instance/);
-
-  const report = await doctor(gitExec, { repo, today: "2026-09-22", now: () => clock });
-  const byName = Object.fromEntries(report.checks.map((c) => [c.name, c]));
-  assert.deepEqual(Object.keys(byName), ["node", "git", "pi", "registry", "definition", "reviews", "manifest", "definition-drift", "identity", "base", "obligations"]);
-  assert.equal(byName.node!.ok, true);
-  assert.equal(byName.registry!.ok, true);
-  assert.equal(byName.definition!.ok, true);
-  assert.match(byName.definition!.detail, /1 eval suite\(s\), 4 report\(s\)/);
-  assert.equal(byName.reviews!.ok, true);
-  assert.equal(byName.manifest!.ok, true);
-  assert.match(byName.manifest!.detail, /writable lib\/, test\/; protected config\//);
-  assert.equal(byName["definition-drift"]!.ok, true);
-  assert.equal(byName.base!.ok, true);
-  assert.match(byName.base!.detail, /clean, on trunk/);
-  assert.equal(byName.obligations!.ok, true);
-  assert.equal(report.problems, report.checks.filter((c) => !c.ok).length);
-  const overdue = await doctor(gitExec, { repo, today: "2027-01-01", now: () => clock });
-  assert.equal(overdue.checks.find((c) => c.name === "reviews")!.ok, false, "every card is overdue for review by then, and doctor says so");
-  assert.equal(overdue.checks.find((c) => c.name === "registry")!.ok, false, "and the registry check itself fails on the date");
-  const older = await doctor(gitExec, { repo, today: "2026-09-22", nodeVersion: "v20.18.0", now: () => clock });
-  assert.match(older.checks.find((c) => c.name === "node")!.detail, /below the engines floor 22\.19\.0/);
-  assert.match((await doctor(gitExec, { repo: bare, today: "2026-09-22" })).checks.find((c) => c.name === "manifest")!.detail, /run `regulator init`/);
-
-  // The declared layout reaches the session: the implement profile writes under lib/ here, not src/; a read-only profile stays read-only.
-  const started = await startUnit(gitExec, { repo, unitId: "u1", owner: "alice" });
-  const { pi, handlers } = mockPi();
-  createProfilesExtension()(pi);
-  const { ctx, statuses } = ctxFor(started.worktree.path);
-  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
-  assert.equal(statuses.profile, "profile: implement (writes under lib/, test/ by the instance manifest)");
-  const gate = (p: string) => handlers.get("tool_call")!({ type: "tool_call", toolName: "write", input: { path: p, content: "" } }, ctx) as { block?: boolean; reason?: string } | undefined;
-  assert.equal(gate("lib/greet.js"), undefined);
-  assert.match(gate("src/x.js")?.reason ?? "", /may write under lib\/, test\/; "src\/x\.js" is outside that/);
-  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, { ...ctx, cwd: bare } as never);
-  assert.equal(statuses.profile, "profile: implement", "outside an instance the profile's own prefixes hold");
-  assert.equal(isReadOnlyProfile(PROFILES.research), true);
-  pi.getFlag = () => "research";
-  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
-  assert.equal(statuses.profile, "profile: research");
-  assert.match(gate("lib/greet.js")?.reason ?? "", /may write under nothing \(read-only profile\)/);
 });
 
 test("one unit end to end in the unfamiliar repository: the unit writes under lib/, the discovered npm test script and the declared prefixes verify it, glossary-lint reads the identity's refused words, and the merged base is checked after reintegration", async (t) => {

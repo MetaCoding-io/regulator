@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "model-judgment",
-    "implementation": "src/cp6-budget.ts",
+    "implementation": "../regulator-pi/src/budget.ts",
     "enforcementPoints": ["session_before_compact", "session_compact", "session_compact_failed"]
   },
   "channels": { "consumes": ["work contract", "budget ledger", "compaction preparation (messages, file ops)"], "emits": ["compaction entry"] },
@@ -20,7 +20,7 @@
     "may": ["provide the compaction summary", "record the compaction in the ledger"],
     "mayNot": ["cancel a compaction", "change the contract", "decide what is kept beyond the preserved block (Pi's cut point stands)"]
   },
-  "evidence": { "tests": ["src/cp6-budget.test.ts", "../core/src/policy.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/budget.test.ts", "../core/src/policy.test.ts"] },
   "limitations": [
     "The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.",
     "Evidence pointers are the first line of run_tests and run_checks results; evidence gathered through bash is invisible to it.",
@@ -28,7 +28,7 @@
     "Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp6-budget", "note": "Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried."},
+  "ablation": {"switch": "extension:budget", "note": "Shares checkpoint 6 with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried."},
   "retirement": {"condition": "No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction."},
   "introducedIn": "M07"
 }

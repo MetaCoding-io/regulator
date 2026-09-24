@@ -4,7 +4,7 @@
 
 VSM-Pi is a coding-agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane. It asks whether Stafford Beer's Viable System Model can be made operational inside an autonomous software-development system—not as five chatbot personas, but as explicit functions, authority boundaries, typed channels, verification gates, and feedback loops—and it provides its own orchestrator to find out.
 
-The course under [`course/`](course/) builds VSM-Pi lesson by lesson: its lab, `regulator`, is the reference build, and each checkpoint promotes into `packages/` as it stabilizes. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
+The course under [`course/`](course/) builds VSM-Pi lesson by lesson: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
 
 The project starts from a simple premise:
 
@@ -46,9 +46,9 @@ When adding a feature, prefer mechanisms in this order:
 
 ## Where it is
 
-Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi extension with the protected-path gate and the typed reporting tools (`pi-extension`); the `regulator status` read model (`cli`) and the read-only control room over it (`control-room`).
+Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`cli`) and the read-only control room over it (`control-room`).
 
-Built in `packages/regulator`, one checkpoint per lesson: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
+Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
 The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
 
@@ -60,13 +60,13 @@ No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the c
 packages/
   protocol/       Typed VSM vocabulary and runtime schemas
   core/           Authority, routing, policy, and finding logic
-  pi-extension/   Pi lifecycle integration
+  regulator-pi/   the Pi host: the session extensions, the dispatcher, the write gate and the reporting tools — @metacoding/regulator-pi
   checks/         Deterministic S3* checks: host-run verification bound to a revision, the technical verdict
-  regulator/      the product: the `regulator` CLI, the checkpoints as Pi extensions, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding/regulator
+  regulator/      the control plane: the `regulator` CLI, the S3 loop, the stores, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding/regulator
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
-course/           The "Viable Agents" course, one lesson per checkpoint of packages/regulator
+course/           The "Viable Agents" course, one lesson per module of the product; course/lab holds its own two early checkpoints
 docs/             ARCHITECTURE.md, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), archive/
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments
@@ -124,10 +124,10 @@ pnpm --filter @metacoding/vsm-pi-core test
 After `pnpm build`, run `pnpm pi` from the project root to load the native Pi
 extension. It mechanically blocks operational `write` and `edit` calls to
 protected S5 artifacts and rejects unsafe paths. Ordinary project writes
-continue normally. Run `pnpm --filter @metacoding/vsm-pi-extension test` for the
+continue normally. Run `pnpm --filter @metacoding/regulator-pi test` for the
 focused handler tests and a model-free smoke test with Pi's real loader.
 
-See [the extension guide](packages/pi-extension/README.md) for loading into
+See [the extension guide](packages/regulator-pi/README.md) for loading into
 another project, SDK compatibility, path rules, and the native-hook enforcement
 boundary. Shell/custom tools and execution engines that bypass that hook require
 separate enforcement.

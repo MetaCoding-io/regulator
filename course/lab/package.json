@@ -1,0 +1,36 @@
+{
+  "name": "@metacoding/viable-agents-lab",
+  "version": "0.0.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "The course's own checkpoints: lessons 01 and 02 build the event log and the first trace and gate before the product's extensions exist; the drills load the product's extensions one lesson at a time.",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "pnpm build && node --test dist/*.test.js",
+    "cp0": "cd ../../packages/regulator/fixture && pi -e ../../../course/lab/dist/cp0-event-log.js",
+    "cp1": "cd ../../packages/regulator/fixture && pi -e ../../../course/lab/dist/cp1-trace.js",
+    "cp2": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js",
+    "cp3": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js",
+    "cp4": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js",
+    "cp5": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js",
+    "cp6": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js",
+    "cp7": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js",
+    "cp8": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js -e ../../packages/regulator-pi/dist/evidence.js",
+    "cp9": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js -e ../../packages/regulator-pi/dist/evidence.js -e ../../packages/regulator-pi/dist/authority.js",
+    "cp10": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js -e ../../packages/regulator-pi/dist/evidence.js -e ../../packages/regulator-pi/dist/authority.js -e ../../packages/regulator-pi/dist/intelligence.js",
+    "cp11": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js -e ../../packages/regulator-pi/dist/evidence.js -e ../../packages/regulator-pi/dist/authority.js -e ../../packages/regulator-pi/dist/intelligence.js -e ../../packages/regulator-pi/dist/identity.js",
+    "cp12": "cd ../../packages/regulator/fixture && pi -e ../../packages/regulator-pi/dist/tools.js -e ../../packages/regulator-pi/dist/profiles.js -e ../../packages/regulator-pi/dist/coordination.js -e ../../packages/regulator-pi/dist/contract.js -e ../../packages/regulator-pi/dist/budget.js -e ../../packages/regulator-pi/dist/recovery.js -e ../../packages/regulator-pi/dist/evidence.js -e ../../packages/regulator-pi/dist/authority.js -e ../../packages/regulator-pi/dist/intelligence.js -e ../../packages/regulator-pi/dist/identity.js -e ../../packages/regulator-pi/dist/algedonic.js"
+  },
+  "dependencies": {
+    "@metacoding/vsm-pi-core": "workspace:*",
+    "@metacoding/vsm-pi-protocol": "workspace:*"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "0.87.0"
+  },
+  "engines": {
+    "node": ">=22.19.0"
+  }
+}

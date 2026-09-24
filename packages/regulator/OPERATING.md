@@ -7,17 +7,19 @@ package ships with; the course's lesson 15 is the long version.
 
 ## Install
 
-The package is the lab directory: the checkpoints load as Pi extensions (declared in
-`package.json` under `pi.extensions`), the `regulator` CLI is its `bin`, and the
-definition — registry, identity, profiles, policies, workload, evals — ships beside
-the code.
+Two packages. `@metacoding/regulator` is the control plane: the `regulator` CLI is its
+`bin`, and the definition — registry, identity, profiles, policies, workload, evals —
+ships beside the code. `@metacoding/regulator-pi` is the Pi host: the session
+extensions (declared in its `package.json` under `pi.extensions`) and the dispatcher
+that runs a unit's session. The CLI finds the host by name — in the project, then
+beside itself — and needs none for `doctor`, `status`, `check` or a scripted run.
 
 ```sh
 git clone <this repository> && cd vsm-pi
 pnpm install && pnpm build          # both Node versions CI runs are fine: >= 22.19
-pi install ./packages/regulator             # every checkpoint, into user settings; -l for project settings
+pi install ./packages/regulator-pi          # every session extension, into user settings; -l for project settings
 # or, for one session without installing:
-pi -e ./packages/regulator/dist/cp2-typed-tools.js -e … -e ./packages/regulator/dist/cp12-algedonic.js
+pi -e ./packages/regulator-pi/dist/tools.js -e … -e ./packages/regulator-pi/dist/algedonic.js
 ```
 
 `pnpm --filter @metacoding/regulator regulator -- <command>` runs the CLI from
@@ -89,7 +91,7 @@ the outbox, and a person edits none of it by hand.
   daemon a quiet instance needs: deliver, remind, forward each new outbox line to the
   channel command, with a cursor so a restart forwards nothing twice.
 - `pi --mode json` / RPC for a non-Node host: a unit's session is an ordinary Pi
-  session; the dispatcher (`dispatch-pi.ts`) is the SDK embedding to copy.
+  session; the dispatcher (`dispatcher.ts`) is the SDK embedding to copy.
 
 ## Upgrading
 

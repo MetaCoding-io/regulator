@@ -11,7 +11,7 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/instance.ts",
-    "enforcementPoints": ["initInstance (refusals; identity seed; manifest written and validated; commit)", "readManifest (schema-validated)", "cp3-profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)", "auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)"]
+    "enforcementPoints": ["initInstance (refusals; identity seed; manifest written and validated; commit)", "readManifest (schema-validated)", "profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)", "auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)"]
   },
   "channels": { "consumes": ["a git repository", "the definition (registry, identity seed, package pin)", "a person's declaration"], "emits": [".regulator/instance.json", "a commit on the base branch (identity, .gitignore)", ".regulator/canaries"] },
   "scope": { "subjects": ["identity", "execution"], "resources": [".regulator/instance.json", "regulator/identity/", ".gitignore"] },

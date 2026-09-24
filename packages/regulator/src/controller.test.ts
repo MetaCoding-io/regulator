@@ -6,7 +6,7 @@ import test from "node:test";
 import { ExecutionStore, SIGNALS_RELATIVE_PATH, loadRegistry, readSignals } from "@metacoding/vsm-pi-core";
 import type { ResultReport, WorkContract } from "@metacoding/vsm-pi-protocol";
 import { runUnit, type Dispatcher } from "./controller.js";
-import { loadContract } from "./cp5-contract.js";
+import { loadContract } from "./contract-file.js";
 import { gitExec, initRepo } from "./git-support.js";
 import { unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
@@ -548,7 +548,7 @@ test("algedonic (lesson 13): a unit that asked a person and got no answer is rec
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit, routeUnit } = await import("./controller.js");
   const { deliverPending, remindDue } = await import("./deliver.js");
-  const { OUTBOX_RELATIVE_PATH } = await import("./cp7-recovery.js");
+  const { OUTBOX_RELATIVE_PATH } = await import("./deliver.js");
   const repo = await initRepo(t);
   const contract = await loadContract(contractFile);
   const workload = await loadWorkload();

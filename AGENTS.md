@@ -48,10 +48,10 @@ Deliberately deferred: RDF/SHACL, full VSM recursion, broad S4 integrations, aut
 - Keep packages small and dependency direction explicit.
 - Put shared protocol/schema definitions in `packages/protocol`.
 - Put authority/routing/policy mechanisms in `packages/core`.
-- Pi integration belongs in `packages/pi-extension`.
+- Pi integration belongs in `packages/regulator-pi`, the Pi host: the session extensions, the dispatcher, the write gate and the reporting tools. `packages/regulator` never imports a host; it resolves one by name through the `Host` seam (`src/host.ts`).
 - Deterministic S3\* checks belong in `packages/checks`.
 - User-facing CLI behavior belongs in `packages/regulator` (`src/cli.ts`); the `status` read model it exports is what `packages/control-room` renders.
-- `packages/regulator` is the product and the reference build: the `regulator` CLI, the checkpoints as Pi extensions, and the definition beside the code. The course lessons cite it there (`course/lab` is a pointer). A checkpoint's Pi-free modules move to `packages/protocol` or `packages/core` once two lessons depend on them, and `regulator` imports them from there; it never re-implements what those packages already ship.
+- `packages/regulator` is the product and the reference build: the control plane — the `regulator` CLI, the S3 loop, the stores, and the definition beside the code — with `packages/regulator-pi` as its Pi host. The course lessons cite them there; `course/lab` holds only the course's own two early checkpoints and the drill scripts. A checkpoint's Pi-free modules move to `packages/protocol` or `packages/core` once two lessons depend on them, and `regulator` imports them from there; it never re-implements what those packages already ship.
 - Judgment-oriented agent prompts belong under `agents/` and should not contain authority that the runtime can enforce mechanically.
 - Committed S5 artifacts belong under `vsm/`.
 - Regulator registry records belong beside the code they describe (`packages/regulator/registry/`); `regulator check` and the generated `REGULATORS.md` run under `pnpm check`.

@@ -218,7 +218,7 @@ escalates; `oscillation` and `ambiguity` clarify; `conflict` repairs then escala
 anything unruled pauses. Read it with the attempt ceiling in mind: `implement` has three
 attempts, so a second `no-report` retry is the last thing the loop does on its own.
 
-### The extension — [`packages/regulator/src/cp7-recovery.ts`](../../packages/regulator/src/cp7-recovery.ts)
+### The extension — [`packages/regulator-pi/src/recovery.ts`](../../packages/regulator-pi/src/recovery.ts)
 
 The session's two contributions. On `tool_execution_end` with `isError`, the error text is
 flattened to one line and appended as an observation with its normalized cause; a refused
@@ -360,7 +360,7 @@ You have finished checkpoint 7 when:
    citing the policy version; the effect journal's intend/commit/reconcile), the
    controller's two recovery tests (retry then repair-with-hint then escalate; clarify
    stops with a question, remediate stops, abort releases the claim and marks the unit
-   `aborted`), `cp7-recovery.test.ts` (tool and provider errors become observations;
+   `aborted`), `recovery.test.ts` (tool and provider errors become observations;
    `notify_owner` sends once per key and a crash between send and record is reconciled;
    the real-session load with the effect declared), and the read-model tests.
 2. Drill 1's driven unit stops after one attempt on `environment → remediate`, and the

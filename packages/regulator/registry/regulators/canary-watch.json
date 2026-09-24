@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp9-authority.ts",
+    "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
       "tool_result (redact)",
       "message_end (record)"
@@ -50,7 +50,7 @@
   },
   "evidence": {
     "tests": [
-      "src/cp9-authority.test.ts"
+      "../regulator-pi/src/authority.test.ts"
     ]
   },
   "limitations": [
@@ -63,7 +63,7 @@
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
-  "ablation": {"switch": "extension:cp9-authority", "note": "Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it."},
+  "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it."},
   "retirement": {"condition": "No canary reaches a tool result or the model's text in the injection fixture across three model versions with the watch off."},
   "introducedIn": "M10"
 }

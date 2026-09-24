@@ -6,7 +6,7 @@ import path from "node:path";
 import test, { type TestContext } from "node:test";
 import { AuditLog, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile } from "@metacoding/vsm-pi-core";
 import { driveUnit } from "./controller.js";
-import { loadContract } from "./cp5-contract.js";
+import { loadContract } from "./contract-file.js";
 import { financeDispatcher, type FinanceBehaviour } from "./finance-scripted.js";
 import { gitExec } from "./git-support.js";
 import { initInstance } from "./instance.js";

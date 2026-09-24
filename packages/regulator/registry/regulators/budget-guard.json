@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp6-budget.ts",
+    "implementation": "../regulator-pi/src/budget.ts",
     "enforcementPoints": ["turn_end (ctx.abort)", "tool_call", "runUnit (close: budget-exhausted attempt)"]
   },
   "channels": { "consumes": ["policy (budgets)", "message_end usage", "model_select"], "emits": ["budget ledger (execution store)"] },
@@ -20,7 +20,7 @@
     "may": ["halt the running attempt", "refuse non-read-only tools once a ceiling is crossed", "record the ledger"],
     "mayNot": ["raise a ceiling", "decide what happens to a halted unit (lesson 08)", "choose a model"]
   },
-  "evidence": { "tests": ["src/cp6-budget.test.ts", "src/controller.test.ts", "../core/src/policy.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/budget.test.ts", "src/controller.test.ts", "../core/src/policy.test.ts"] },
   "limitations": [
     "Ceilings are checked at turn end and tool call, so the turn that crosses one completes; a single very large response is not cut off mid-stream.",
     "Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.",
@@ -28,7 +28,7 @@
     "Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp6-budget", "note": "The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},
+  "ablation": {"switch": "extension:budget", "note": "The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},
   "retirement": {"condition": "No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models."},
   "introducedIn": "M07"
 }

@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp8-evidence.ts",
+    "implementation": "../regulator-pi/src/evidence.ts",
     "enforcementPoints": ["tool_result (run_tests, run_checks: provenance)", "tool_call (report_result: block)"]
   },
   "channels": { "consumes": ["tool_result", "tool_call (report_result)"], "emits": ["evidence-provenance entry (session)"] },
@@ -20,14 +20,14 @@
     "may": ["stamp a tool result", "block a report_result call with the reason"],
     "mayNot": ["certify the evidence (the closeout gate does, independently)", "rewrite what a tool reported", "block anything but report_result"]
   },
-  "evidence": { "tests": ["src/cp8-evidence.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/evidence.test.ts"] },
   "limitations": [
     "It trusts the session's own tool run: the session ran run_tests, and the session is what is being checked. Independence comes from the closeout gate, which reads nothing this extension records.",
     "Only test and command claims are preflighted; file, runtime, semantic and model claims pass through to the closeout gate.",
     "A run_tests call with a filter that passes counts as a passing run: the preflight sees the verdict, not the coverage."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp8-evidence", "note": "A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost."},
+  "ablation": {"switch": "extension:evidence", "note": "A live arm without checkpoint 8 reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost."},
   "retirement": {"condition": "Reports under three model versions cite only evidence the session produced, with the preflight off, and the closeout gate's contradicted count stays at zero."},
   "introducedIn": "M09"
 }

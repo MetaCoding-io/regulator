@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/dispatch-pi.ts",
+    "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": ["piDispatcher (model choice, failover)", "model_select (ledger)"]
   },
   "channels": { "consumes": ["policy (models)", "model availability (ModelRuntime)"], "emits": ["budget ledger models[]"] },

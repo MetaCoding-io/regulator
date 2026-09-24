@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "typed-tool",
-    "implementation": "src/cp12-algedonic.ts",
+    "implementation": "../regulator-pi/src/algedonic.ts",
     "enforcementPoints": ["ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)", "ctx.ui.confirm / select / input with the policy's timeout"]
   },
   "channels": { "consumes": ["tool call (ask_human)", "interaction policy (timeouts, attention)", "lease (unit provenance)", "ctx.hasUI / ctx.mode (channel)"], "emits": ["obligation-opened (interaction, owed to a person)", "interaction-requested / interaction-answered", "obligation-resolved (answered in the session)", "regulator:interaction (session entry)"] },
@@ -20,14 +20,14 @@
     "may": ["open an obligation owed to a person", "ask through the session's dialogs", "record a dialog answer as the person's disposition", "refuse a question past the attention budget or without its required fields"],
     "mayNot": ["treat a timeout, a cancel or an absent person as an answer", "continue a blocking question without one (the pause gate)", "ask outside a repository the orchestrator knows", "widen what a kind means: the rule is the protocol's, not the policy's"]
   },
-  "evidence": { "tests": ["src/cp12-algedonic.test.ts", "../core/src/interaction.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/algedonic.test.ts", "../core/src/interaction.test.ts"] },
   "limitations": [
     "The dialog answer is attributed to the OS user of the session (or the `person` option), not to an authenticated identity; in a session run by hand that is the person at the keyboard, which is what the record says.",
     "Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).",
     "A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp12-algedonic", "note": "Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows."},
+  "ablation": {"switch": "extension:algedonic", "note": "Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows."},
   "retirement": {"condition": "Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads."},
   "introducedIn": "M13"
 }

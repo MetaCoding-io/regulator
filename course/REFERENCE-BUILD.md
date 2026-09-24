@@ -99,29 +99,29 @@ What the course repository ships, and what of it is still owed (`docs/DEBT.md`):
   result-report schemas, the workload and execution-record schemas (`protocol`), the
   contract/report checks, the execution store and the signal sink (`core`), and in the lab
   the first slice of the S3 loop (`controller.ts`), the Pi SDK dispatcher, the
-  `cp5-contract` extension, the software-development workload definition and two example
+  `contract` extension, the software-development workload definition and two example
   contracts. `packages/cli` ships `regulator status`, the read model the control room
   consumes. Checkpoint 6 adds the policy schema and the budget ledger (`protocol`), the
   budget meter, policy resolution, model choice and the preserved-context block (`core`),
-  and in the lab the `cp6-budget` extension, the default policy, attempt ceilings with
+  and in the lab the `budget` extension, the default policy, attempt ceilings with
   re-dispatch in the loop, and model failover in the dispatcher. Checkpoint 7 adds the
   recovery vocabulary — causes, actions, policy, observations, decisions, effect journal
   entries (`protocol`) — the router and the effect journal (`core`), and in the lab the
-  `cp7-recovery` extension (failure observer, `notify_owner`), the recovery policy, and
+  `recovery` extension (failure observer, `notify_owner`), the recovery policy, and
   `routeUnit` / `driveUnit` in the loop. Checkpoint 8 adds the audit vocabulary — evidence
   records, technical verdicts, human acceptances (`protocol`) — the `packages/checks`
   package (host-run checks, evidence binding and the verdict, with the conventions
   discovery promoted from the lab), the audit log (`core`), and in the lab the closeout
-  gate in the loop (`auditUnit`, `closeUnit`) and the `cp8-evidence` extension.
+  gate in the loop (`auditUnit`, `closeUnit`) and the `evidence` extension.
   Checkpoint 9 promotes the write preflight (`prepareWritePath`: expansion, traversal,
   protected paths and parents, the filesystem alias walk) from the Pi extension into
   `core`, where both now use it, adds the boundary-statement generator, and in the lab
-  the identity seed, the `cp9-authority` extension (write gate, bash watch, proposal
+  the identity seed, the `authority` extension (write gate, bash watch, proposal
   intake, canary watch, trust answer), the trust rule in the dispatcher's loader, the
   injection fixture and `BOUNDARY.md`. Checkpoint 10 adds the obligation vocabulary and
   the routing policy (`protocol`), the obligation ledger, router, veto and disposition
   over the regulatory log (`core`), and in the lab the `research` unit type, the
-  `intelligence` profile, the `cp10-intelligence` extension (`report_intelligence`), the
+  `intelligence` profile, the `intelligence` extension (`report_intelligence`), the
   routing policy, routing and the veto in the loop, and the obligation commands in the
   CLI; the read model and the control room show obligations and all three policy shapes.
   Checkpoint 11 adds the profile schema, the memory vocabulary, routing floors, the
@@ -129,13 +129,13 @@ What the course repository ships, and what of it is still owed (`docs/DEBT.md`):
   rendering, authority-reference resolution, the memory store and the definition check
   (`core`); the `identity-untouched` host check (`checks`); and in the lab the complete
   identity set, profiles as files, the definition's `settings.json`, the
-  `cp11-identity` extension (`remember`, identity and memory sections), the trust rule
+  `identity` extension (`remember`, identity and memory sections), the trust rule
   extended to context files and settings in the dispatcher, the S5 decision path and
   memory commands in the CLI, and the drift scenario. Checkpoint 12 adds the interaction
   vocabulary — kinds with the fixed continue-without-answer rule, requests, outcomes,
   people and the interaction policy, the delivered event and the paused attempt outcome
   (`protocol`); the interaction rules, disposition authority, reminders and the ledger's
-  deliveries and interactions (`core`); and in the lab the `cp12-algedonic` extension
+  deliveries and interactions (`core`); and in the lab the `algedonic` extension
   (`ask_human`, the pause gate), the interaction policy, delivery to the outbox through
   the effect journal, the paused path in the loop, and `answer`, `remind` and the
   authority check in the CLI; the read model and the control room show the interaction

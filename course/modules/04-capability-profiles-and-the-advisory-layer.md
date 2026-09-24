@@ -250,7 +250,7 @@ against the code: the card claims the gate may set the tool surface and block un
 writes, and may *not* select a profile without a user command, block shell commands, or
 grant a tool the host does not have.
 
-### The extension — [`packages/regulator/src/cp3-profiles.ts`](../../packages/regulator/src/cp3-profiles.ts)
+### The extension — [`packages/regulator-pi/src/profiles.ts`](../../packages/regulator-pi/src/profiles.ts)
 
 Four documented Pi APIs and nothing else, each labelled with its hierarchy level in the
 source. `apply()` sets the tool surface and the thinking level and shows the profile in
@@ -262,14 +262,14 @@ Load it with checkpoint 2, so the typed tools the profiles name exist:
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/regulator cp3
+pnpm --filter @metacoding/viable-agents-lab cp3
 ```
 
 You start in `implement`. Try `/profile`, then `/profile research`, and watch the
 footer and the tool list in the system prompt change. To start in research:
 
 ```sh
-cd packages/regulator/fixture && pi -e ../dist/cp2-typed-tools.js -e ../dist/cp3-profiles.js --profile research
+cd packages/regulator/fixture && pi -e ../dist/tools.js -e ../dist/profiles.js --profile research
 ```
 
 ### The file you write — `packages/regulator/fixture/AGENTS.md`

@@ -31,7 +31,7 @@ test("the drift suite is a declared part of the definition: its arms name what t
   assert.deepEqual(control.unitTypes.map((t) => [t.name, t.checks]), workload.unitTypes.map((t) => [t.name, t.checks.length ? ["run_tests"] : []]));
   // An arm's contract asks only for what the arm can observe: under control the runtime and command criteria are gone, and the test criterion stays.
   const { contractForArm } = await import("./evals.js");
-  const { loadContract } = await import("./cp5-contract.js");
+  const { loadContract } = await import("./contract-file.js");
   const d1 = await loadContract(path.join(LAB_ROOT, suite.tasks[0]!));
   assert.deepEqual(contractForArm(d1, suite.arms[0]!).expectedEvidence.map((e) => e.id), ["e-tests"]);
   assert.deepEqual(contractForArm(d1, suite.arms[1]!).expectedEvidence.map((e) => e.id), ["e-tests", "e-checks", "e-signature"]);

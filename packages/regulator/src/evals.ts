@@ -16,7 +16,8 @@ import path from "node:path";
 import { lifts, loadRegistry, summarizeArms } from "@metacoding/vsm-pi-core";
 import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition } from "@metacoding/vsm-pi-protocol";
 import { driveUnit, type Dispatcher } from "./controller.js";
-import { loadContract } from "./cp5-contract.js";
+import { loadContract } from "./contract-file.js";
+import { hostPin } from "./host.js";
 import type { Exec } from "./exec.js";
 import { GLOSSARY_DRIFT, boundaryViolations, memoryFacts, memoryRules, signatureDrift, suiteWeakened, type GraderContext, unitTrajectory, vocabularyDrift } from "./graders.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
@@ -84,12 +85,11 @@ export function contractForArm(contract: WorkContract, arm: EvalArm): WorkContra
 }
 
 export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string }): Promise<EnvironmentFingerprint> {
-  const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8")) as { peerDependencies?: Record<string, string> };
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: root });
   const [policy, recovery, routing, interaction] = await Promise.all([loadPolicy(), loadRecoveryPolicy(), loadRoutingPolicy(), loadInteractionPolicy()]);
   return {
     node: process.version, platform: process.platform, arch: process.arch,
-    pi: pkg.peerDependencies?.["@earendil-works/pi-coding-agent"] ?? "unknown",
+    pi: (await hostPin(undefined, root))?.pin ?? "none",
     harnessRevision: rev.code === 0 ? rev.stdout.trim() : "unknown",
     dispatcher: options.dispatcher, model: options.model,
     registry: (await loadRegistry(path.join(root, "registry"))).records.length,

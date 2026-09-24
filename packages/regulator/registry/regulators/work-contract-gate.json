@@ -13,7 +13,7 @@
     "implementation": "src/controller.ts",
     "enforcementPoints": [
       "runUnit (before createUnit)",
-      "session_start (cp5-contract)",
+      "session_start (contract)",
       "unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)"
     ]
   },
@@ -47,7 +47,7 @@
   "evidence": {
     "tests": [
       "src/controller.test.ts",
-      "src/cp5-contract.test.ts"
+      "../regulator-pi/src/contract.test.ts"
     ]
   },
   "limitations": [

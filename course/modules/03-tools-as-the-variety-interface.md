@@ -241,7 +241,7 @@ because a default is not a fact; and where it does not — a project's own `npm 
 script prints whatever it prints — the parser accepts both formats. A tool that reports
 facts must not quietly depend on a default that changes under it.
 
-### Three tools — [`packages/regulator/src/cp2-typed-tools.ts`](../../packages/regulator/src/cp2-typed-tools.ts)
+### Three tools — [`packages/regulator-pi/src/tools.ts`](../../packages/regulator-pi/src/tools.ts)
 
 **`read_conventions`** — no parameters. Returns the conventions as four lines for the
 model and the full structure in `details`. Its guideline tells the model to call it
@@ -265,7 +265,7 @@ return { content: [{ type: "text", text: lines.join("\n") }], details: { …summ
 ```
 
 Two throws for "could not run"; one normal return for "ran, here is what happened,"
-whether or not tests passed. The tests in `cp2-typed-tools.test.ts` pin both sides.
+whether or not tests passed. The tests in `tools.test.ts` pin both sides.
 
 **`run_checks`** — no parameters. Runs every check the project defines and returns one
 verdict per check: `ok  syntax:src/slugify.js`, `FAIL protected-untouched — M vendor/left-pad.js`.
@@ -279,7 +279,7 @@ is the point.
 
 ```sh
 pnpm build
-pnpm --filter @metacoding/regulator cp2
+pnpm --filter @metacoding/viable-agents-lab cp2
 ```
 
 Try, in order:
@@ -294,7 +294,7 @@ You should see `run_tests` called and a short structured answer come back. If yo
 the trace from checkpoint 1 alongside, Pi takes `-e` more than once:
 
 ```sh
-cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/cp2-typed-tools.js
+cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/tools.js
 ```
 
 **Exercise.** From the trace, compare the token usage of a turn that called `run_tests`
@@ -318,7 +318,7 @@ cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js
 Condition B — typed tools available:
 
 ```sh
-cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/cp2-typed-tools.js
+cd packages/regulator/fixture && pi -e ../dist/cp1-trace.js -e ../dist/tools.js
 ```
 
 Reset the fixture between runs (`git checkout -- .`). Three runs each. Record:
@@ -364,7 +364,7 @@ Both are level 3 in the hierarchy doing work that a persona prompt would have tr
 do at level 5. Notice that neither is generic. They are *domain operations*, shaped to
 GSD's lifecycle, and their names say what they are for.
 
-**VSM-Pi.** Open [`packages/pi-extension/src/reporting-tools.ts`](../../packages/pi-extension/src/reporting-tools.ts)
+**VSM-Pi.** Open [`packages/regulator-pi/src/reporting-tools.ts`](../../packages/regulator-pi/src/reporting-tools.ts)
 and read all three tools. Then notice:
 
 - their schemas are imported from `packages/protocol`, which has no Pi dependency —

@@ -62,7 +62,7 @@ test("an overdue review date fails the registry check (lesson 15): every record 
   const fine = await checkRegistry(registryDir, labRoot, { today: "2026-09-22" });
   assert.deepEqual(fine.problems, []);
   const late = await checkRegistry(registryDir, labRoot, { today: "2027-01-01" });
-  assert.equal(late.problems.length, late.records.length, "every active record is overdue by then");
+  assert.equal(late.problems.length, late.records.filter((r) => r.status === "active").length, "every active record is overdue by then; the retired one is history");
   assert.match(late.problems[0]!.message, /^review overdue since 2026-12-01: review the record, then move ownership\.reviewBy or retire it$/);
 });
 

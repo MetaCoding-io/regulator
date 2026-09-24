@@ -83,7 +83,7 @@ attempt of which unit — is an attribute on every span.
 ### Every regulator can be switched off, or says why not
 
 Every active record now carries an ablation switch — `check:identity-untouched`,
-`extension:cp9-authority`, or `none` with the reason the harness cannot throw it — and a
+`extension:authority`, or `none` with the reason the harness cannot throw it — and a
 retirement condition, or `regulator check` refuses the record. The harness throws two
 kinds of switch, a host check and a checkpoint extension for a live arm; a regulator
 whose switch is `loop:`, `policy:` or `none` has no arm the harness can run, and the

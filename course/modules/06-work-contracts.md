@@ -226,7 +226,7 @@ consumed from lesson 09; declaring them now is how the definition stays ahead of
 loop rather than behind it. `workload.test.ts` asserts every profile named is one the
 lab declares.
 
-### The extension — [`packages/regulator/src/cp5-contract.ts`](../../packages/regulator/src/cp5-contract.ts)
+### The extension — [`packages/regulator-pi/src/contract.ts`](../../packages/regulator-pi/src/contract.ts)
 
 `--contract <path>` (or `REGULATOR_CONTRACT`). On `session_start` it loads and checks
 the contract, appends it as a `regulator:contract` entry and puts `contract: tc-… v1` in
@@ -257,7 +257,7 @@ close      report = store.getReport(unit, version)     never the diff
 ```
 
 The `Dispatcher` is the one Pi-shaped step, injected so the loop is tested without a
-model and driven with one. [`dispatch-pi.ts`](../../packages/regulator/src/dispatch-pi.ts) is the real
+model and driven with one. [`dispatcher.ts`](../../packages/regulator-pi/src/dispatcher.ts) is the real
 one: checkpoints 2–5 loaded into a session in the worktree, flags set on the runtime,
 `session.prompt(contract.objective)`, session persisted. Verify and route are missing
 from the loop on purpose; where they would go, it records what happened and stops.
@@ -396,7 +396,7 @@ You have finished checkpoint 5 when:
    be closed silently; delegated choices must be reported; required evidence by class),
    the execution store's immutability tests, `controller.test.ts` (closed from a report;
    blocked on no report with the lease kept; blocked on an invalid report; refused before
-   anything is claimed; deviations become blocking signals), `cp5-contract.test.ts`
+   anything is claimed; deviations become blocking signals), `contract.test.ts`
    (typed entry, section, tool gate, and the real-session load with the contract as a
    flag), and `status.test.ts`.
 2. `regulator unit dispatch` runs a live unit against the main fixture to `closed`, and

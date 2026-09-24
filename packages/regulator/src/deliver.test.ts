@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import test from "node:test";
 import { ObligationLedger } from "@metacoding/vsm-pi-core";
-import { OUTBOX_RELATIVE_PATH } from "./cp7-recovery.js";
+import { OUTBOX_RELATIVE_PATH } from "./deliver.js";
 import { watchOutbox } from "./deliver.js";
 import { initRepo } from "./git-support.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";

@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp5-contract.ts",
+    "implementation": "../regulator-pi/src/contract.ts",
     "enforcementPoints": ["report_result (tool execute)", "runUnit (close)"]
   },
   "channels": { "consumes": ["result report (S1, via report_result)"], "emits": ["operational-signal → S3 (high-consequence emergent decisions, deviations)"] },
@@ -19,14 +19,14 @@
     "may": ["refuse a report with reasons", "block a unit that ends without a valid report", "record emergent decisions and deviations as typed signals for S3"],
     "mayNot": ["certify that the work is correct (verification and audit do that)", "resolve an unresolved decision", "decide what to do about a blocked unit (lesson 08)"]
   },
-  "evidence": { "tests": ["src/cp5-contract.test.ts", "src/controller.test.ts", "../core/src/contracts.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/contract.test.ts", "src/controller.test.ts", "../core/src/contracts.test.ts"] },
   "limitations": [
     "Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.",
     "A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.",
     "Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp5-contract", "note": "Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report."},
+  "ablation": {"switch": "extension:contract", "note": "Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report."},
   "retirement": {"condition": "Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them."},
   "introducedIn": "M06"
 }

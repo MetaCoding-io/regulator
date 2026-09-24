@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "prompt",
-    "implementation": "src/cp5-contract.ts",
+    "implementation": "../regulator-pi/src/contract.ts",
     "enforcementPoints": ["before_agent_start"]
   },
   "channels": { "consumes": ["work contract (S3)"], "emits": [] },
@@ -19,13 +19,13 @@
     "may": ["add a section to the system prompt"],
     "mayNot": ["enforce anything; the result-report gate and the lease gate do"]
   },
-  "evidence": { "tests": ["src/cp5-contract.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/contract.test.ts"] },
   "limitations": [
     "Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.",
     "The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp5-contract", "note": "Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all."},
+  "ablation": {"switch": "extension:contract", "note": "Shares checkpoint 5 with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all."},
   "retirement": {"condition": "Retire the advice when a contract-aware model needs no rendered section: units under three model versions report every delegated decision without it, with the gate still on."},
   "introducedIn": "M06"
 }

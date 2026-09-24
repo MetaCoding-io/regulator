@@ -15,8 +15,8 @@ the former `@metacoding/vsm-pi-cli`.
 
 ### Added
 - The `regulator` CLI: `init`, `doctor`, `unit start|dispatch|drive|route|show|close|accept|evidence|finish|status`, `contract check`, `obligations`, `obligation show|ack|resolve|escalate`, `answer`, `remind`, `memory`, `identity accept|reject|promote`, `signals route`, `effects`, `watch`, `eval`, `spans`, `review`, `status`, `fixture`.
-- Eleven Pi extensions loaded by `pi install ./packages/regulator`: typed tools with effect contracts, capability profiles, coordination, the work contract, budgets, recovery, evidence, authority, intelligence, identity, and the algedonic path.
-- The definition beside the code: forty-three registry records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
+- The host seam (`Host`, `loadHost`): the control plane resolves a host package by name and runs live units through its dispatcher; `@metacoding/regulator-pi` is the Pi host, with the eleven session extensions (`tools`, `profiles`, `coordination`, `contract`, `budget`, `recovery`, `evidence`, `authority`, `intelligence`, `identity`, `algedonic`) loaded by `pi install`, the dispatcher, the write gate and the typed reporting tools folded in from the former `@metacoding/vsm-pi-extension`.
+- The definition beside the code: forty-three registry records (forty-two active; the lexical vendor write gate of lesson 02 retired, superseded by the authority extension and the manifest's protected prefixes) with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
 - Host checks at closeout: `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature`, `glossary-lint`.
 
 [Unreleased]: https://github.com/MetaCoding-io/vsm-pi/compare/v0.1.0...HEAD

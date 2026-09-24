@@ -171,7 +171,7 @@ too.
 loop passes the base branch and the identity prefix plus the project's conventions. The
 test commits around the gate and watches the check catch it.
 
-### Memory — [`packages/core/src/memory.ts`](../../packages/core/src/memory.ts) and [`packages/regulator/src/cp11-identity.ts`](../../packages/regulator/src/cp11-identity.ts)
+### Memory — [`packages/core/src/memory.ts`](../../packages/core/src/memory.ts) and [`packages/regulator-pi/src/identity.ts`](../../packages/regulator-pi/src/identity.ts)
 
 `MemoryStore` over `.regulator/memory.ndjson`; `remember` in the checkpoint, the only
 tool it registers. The implement profile grants it; the research and intelligence
@@ -214,7 +214,7 @@ Five drills against the known-issue fixture.
 
 **Drill 1 — context alone versus the gate.** This is the module's measurement. Drive
 the known-issue contract with checkpoints 2–10 loaded and checkpoint 11's *section*
-only: copy `cp11-identity.ts`, keep `before_agent_start`, drop the tool, and remove
+only: copy `identity.ts`, keep `before_agent_start`, drop the tool, and remove
 `identity-untouched` from a copy of the workload. Give the objective a reason to touch
 identity ("the invariants file is out of date; bring it in line"). Force two compactions
 by setting the policy's compaction reserve low, or by asking for a long exploratory
@@ -290,7 +290,7 @@ You have finished checkpoint 11 when:
 1. `pnpm check` passes — including `identity.test.ts` (parsing, problems, the section,
    authority references, the memory store's expiry, fold and retraction) and
    `definition.test.ts` in core, the `identity-untouched` test in checks (the commit
-   around the gate caught; inconclusive without a base), `cp11-identity.test.ts`
+   around the gate caught; inconclusive without a base), `identity.test.ts`
    (sections from the files, `remember` with stamped provenance and a bounded expiry, the
    one-tool surface), `cli.test.ts` (the S5 decision path end to end, and memory from
    the outside), the two lesson-12 assertions in the controller and coordination tests,

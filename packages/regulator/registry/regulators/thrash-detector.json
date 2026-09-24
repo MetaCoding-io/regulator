@@ -10,7 +10,7 @@
   },
   "mechanism": {
     "level": "deterministic-gate",
-    "implementation": "src/cp4-coordination.ts",
+    "implementation": "../regulator-pi/src/coordination.ts",
     "enforcementPoints": ["tool_execution_end"]
   },
   "channels": { "consumes": ["tool_execution_end (write, edit)"], "emits": ["coordination-signal (oscillation) → S3"] },
@@ -19,14 +19,14 @@
     "may": ["record a coordination signal to .regulator/signals.ndjson and notify the user"],
     "mayNot": ["block a tool call", "pause or replan the unit (S3 decides, lesson 08)", "decide which of two fixes is right"]
   },
-  "evidence": { "tests": ["src/cp4-coordination.test.ts", "../core/src/coordination.test.ts"] },
+  "evidence": { "tests": ["../regulator-pi/src/coordination.test.ts", "../core/src/coordination.test.ts"] },
   "limitations": [
     "Counts write and edit tool calls only; edits made through bash are invisible to it.",
     "Memory is per session: a unit resumed in a new session starts counting from zero.",
     "The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:cp4-coordination", "note": "Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later."},
+  "ablation": {"switch": "extension:coordination", "note": "Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later."},
   "retirement": {"condition": "No oscillation in the oscillation fixture across three model versions with the detector off: the models stop alternating on their own, or the ceiling catches it at acceptable cost."},
   "introducedIn": "M05"
 }

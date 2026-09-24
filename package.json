@@ -13,12 +13,14 @@
     "typecheck": "pnpm build && pnpm -r typecheck",
     "test": "pnpm build && pnpm -r test",
     "check": "pnpm typecheck && pnpm test",
-    "pi": "pi -e ./packages/pi-extension/dist/index.js",
+    "pi": "pi -e ./packages/regulator-pi/dist/write-gate.js",
     "smoke:reporting": "pnpm build && node scripts/reporting-smoke.mjs"
   },
   "devDependencies": {
     "@types/node": "22.18.0",
     "typescript": "5.9.2",
-    "@earendil-works/pi-coding-agent": "0.87.0"
+    "@earendil-works/pi-coding-agent": "0.87.0",
+    "@metacoding/regulator": "workspace:*",
+    "@metacoding/regulator-pi": "workspace:*"
   }
 }

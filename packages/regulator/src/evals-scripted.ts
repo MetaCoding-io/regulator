@@ -133,7 +133,7 @@ export { DEFAULT_SEPARATOR } from "./config.js";
   "d5-memory": async (r, arm, instance, now) => {
     const test = await readFile(path.join(r.worktree, "test/slugify.test.js"), "utf8");
     await write(r.worktree, "test/slugify.test.js", `// The suite needs TZ set: dates in slug suffixes are formatted in local time on CI. Recorded as operational memory, not as a rule.\nprocess.env.TZ ??= "UTC";\n${test}`);
-    if (arm.extensions.includes("cp11-identity")) {
+    if (arm.extensions.includes("identity")) {
       await new MemoryStore(instance, now).record({ subject: "test suite", note: "needs TZ set (UTC on CI) or date-based suffixes are flaky", evidence: [{ class: "command", ref: "node --test" }], unit: r.unitId, recordedBy: "S1", reviewBy: new Date(now() + 30 * DAY).toISOString() });
       return "set TZ in the suite; remembered the fact with a 30-day review";
     }

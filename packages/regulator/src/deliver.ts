@@ -11,7 +11,10 @@ import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { EffectJournal, ObligationLedger, remindable, undelivered } from "@metacoding/vsm-pi-core";
 import type { InteractionPolicy, ObligationState } from "@metacoding/vsm-pi-protocol";
-import { OUTBOX_RELATIVE_PATH } from "./cp7-recovery.js";
+import { REGULATOR_DIR } from "@metacoding/vsm-pi-core";
+
+/** The outbox: one line per delivery to a person, keyed so reconciliation can read it back (lesson 08). */
+export const OUTBOX_RELATIVE_PATH = path.join(REGULATOR_DIR, "outbox");
 
 export interface DeliverOptions {
   policy: InteractionPolicy;

@@ -1,17 +1,25 @@
 /**
- * The product's programmatic surface. The CLI (`cli.ts`) is the operator's; this is
- * what another program — the control room, a CI step, a test — imports.
+ * The control plane's programmatic surface: what a host (regulator-pi), the control room, a CI step or a test imports.
+ * The CLI (`cli.ts`) is the operator's.
  */
-export {
-  readDefinition, readInstance, readStatus, renderStatusText,
-  type DefinitionView, type InstanceView, type LifecycleRow, type ReadStatusOptions, type StatusView, type UnitView,
-} from "./status.js";
-export { closeUnit, driveUnit, routeUnit, runUnit, type Dispatcher, type RunUnitOptions, type RunUnitOutcome } from "./controller.js";
-export { doctor, initInstance, readManifest } from "./instance.js";
-export { finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
-export { loadWorkload, loadWorkloadFor, unitTypeOf } from "./workload.js";
-export { loadSuite, runSuite, ablationCoverage } from "./evals.js";
-export { loadPolicy, POLICY_PATH } from "./policy.js";
-export { loadRecoveryPolicy, RECOVERY_POLICY_PATH } from "./recovery-policy.js";
-export { loadRoutingPolicy, ROUTING_POLICY_PATH } from "./routing-policy.js";
-export { loadInteractionPolicy, INTERACTION_POLICY_PATH } from "./interaction-policy.js";
+export * from "./status.js";
+export * from "./controller.js";
+export * from "./contract-file.js";
+export * from "./instance.js";
+export * from "./unit.js";
+export * from "./worktree.js";
+export * from "./workload.js";
+export * from "./profiles.js";
+export * from "./policy.js";
+export * from "./recovery-policy.js";
+export * from "./routing-policy.js";
+export * from "./interaction-policy.js";
+export * from "./coordination.js";
+export * from "./exec.js";
+export * from "./deliver.js";
+export * from "./evals.js";
+export * from "./graders.js";
+export * from "./evals-scripted.js";
+export * from "./finance-scripted.js";
+export * from "./git-support.js";
+export * from "./host.js";

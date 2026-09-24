@@ -192,7 +192,7 @@ router's hint carries the failing checks by name. `closeUnit` re-audits a blocke
 *without* an attempt — after a human acceptance, or after missing evidence can be
 produced — and closes it on `pass`. The attempt history is untouched by a re-audit.
 
-### The extension — [`packages/regulator/src/cp8-evidence.ts`](../../packages/regulator/src/cp8-evidence.ts)
+### The extension — [`packages/regulator-pi/src/evidence.ts`](../../packages/regulator-pi/src/evidence.ts)
 
 Provenance on `tool_result` and the preflight on `tool_call`, as in section 3. The status
 line shows what has run and at what: `evidence: run_tests@35c471f ok, run_checks@35c471f+
@@ -314,7 +314,7 @@ You have finished checkpoint 8 when:
    inconclusive; the verdict's missing / stale / failed / contradicted cases; human
    acceptance at the revision only), the controller's two audit tests (the claimed pass
    refused and repaired on fresh evidence; the dirty tree, the awaited acceptance, and
-   `close` without an attempt), `cp8-evidence.test.ts` (provenance stamps and entries; the
+   `close` without an attempt), `evidence.test.ts` (provenance stamps and entries; the
    preflight's four refusals; the real-session load), and the read-model tests.
 2. Drill 1's unit is blocked `check-failure` with a `fail` verdict whose `contradicted`
    names the report's `run_tests` claim, and the audit finding is in the signal sink with

@@ -132,11 +132,11 @@ lesson is a prompt.
 
 ## 3. Mechanism
 
-### `pi install ./packages/regulator`
+### `pi install ./packages/regulator-pi`
 
 A Pi package is a directory with a `package.json` that names its extensions under
-`pi.extensions`; the lab's names the eleven checkpoints, and its `bin` is the
-`regulator` CLI. `pi install <path>` records it in user settings (`-l` for project
+`pi.extensions`; the Pi host's (`packages/regulator-pi`) names the eleven session
+extensions, and the control plane's (`packages/regulator`) `bin` is the `regulator` CLI. `pi install <path>` records it in user settings (`-l` for project
 settings, shared with a team, installed on startup once the project is trusted);
 `pi -e` loads the same files for one session. Pi runs `npm install` for a package from
 npm or git; a workspace package is built where it lives.
@@ -192,7 +192,7 @@ gains `timelineFor` and reads the events store.
 
 `glossary-lint`, with `forbidden` and `writablePaths` options.
 
-### The loop and the session — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts), [`cp3-profiles.ts`](../../packages/regulator/src/cp3-profiles.ts), [`cp11-identity.ts`](../../packages/regulator/src/cp11-identity.ts)
+### The loop and the session — [`packages/regulator/src/controller.ts`](../../packages/regulator/src/controller.ts), [`profiles.ts`](../../packages/regulator-pi/src/profiles.ts), [`identity.ts`](../../packages/regulator-pi/src/identity.ts)
 
 `verifyBase` after reintegration; protected and writable prefixes from the manifest at
 closeout; the glossary's terms from the worktree's identity; the profile grant reads the
@@ -270,7 +270,7 @@ mechanism would check it. This is the capstone's first page.
 
 **GSD-Pi.** Its distribution story — a scoped npm package, a guided installer, migration
 instructions for a shadowed global binary — and its extension surface for
-project-specific commands, tools, skills and UI. Compare with `pi install ./packages/regulator`
+project-specific commands, tools, skills and UI. Compare with `pi install ./packages/regulator-pi`
 and `regulator init`: what GSD installs into a project versus what this harness refuses
 to read from one, and why the second is a security posture rather than a limitation.
 

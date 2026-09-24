@@ -164,7 +164,7 @@ consumed, models, compactions, and `exhausted` once set. The execution store gai
 `budget.a<N>.json` per attempt — a counter, rewritten, unlike the immutable contract and
 report.
 
-### The extension — [`packages/regulator/src/cp6-budget.ts`](../../packages/regulator/src/cp6-budget.ts)
+### The extension — [`packages/regulator-pi/src/budget.ts`](../../packages/regulator-pi/src/budget.ts)
 
 `--policy <file>` (default: the lab's). On `session_start` it finds the unit from the
 lease on the current worktree, loads the unit's contract from the store, builds the
@@ -188,7 +188,7 @@ dispatch, a missing report with an `exhausted` ledger records the attempt as
 `budget-exhausted` and blocks the unit on that dimension. The dispatch request now
 carries the attempt number, the route, and the policy path.
 
-### The dispatcher — [`packages/regulator/src/dispatch-pi.ts`](../../packages/regulator/src/dispatch-pi.ts)
+### The dispatcher — [`packages/regulator-pi/src/dispatcher.ts`](../../packages/regulator-pi/src/dispatcher.ts)
 
 Filters the route by `ModelRuntime.getAvailable()`, runs the first candidate with
 checkpoints 2–6 loaded, and on an assistant message with `stopReason: "error"` moves to
@@ -311,7 +311,7 @@ You have finished checkpoint 6 when:
    availability, the meter's dimensions and stickiness, the preserved block), the
    controller's budget test (a halted attempt recorded as `budget-exhausted`; re-dispatch
    under the same version while attempts remain; refusal when spent or replanned), and
-   `cp6-budget.test.ts` (ledger at start, halt and gate at the ceiling, no metering
+   `budget.test.ts` (ledger at start, halt and gate at the ceiling, no metering
    without a unit, the compaction summary beginning with the contract block with and
    without a model, and the real-session load).
 2. Drill 1's unit is blocked with `budget exhausted: turns` after attempt 1, resumed for
