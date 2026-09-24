@@ -14,7 +14,7 @@
 import { createHash } from "node:crypto";
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import { EffectJournalEntrySchema, assertValid, type EffectJournalEntry, type EffectStatus } from "@metacoding/vsm-pi-protocol";
+import { EffectJournalEntrySchema, assertValid, type EffectJournalEntry, type EffectStatus } from "@metacoding/regulator-protocol";
 import { EFFECTS_RELATIVE_PATH } from "./paths.js";
 
 export interface EffectState {

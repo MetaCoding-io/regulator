@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/vsm-pi-core";
+import { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/regulator-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
@@ -67,7 +67,7 @@ test("an overdue review date fails the registry check (lesson 15): every record 
 });
 
 test("the committed definition passes the definition check: profiles, workload, policies and identity validate and resolve", async () => {
-  const { checkDefinition } = await import("@metacoding/vsm-pi-core");
+  const { checkDefinition } = await import("@metacoding/regulator-core");
   const definition = await checkDefinition(labRoot);
   assert.deepEqual(definition.problems, []);
   assert.deepEqual(definition.profiles.map((p) => p.name), ["auditor", "bookkeeper", "implement", "intelligence", "research"]);

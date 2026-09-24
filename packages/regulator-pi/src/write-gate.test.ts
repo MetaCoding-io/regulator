@@ -4,12 +4,12 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test, { type TestContext } from "node:test";
-import { PROTECTED_S5_PATHS } from "@metacoding/vsm-pi-core";
+import { PROTECTED_S5_PATHS } from "@metacoding/regulator-core";
 import {
   createAgentSession, createWriteTool, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
   type CustomToolCallEvent, type ExtensionAPI, type ExtensionContext, type ExtensionHandler, type ToolCallEvent, type ToolCallEventResult,
 } from "@earendil-works/pi-coding-agent";
-import vsmPiExtension from "./write-gate.js";
+import regulatorPiExtension from "./write-gate.js";
 
 type Handler = ExtensionHandler<ToolCallEvent, ToolCallEventResult>;
 
@@ -18,7 +18,7 @@ type WriteOrEditArguments = { path: string; content?: string; edits?: { oldText:
 const asArguments = (input: Record<string, unknown>): WriteOrEditArguments => input as WriteOrEditArguments;
 
 async function fixture(t: TestContext): Promise<string> {
-  const cwd = await mkdtemp(path.join(tmpdir(), "vsm-pi-extension-"));
+  const cwd = await mkdtemp(path.join(tmpdir(), "regulator-pi-"));
   t.after(() => rm(cwd, { recursive: true, force: true }));
   await mkdir(path.join(cwd, "vsm"));
   await mkdir(path.join(cwd, "src"));
@@ -37,7 +37,7 @@ function registeredHandler(): Handler {
       handlers.push(handler);
     },
   } as unknown as ExtensionAPI;
-  vsmPiExtension(pi);
+  regulatorPiExtension(pi);
   assert.equal(handlers.length, 1);
   return handlers[0]!;
 }
@@ -166,7 +166,7 @@ test("absolute, home, traversal, and malformed paths fail closed", async (t) => 
 
 test("filesystem aliases and unresolvable parents cannot bypass S5 checks", async (t) => {
   const cwd = await fixture(t);
-  const outside = await mkdtemp(path.join(tmpdir(), "vsm-pi-outside-"));
+  const outside = await mkdtemp(path.join(tmpdir(), "regulator-outside-"));
   t.after(() => rm(outside, { recursive: true, force: true }));
   await symlink(path.join(cwd, "vsm/IDENTITY.md"), path.join(cwd, "alias.md"));
   await symlink(path.join(cwd, "vsm"), path.join(cwd, "policy"));

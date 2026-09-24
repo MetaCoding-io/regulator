@@ -128,7 +128,7 @@ node packages/regulator-pi/dist/write-gate.test.js
 
 The extension also registers `vsm_propose_policy_change`,
 `vsm_report_audit_finding`, and `vsm_report_uncertainty`. The default host context
-has no reporting grants. A trusted host may use `createVsmPiExtension()` to
+has no reporting grants. A trusted host may use `createRegulatorPiExtension()` to
 supply explicit capabilities through `resolveReportingContext`; no model payload
 can grant authority. Successful calls commit to the separate VSM SQLite store
 before returning receipts. See [the reporting guide](../../docs/REPORTING.md)

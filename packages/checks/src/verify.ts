@@ -23,7 +23,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import type {
   EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, ExpectationCheck, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
-} from "@metacoding/vsm-pi-protocol";
+} from "@metacoding/regulator-protocol";
 import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectConventions } from "./conventions.js";
 import type { Exec } from "./exec.js";
 

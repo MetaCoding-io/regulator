@@ -19,7 +19,7 @@ boundary, and a guardrail whose limits are undocumented is a liability, not a co
 
 ## 1. The question
 
-Two rules come from VSM-Pi's invariants. **INV-001**: operational execution must not
+Two rules come from regulator's invariants. **INV-001**: operational execution must not
 mutate protected identity. **INV-002**: a proposal is not policy — the right to ask is
 mechanically separate from the right to change. Both are easy to state and easy to put
 in a prompt, and lesson 02's glossary row says what happens then: a rule in `AGENTS.md`
@@ -250,7 +250,7 @@ proposal to a person yet — lesson 11's obligations do — and that gap is on t
 
 ## 6. Field study: the extension that documents its own edge
 
-**VSM-Pi.** [`packages/regulator-pi/src/write-gate.ts`](../../packages/regulator-pi/src/write-gate.ts)
+**regulator.** [`packages/regulator-pi/src/write-gate.ts`](../../packages/regulator-pi/src/write-gate.ts)
 and its README. Three things to check against this checkpoint. `authorizeWrite(path,
 "operational")`: the authority is a constant in the host's code, and no argument, prompt,
 channel or proposal can supply `"s5-authority"`. There is no S5 approval command: the

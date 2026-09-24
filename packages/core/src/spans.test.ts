@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { GENAI, VSM_ATTR, isSpanRecord, type WorkContract } from "@metacoding/vsm-pi-protocol";
+import { GENAI, VSM_ATTR, isSpanRecord, type WorkContract } from "@metacoding/regulator-protocol";
 import { AuditLog } from "./audit-log.js";
 import { EffectJournal } from "./effect-journal.js";
 import { ExecutionStore } from "./execution-store.js";

@@ -6,7 +6,7 @@
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { RoutingPolicySchema, assertValid, type RoutingPolicy } from "@metacoding/vsm-pi-protocol";
+import { RoutingPolicySchema, assertValid, type RoutingPolicy } from "@metacoding/regulator-protocol";
 import { LAB_ROOT } from "./workload.js";
 
 export const ROUTING_POLICY_PATH = path.join(LAB_ROOT, "policies", "routing.json");

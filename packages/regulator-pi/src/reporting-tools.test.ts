@@ -6,10 +6,10 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import test, { type TestContext } from "node:test";
-import { PROTECTED_S5_PATHS, RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "@metacoding/vsm-pi-core";
-import { assertValid, RegulatoryReceiptSchema, type ReportingAuthority } from "@metacoding/vsm-pi-protocol";
+import { PROTECTED_S5_PATHS, RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "@metacoding/regulator-core";
+import { assertValid, RegulatoryReceiptSchema, type ReportingAuthority } from "@metacoding/regulator-protocol";
 import { type ExtensionAPI, type ExtensionContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
-import defaultExtension, { createVsmPiExtension, type HostReportingContext } from "./write-gate.js";
+import defaultExtension, { createRegulatorPiExtension, type HostReportingContext } from "./write-gate.js";
 
 const examples = JSON.parse(readFileSync(new URL("../../../fixtures/reporting/examples.json", import.meta.url), "utf8"));
 const names = ["vsm_propose_policy_change", "vsm_report_audit_finding", "vsm_report_uncertainty"] as const;
@@ -25,7 +25,7 @@ function harness(cwd: string, resolve?: () => HostReportingContext | undefined) 
     on: (event: string) => events.push(event),
     registerTool: (tool: ToolDefinition) => { assert.equal(tools.has(tool.name), false); tools.set(tool.name, tool); },
   } as unknown as ExtensionAPI;
-  (resolve ? createVsmPiExtension({ resolveReportingContext: resolve }) : defaultExtension)(api);
+  (resolve ? createRegulatorPiExtension({ resolveReportingContext: resolve }) : defaultExtension)(api);
   assert.deepEqual(events, ["tool_call"]);
   assert.deepEqual([...tools.keys()], names);
   const context = { cwd, sessionManager: { getSessionId: () => "pi-session-1" } } as ExtensionContext;

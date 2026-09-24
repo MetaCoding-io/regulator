@@ -23,8 +23,8 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, loadRegistry, reviewDue, undelivered } from "@metacoding/vsm-pi-core";
-import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding/vsm-pi-protocol";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, loadRegistry, reviewDue, undelivered } from "@metacoding/regulator-core";
+import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR, canariesFromEnv } from "./unit.js";
 import { LAB_ROOT } from "./workload.js";

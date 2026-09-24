@@ -3,5 +3,5 @@
  * loads; the write gate and the reporting tools are the generic, definition-free pieces a Pi session can carry alone.
  */
 export { CHECKPOINT_EXTENSIONS, EXTENSIONS, SETTINGS_PATH, definitionResourceLoader, definitionSettings, extensionPath, host, piDispatcher, type DefinitionLoader, type DefinitionLoaderOptions, type PiDispatcherOptions } from "./dispatcher.js";
-export { createVsmPiExtension } from "./write-gate.js";
+export { createRegulatorPiExtension } from "./write-gate.js";
 export { registerReportingTools, type HostReportingContext, type ReportingToolOptions } from "./reporting-tools.js";

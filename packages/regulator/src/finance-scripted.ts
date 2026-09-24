@@ -24,8 +24,8 @@
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ExecutionStore, MemoryStore, ObligationLedger, severityForKind } from "@metacoding/vsm-pi-core";
-import type { InteractionPolicy, ResultReport, WorkContract } from "@metacoding/vsm-pi-protocol";
+import { ExecutionStore, MemoryStore, ObligationLedger, severityForKind } from "@metacoding/regulator-core";
+import type { InteractionPolicy, ResultReport, WorkContract } from "@metacoding/regulator-protocol";
 import type { DispatchRequest, Dispatcher } from "./controller.js";
 import type { Exec } from "./exec.js";
 

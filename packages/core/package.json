@@ -1,12 +1,12 @@
 {
-  "name": "@metacoding/vsm-pi-core",
+  "name": "@metacoding/regulator-core",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": false,
-  "homepage": "https://github.com/MetaCoding-io/vsm-pi#readme",
+  "homepage": "https://github.com/MetaCoding-io/regulator#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/MetaCoding-io/vsm-pi.git",
+    "url": "git+https://github.com/MetaCoding-io/regulator.git",
     "directory": "packages/core"
   },
   "publishConfig": {
@@ -27,6 +27,6 @@
     "test": "pnpm build && node --test dist/*.test.js"
   },
   "dependencies": {
-    "@metacoding/vsm-pi-protocol": "workspace:*"
+    "@metacoding/regulator-protocol": "workspace:*"
   }
 }

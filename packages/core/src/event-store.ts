@@ -1,7 +1,7 @@
 import { lstatSync, mkdirSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { assertValid, RegulatoryReceiptSchema, type RegulatoryEvent, type RegulatoryReceipt } from "@metacoding/vsm-pi-protocol";
+import { assertValid, RegulatoryReceiptSchema, type RegulatoryEvent, type RegulatoryReceipt } from "@metacoding/regulator-protocol";
 import { assertRegulatoryEvent } from "./reporting.js";
 
 /** Lesson 15: the reporting tools' event store lives with the instance's other records, under `.regulator/`. */

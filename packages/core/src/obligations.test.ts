@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import type { RecoveryDecision, RoutingPolicy, VsmMessage } from "@metacoding/vsm-pi-protocol";
+import type { RecoveryDecision, RoutingPolicy, VsmMessage } from "@metacoding/regulator-protocol";
 import { ObligationLedger, dispositionByDecision, effectiveSeverity, progressionVeto, routeMessages } from "./obligations.js";
 import { SIGNALS_RELATIVE_PATH } from "./paths.js";
 import { appendSignal, readSignals } from "./signals.js";

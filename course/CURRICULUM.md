@@ -8,7 +8,7 @@ CONCEPT       the cybernetic idea that names the problem
 MECHANISM     the Pi feature(s) that implement an answer
 BUILD         the step added to the learner's harness (regulator)
 BREAK IT      a deliberate failure drill that proves the mechanism matters
-FIELD STUDY   how GSD-Pi (the comparison) and VSM-Pi's packages solve this in production
+FIELD STUDY   how GSD-Pi (the comparison) and regulator's packages solve this in production
 CHECKPOINT    what must exist and pass before moving on
 ```
 
@@ -69,7 +69,7 @@ the class which failure each one is absorbing.
 **Question.** If I want to change agent behaviour, where exactly can I intervene, and
 what does each intervention point cost me?
 
-**Concept.** The **mechanism hierarchy**, taken from VSM-Pi's prime directive:
+**Concept.** The **mechanism hierarchy**, taken from regulator's prime directive:
 
 ```text
 1. TypeScript type / compile-time invariant
@@ -117,7 +117,7 @@ mechanism level, implementation path, tests, and the one limitation already know
 Adversarially prompt both. Record the pass rate. This table is quoted for the rest of
 the course.
 
-**Field study.** VSM-Pi `AGENTS.md` and `docs/ARCHITECTURE.md`: a project that writes
+**Field study.** regulator `AGENTS.md` and `docs/ARCHITECTURE.md`: a project that writes
 its own mechanism hierarchy down and is held to it in review.
 
 **Checkpoint.** Trace file with per-turn records that pass the runtime schema (and a
@@ -165,7 +165,7 @@ correctness suite never needs a provider key. Two patterns, both using Node's bu
 `registerTool` / `on` calls and assert on the registrations; and for handlers, build a
 real in-memory session with the SDK's `DefaultResourceLoader` and `createAgentSession`,
 then invoke the hook directly (for example `session.agent.beforeToolCall(...)`) with
-isolated temporary settings and no credentials. VSM-Pi's
+isolated temporary settings and no credentials. regulator's
 `packages/regulator-pi/src/index.test.ts` is the worked reference. Live-model runs are
 for failure drills and evals, never for proving a handler correct.
 
@@ -185,7 +185,7 @@ tool that fails — show how an unstructured stack trace poisons the next three 
 
 **Field study.** GSD-Pi's tool surface as domain operations (`gsd_plan_slice`,
 `uat_result_save`, and the rule that a PASS check may not cite failed evidence) —
-validation living in the tool, not in the prompt. VSM-Pi's three content-only reporting
+validation living in the tool, not in the prompt. regulator's three content-only reporting
 tools and their host-supplied authorization grant.
 
 **Checkpoint.** Typed tools registered, tested headlessly without a live model.
@@ -201,7 +201,7 @@ persona stacks disappoint, and what should replace them?
 operational boundary: responsibility, tool surface, allowed paths, evidence
 requirements, model and reasoning budget. The difference is enforceability — a persona
 that "must not edit tests" is advice; a profile without the write tool is a fact. This
-is VSM-Pi's S1 rule: *profiles are capability boundaries, not personalities*. Introduce
+is regulator's S1 rule: *profiles are capability boundaries, not personalities*. Introduce
 **separation of duty** as the reason profiles matter for audit later (M09).
 
 Draw the boundary with M10 explicitly. A profile is a **positive grant**: what this unit
@@ -248,7 +248,7 @@ gates cannot know.
 **Field study.** GSD-Pi phases as model-routing buckets (`research`, `planning`,
 `discuss`, `execution`, `execution_simple`, `completion`, `validation`, `subagent`,
 `uat`) and the distinction between a *unit* (dispatched) and a *phase* (routing key).
-VSM-Pi's functional projection: capabilities derived from unit + phase + separation-of-duty
+regulator's functional projection: capabilities derived from unit + phase + separation-of-duty
 policy, fail-closed, never a naive union of memberships.
 
 **Checkpoint.** Two profiles working; a test proving the read-only profile cannot write.
@@ -295,7 +295,7 @@ oscillate until the detector fires.
 
 **Field study.** GSD-Pi's worktree-aware git automation, milestone leases, and the
 release note about *reclaiming leases held by verifiably-dead local workers* — a real
-lease system needs a liveness story. VSM-Pi's archived S2 gap analysis
+lease system needs a liveness story. regulator's archived S2 gap analysis
 (`docs/archive/2026-09/S2-COORDINATION-GAP-ANALYSIS.md`).
 
 **Checkpoint.** Lease acquired/released across a run; thrash detector fires on a seeded
@@ -342,7 +342,7 @@ back silently settled).
 the results for unrequested scope, silent library choices, and schema changes nobody
 authorized.
 
-**Field study.** VSM-Pi's archived design records
+**Field study.** regulator's archived design records
 `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md` (slice delivery vs task work
 contract, decision allocation, result report, validation rules) and
 `docs/archive/2026-09/PLANNER-CONTRACT-COMPOSITION.md`, against the shipped
@@ -434,7 +434,7 @@ harness before the result is recorded, restart — and prove the effect is *dete
 duplicated.
 
 **Field study.** GSD-Pi's failure observation, recovery action, and lifecycle kernel
-(advance → execute → verify → route → closeout) with normalized kernel outcomes. VSM-Pi's
+(advance → execute → verify → route → closeout) with normalized kernel outcomes. regulator's
 regulatory obligation lifecycle: expose → acknowledge → resolve/escalate/supersede, with
 no `in-progress` state, immutable terminal history, and successor obligations on reopen.
 
@@ -450,7 +450,7 @@ each recovery decision.
 **Question.** The agent says the tests pass. What is that statement worth?
 
 **Concept.** S3\* is the audit channel, and its defining property is **independence from
-self-report**. VSM-Pi's INV-003 stated plainly: an executor's claim that work is correct
+self-report**. regulator's INV-003 stated plainly: an executor's claim that work is correct
 cannot by itself satisfy audit. Build the evidence model: an observation tied to an
 acceptance criterion, an attempt, a source revision, and an execution environment,
 produced by the host — plus freshness, because evidence from three commits ago is a
@@ -475,7 +475,7 @@ catching it. Then show the harder case: a passing suite that does not cover the 
 behaviour — motivating criterion-bound evidence rather than "CI is green".
 
 **Field study.** GSD-Pi's verification evidence, technical verdict, human acceptance, and
-the rule that a PASS check cannot cite failed evidence. VSM-Pi's three-layer S3\*
+the rule that a PASS check cannot cite failed evidence. regulator's three-layer S3\*
 (deterministic structural checks → semantic/domain checks → LLM judgment for residual
 architectural questions) and its typed audit finding.
 
@@ -490,7 +490,7 @@ event store.
 enforce that against an agent that can run shell commands?
 
 **Concept.** Authority is not a role label; it is what the mechanism permits. Two rules
-carried from VSM-Pi: **operational code must not mutate protected identity** (INV-001)
+carried from regulator: **operational code must not mutate protected identity** (INV-001)
 and **a proposal is not policy** (INV-002) — the right to ask is not the right to change.
 Then the module's most important lesson, taught honestly: **state your enforcement
 boundary**. A tool-call hook protects calls routed through that hook. It does not sandbox
@@ -546,7 +546,7 @@ authority in the gate, the injected instruction fails the same way an honest req
 would. Then the canary: a fake credential in `.env`, a tool that would exfiltrate it,
 and a check on every transcript and tool result for the canary's value.
 
-**Field study.** VSM-Pi's Pi extension: `authorizeWrite(path, "operational")`, no
+**Field study.** regulator's Pi extension: `authorizeWrite(path, "operational")`, no
 model-controlled authority flag, no S5 approval command, with a README that documents the
 native-hook enforcement boundary precisely.
 
@@ -605,7 +605,7 @@ mode (stale advisory rewrites working code). Then route it correctly and show th
 controller deciding.
 
 **Field study.** GSD-Pi's research milestones and subagent phase (prompt-injected, not
-framework-dispatched). VSM-Pi's `intelligence` channel with S3/S5 destinations and its
+framework-dispatched). regulator's `intelligence` channel with S3/S5 destinations and its
 rule that recurring uncertainty clusters are themselves higher-order evidence.
 
 **Checkpoint.** Intelligence record produced, routed, and visibly *not* auto-applied.
@@ -650,7 +650,7 @@ and a review-by date.
 **Break it.** Run a long session, force two compactions, and measure how many invariants
 the agent still honours from context alone versus from the gate.
 
-**Field study.** VSM-Pi `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml`, and
+**Field study.** regulator `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `vsm/channels.yaml`, and
 the committed-identity vs runtime-evidence split (`vsm/` versus `.regulator/`).
 GSD-Pi's `CONTEXT.md` glossary and ADR practice.
 
@@ -692,7 +692,7 @@ evidence.
 (timeout → pause and record) costing only time.
 
 **Field study.** GSD-Pi's Interaction Kind vocabulary (open, choice, clarification,
-recap, consent, subjective UAT) and its consent semantics. VSM-Pi's `algedonic` channel
+recap, consent, subjective UAT) and its consent semantics. regulator's `algedonic` channel
 with severity `[blocking, critical]`.
 
 **Checkpoint.** Escalation fires, is answerable in TUI, and is safe under headless
@@ -734,7 +734,7 @@ counterfactual branches from an identical prefix; `/export` and `/share`;
 `pi.setSessionName` and `pi.events` for labelling and tapping runs; JSON event mode
 for machine consumption; the `evals` package (vitest-evals; host evals and
 docs-lift-style paired comparison with isolated arms, repetitions, and lift reporting);
-an append-only event store with replay (VSM-Pi's SQLite event store and committed
+an append-only event store with replay (regulator's SQLite event store and committed
 receipts as the reference pattern).
 
 **Build.** Checkpoint 13: an eval harness for `regulator` — N fixture tasks, two arms
@@ -752,7 +752,7 @@ views over registry ∪ events ∪ eval results, read-only.
 is a real failure mode, and the right response is attenuation of the regulation, not
 louder prompts.
 
-**Field study.** VSM-Pi's longitudinal drift fixture and its control-vs-treatment intent.
+**Field study.** regulator's longitudinal drift fixture and its control-vs-treatment intent.
 GSD-Pi's token-consumption savings evidence as an example of publishing a cost claim with
 its measurement.
 

@@ -257,7 +257,7 @@ that authorized it.
 
 ## 6. Field study: the identity this repository keeps for itself
 
-**VSM-Pi.** [`vsm/IDENTITY.md`](../../vsm/IDENTITY.md), [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md),
+**regulator.** [`vsm/IDENTITY.md`](../../vsm/IDENTITY.md), [`vsm/INVARIANTS.md`](../../vsm/INVARIANTS.md),
 [`vsm/ARCHITECTURE.md`](../../vsm/ARCHITECTURE.md), [`vsm/channels.yaml`](../../vsm/channels.yaml)
 against the lab's `identity/`. Three things to check. `vsm/` has seven invariants and no
 *checked by* lines; the lab's four each name a mechanism. For your notes: which of the
@@ -266,7 +266,7 @@ split between committed identity (`vsm/`) and runtime evidence (`.regulator/`,
 the path the architecture policy says is a code change to rename): the lab's instance
 keeps identity under `regulator/identity/` and evidence under `.regulator/`, and now
 memory beside evidence — same split, third kind. Finally `AGENTS.md` at the root of this
-repository: it is a context file, loaded by Pi for every session that works on VSM-Pi
+repository: it is a context file, loaded by Pi for every session that works on regulator
 itself, and it carries the prime directive. Is it identity or advice, and what would it
 take to make the distinction mechanical here the way the lab makes it for a fixture?
 

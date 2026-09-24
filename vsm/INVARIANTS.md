@@ -1,4 +1,4 @@
-# VSM-Pi Invariants
+# regulator Invariants
 
 These are initial architectural invariants for the project itself. They are intentionally few.
 

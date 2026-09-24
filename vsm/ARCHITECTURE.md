@@ -1,8 +1,8 @@
-# VSM-Pi Architecture Policy
+# regulator Architecture Policy
 
 ## System boundary
 
-VSM-Pi is a coding-agent harness on Pi with its own orchestrator and an explicit control plane. It integrates with Pi only through supported extension and SDK seams. The orchestrator is the sole authority over execution state; regulators are the sole authority over regulatory state (INV-005). GSD-Pi is comparison material in the course, not a dependency.
+regulator is a coding-agent harness on Pi with its own orchestrator and an explicit control plane. It integrates with Pi only through supported extension and SDK seams. The orchestrator is the sole authority over execution state; regulators are the sole authority over regulatory state (INV-005). GSD-Pi is comparison material in the course, not a dependency.
 
 ## Primary components
 

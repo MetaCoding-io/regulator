@@ -1,6 +1,6 @@
 # Viable Agents — Build Your Own Coding-Agent Harness
 
-**A course offering built on Pi, GSD-Pi, and the VSM-Pi control-plane research.**
+**A course offering built on Pi, GSD-Pi, and the regulator control-plane research.**
 
 > Most agent courses teach you the buttons. This one teaches you the control system,
 > and you leave holding a harness you wrote yourself.
@@ -17,7 +17,7 @@ This course uses Stafford Beer's Viable System Model (VSM) and Ashby's Law of Re
 Variety as the organizing spine. Each module opens with a **regulatory question** that
 an autonomous coding agent forces on you, derives the mechanism that answers it, and
 then shows the Pi feature that implements it, the production example in GSD-Pi, and the
-typed control-plane treatment in VSM-Pi.
+typed control-plane treatment in regulator.
 
 The learner leaves with three things:
 
@@ -103,7 +103,7 @@ failure demo is how the regulatory need becomes felt rather than asserted.
 
 Full module specs: [CURRICULUM.md](CURRICULUM.md). Three reference documents sit
 alongside them: [GLOSSARY.md](GLOSSARY.md) maps each cybernetic term to its harness
-meaning and to where it already exists as mechanism in Pi, GSD-Pi or VSM-Pi, and ends
+meaning and to where it already exists as mechanism in Pi, GSD-Pi or regulator, and ends
 with a *failure → diagnosis → mechanism* table; [FEATURE-MATRIX.md](FEATURE-MATRIX.md)
 lists every Pi documentation page and extension API area against the module that
 teaches it, so the "you learn the feature base anyway" claim is checkable rather than
@@ -136,10 +136,10 @@ Staging, checkpoints and starter-kit requirements: [REFERENCE-BUILD.md](REFERENC
 | Repo | Role in the course |
 | --- | --- |
 | **Pi** (`earendil-works/pi`) | The substrate. Every build step uses documented Pi APIs — no forks, no monkey-patching. |
-| **VSM-Pi** (this repo) | The product. `regulator`, the harness learners build, *is* VSM-Pi's reference build; its checkpoints promote into `packages/` as they stabilize. Channels, invariants, effects, profiles, the registry, contracts and obligations are the course's own material, not a reference to something else. |
+| **regulator** (this repo) | The product: the control plane `packages/regulator` and the Pi host `packages/regulator-pi`. The harness learners build is a reproduction of it, lesson by lesson; its Pi-free pieces promote into `packages/` as they stabilize. Channels, invariants, effects, profiles, the registry, contracts and obligations are the course's own material, not a reference to something else. |
 | **GSD-Pi** (`open-gsd/gsd-pi`) | The comparison. A production harness that answered the same regulatory questions differently — lifecycle, worktrees, leases, attempts, recovery, verification evidence, human-interaction contracts. Each module reads the part of GSD that solves that module's problem, so learners see what their own answer is standing beside. |
 
-The course never asks a learner to adopt VSM-Pi's answers. It asks them to understand
+The course never asks a learner to adopt regulator's answers. It asks them to understand
 the regulatory question well enough to accept, reject, or redesign any specific answer —
 including ours.
 

@@ -8,7 +8,7 @@
 import { appendFile, mkdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
-import { MemoryEventSchema, assertValid, type MemoryEntry, type MemoryEvent } from "@metacoding/vsm-pi-protocol";
+import { MemoryEventSchema, assertValid, type MemoryEntry, type MemoryEvent } from "@metacoding/regulator-protocol";
 import { MEMORY_RELATIVE_PATH } from "./paths.js";
 
 export interface MemoryState extends MemoryEntry {

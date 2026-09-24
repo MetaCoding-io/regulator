@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { ObligationLedger } from "@metacoding/vsm-pi-core";
-import type { InteractionPolicy } from "@metacoding/vsm-pi-protocol";
+import { ObligationLedger } from "@metacoding/regulator-core";
+import type { InteractionPolicy } from "@metacoding/regulator-protocol";
 import { INTERACTION_ENTRY_TYPE, PAUSED_ENTRY_TYPE, createAlgedonicExtension } from "./algedonic.js";
 import { gitExec, initRepo } from "@metacoding/regulator";
 import { ctxFor, mockPi, type Dialogs } from "./test-support.js";

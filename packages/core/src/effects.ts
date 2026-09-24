@@ -1,12 +1,12 @@
 /**
- * Declared effects for Pi's built-in tools and VSM-Pi's own tools.
+ * Declared effects for Pi's built-in tools and regulator's own tools.
  *
  * A tool's schema says what the model may ask for; its effect says what
  * happens in the world when it runs. A profile that calls itself read-only
  * reasons about effects, not schemas: `run_tests` has a one-string schema and
  * runs whatever the project's test suite does.
  */
-import type { ToolEffect } from "@metacoding/vsm-pi-protocol";
+import type { ToolEffect } from "@metacoding/regulator-protocol";
 
 const READ_ONLY: ToolEffect = { filesystem: "read", execution: "none", network: "none", sideEffects: "none" };
 
@@ -18,7 +18,7 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   write: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
   edit: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
   bash: { filesystem: "write", execution: "arbitrary", network: "open", sideEffects: "unknown" },
-  // VSM-Pi typed tools.
+  // regulator typed tools.
   read_conventions: READ_ONLY,
   // `node --check` parses without executing; `git status` reads. Bounded by the harness, not the project.
   run_checks: READ_ONLY,

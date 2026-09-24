@@ -22,10 +22,10 @@
 import { randomUUID } from "node:crypto";
 import { realpath } from "node:fs/promises";
 import type { ExtensionAPI, ExtensionContext, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import type { CoordinationSignal } from "@metacoding/vsm-pi-protocol";
-import { isReadOnlyEffect, TOOL_EFFECTS } from "@metacoding/vsm-pi-core";
+import type { CoordinationSignal } from "@metacoding/regulator-protocol";
+import { isReadOnlyEffect, TOOL_EFFECTS } from "@metacoding/regulator-core";
 import { readFile } from "node:fs/promises";
-import { PolicyDefinitionSchema, assertValid } from "@metacoding/vsm-pi-protocol";
+import { PolicyDefinitionSchema, assertValid } from "@metacoding/regulator-protocol";
 import { LeaseStore, ThrashDetector, type Lease, type ThrashSignal } from "@metacoding/regulator";
 import type { Exec } from "@metacoding/regulator";
 import { POLICY_PATH } from "@metacoding/regulator";

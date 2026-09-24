@@ -254,7 +254,7 @@ to `retired` in a copy of the card and run `regulator check`: the record stays, 
 
 ## 6. Field study: publishing a cost claim with its measurement
 
-**VSM-Pi.** The drift scenario under [`packages/regulator/drift/SCENARIO.md`](../../packages/regulator/drift/SCENARIO.md)
+**regulator.** The drift scenario under [`packages/regulator/drift/SCENARIO.md`](../../packages/regulator/drift/SCENARIO.md)
 against what the committed reports actually measured. Three of the five measures have a
 grader; cost has the budget's numbers only in a live run; memory hygiene has the
 rules grader and the memory store's count. For your notes: which measure in the scenario

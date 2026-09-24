@@ -25,8 +25,8 @@
 import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { ReportedEvidenceSchema } from "@metacoding/vsm-pi-protocol";
-import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding/vsm-pi-core";
+import { ReportedEvidenceSchema } from "@metacoding/regulator-protocol";
+import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding/regulator-core";
 import type { Exec } from "@metacoding/regulator";
 import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding/regulator";
 import { baseRoot, headRevision } from "@metacoding/regulator";

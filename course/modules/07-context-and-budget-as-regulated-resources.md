@@ -295,7 +295,7 @@ compacting what is already there — the lesson 03 side of this lesson's coin. Y
 registry cards' `cost` fields are the seed of the same table for `regulator`; lesson 14
 fills it.
 
-**VSM-Pi.** This repository's `AGENTS.md`, the S3 bullet in "Architectural
+**regulator.** This repository's `AGENTS.md`, the S3 bullet in "Architectural
 boundaries": *leases and budgets* are named as part of the loop, and the loop is
 *generic over workloads*. Check that against the build: the ceiling and the route are
 resolved by unit type from a file; the loop code mentions neither tokens nor models.

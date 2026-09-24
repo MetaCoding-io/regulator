@@ -7,7 +7,7 @@
  * on for enforcement.
  */
 import path from "node:path";
-import type { CapabilityProfile } from "@metacoding/vsm-pi-protocol";
+import type { CapabilityProfile } from "@metacoding/regulator-protocol";
 import { readOnlyViolations } from "./effects.js";
 
 /**

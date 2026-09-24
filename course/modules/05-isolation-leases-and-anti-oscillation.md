@@ -348,12 +348,12 @@ the same shape without the fencing token and without the process check. Name wha
 of those buys, and what it costs to add.
 
 Notice the gap analysis's own restraint, in §1.1's last line and in §4's "Important M0
-restraint": written while VSM-Pi was to sit *on* GSD, it says *do not build another
+restraint": written while regulator was to sit *on* GSD, it says *do not build another
 lease system*. That restraint was correct for that design and is lifted under this one
-— VSM-Pi provides its own orchestrator now, so it provides its own leases. Read the
+— regulator provides its own orchestrator now, so it provides its own leases. Read the
 status banner at the top of the document for the mapping.
 
-**VSM-Pi.** §2.5 and §5.6 of the same document describe *coordination oscillation* as
+**regulator.** §2.5 and §5.6 of the same document describe *coordination oscillation* as
 the gap GSD did not model: repeated rework around the same shared commitment, visible
 to S3 as a signal before it becomes hard policy. Your thrash detector is the smallest
 possible instance — one file, one unit, one counter. The analysis is about a larger

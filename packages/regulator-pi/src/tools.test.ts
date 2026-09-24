@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { discoverConventions } from "@metacoding/vsm-pi-checks";
+import { discoverConventions } from "@metacoding/regulator-checks";
 import { createTypedToolsExtension, TOOL_NAMES, type CheckResult } from "./tools.js";
 import { ctxFor, fixtureCopy, mockPi } from "./test-support.js";
 

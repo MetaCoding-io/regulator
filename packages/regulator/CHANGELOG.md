@@ -19,5 +19,5 @@ the former `@metacoding/vsm-pi-cli`.
 - The definition beside the code: forty-three registry records (forty-two active; the lexical vendor write gate of lesson 02 retired, superseded by the authority extension and the manifest's protected prefixes) with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
 - Host checks at closeout: `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature`, `glossary-lint`.
 
-[Unreleased]: https://github.com/MetaCoding-io/vsm-pi/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/MetaCoding-io/vsm-pi/releases/tag/v0.1.0
+[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/MetaCoding-io/regulator/releases/tag/v0.1.0

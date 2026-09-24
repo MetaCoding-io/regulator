@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createProfilesExtension, PROFILE_SECTION_TAG } from "./profiles.js";
-import { readOnlyViolations } from "@metacoding/vsm-pi-core";
+import { readOnlyViolations } from "@metacoding/regulator-core";
 import { isReadOnlyProfile, isWritableUnder, PROFILES, renderProfileSection } from "@metacoding/regulator";
 import { ctxFor, fixtureCopy, mockPi } from "./test-support.js";
 
@@ -134,7 +134,7 @@ test("Pi 0.87.0 loads the built checkpoint; the native hook enforces the default
 
 test("the instance manifest reaches the session (lesson 15): the implement profile writes under the prefixes the manifest declares, outside an instance its own prefixes hold, and a read-only profile stays read-only whatever the manifest says", async (t) => {
   const { PROFILES, gitExec, initInstance, startUnit } = await import("@metacoding/regulator");
-  const { isReadOnlyProfile } = await import("@metacoding/vsm-pi-core");
+  const { isReadOnlyProfile } = await import("@metacoding/regulator-core");
   const { mkdir, mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const repo = await mkdtemp(path.join(tmpdir(), "regulator-unfamiliar-"));

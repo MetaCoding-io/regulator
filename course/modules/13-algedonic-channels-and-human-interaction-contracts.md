@@ -274,7 +274,7 @@ where GSD says silence is not consent and ask whether a configuration could make
 The lab's answer is `CONTINUES_WITHOUT_ANSWER`, which no policy field can reach; compare
 what each design costs a maintainer who wants, for one deployment, a timeout to proceed.
 
-**VSM-Pi.** [`vsm/channels.yaml`](../../vsm/channels.yaml) declares the `algedonic`
+**regulator.** [`vsm/channels.yaml`](../../vsm/channels.yaml) declares the `algedonic`
 channel with severity `[blocking, critical]` and [`vsm/ARCHITECTURE.md`](../../vsm/ARCHITECTURE.md)
 describes it as the exceptional path that bypasses the hierarchy. The lab's obligation
 concern `interaction` is severity `blocking` or `advisory` (a recap) and its consumer is

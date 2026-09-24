@@ -339,7 +339,7 @@ notes: GSD's kernel can route *verify* failures because it runs the verification
 this loop's `check-failure` cause produced today, and what does lesson 09 have to add
 before the router ever sees it?
 
-**VSM-Pi.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
+**regulator.** [`REGULATORY-STATE-AND-ROUTING.md`](../../docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md)
 §1–2 (events are not obligations; the lifecycle *open → acknowledged → resolved |
 escalated | superseded*, with no in-progress state), §8 (the routing table, which is
 "policy, not prompt advice"), §12 (separation of duty: S1 cannot resolve its own

@@ -1,4 +1,4 @@
-# @metacoding/vsm-pi-control-room
+# @metacoding/regulator-control-room
 
 The maintainer's control room: one read-only page over the `regulator status` read model
 (`packages/regulator`). It answers three questions and owns no state:
