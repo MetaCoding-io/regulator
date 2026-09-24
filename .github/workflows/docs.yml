@@ -9,6 +9,8 @@ on:
       - "packages/regulator/BOUNDARY.md"
       - "packages/regulator/OPERATING.md"
       - "packages/regulator/CHANGELOG.md"
+      - "ROADMAP.md"
+      - "CONTRIBUTING.md"
       - ".github/workflows/docs.yml"
   workflow_dispatch:
 permissions:

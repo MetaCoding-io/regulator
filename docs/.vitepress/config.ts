@@ -30,6 +30,8 @@ export default defineConfig({
     "generated/boundary.md": "reference/boundary.md",
     "generated/operating.md": "guide/operating.md",
     "generated/changelog.md": "project/changelog.md",
+    "generated/roadmap.md": "project/roadmap.md",
+    "generated/contributing.md": "project/contributing.md",
   },
   head: [["link", { rel: "icon", type: "image/svg+xml", href: "/regulator/favicon.svg" }]],
   themeConfig: {
@@ -39,7 +41,7 @@ export default defineConfig({
       { text: "Guide", link: "/guide/getting-started" },
       { text: "Concepts", link: "/concepts/control-plane" },
       { text: "Reference", link: "/reference/cli" },
-      { text: "Project", link: "/project/changelog" },
+      { text: "Project", link: "/project/roadmap" },
       { text: "Course", link: "https://github.com/MetaCoding-io/viable-agents-course" },
     ],
     sidebar: [
@@ -77,10 +79,12 @@ export default defineConfig({
       {
         text: "Project",
         items: [
+          { text: "Roadmap", link: "/project/roadmap" },
           { text: "Changelog", link: "/project/changelog" },
           { text: "Build debt", link: "/DEBT" },
           { text: "Decisions", link: "/decisions/0001-own-orchestrator" },
           { text: "Packages", link: "/project/packages" },
+          { text: "Contributing", link: "/project/contributing" },
         ],
       },
     ],

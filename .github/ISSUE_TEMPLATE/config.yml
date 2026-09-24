@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://metacoding-io.github.io/regulator/
+    about: The guide, the concepts and the reference for the CLI and the definition files.
+  - name: Roadmap
+    url: https://github.com/MetaCoding-io/regulator/blob/main/ROADMAP.md
+    about: What is planned, in which milestone, and what is deliberately not.
