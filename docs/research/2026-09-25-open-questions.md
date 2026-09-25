@@ -118,7 +118,63 @@ SHACL run has no session and so no profile that means anything.
   deterministic and probabilistic units under one contract shape, and the picture in
   §1 shows both kinds on the same spine.
 
-## 4. Backlog — smaller things to think about
+## 5. Predictive intelligence: S4 as a model of "outside and then"
+
+**What S4 is today.** Two records do two jobs. `remember` writes operational memory — a
+fact with provenance and an expiry, scoped to unit types, rendered into later units'
+context: that is storage for later. `report_intelligence` writes an
+`intelligence-signal` — `claim`, `observation`, `evidence`, `confidence`, `observedAt`,
+`expiresAt`, `affectedUnits` (`packages/protocol/src/index.ts`) — and the router opens
+one obligation *per affected unit*, owed to S3 at `advisory` or above under the shipped
+routing policy, blocking at `blocking` or above; an expired signal is noted and raises
+nothing (`routeMessages`, `packages/core/src/obligations.ts`). So intelligence today is
+an interrupt with a hold, not a cache.
+
+**The question.** Could S4 predict rather than report — the probability a unit escalates,
+the attempts a contract shape will take, an instance drifting from its own baseline —
+for S3 to allocate on and for a person handling an algedonic signal to read? This is
+not a stretch of S4; it is Beer's S4, whose job was a model of the organization and its
+environment that could be run forward. What makes it feel like machine-learning creep
+is the word "model". It need not be trained.
+
+**Proposal, in the mechanism hierarchy's order.**
+
+1. *A prediction is an intelligence signal.* `claim` is about the future, with a
+   `horizon` (when it resolves), a `confidence` that is a probability, and the evidence
+   it was computed from. Same router, same obligation, same veto. It never replans and
+   never moves a threshold; "S5 uses it" means either the prediction is shown beside the
+   obligation a person dispositions, or it becomes a policy proposal (a routing floor,
+   an attention budget) that a person accepts. A predictor that adjusts thresholds is
+   autonomous S5 mutation, deferred.
+2. *A prediction resolves.* When the unit closes or aborts the loop records the outcome
+   against every open prediction that named it. A resolved prediction is a pair
+   (probability, outcome); the record is regulatory state like an evidence record.
+3. *The predictor is a regulator.* A registry card, an ablation arm, a limitation, a
+   review date. Its evidence is calibration: the Brier score over its resolved
+   predictions, pre-registered as an eval metric like any other. The harness grades its
+   own S4, and an uncalibrated predictor fails review like any other card.
+4. *Base rates first.* The first predictor is counts over the execution store — the
+   escalation rate per unit type and cause, attempts per contract shape, cost per route
+   — a deterministic level-2 mechanism anyone can read and recompute. A fitted model
+   (a regression, a sequence model) is admitted only when the base-rate card's
+   calibration is shown insufficient on the same metric, and it is a second card with
+   its own ablation, never a replacement of the first by fiat.
+
+**Consumers worth building for.** S3's route and budget resolution (expected cost and
+attempts for this contract shape); the recovery policy's next revision (which action
+has resolved which cause, as data for a proposal); the attention budget (how much of a
+person's attention this week's plan will spend, before dispatch); drift (the instance
+deviating from its own baseline in failure rate, oscillation or cost — the corpus-drift
+monitor the ArticleMiner note wants, generalized).
+
+**Hazards to record on the card.** A predictor that reads the instance's own trace and
+feeds S3 is a feedback loop that can oscillate — the thrash detector's cousin one level
+up — so its outputs are advice with a horizon, never a control input at the loop's
+step. And it can be self-fulfilling: predict escalation, route to the cheaper model to
+save budget, cause the escalation. Calibration catches that only if the resolution
+records the route actually taken beside the outcome.
+
+## 6. Backlog — smaller things to think about
 
 Items with no design yet. Each gets a section above when it has one.
 
@@ -135,5 +191,6 @@ Items with no design yet. Each gets a section above when it has one.
 | Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
+| Predictions as intelligence signals that resolve; a base-rate predictor card graded on calibration | §5 above | |
 | Attention as the scarcest budget, shown as one | the interaction policy | `attention.blockingPerAttempt` exists; nothing shows how much of a person's attention an instance has spent this week |
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link |

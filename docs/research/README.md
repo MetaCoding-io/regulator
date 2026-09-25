@@ -25,4 +25,4 @@ Like `archive/`, this directory is not built into the documentation site.
 | Note | Status |
 | --- | --- |
 | [ArticleMiner as a knowledge-production workload](2026-09-25-articleminer-knowledge-production.md) | open |
-| [Open questions and things to think about](2026-09-25-open-questions.md) — the control room's system view, person-raised S4 intelligence, units without a session, and a running backlog | open, running |
+| [Open questions and things to think about](2026-09-25-open-questions.md) — the control room's system view, person-raised S4 intelligence, units without a session, predictive S4, and a running backlog | open, running |
