@@ -65,5 +65,5 @@ changes anything, and that is deliberate.
 All six are released together at one version (`0.1.0`), from a `v*` tag, after
 `pnpm check` passes on both supported Node versions. The
 [changelog](/project/changelog) is the package's; the course,
-[Viable Agents](https://github.com/MetaCoding-io/viable-agents-course), pins the version
+[Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), pins the version
 each cohort builds against.

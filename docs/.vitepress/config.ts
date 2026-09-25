@@ -42,7 +42,7 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/control-plane" },
       { text: "Reference", link: "/reference/cli" },
       { text: "Project", link: "/project/roadmap" },
-      { text: "Course", link: "https://github.com/MetaCoding-io/viable-agents-course" },
+      { text: "Course", link: "https://metacoding-io.github.io/regulator-website/index.html" },
     ],
     sidebar: [
       {
