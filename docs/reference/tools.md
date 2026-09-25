@@ -15,18 +15,17 @@ not name is not merely refused; the model never sees it.
 | [`read_conventions`](#read_conventions) | read-only | every profile | nothing |
 | [`run_tests`](#run_tests-and-run_checks) | runs project code | `implement`, `bookkeeper` | a provenance entry in the session |
 | [`run_checks`](#run_tests-and-run_checks) | read-only | every profile | a provenance entry in the session |
-| [`report_result`](#report_result) | writes the execution store | `intelligence` (see the note) | the result report |
+| [`report_result`](#report_result) | writes the execution store | every contracted session (see the note) | the result report |
 | [`ask_human`](#ask_human) | irreversible: attention | `implement`, `intelligence`, `bookkeeper` | an `interaction` obligation |
 | [`notify_owner`](#notify_owner) | irreversible: a message | `implement`, `bookkeeper` | the effect journal, the outbox |
 | [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper` | a memory entry |
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
 | [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | `implement`, `intelligence`, `bookkeeper` | a `policy-proposal` |
 
-::: warning `report_result` and the shipped profiles
-Only the `intelligence` profile lists `report_result` today. A contracted unit must
-call it, so this is a defect in the shipped profiles, tracked in the research notes;
-until it is fixed, a definition of your own should add `report_result` to every profile
-a contracted unit type names.
+::: tip `report_result` needs no grant
+A contracted unit must be able to report, so the contract extension puts
+`report_result` on the active tool surface when the contract loads, whatever the
+profile lists; a profile need not name it. A session with no contract never sees it.
 :::
 
 ## `read_conventions`

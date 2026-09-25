@@ -41,6 +41,8 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
     getFlag: (name: string) => state.flags.get(name),
     getAllTools: () => [...allToolNames, ...state.tools.keys()].map((name) => ({ name })),
     setActiveTools: (names: string[]) => state.activeTools.push(names),
+    // The surface as last set; every tool until something sets it, as in Pi.
+    getActiveTools: () => state.activeTools.at(-1) ?? [...allToolNames, ...state.tools.keys()],
     setThinkingLevel: (level: string) => state.thinkingLevels.push(level),
     exec: realExec,
     appendEntry: (customType: string, data: unknown) => state.entries.push({ customType, data }),

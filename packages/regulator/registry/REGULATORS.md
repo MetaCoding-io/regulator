@@ -1487,7 +1487,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `silent-closure` — A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript.
 
-**Mechanism.** `../regulator-pi/src/contract.ts` at `report_result (tool execute)`, `runUnit (close)`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `report_result (tool execute)`, `runUnit (close)`, `session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)`
 
 **Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
 
@@ -1509,6 +1509,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
 - A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
 - Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
+- report_result joins the tool surface when the contract loads at session_start; a profile switched by hand mid-session (/profile) resets the surface to the profile's list and drops it until the session restarts. The dispatcher never switches profiles.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
