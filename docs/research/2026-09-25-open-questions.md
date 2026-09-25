@@ -149,10 +149,25 @@ is the word "model". It need not be trained.
 2. *A prediction resolves.* When the unit closes or aborts the loop records the outcome
    against every open prediction that named it. A resolved prediction is a pair
    (probability, outcome); the record is regulatory state like an evidence record.
-3. *The predictor is a regulator.* A registry card, an ablation arm, a limitation, a
-   review date. Its evidence is calibration: the Brier score over its resolved
-   predictions, pre-registered as an eval metric like any other. The harness grades its
-   own S4, and an uncalibrated predictor fails review like any other card.
+3. *The predictor is an instrument, not a regulator.* A prediction regulates nothing;
+   a regulator may act on it as evidence. So a predictor does not get a regulator card
+   by analogy. It gets its own kind of registry record — an *instrument* record —
+   with what the two kinds share (purpose, implementation, tests, limitations, owner,
+   review date, ablation) and what only an instrument has: the quantity it estimates,
+   its `level` (below), the metric it is graded on and the report that last graded it.
+   The registry then holds two things the control room can draw apart: gates that
+   refuse, and instruments that inform. `regulator check` treats an instrument
+   without a calibration report the way it treats a regulator without a limitation.
+
+   Instrument levels, in the order the mechanism hierarchy suggests:
+
+   | Level | What it is | Inspectable by |
+   | --- | --- | --- |
+   | `base-rate` | counts and rates over the execution store | recomputing the count |
+   | `smoothed` | a chosen-parameter estimator (a moving or exponentially weighted average, a control chart) | reading the parameter and the window |
+   | `fitted` | parameters learned from the instance's records (a regression, a sequence model) | the training set's fingerprint, the held-out score |
+   | `model-judgment` | a language model asked to estimate, with its reasons | the prompt and the reasons; the weakest, and graded like the rest |
+
 4. *Base rates first.* The first predictor is counts over the execution store — the
    escalation rate per unit type and cause, attempts per contract shape, cost per route
    — a deterministic level-2 mechanism anyone can read and recompute. A fitted model
@@ -191,6 +206,8 @@ Items with no design yet. Each gets a section above when it has one.
 | Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
-| Predictions as intelligence signals that resolve; a base-rate predictor card graded on calibration | §4 above | |
+| Predictions as intelligence signals that resolve; an instrument record kind in the registry with levels, graded on calibration | §4 above | |
+| Eval metrics are a closed list of fifteen trajectory counts (`EVAL_METRICS`); a workload or an instrument cannot declare its own | §4 above; the ArticleMiner note §4.6 | calibration (Brier) and a corpus F₁ both need an open metric with a declared grader |
+| The docs do not explain intelligence, memory or evals as concepts | this conversation | `intelligence-signal` appears in one table row of the control-plane page; `remember` in the glossary and the running-units guide; metrics and `interpretation` only in the definition reference's schema table. The website mentions all three in passing. A concepts page each: *Intelligence and memory* (what each record is, who writes it, what it holds, when it expires) and *Evidence about the regulators* (suites, arms, ablation, metrics, the interpretation rule) |
 | Attention as the scarcest budget, shown as one | the interaction policy | `attention.blockingPerAttempt` exists; nothing shows how much of a person's attention an instance has spent this week |
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link |
