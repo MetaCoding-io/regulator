@@ -118,7 +118,7 @@ SHACL run has no session and so no profile that means anything.
   deterministic and probabilistic units under one contract shape, and the picture in
   §1 shows both kinds on the same spine.
 
-## 5. Predictive intelligence: S4 as a model of "outside and then"
+## 4. Predictive intelligence: S4 as a model of "outside and then"
 
 **What S4 is today.** Two records do two jobs. `remember` writes operational memory — a
 fact with provenance and an expiry, scoped to unit types, rendered into later units'
@@ -174,7 +174,7 @@ step. And it can be self-fulfilling: predict escalation, route to the cheaper mo
 save budget, cause the escalation. Calibration catches that only if the resolution
 records the route actually taken beside the outcome.
 
-## 6. Backlog — smaller things to think about
+## 5. Backlog — smaller things to think about
 
 Items with no design yet. Each gets a section above when it has one.
 
@@ -191,6 +191,6 @@ Items with no design yet. Each gets a section above when it has one.
 | Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
-| Predictions as intelligence signals that resolve; a base-rate predictor card graded on calibration | §5 above | |
+| Predictions as intelligence signals that resolve; a base-rate predictor card graded on calibration | §4 above | |
 | Attention as the scarcest budget, shown as one | the interaction policy | `attention.blockingPerAttempt` exists; nothing shows how much of a person's attention an instance has spent this week |
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link |
