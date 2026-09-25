@@ -48,6 +48,7 @@ export default defineConfig({
     sidebar: [
       {
         text: "Guide",
+        collapsed: false,
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Running units", link: "/guide/running-units" },
@@ -58,6 +59,7 @@ export default defineConfig({
       },
       {
         text: "Concepts",
+        collapsed: false,
         items: [
           { text: "The control plane", link: "/concepts/control-plane" },
           { text: "Definition, instance, domain", link: "/concepts/definition-and-instance" },
@@ -72,6 +74,7 @@ export default defineConfig({
       },
       {
         text: "Reference",
+        collapsed: false,
         items: [
           { text: "CLI", link: "/reference/cli" },
           { text: "Definition files", link: "/reference/definition" },
@@ -84,6 +87,7 @@ export default defineConfig({
       },
       {
         text: "Project",
+        collapsed: false,
         items: [
           { text: "Roadmap", link: "/project/roadmap" },
           { text: "Changelog", link: "/project/changelog" },

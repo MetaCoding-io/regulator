@@ -1,3 +1,7 @@
+---
+aside: false
+---
+
 # Build debt
 
 What the build knows it has not yet absorbed. One row per gap that is *debt* — taken on
