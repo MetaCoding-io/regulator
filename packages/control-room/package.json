@@ -1,5 +1,5 @@
 {
-  "name": "@metacoding/regulator-control-room",
+  "name": "@metacoding.io/regulator-control-room",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": false,
@@ -31,8 +31,8 @@
     "test": "pnpm build && node --test dist/*.test.js"
   },
   "dependencies": {
-    "@metacoding/regulator": "workspace:*",
-    "@metacoding/regulator-core": "workspace:*",
-    "@metacoding/regulator-protocol": "workspace:*"
+    "@metacoding.io/regulator": "workspace:*",
+    "@metacoding.io/regulator-core": "workspace:*",
+    "@metacoding.io/regulator-protocol": "workspace:*"
   }
 }

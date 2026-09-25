@@ -14,7 +14,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { existsSync } from "node:fs";
-import { GENAI, VSM_ATTR, type EvalReport, type SpanEvent, type SpanRecord } from "@metacoding/regulator-protocol";
+import { GENAI, VSM_ATTR, type EvalReport, type SpanEvent, type SpanRecord } from "@metacoding.io/regulator-protocol";
 import { AuditLog } from "./audit-log.js";
 import { EffectJournal } from "./effect-journal.js";
 import { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "./event-store.js";

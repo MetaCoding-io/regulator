@@ -19,7 +19,7 @@ import {
   WAITING_ACTIONS, severityAtLeast,
   type Consumer, type Disposition, type InteractionEvent, type InteractionOutcome, type InteractionRequest, type Obligation, type ObligationEvent, type ObligationState,
   type RecoveryDecision, type RegulatoryEntry, type RoutingPolicy, type Severity, type VsmMessage, type VsmSystem,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 import { appendEntry, isMessage, readEntries } from "./signals.js";
 
 const TERMINAL = new Set(["resolved", "escalated", "superseded"]);

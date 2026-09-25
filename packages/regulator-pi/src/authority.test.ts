@@ -4,12 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test, { type TestContext } from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { readSignals } from "@metacoding/regulator-core";
+import { readSignals } from "@metacoding.io/regulator-core";
 import { REDACTION, createAuthorityExtension } from "./authority.js";
 import { definitionResourceLoader } from "./dispatcher.js";
-import { gitExec, initRepo , LAB_ROOT } from "@metacoding/regulator";
+import { gitExec, initRepo , LAB_ROOT } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { canariesFromEnv, initFixture } from "@metacoding/regulator";
+import { canariesFromEnv, initFixture } from "@metacoding.io/regulator";
 
 /** A repository with an identity and a vendored file: the two things the gate protects. */
 async function protectedRepo(t: TestContext): Promise<string> {

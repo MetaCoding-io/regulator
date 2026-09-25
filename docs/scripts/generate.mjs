@@ -105,7 +105,7 @@ function parseUsage(source) {
 
 function renderCli(source) {
   const { groups, trailing } = parseUsage(source);
-  const out = ["# CLI", "", "`regulator` is the `bin` of `@metacoding/regulator`. Every command runs against the instance in the current working directory (the base checkout `regulator init` was run in) and the definition that ships with the package; `--policy`, `--recovery`, `--routing` and `--interaction` point a command at a different policy file for one run.", "", "```sh", "pnpm add -D @metacoding/regulator @metacoding/regulator-pi", "pnpm regulator doctor", "```", ""];
+  const out = ["# CLI", "", "`regulator` is the `bin` of `@metacoding.io/regulator`. Every command runs against the instance in the current working directory (the base checkout `regulator init` was run in) and the definition that ships with the package; `--policy`, `--recovery`, `--routing` and `--interaction` point a command at a different policy file for one run.", "", "```sh", "pnpm add -D @metacoding.io/regulator @metacoding.io/regulator-pi", "pnpm regulator doctor", "```", ""];
   for (const g of groups) {
     out.push(`## ${g.name}`, "");
     for (const e of g.entries) {
@@ -113,7 +113,7 @@ function renderCli(source) {
     }
   }
   if (trailing.length) out.push("## Authority", "", trailing.join(" "), "");
-  out.push("## The definition's own commands", "", "The definition check and the generated registry documents are a second entry point, `registry-cli.js` in the same package, run from the workspace:", "", "```sh", "pnpm --filter @metacoding/regulator registry:check   # validate the registry and the definition; exit 1 on a problem", "pnpm --filter @metacoding/regulator registry:docs    # rewrite registry/REGULATORS.md and BOUNDARY.md", "```", "", "`registry:check` runs under `pnpm check`, so a record whose review date has passed fails the build.", "");
+  out.push("## The definition's own commands", "", "The definition check and the generated registry documents are a second entry point, `registry-cli.js` in the same package, run from the workspace:", "", "```sh", "pnpm --filter @metacoding.io/regulator registry:check   # validate the registry and the definition; exit 1 on a problem", "pnpm --filter @metacoding.io/regulator registry:docs    # rewrite registry/REGULATORS.md and BOUNDARY.md", "```", "", "`registry:check` runs under `pnpm check`, so a record whose review date has passed fails the build.", "");
   return out.join("\n");
 }
 

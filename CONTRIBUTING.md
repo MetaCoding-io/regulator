@@ -47,7 +47,7 @@ eval, not a test.
    card without a limitation. Regenerate the rendered documents:
 
    ```sh
-   pnpm --filter @metacoding/regulator registry:docs
+   pnpm --filter @metacoding.io/regulator registry:docs
    ```
 
 2. **A debt row, when a limitation names later work.** A new limitation that says

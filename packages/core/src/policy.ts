@@ -10,7 +10,7 @@
  * contract's identity and allocation, the evidence gathered so far, and the
  * files touched — losing any of these breaks the loop.
  */
-import type { BudgetCeiling, BudgetDimension, BudgetLedger, ModelRoute, PolicyDefinition, TokenUsage, WorkContract } from "@metacoding/regulator-protocol";
+import type { BudgetCeiling, BudgetDimension, BudgetLedger, ModelRoute, PolicyDefinition, TokenUsage, WorkContract } from "@metacoding.io/regulator-protocol";
 
 export function ceilingFor(policy: PolicyDefinition, unitType: string): BudgetCeiling {
   return { ...policy.budgets.default, ...(policy.budgets.byUnitType?.[unitType] ?? {}) };

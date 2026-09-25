@@ -15,12 +15,12 @@
  *   pi -e ../dist/tools.js -e ../dist/profiles.js
  */
 import { isToolCallEventType, type ExtensionAPI, type ExtensionContext, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import type { CapabilityProfile } from "@metacoding/regulator-protocol";
-import { isWritableUnder, renderProfileSection } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { readManifest } from "@metacoding/regulator";
-import { isProfileName, PROFILES, type ProfileName } from "@metacoding/regulator";
-import { baseRoot } from "@metacoding/regulator";
+import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
+import { isWritableUnder, renderProfileSection } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { readManifest } from "@metacoding.io/regulator";
+import { isProfileName, PROFILES, type ProfileName } from "@metacoding.io/regulator";
+import { baseRoot } from "@metacoding.io/regulator";
 
 export const PROFILE_SECTION_TAG = "regulator_profile";
 

@@ -17,14 +17,14 @@
  *   pi -e tools.js -e profiles.js -e coordination.js -e contract.js \
  *      --unit u1 --profile implement --contract ../../units/u1/contract.v1.json
  */
-import { loadContract } from "@metacoding/regulator";
-export { loadContract } from "@metacoding/regulator";
+import { loadContract } from "@metacoding.io/regulator";
+export { loadContract } from "@metacoding.io/regulator";
 import { readFile } from "node:fs/promises";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { ResultReportInputSchema, WorkContractSchema, assertValid, type ResultReport, type WorkContract } from "@metacoding/regulator-protocol";
-import { ExecutionStore, checkContract, checkResultReport, renderContractSection } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { baseRoot } from "@metacoding/regulator";
+import { ResultReportInputSchema, WorkContractSchema, assertValid, type ResultReport, type WorkContract } from "@metacoding.io/regulator-protocol";
+import { ExecutionStore, checkContract, checkResultReport, renderContractSection } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { baseRoot } from "@metacoding.io/regulator";
 
 export const CONTRACT_SECTION_TAG = "regulator_contract";
 export const CONTRACT_ENTRY_TYPE = "regulator:contract";

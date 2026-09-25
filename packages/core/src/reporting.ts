@@ -3,7 +3,7 @@ import {
   assertValid, AuditFindingInputSchema, PolicyProposalInputSchema, RegulatoryEventSchema,
   ReportingContextSchema, UncertaintyInputSchema,
   type RegulatoryEvent, type ReportingContext, type ReportingToolName,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 
 /** Validate both structure and the host grant that authorized the event. */
 export function assertRegulatoryEvent(value: unknown): asserts value is RegulatoryEvent {

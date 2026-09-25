@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { ResultReport, WorkContract } from "@metacoding/regulator-protocol";
+import type { ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
 import { checkContract, checkResultReport, renderContractSection } from "./contracts.js";
 import { ExecutionStore } from "./execution-store.js";
 

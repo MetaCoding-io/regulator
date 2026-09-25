@@ -4,8 +4,8 @@ import type { AddressInfo } from "node:net";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { ExecutionStore, LeaseStore, MemoryStore, ObligationLedger, appendSignal } from "@metacoding/regulator-core";
-import type { WorkContract } from "@metacoding/regulator-protocol";
+import { ExecutionStore, LeaseStore, MemoryStore, ObligationLedger, appendSignal } from "@metacoding.io/regulator-core";
+import type { WorkContract } from "@metacoding.io/regulator-protocol";
 import { createControlRoomServer, readControlRoom } from "./server.js";
 
 const contract: WorkContract = {

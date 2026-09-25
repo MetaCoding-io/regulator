@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding/regulator-core";
+import { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding.io/regulator-core";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
@@ -67,7 +67,7 @@ test("an overdue review date fails the registry check (lesson 15): every record 
 });
 
 test("the committed definition passes the definition check: profiles, workload, policies and identity validate and resolve", async () => {
-  const { checkDefinition } = await import("@metacoding/regulator-core");
+  const { checkDefinition } = await import("@metacoding.io/regulator-core");
   const definition = await checkDefinition(labRoot);
   assert.deepEqual(definition.problems, []);
   assert.deepEqual(definition.profiles.map((p) => p.name), ["auditor", "bookkeeper", "implement", "intelligence", "research"]);
@@ -82,7 +82,7 @@ test("the committed definition passes the definition check: profiles, workload, 
 test("REGULATORS.md is generated from the records and has not drifted", async () => {
   const { records } = await loadRegistry(registryDir);
   const committed = await readFile(path.join(registryDir, "REGULATORS.md"), "utf8");
-  assert.equal(committed, renderRegistryMarkdown(records), "run `pnpm --filter @metacoding/regulator registry:docs`");
+  assert.equal(committed, renderRegistryMarkdown(records), "run `pnpm --filter @metacoding.io/regulator registry:docs`");
   const boundary = await readFile(path.join(labRoot, "BOUNDARY.md"), "utf8");
   assert.equal(boundary, renderBoundaryMarkdown(records), "BOUNDARY.md is generated from the same records");
   assert.match(boundary, /## Identity write gate[\s\S]*Not covered:[\s\S]*- /, "every gate states what it does not cover");

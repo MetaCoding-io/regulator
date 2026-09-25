@@ -1,7 +1,7 @@
 # Definition files
 
 Every file the definition is made of, with its schema. The schemas are TypeBox objects
-in `@metacoding/regulator-protocol` and are closed: an unknown field is rejected, so a
+in `@metacoding.io/regulator-protocol` and are closed: an unknown field is rejected, so a
 definition grows deliberately. `regulator check` validates the whole set together; the
 shipped definition under `packages/regulator/` is the example for each.
 

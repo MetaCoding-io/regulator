@@ -3,8 +3,8 @@
  * extension that loads the contract into a session (regulator-pi) and the loop both use it.
  */
 import { readFile } from "node:fs/promises";
-import { checkContract } from "@metacoding/regulator-core";
-import { WorkContractSchema, assertValid, type WorkContract } from "@metacoding/regulator-protocol";
+import { checkContract } from "@metacoding.io/regulator-core";
+import { WorkContractSchema, assertValid, type WorkContract } from "@metacoding.io/regulator-protocol";
 
 export async function loadContract(file: string): Promise<WorkContract> {
   const value: unknown = JSON.parse(await readFile(file, "utf8"));

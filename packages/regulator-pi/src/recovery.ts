@@ -24,12 +24,12 @@ import { appendFile, mkdir, readFile, realpath } from "node:fs/promises";
 import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import type { FailureObservation } from "@metacoding/regulator-protocol";
-import { EffectJournal, ExecutionStore, REGULATOR_DIR, causeFromError, effectKey } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { OUTBOX_RELATIVE_PATH } from "@metacoding/regulator";
-import { leaseStoreFor } from "@metacoding/regulator";
-import { baseRoot } from "@metacoding/regulator";
+import type { FailureObservation } from "@metacoding.io/regulator-protocol";
+import { EffectJournal, ExecutionStore, REGULATOR_DIR, causeFromError, effectKey } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { OUTBOX_RELATIVE_PATH } from "@metacoding.io/regulator";
+import { leaseStoreFor } from "@metacoding.io/regulator";
+import { baseRoot } from "@metacoding.io/regulator";
 
 export interface RecoveryExtensionOptions {
   now?: () => number;
@@ -39,7 +39,7 @@ export interface RecoveryExtensionOptions {
   crashAfterEffect?: boolean;
 }
 
-export { OUTBOX_RELATIVE_PATH } from "@metacoding/regulator";
+export { OUTBOX_RELATIVE_PATH } from "@metacoding.io/regulator";
 
 export async function outboxHas(outbox: string, key: string): Promise<boolean> {
   try {

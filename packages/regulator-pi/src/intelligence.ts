@@ -26,11 +26,11 @@ import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { ConfidenceSchema, ReportedEvidenceSchema, SeveritySchema, type IntelligenceSignal } from "@metacoding/regulator-protocol";
-import { appendSignal } from "@metacoding/regulator-core";
-import type { Exec } from "@metacoding/regulator";
-import { leaseStoreFor } from "@metacoding/regulator";
-import { baseRoot, headRevision, isClean } from "@metacoding/regulator";
+import { ConfidenceSchema, ReportedEvidenceSchema, SeveritySchema, type IntelligenceSignal } from "@metacoding.io/regulator-protocol";
+import { appendSignal } from "@metacoding.io/regulator-core";
+import type { Exec } from "@metacoding.io/regulator";
+import { leaseStoreFor } from "@metacoding.io/regulator";
+import { baseRoot, headRevision, isClean } from "@metacoding.io/regulator";
 
 export const INTELLIGENCE_ENTRY_TYPE = "regulator:intelligence";
 

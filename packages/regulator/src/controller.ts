@@ -37,17 +37,17 @@
  */
 import { randomUUID } from "node:crypto";
 import path from "node:path";
-import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding/regulator-checks";
-import { discoverConventions } from "@metacoding/regulator-checks";
+import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding.io/regulator-checks";
+import { discoverConventions } from "@metacoding.io/regulator-checks";
 import {
   ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
   dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem,
-} from "@metacoding/regulator-core";
+} from "@metacoding.io/regulator-core";
 import type {
   AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
   TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
-} from "@metacoding/regulator-protocol";
+} from "@metacoding.io/regulator-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";

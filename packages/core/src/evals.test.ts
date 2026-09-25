@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { EvalRun } from "@metacoding/regulator-protocol";
+import type { EvalRun } from "@metacoding.io/regulator-protocol";
 import { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 
 const run = (arm: string, repetition: number, metrics: Record<string, number>): EvalRun =>

@@ -30,7 +30,7 @@ tests is a claim beside the evidence, never the evidence.
 ## Adding a check
 
 A new check name is added to `HOST_CHECK_NAMES` in the protocol, implemented in
-`@metacoding/regulator-checks`, named by the workloads that need it, and gets a registry
+`@metacoding.io/regulator-checks`, named by the workloads that need it, and gets a registry
 record with its limitations and its ablation arm. The `inherited-tests` check is the
 worked example: its record, its `no-inherited-tests` arm and the `suiteWeakened` grader
 in the drift suite landed together.

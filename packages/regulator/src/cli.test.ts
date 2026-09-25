@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { promisify } from "node:util";
-import { MemoryStore, ObligationLedger, appendSignal, routeMessages } from "@metacoding/regulator-core";
+import { MemoryStore, ObligationLedger, appendSignal, routeMessages } from "@metacoding.io/regulator-core";
 import { gitExec, initRepo } from "./git-support.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
 import { LAB_ROOT } from "./workload.js";
@@ -172,7 +172,7 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   const ledger = new ObligationLedger(repo);
   await appendSignal(repo, { id: "f1", timestamp: "2026-09-22T12:00:00.000Z", source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking", subject: "unit u1: closeout refused (fail)", unit: "u1", observation: "token hunter2hunter2 in output", evidence: [] });
   await routeMessages(ledger, { policy: await loadRoutingPolicy() });
-  const { ExecutionStore } = await import("@metacoding/regulator-core");
+  const { ExecutionStore } = await import("@metacoding.io/regulator-core");
   const store = new ExecutionStore(repo);
   await store.createUnit({ kind: "task", id: "tc-1", version: 1, unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" } });
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-09-22T12:00:01.000Z", endedAt: "2026-09-22T12:00:05.000Z", outcome: "check-failure", detail: "see hunter2hunter2" });

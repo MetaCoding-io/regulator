@@ -201,9 +201,9 @@ correlated rather than merged (`docs/DEBT.md` rows 1 and 31, paid).
 ```sh
 pnpm install --frozen-lockfile
 pnpm typecheck
-pnpm --filter @metacoding/regulator-protocol test
-pnpm --filter @metacoding/regulator-core test
-pnpm --filter @metacoding/regulator-pi test
+pnpm --filter @metacoding.io/regulator-protocol test
+pnpm --filter @metacoding.io/regulator-core test
+pnpm --filter @metacoding.io/regulator-pi test
 pnpm test
 pnpm check
 pnpm smoke:reporting

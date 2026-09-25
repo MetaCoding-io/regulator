@@ -11,10 +11,10 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: 0.87.0
         version: 0.87.0(ws@8.21.3)(zod@4.5.4)
-      '@metacoding/regulator':
+      '@metacoding.io/regulator':
         specifier: workspace:*
         version: link:packages/regulator
-      '@metacoding/regulator-pi':
+      '@metacoding.io/regulator-pi':
         specifier: workspace:*
         version: link:packages/regulator-pi
       '@types/node':
@@ -32,25 +32,25 @@ importers:
 
   packages/checks:
     dependencies:
-      '@metacoding/regulator-protocol':
+      '@metacoding.io/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/control-room:
     dependencies:
-      '@metacoding/regulator':
+      '@metacoding.io/regulator':
         specifier: workspace:*
         version: link:../regulator
-      '@metacoding/regulator-core':
+      '@metacoding.io/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/regulator-protocol':
+      '@metacoding.io/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
   packages/core:
     dependencies:
-      '@metacoding/regulator-protocol':
+      '@metacoding.io/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
 
@@ -62,13 +62,13 @@ importers:
 
   packages/regulator:
     dependencies:
-      '@metacoding/regulator-checks':
+      '@metacoding.io/regulator-checks':
         specifier: workspace:*
         version: link:../checks
-      '@metacoding/regulator-core':
+      '@metacoding.io/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/regulator-protocol':
+      '@metacoding.io/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
       typebox:
@@ -80,16 +80,16 @@ importers:
       '@earendil-works/pi-coding-agent':
         specifier: 0.87.0
         version: 0.87.0(ws@8.21.3)(zod@4.5.4)
-      '@metacoding/regulator':
+      '@metacoding.io/regulator':
         specifier: workspace:*
         version: link:../regulator
-      '@metacoding/regulator-checks':
+      '@metacoding.io/regulator-checks':
         specifier: workspace:*
         version: link:../checks
-      '@metacoding/regulator-core':
+      '@metacoding.io/regulator-core':
         specifier: workspace:*
         version: link:../core
-      '@metacoding/regulator-protocol':
+      '@metacoding.io/regulator-protocol':
         specifier: workspace:*
         version: link:../protocol
       typebox:

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test, { type TestContext } from "node:test";
-import { PROTECTED_S5_PATHS } from "@metacoding/regulator-core";
+import { PROTECTED_S5_PATHS } from "@metacoding.io/regulator-core";
 import {
   createAgentSession, createWriteTool, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager,
   type CustomToolCallEvent, type ExtensionAPI, type ExtensionContext, type ExtensionHandler, type ToolCallEvent, type ToolCallEventResult,

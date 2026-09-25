@@ -4,12 +4,12 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
-import { EffectJournal, ExecutionStore, effectKey } from "@metacoding/regulator-core";
+import { EffectJournal, ExecutionStore, effectKey } from "@metacoding.io/regulator-core";
 import { createRecoveryExtension, outboxHas } from "./recovery.js";
 import { loadContract } from "./contract.js";
-import { gitExec, initRepo , LAB_ROOT } from "@metacoding/regulator";
+import { gitExec, initRepo , LAB_ROOT } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { startUnit } from "@metacoding/regulator";
+import { startUnit } from "@metacoding.io/regulator";
 
 
 
@@ -113,6 +113,6 @@ test("checkpoint 7 loads into a real Pi session and registers notify_owner with 
   t.after(() => session.dispose());
   await session.bindExtensions({});
   assert.ok(extensionsResult.extensions[0]?.tools.has("notify_owner"));
-  const { TOOL_EFFECTS } = await import("@metacoding/regulator-core");
+  const { TOOL_EFFECTS } = await import("@metacoding.io/regulator-core");
   assert.equal(TOOL_EFFECTS.notify_owner?.sideEffects, "irreversible", "an effect that cannot be unsent says so");
 });

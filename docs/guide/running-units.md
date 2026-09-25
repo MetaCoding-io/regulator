@@ -41,7 +41,7 @@ The loop is the normal path. When you want to sit in the session yourself:
 ```sh
 regulator unit start u2 --type implement    # lease, worktree, branch
 cd .regulator/worktrees/u2
-pi                                          # with the host's extensions installed: pi install <path to @metacoding/regulator-pi>
+pi                                          # with the host's extensions installed: pi install <path to @metacoding.io/regulator-pi>
 cd -
 regulator signals route                     # route what the session recorded
 regulator unit finish u2                    # reintegrate, or surface the conflict

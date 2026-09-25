@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { readSignals } from "@metacoding/regulator-core";
+import { readSignals } from "@metacoding.io/regulator-core";
 import { INTELLIGENCE_ENTRY_TYPE, createIntelligenceExtension } from "./intelligence.js";
-import { gitExec, initRepo } from "@metacoding/regulator";
+import { gitExec, initRepo } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { startUnit } from "@metacoding/regulator";
+import { startUnit } from "@metacoding.io/regulator";
 
 test("report_intelligence records a typed intelligence-signal S4→S3 with host provenance — unit from the lease, revision from the tree — and applies nothing; there is no tool to resolve, route or apply", async (t) => {
   const repo = await initRepo(t);

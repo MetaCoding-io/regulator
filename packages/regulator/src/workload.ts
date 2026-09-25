@@ -7,7 +7,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { WorkloadDefinitionSchema, assertValid, type UnitType, type WorkloadDefinition } from "@metacoding/regulator-protocol";
+import { WorkloadDefinitionSchema, assertValid, type UnitType, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 
 export const LAB_ROOT = fileURLToPath(new URL("../", import.meta.url));
 export const WORKLOAD_PATH = path.join(LAB_ROOT, "workload", "software-development.json");

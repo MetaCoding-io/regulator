@@ -29,7 +29,7 @@ body:
     attributes:
       label: Versions
       description: "`regulator doctor` prints the package, the Pi pin and the Node version."
-      placeholder: "@metacoding/regulator 0.1.0, pi 0.87.0, node 22.19.0"
+      placeholder: "@metacoding.io/regulator 0.1.0, pi 0.87.0, node 22.19.0"
     validations:
       required: true
   - type: input

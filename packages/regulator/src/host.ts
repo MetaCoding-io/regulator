@@ -1,7 +1,7 @@
 /**
  * The host seam. The loop runs a unit through a `Dispatcher`; a *host* is the package that supplies one for a
  * particular agent runtime, and the session-side extensions that enforce the control plane inside it. Pi's is
- * `@metacoding/regulator-pi`. The control plane never imports a host: it resolves one by name at run time — from the
+ * `@metacoding.io/regulator-pi`. The control plane never imports a host: it resolves one by name at run time — from the
  * project the operator is in, then from beside itself — so that headless runs, `doctor`, `status` and CI need none.
  */
 import { createRequire } from "node:module";
@@ -11,7 +11,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import type { Dispatcher } from "./controller.js";
 
-export const DEFAULT_HOST = "@metacoding/regulator-pi";
+export const DEFAULT_HOST = "@metacoding.io/regulator-pi";
 
 export interface HostDispatcherOptions {
   /** Echo the model's text to stdout as it streams. */

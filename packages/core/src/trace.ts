@@ -7,7 +7,7 @@
  */
 import { appendFile, mkdir } from "node:fs/promises";
 import path from "node:path";
-import { isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "@metacoding/regulator-protocol";
+import { isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "@metacoding.io/regulator-protocol";
 
 /** Accumulates one turn's worth of events into a single `TurnRecord`. */
 export class TurnTracker {

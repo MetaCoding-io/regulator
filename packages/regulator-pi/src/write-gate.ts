@@ -1,4 +1,4 @@
-import { prepareWritePath } from "@metacoding/regulator-core";
+import { prepareWritePath } from "@metacoding.io/regulator-core";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 
 import { registerReportingTools, type ReportingToolOptions } from "./reporting-tools.js";

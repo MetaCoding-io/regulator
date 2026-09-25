@@ -64,9 +64,9 @@ No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the c
 packages/
   protocol/       Typed VSM vocabulary and runtime schemas
   core/           Authority, routing, policy, and finding logic
-  regulator-pi/   the Pi host: the session extensions, the dispatcher, the write gate and the reporting tools — @metacoding/regulator-pi
+  regulator-pi/   the Pi host: the session extensions, the dispatcher, the write gate and the reporting tools — @metacoding.io/regulator-pi
   checks/         Deterministic S3* checks: host-run verification bound to a revision, the technical verdict
-  regulator/      the control plane: the `regulator` CLI, the S3 loop, the stores, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding/regulator
+  regulator/      the control plane: the `regulator` CLI, the S3 loop, the stores, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding.io/regulator
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
@@ -118,8 +118,8 @@ and runs `pnpm check` on Node 22.19.0 and 24 for pushes and pull requests.
 After `pnpm build`, run either focused suite with:
 
 ```sh
-pnpm --filter @metacoding/regulator-protocol test
-pnpm --filter @metacoding/regulator-core test
+pnpm --filter @metacoding.io/regulator-protocol test
+pnpm --filter @metacoding.io/regulator-core test
 ```
 
 ## Pi extension
@@ -127,7 +127,7 @@ pnpm --filter @metacoding/regulator-core test
 After `pnpm build`, run `pnpm pi` from the project root to load the native Pi
 extension. It mechanically blocks operational `write` and `edit` calls to
 protected S5 artifacts and rejects unsafe paths. Ordinary project writes
-continue normally. Run `pnpm --filter @metacoding/regulator-pi test` for the
+continue normally. Run `pnpm --filter @metacoding.io/regulator-pi test` for the
 focused handler tests and a model-free smoke test with Pi's real loader.
 
 See [the extension guide](packages/regulator-pi/README.md) for loading into

@@ -1,4 +1,4 @@
-# `@metacoding/regulator-pi` — the Pi host
+# `@metacoding.io/regulator-pi` — the Pi host
 
 The Pi host for [`regulator`](../regulator/): the eleven session extensions that enforce
 the control plane inside a Pi session (`tools`, `profiles`, `coordination`, `contract`,
@@ -104,7 +104,7 @@ From the repository root:
 
 ```sh
 pnpm typecheck
-pnpm --filter @metacoding/regulator-pi test
+pnpm --filter @metacoding.io/regulator-pi test
 pnpm test
 pnpm check
 ```

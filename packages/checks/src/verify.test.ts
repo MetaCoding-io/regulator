@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import type { EvidenceRecord, ResultReport, WorkContract } from "@metacoding/regulator-protocol";
+import type { EvidenceRecord, ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
 import { realExec } from "./exec.js";
 import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "./verify.js";
 

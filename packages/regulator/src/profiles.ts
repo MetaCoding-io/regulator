@@ -12,10 +12,10 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { CapabilityProfileSchema, assertValid, type CapabilityProfile } from "@metacoding/regulator-protocol";
+import { CapabilityProfileSchema, assertValid, type CapabilityProfile } from "@metacoding.io/regulator-protocol";
 
-export type { CapabilityProfile } from "@metacoding/regulator-protocol";
-export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "@metacoding/regulator-core";
+export type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
+export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "@metacoding.io/regulator-core";
 
 export const PROFILES_DIR = fileURLToPath(new URL("../profiles/", import.meta.url));
 /** The names the workload and the checkpoints rely on; the definition check refuses a workload that names another. */

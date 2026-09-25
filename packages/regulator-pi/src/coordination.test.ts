@@ -5,9 +5,9 @@ import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { createAgentSession, DefaultResourceLoader, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
 import { createCoordinationExtension, oscillationThreshold } from "./coordination.js";
-import { gitExec, initRepo } from "@metacoding/regulator";
+import { gitExec, initRepo } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
-import { SIGNALS_RELATIVE_PATH, startUnit } from "@metacoding/regulator";
+import { SIGNALS_RELATIVE_PATH, startUnit } from "@metacoding.io/regulator";
 
 const write = (p: string) => ({ type: "tool_call", toolName: "write", toolCallId: p, input: { path: p, content: "" } });
 const bash = { type: "tool_call", toolName: "bash", toolCallId: "sh", input: { command: "sed -i s/a/b/ src.txt" } };
@@ -139,7 +139,7 @@ test("Pi 0.87.0 loads the built checkpoint; the native hook refuses a write outs
 });
 
 test("the oscillation threshold is the policy's, not a constant (lesson 12): the definition's default declares it; a policy without one, or none at all, falls back to 4", async (t) => {
-  const { POLICY_PATH } = await import("@metacoding/regulator");
+  const { POLICY_PATH } = await import("@metacoding.io/regulator");
   const { mkdtemp, rm, writeFile } = await import("node:fs/promises");
   const { tmpdir } = await import("node:os");
   const path = await import("node:path");

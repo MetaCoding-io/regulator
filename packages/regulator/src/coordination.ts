@@ -4,4 +4,4 @@
  * read model became their second and third consumers). The lab imports them
  * from there; this module only keeps the lesson's import path stable.
  */
-export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "@metacoding/regulator-core";
+export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "@metacoding.io/regulator-core";

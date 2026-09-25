@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { isTurnRecord, type CapabilityProfile } from "@metacoding/regulator-protocol";
+import { isTurnRecord, type CapabilityProfile } from "@metacoding.io/regulator-protocol";
 import {
   checkRegistry, isReadOnlyProfile, isWritableUnder, readOnlyViolations, renderBoundaryMarkdown, renderProfileSection, renderRegistryMarkdown,
   TraceWriter, TurnTracker,
