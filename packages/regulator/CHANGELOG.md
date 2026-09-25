@@ -7,6 +7,14 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-09-25
+
+The first install from npm found two things the workspace never exercised.
+
+### Fixed
+- `regulator` on the path: `dist/cli.js` had no shebang, so the `bin` link ran it as a shell script. `node dist/cli.js` was unaffected.
+- `regulator doctor` from an installed package reported every registry record's implementation and cited tests as missing: the paths name source files the package does not ship. The registry check now verifies paths only in a source checkout (a `src/` beside the registry) and `doctor` says when it did not; `pnpm check` at the release is where they are verified. The `regulator-lifecycle` card states the limit.
+
 ## [0.1.0] — 2026-09-24
 
 The first versioned release: the course's reference build, relocated from `course/lab`
@@ -20,5 +28,6 @@ the former `@metacoding/vsm-pi-cli`.
 - The definition beside the code: forty-three registry records (forty-two active; the lexical vendor write gate of lesson 02 retired, superseded by the authority extension and the manifest's protected prefixes) with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
 - Host checks at closeout: `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature`, `glossary-lint`.
 
-[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/MetaCoding-io/regulator/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MetaCoding-io/regulator/releases/tag/v0.1.0
