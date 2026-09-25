@@ -9,7 +9,10 @@ GSD-era `.gsd/vsm-runtime/vsm.db` path is gone) before returning a `persisted` r
 
 ## Default authority and explicit host binding
 
-`pnpm pi` registers all three tools but grants **no reporting capabilities**.
+These three tools are the generic reporting extension, not part of a unit's session:
+the eleven extensions the Pi host declares do not include them, and a unit reports
+through `report_result` ([session tools](reference/tools.md)). The repository's root
+`pnpm pi` script registers all three but grants **no reporting capabilities**.
 An unmapped context fails closed. A trusted host can load an explicit wrapper
 using the same `pi -e /absolute/path/to/wrapper.js` mechanism:
 
@@ -187,11 +190,11 @@ The path is fixed relative to the trusted project root. Runtime directory,
 database, and SQLite sidecar symlink/hard-link aliases are rejected before open.
 The directory must remain host-controlled during operations; preflight path
 checks and SQLite triggers are not a sandbox against malicious concurrent
-filesystem writers or a process that can change the database schema. This issue
+filesystem writers or a process that can change the database schema. This store
 does not expand the native write/edit gate into complete filesystem enforcement.
 
 The store never changes S5 artifacts. Routing, obligations, and retry/pause control
-are not implemented here: the course lab's router and obligation ledger (lesson 11)
+are not implemented here: the control plane's router and obligation ledger
 fold the instance's regulatory log (`.regulator/signals.ndjson`), not this store. The
 span projection (lesson 14) reads both into one set of spans, so the two histories are
 correlated rather than merged (`docs/DEBT.md` rows 1 and 31, paid).

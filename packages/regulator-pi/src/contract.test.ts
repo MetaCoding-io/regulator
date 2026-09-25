@@ -121,3 +121,23 @@ test("checkpoint 5 loads into a real Pi session with the contract supplied as an
   assert.equal(entries.length, 1, "session_start appended the contract as a typed entry");
   assert.equal((entries[0] as { customType: string }).customType, CONTRACT_ENTRY_TYPE);
 });
+
+test("contract extension: a loaded contract puts report_result on the active tool surface whatever the profile set; no contract, no tool", async (t) => {
+  const repo = await initRepo(t);
+  const { file } = await contractFor(repo);
+  const started = await startUnit(gitExec, { repo, unitId: "u1", owner: "alice" });
+  const { pi, handlers, flags, activeTools } = mockPi();
+  flags.set("contract", file);
+  createContractExtension({ now: () => 1_700_000_000_000 })(pi);
+  // The profiles extension runs first and sets a surface without report_result (every shipped profile but intelligence).
+  pi.setActiveTools(["read", "write", "edit", "run_tests", "run_checks"]);
+  const { ctx } = ctxFor(started.worktree.path);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  assert.deepEqual(activeTools.at(-1), ["read", "write", "edit", "run_tests", "run_checks", "report_result"]);
+
+  const bare = mockPi();
+  createContractExtension({ now: () => 1_700_000_000_000 })(bare.pi);
+  bare.pi.setActiveTools(["read"]);
+  await bare.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctxFor(started.worktree.path).ctx);
+  assert.deepEqual(bare.activeTools.at(-1), ["read"], "a session with no contract keeps the profile's surface");
+});

@@ -2,7 +2,7 @@
 
 The registry says what each regulator does and the failure class it absorbs
 (`absorbs.failureClass` on every record; `regulator docs` renders them). The glossary's
-[diagnostic table](GLOSSARY.md#5-diagnostic-table--from-observed-failure-to-mechanism)
+[diagnostic table](GLOSSARY.md#_5-diagnostic-table-from-observed-failure-to-mechanism)
 goes from one observed failure to one mechanism. This page is the third view: the
 *characteristic* ways a viable system fails as a whole — a function missing, absorbed by
 its neighbour, disconnected from the one it must talk to, or a channel that carries the
@@ -64,7 +64,7 @@ absorbs is a row for `docs/DEBT.md`.
 | Unaware of termination conditions | a unit that never reports, or reports twice | `result-report-gate` (one report per attempt), `budget-guard`, the `no-report` recovery cause | `controller.test.ts` |
 | Fail to ask for clarification | an unresolved decision settled silently | `work-contract-gate` (unresolved must be surfaced), `result-report-gate` | `underscore-unresolved` |
 | Task derailment | a unit outside its contract's scope | `result-report-gate` deviations of kind `scope`; the closeout's writable prefixes | the drifter's root-level config |
-| Information withholding | a finding not reported | `report_intelligence` and `report_uncertainty` are typed and journaled; nothing forces their use | — (a unit that finds and does not tell is not reproduced) |
+| Information withholding | a finding not reported | `report_intelligence` and the result report's `residualUncertainty` are typed and recorded; nothing forces their use | — (a unit that finds and does not tell is not reproduced) |
 | Ignored other agent's input | intelligence not consumed | `intelligence-intake` obligation and veto | `research-vendored-helper` |
 | Reasoning–action mismatch | the report claims what the tree does not show | `closeout-gate`, `inherited-tests-check`: the report's claims satisfy nothing | the **self-certifier** |
 | Premature termination | closed before verification | `closeout-gate` runs before reintegration; `post-merge-check` after | every closeout test |

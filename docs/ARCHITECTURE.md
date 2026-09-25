@@ -6,7 +6,7 @@ regulator is an agent harness on Pi with an explicit cybernetic control plane. I
 
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 
-regulator therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. See [GSD → VSM Functional Projection](archive/2026-09/GSD-VSM-FUNCTIONAL-MAP.md) for the current mapping and capability design.
+regulator therefore does not instantiate separate `S1Agent` through `S5Agent` subsystems. A unit runs under a capability profile the workload names for its unit type; the profile is a host-derived grant over declared tool effects, and the regulators are mechanisms around the loop, not personas. That assignment determines regulatory context, capabilities, and hooks while preserving separation-of-duty requirements. The [control plane](concepts/control-plane.md) page is the current mapping.
 
 ## Core rule
 
@@ -61,7 +61,7 @@ Prompt engineering is used for interpretation and judgment. Mechanical facts and
 
 ### S1 — Operations
 
-S1 profiles perform implementation work. Profiles should represent capability/concern boundaries such as API, data, UI, infrastructure, migration, or integration. They are not theatrical personas.
+S1 profiles perform the work. A profile is a capability boundary — what a unit may use and where it may write — not a persona: the shipped ones are `implement`, `research`, `intelligence`, `bookkeeper` and `auditor`, and a workload declares its own.
 
 S1 may:
 

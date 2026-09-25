@@ -60,9 +60,39 @@ A read-only page over the `status` read model: instances, units, obligations, bu
 review dates, and a replay view of a unit's records. It renders; it has no command that
 changes anything, and that is deliberate.
 
+## Writing a host
+
+A host is a package that exports `host`, an object the control plane resolves by name
+and never imports:
+
+```ts
+export const host: Host = {
+  name: "@your/regulator-host",
+  runtime: { name: "<the agent runtime package>", pin: "<its version>" },
+  extensions: ["tools", "profiles", …],       // the session-side gates, in load order
+  extensionPath: (name) => "<absolute path of the built extension>",
+  dispatcher: (options) => async (request) => { /* run one attempt; return { sessionId } */ },
+};
+```
+
+The dispatcher receives one `DispatchRequest` per attempt: the unit id, the worktree,
+the contract and its file, the profile name, the attempt number, the model route, the
+policy file, and the hint from the previous attempt. It runs a session with the
+definition's settings, the profile's tools and the contract in context, and returns
+when the session ends. Everything the loop needs afterwards — the report, the evidence,
+the trace — is in the stores; the dispatcher writes nothing else. The gates a host
+enforces inside the session are its own to declare; the enforcement boundary says which
+host enforces which.
+
+`unit dispatch` and `unit drive` find the host by `--host <package>`, then
+`REGULATOR_HOST`, then `@metacoding.io/regulator-pi`, resolved from the project and then
+from beside the CLI; `doctor` reports the runtime pin the host declares against what is
+installed. A second host behind this seam is
+[#58](https://github.com/MetaCoding-io/regulator/issues/58).
+
 ## Versions and releases
 
-All six are released together at one version (`0.1.0`), from a `v*` tag, after
+All six are released together at one version (`0.1.1` today), from a `v*` tag, after
 `pnpm check` passes on both supported Node versions. The
 [changelog](/project/changelog) is the package's; the course,
 [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), pins the version

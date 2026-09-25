@@ -1,6 +1,6 @@
 # Contributing
 
-`regulator` is a coding-agent harness with a cybernetic control plane. Contributions
+`regulator` is an agent harness with a cybernetic control plane. Contributions
 that fit are mechanisms, evidence and documentation; the prime directive applies to
 every one of them:
 

@@ -73,7 +73,8 @@ step, before it decides anything about a unit. `regulator signals route` runs it
 hand.
 
 1. **Severity is derived, not taken.** The router starts from the reported severity and
-   applies the policy's floors. The shipped policy raises any message that names an
+   applies the policy's floors, tested against the message's subject, observation and
+   rationale (not the claim). The shipped policy raises any of those that names an
    invariant (`INV-nnn`) or `regulator/identity/` to at least `blocking`, whatever the
    unit claimed.
 2. **Below the line, it is noted.** The shipped rule for `intelligence-signal` is
@@ -83,7 +84,9 @@ hand.
    the time it is routed is noted as expired. Stale evidence cannot open an obligation.
 4. **One obligation per affected unit.** A finding that names `u1` and `u3` opens two
    obligations, so each veto lands on the unit it concerns. A finding that names no
-   unit opens one obligation with no unit.
+   unit opens one obligation on the research unit itself — the unit id the host
+   stamped from its lease — so at `blocking` it holds that unit's own close until
+   someone dispositions it.
 5. **Blocking holds the unit.** At or above the policy's `blocksAtOrAbove` line
    (`blocking` in the shipped policy), the obligation vetoes that unit's dispatch and
    close until it is dispositioned. An `advisory` obligation is owed but holds nothing.
@@ -91,9 +94,11 @@ hand.
 A person dispositions an obligation with `regulator obligation resolve <id> --by <who>
 --disposition <d> --rationale <text>`. The interaction policy decides whether `<who>`
 may resolve that severity. The dispositions include `no-action`, `accepted-risk`,
-`rework`, `replan` and `research-requested`. A recovery decision the loop takes on the
-unit also dispositions the unit's open S3 obligations: retry and repair resolve them as
-rework, and abort as rejected.
+`rework`, `replan` and `research-requested`; [obligations](/concepts/obligations) lists
+them all. A recovery decision the loop takes on the unit also dispositions the unit's
+open S3 obligations: retry and repair resolve them as `rework`, abort as `rejected`, and
+a waiting action (remediate, replan, clarify, pause, escalate) escalates them into the
+`recovery-decision` obligation the unit now waits on.
 
 Intelligence raises an obligation and never replans. The router decides what the
 finding means for a unit, and a consumer decides what to do about it. No tool applies
@@ -131,7 +136,8 @@ entries into the system prompt. A current entry is one that has not expired and 
 not been retracted. Each entry is rendered as a fact with its provenance and its
 review-by date, under a heading that says facts are not rules and not identity. An
 entry with a `scope` is rendered only to units of those types. An entry without a
-scope is rendered to every unit of the instance.
+scope is rendered to every unit of the instance. A session run by hand with no leased
+unit has no unit type, and sees every current entry, scoped or not.
 
 Memory never opens an obligation or holds a unit, and it never reaches an identity
 file (INV-004). Rendering it is prompt engineering, the lowest mechanism level, and

@@ -350,7 +350,7 @@ What the test asserts is what you would look for in the control room:
 - **Definition** — two workloads now, `software-development` and `personal-finance`,
   with each unit type's profile and checks; five profiles; the finance budget policy
   beside the default one.
-- **Instances** — the ledger's manifest line (`definition regulator at <rev> · 42
+- **Instances** — the ledger's manifest line (`definition regulator at <rev> · 43
   regulators · pi 0.87.0 · initialized by alice · writable ledger/, reports/,
   payments/pending/ · protected statements/, payments/executed/`); six units with
   status, attempts, budget, verdict and what is owed; the consent obligation with the

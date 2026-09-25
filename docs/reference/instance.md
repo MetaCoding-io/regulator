@@ -21,12 +21,14 @@ repository is the domain; `.regulator/` is the instance's state and is ignored b
 | `leases/` | execution | one lease per running unit with its TTL and liveness |
 | `worktrees/<unit>/` | execution | the unit's git worktree on its own branch; removed on reintegration |
 | `trace.ndjson` | regulatory | every schema-validated trace event, append-only |
-| `signals.ndjson` | regulatory | messages recorded and not yet routed; `signals route` and the loop drain it into obligations |
-| `events.db` | regulatory | the SQLite event store: obligations, findings, proposals, escalations, with provenance |
+| `signals.ndjson` | regulatory | the regulatory log, append-only: every typed message a session or the loop recorded, the obligation events the router and the consumers appended (opened, acknowledged, resolved, escalated, delivered, noted), and the interaction requests and answers; [obligations](/concepts/obligations) are the fold of it |
+| `events.db` | regulatory | the SQLite event store the generic `vsm_*` reporting tools write; a unit's session does not load them, so an instance driven by the loop keeps it empty |
 | `audit.ndjson` | regulatory | evidence records, technical verdicts, human acceptances, append-only |
 | `effects.ndjson` | regulatory | the effect journal: every side-effecting tool call, its outcome, and its reconciliation on restart |
 | `memory.ndjson` | regulatory | operational memory: facts with provenance and expiry, and their retractions; scoped by unit type |
 | `outbox` | delivery | one line per delivery of an obligation owed to a person; `watch` forwards new lines to a channel command; `REGULATOR_OUTBOX` moves it |
+| `outbox.cursor` | delivery | how far `watch` has forwarded, so a restart forwards nothing twice |
+| `canaries` | manifest | the credential-looking values `init` found in a committed `.env`, one per line; watched in every tool result and redacted from spans |
 
 Execution state and regulatory state are in different stores on purpose: the loop
 decides what a unit may do next by reading the regulatory log, and the regulators never
@@ -36,7 +38,9 @@ read the loop's progress off the repository.
 
 `.regulator/instance.json` is written once by `init` and read by the profile grant, the
 closeout and `doctor`. It is the only file under `.regulator/` a person's declaration
-goes into, and it is not edited by hand: re-run `init` to change it.
+goes into, and it is not edited by hand. `init` refuses to run twice; changing the
+declared layout is a new instance, and a newer definition shows as `definition-drift`
+in `doctor` until a person upgrades.
 
 | Field | Meaning |
 | --- | --- |
@@ -47,7 +51,7 @@ goes into, and it is not edited by hand: re-run `init` to change it.
 | `definition.pi` | the Pi version the definition pins |
 | `writablePaths[]` | optional; where the implement profile may write in this repository instead of its own default |
 | `protectedPaths[]` | optional; prefixes the closeout refuses a change under, in addition to `regulator/identity/` and the discovered conventions |
-| `initializedAt`, `initializedBy` | when and who; `--by` is checked against the interaction policy |
+| `initializedAt`, `initializedBy` | when and who: `--by`, or the user and host; recorded as provenance, not checked against the interaction policy |
 
 ## Environment
 

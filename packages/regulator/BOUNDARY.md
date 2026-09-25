@@ -12,8 +12,8 @@ Enforced at `deliverPending (undelivered → outbox, journaled, ledger.deliver)`
 
 Not covered:
 
-- The outbox is a file; no real channel (mail, chat, a daemon that watches the file) exists, so delivery reaches a person who reads the file. The channel is a property of the deployment, not of this lesson.
-- Reminders run on demand (`regulator remind`) and at the loop's steps; nothing schedules them. A quiet instance reminds nobody until someone runs something.
+- The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names (lesson 15), and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.
+- Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
 
 ## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
@@ -349,13 +349,14 @@ Not covered:
 
 ## Result report gate (`reg.control.result-report-gate.v1`)
 
-Enforced at `report_result (tool execute)`, `runUnit (close)` in `../regulator-pi/src/contract.ts`; S3, deterministic-gate.
+Enforced at `report_result (tool execute)`, `runUnit (close)`, `session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)` in `../regulator-pi/src/contract.ts`; S3, deterministic-gate.
 
 Not covered:
 
 - Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
 - A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
 - Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
+- report_result joins the tool surface when the contract loads at session_start; a profile switched by hand mid-session (/profile) resets the surface to the profile's list and drops it until the session restarts. The dispatcher never switches profiles.
 
 ## S5 decision path (`reg.authority.s5-decision.v1`)
 
