@@ -158,6 +158,9 @@ interpretation says where the gated arm lost is for a reviewer to judge.
 
 ## Scripted and live runs
 
+The paths below are a source checkout's; from the installed package the suite is
+`node_modules/@metacoding.io/regulator/evals/drift.json`.
+
 ```sh
 # headless: a scripted unit under every arm, three repetitions
 regulator eval packages/regulator/evals/drift.json --behaviour drifter \

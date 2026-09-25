@@ -3,9 +3,9 @@
   "version": "0.1.1",
   "license": "Apache-2.0",
   "private": false,
-  "description": "regulator: a coding-agent harness with an explicit cybernetic control plane. The S3 loop (contract, dispatch, verify, route, close) with leases and budgets, host-run evidence at closeout, obligations owed to someone, an algedonic path to a person, and a registry of every regulator with its stated limitation. The `regulator` CLI and the definition (registry, identity, profiles, policies, workloads, evals) ship here; a host package (`@metacoding.io/regulator-pi` for Pi) runs the units.",
+  "description": "regulator: an agent harness with an explicit cybernetic control plane. The S3 loop (contract, dispatch, verify, route, close) with leases and budgets, host-run evidence at closeout, obligations owed to someone, an algedonic path to a person, and a registry of every regulator with its stated limitation. The `regulator` CLI and the definition (registry, identity, profiles, policies, workloads, evals) ship here; a host package (`@metacoding.io/regulator-pi` for Pi) runs the units.",
   "keywords": [
-    "coding-agent",
+    "agent",
     "agent-harness",
     "viable-system-model",
     "cybernetics",

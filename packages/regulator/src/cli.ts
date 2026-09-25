@@ -7,6 +7,8 @@
  *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
  *   regulator doctor [--json] [--today <date>]   the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
+ *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
+ *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
  *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
  *   regulator fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
  *
@@ -27,7 +29,7 @@
  *   regulator obligations [--all]              what is owed and to whom; --all includes closed ones
  *   regulator obligation show <id>             one obligation with its history (id or unique prefix)
  *   regulator obligation ack <id> --by <who> [--note <text>]   acknowledge without resolving
- *   regulator obligation resolve <id> --by <who> --disposition <d> --rationale <text>   close it: accepted, rejected, accepted-risk, remediated, superseded
+ *   regulator obligation resolve <id> --by <who> --disposition <d> --rationale <text>   close it: no-action, accepted-risk, rework, replan, fixed, verified, rejected, research-requested, audit-requested, policy-clarification-requested
  *   regulator obligation escalate <id> --by <who> --to <consumer> --rationale <text>   hand it to another consumer; the successor inherits the veto
  *   regulator answer <obligation> --by <who> --answer <text>   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it
  *   regulator remind                           deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
@@ -50,9 +52,11 @@
  *                                 [--interpretation <file>] [--by <who>] [--keep]   run a suite: scripted units headlessly, or live units through the host's dispatcher
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
- * Every `--by` is checked against the interaction policy's people: a name not listed may disposition nothing, and what a
- * listed person may do (severity, accepted-risk, S5) is declared there. The name itself is asserted, not authenticated.
- * `regulator check` and `regulator docs` (the definition check and the generated registry documents) live in `registry-cli.ts`.
+ * Every `--by` that dispositions something is checked against the interaction policy's people: a name not listed may
+ * disposition nothing, and what a listed person may do (severity, accepted-risk, S5) is declared there. `init`,
+ * `unit accept` and `eval` record `--by` as provenance without the check. The name itself is asserted, not authenticated.
+ * `regulator check` and `regulator docs` (the definition check and the generated registry documents) are implemented in
+ * `registry-cli.ts` and reached through this entry point.
  */
 import { hostname, userInfo } from "node:os";
 import path from "node:path";
@@ -86,7 +90,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -491,6 +495,11 @@ ${rationale}`]]) {
     const due = rest.includes("--due") || sub === "--due" ? reviewDue(records, today, within) : records.filter((r) => r.status === "active").map((r) => ({ record: r, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((Date.parse(today) - Date.parse(r.ownership.reviewBy)) / 86_400_000) }));
     for (const d of due) console.log(`${d.overdueDays > 0 ? `overdue ${d.overdueDays}d` : `due in ${-d.overdueDays}d`}`.padEnd(16) + `  ${d.reviewBy}  ${d.record.id}  ablation ${d.record.ablation?.switch ?? "—"}  retire when: ${d.record.retirement?.condition ?? "—"}`);
     console.log(`${due.length} record(s)${rest.includes("--due") || sub === "--due" ? ` overdue or due within ${within} day(s)` : ""}`);
+  } else if (command === "check" || command === "docs") {
+    // The definition check and the generated registry documents live in registry-cli.ts; reached from here so
+    // `regulator check` and `regulator docs` are the commands the documentation names.
+    process.argv = [process.argv[0]!, process.argv[1]!, command, ...[sub, ...rest].filter((a): a is string => a !== undefined)];
+    await import("./registry-cli.js");
   } else if (command === "remind") {
     const delivered = await remindDue(process.cwd(), { policy: await interactionP() });
     for (const d of delivered) console.log(`${d.reminder ? "reminded " : "delivered"} ${describe(d.obligation)}`);

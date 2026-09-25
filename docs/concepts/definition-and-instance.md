@@ -79,7 +79,7 @@ of truth.
   </g>
   <text x="550" y="428" text-anchor="middle" font-size="11" fill="currentColor" opacity="0.65">no arrow leaves the domain for either store: state is written down, never inferred from the diff</text>
 </svg>
-<figcaption><b>INV-005 — nothing reads its own progress off the domain.</b> The orchestrator owns the execution store and is the only thing that merges into the base. The session writes the domain through gated tools and writes its report and ledger into the store. S3* and S2 write regulatory state; the router and the read model consume it. The one thing missing on purpose is an arrow from the repository back into either store.</figcaption>
+<figcaption><b>Nothing reads its own progress off the domain.</b> The orchestrator owns the execution store and is the only thing that merges into the base. The session writes the domain through gated tools and writes its report and ledger into the store. S3* and S2 write regulatory state; the router and the read model consume it. The one thing missing on purpose is an arrow from the repository back into either store.</figcaption>
 </figure>
 
 ## The definition

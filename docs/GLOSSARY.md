@@ -28,18 +28,18 @@ learners to build themselves.
 | **S3 — Control** | Operational control: planning, dispatch, budgets, recovery, authoritative work state. | GSD lifecycle kernel, auto orchestration; regulator work contracts (M06–M08). |
 | **S3\* — Audit** | Independent verification that does not depend on the executor's self-report. | GSD verification evidence and technical verdict; regulator audit finding and deterministic gates (M09, M10). |
 | **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel (M11). [Intelligence and memory](concepts/intelligence-and-memory.md). |
-| **S5 — Identity / Policy** | What the system is: purpose, invariants, domain model, policy. Durable and version-controlled, never trapped in a context window. Not an agent. | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `AGENTS.md` (M12). |
+| **S5 — Identity / Policy** | What the system is: purpose, invariants, domain model, policy. Durable and version-controlled, never trapped in a context window. Not an agent. | an instance's `regulator/identity/` (`IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md`), seeded from the definition; this repository's own is `vsm/` (M12). |
 | **Separation of duty** | The function that did the work cannot be the function that certifies it. | regulator independence domains in the functional projection (M04, M09). |
 
 ## 3. Channels and authority
 
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
-| **Channel** | A typed message path with a stated authority and destination. A signal is not an audit; an audit is not a policy decision. | `vsm/channels.yaml`; regulator INV-006. |
+| **Channel** | A typed message path with a stated authority and destination. A signal is not an audit; an audit is not a policy decision. | the message kinds in `packages/protocol` and the routing policy; the [control plane](concepts/control-plane.md#typed-channels) lists them. |
 | **Authority** | What a mechanism permits, not what a role label claims. | `authorizeWrite(path, "operational")` in regulator's extension. |
 | **Positive grant** | What a unit *may* do: its capability profile. | `pi.setActiveTools`, `--tools` allowlist (M04). |
 | **Negative invariant** | What *nothing* may do: a protected path, a forbidden mutation. | `tool_call` blocking handlers, protected S5 paths (M10). |
-| **Proposal** | A request to change identity or policy. Proposing confers no mutation authority. | `vsm_propose_policy_change`; regulator INV-002. |
+| **Proposal** | A request to change identity or policy. Proposing confers no mutation authority. | `propose_policy_change`; INV-002 in the identity seed. |
 | **Constraint** | S5's downward definition of the permitted operational space. | `constraint` channel; context files as advice, gates as enforcement. |
 | **Signal** | Ordinary upward operational feedback, including residual uncertainty. | regulator uncertainty signal tool. |
 | **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `packages/core/src/obligations.ts` and `packages/regulator/policies/routing.json` (M08, M11); design record archived as `docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md`. |
@@ -66,7 +66,7 @@ learners to build themselves.
 | **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard (M07). |
 | **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). |
 | **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result (M08). |
-| **Recovery action** | Exactly one response to a failure: retry, repair, replan, remediate, clarify, pause, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). |
+| **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). |
 | **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector (M05, M08). |
 | **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation (M05). |
 | **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back (M05). |
@@ -76,7 +76,7 @@ learners to build themselves.
 | **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts` (M13). |
 | **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts` (M13). |
 | **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
-| **Identity** | What the system is. Committed, reviewed, S5. | `vsm/` (M12). |
+| **Identity** | What the system is. Committed, reviewed, S5. | `regulator/identity/` in an instance; `vsm/` for this repository (M12). |
 | **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). [Intelligence and memory](concepts/intelligence-and-memory.md). |
 | **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.regulator/*.ndjson`, projected as OpenTelemetry GenAI spans by `regulator spans` (M09, M14). |
 | **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | regulator drift fixture (M12, M14). |
