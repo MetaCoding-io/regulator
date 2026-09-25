@@ -1,6 +1,6 @@
 {
   "name": "@metacoding.io/regulator-pi",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "Apache-2.0",
   "private": false,
   "description": "The Pi host for regulator: the session-side extensions that enforce the control plane inside a Pi session (typed tools, capability profiles, coordination, the work contract, budgets, recovery, evidence, authority, intelligence, identity, the algedonic path), the dispatcher that runs a unit's session through the Pi SDK, and the generic write gate and typed reporting tools. Installable with `pi install`.",

@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * `regulator` — the control plane's CLI. The usage table below is the source of the CLI reference in `docs/`.
  *

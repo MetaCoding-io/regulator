@@ -173,7 +173,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
   check("pi", installed === pin, `definition pins ${pin}; installed ${installed}${installed === pin ? "" : " — an upgrade is a change with evidence (OPERATING.md)"}`);
 
   const registry = await checkRegistry(path.join(definitionRoot, "registry"), definitionRoot, { today });
-  check("registry", registry.problems.length === 0, `${registry.records.length} record(s), ${registry.problems.length} problem(s)${registry.problems.length ? `: ${registry.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`);
+  check("registry", registry.problems.length === 0, `${registry.records.length} record(s), ${registry.problems.length} problem(s)${registry.problems.length ? `: ${registry.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}${registry.filesVerified ? "" : "; implementation and test paths not verified here (an installed package ships no sources; they were verified at the release by `pnpm check`)"}`);
   const definition = await checkDefinition(definitionRoot);
   check("definition", definition.problems.length === 0, `${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.evals.length} eval suite(s), ${definition.reports.length} report(s)${definition.problems.length ? `; problems: ${definition.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`);
   const due = reviewDue((await loadRegistry(path.join(definitionRoot, "registry"))).records, today, 30);

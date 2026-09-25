@@ -11,23 +11,71 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../core/src/registry.ts",
-    "enforcementPoints": ["checkRegistry (active record without ablation or retirement is a problem)", "reviewDue", "regulator review --due (CLI)", "the lifecycle view (read model, control room)"]
+    "enforcementPoints": [
+      "checkRegistry (active record without ablation or retirement is a problem)",
+      "reviewDue",
+      "regulator review --due (CLI)",
+      "the lifecycle view (read model, control room)"
+    ]
   },
-  "channels": { "consumes": ["registry records", "eval suites and committed reports"], "emits": ["registry problems", "the lifecycle view"] },
-  "scope": { "subjects": ["registry"], "resources": ["registry/regulators/", "evals/"] },
-  "cost": { "description": "Two fields per record and a date check; the eval runs that pay a retirement condition are the harness's cost." },
+  "channels": {
+    "consumes": [
+      "registry records",
+      "eval suites and committed reports"
+    ],
+    "emits": [
+      "registry problems",
+      "the lifecycle view"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "registry"
+    ],
+    "resources": [
+      "registry/regulators/",
+      "evals/"
+    ]
+  },
+  "cost": {
+    "description": "Two fields per record and a date check; the eval runs that pay a retirement condition are the harness's cost."
+  },
   "authority": {
-    "may": ["refuse a record without a switch or a condition", "list what is due", "show what an eval covers"],
-    "mayNot": ["retire anything", "run an ablation", "change a review date"]
+    "may": [
+      "refuse a record without a switch or a condition",
+      "list what is due",
+      "show what an eval covers"
+    ],
+    "mayNot": [
+      "retire anything",
+      "run an ablation",
+      "change a review date"
+    ]
   },
-  "evidence": { "tests": ["../core/src/control-plane.test.ts", "src/cli.test.ts", "src/registry.test.ts"] },
+  "evidence": {
+    "tests": [
+      "../core/src/control-plane.test.ts",
+      "src/cli.test.ts",
+      "src/registry.test.ts"
+    ]
+  },
   "limitations": [
     "A retirement condition is prose; nothing checks that a committed report satisfies it. The lifecycle view shows coverage (an ablation arm exists for the record), not satisfaction; a person reads the report against the condition.",
     "Review dates are checked on demand, not scheduled: `regulator review --due` runs when someone runs it, and nothing under CI fails on an overdue record (docs/DEBT.md row 32).",
-    "Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite."
+    "Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite.",
+    "Implementation and cited-test paths are verified only in a source checkout (a `src/` beside the registry). An installed package ships `dist/` and no sibling packages' sources, so there `checkRegistry` carries the paths as provenance and `doctor` says it did not verify them; the release's `pnpm check` is where they were verified."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": { "switch": "none", "note": "A check on the registry; there is no run it participates in." },
-  "retirement": { "condition": "Never: the record that decides retirement cannot retire before the last regulator does." },
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-22",
+    "reviewBy": "2026-12-01"
+  },
+  "ablation": {
+    "switch": "none",
+    "note": "A check on the registry; there is no run it participates in."
+  },
+  "retirement": {
+    "condition": "Never: the record that decides retirement cannot retire before the last regulator does."
+  },
   "introducedIn": "M14"
 }

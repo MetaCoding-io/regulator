@@ -23,6 +23,8 @@ export interface RegistryProblem {
 export interface LoadedRegistry {
   records: RegulatorRecord[];
   problems: RegistryProblem[];
+  /** Whether `mechanism.implementation` and `evidence.tests` paths were checked against the filesystem (a source checkout), or only carried as provenance (an installed package). */
+  filesVerified: boolean;
 }
 
 async function exists(p: string): Promise<boolean> {
@@ -54,7 +56,7 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
     }
     records.push(parsed);
   }
-  return { records, problems };
+  return { records, problems, filesVerified: false };
 }
 
 /**
@@ -64,24 +66,32 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
 export interface CheckRegistryOptions {
   /** ISO date; an active record whose review date is before it is a problem (lesson 15). Omit to skip the date check. */
   today?: string;
+  /**
+   * Whether to check that implementation and test paths exist under `root`. Default: only when `root` has a `src/`
+   * directory, i.e. a source checkout. An installed package ships `dist/` and no sibling sources, so the paths a
+   * record cites are provenance there — verified at the release by `pnpm check`, not re-verifiable on the instance.
+   */
+  verifyFiles?: boolean;
 }
 
 export async function checkRegistry(registryDir: string, root: string, options: CheckRegistryOptions = {}): Promise<LoadedRegistry> {
   const loaded = await loadRegistry(registryDir);
+  const verifyFiles = options.verifyFiles ?? (await exists(path.join(root, "src")));
+  loaded.filesVerified = verifyFiles;
   const seen = new Map<string, string>();
   for (const record of loaded.records) {
     const file = record.id;
     if (seen.has(record.id)) loaded.problems.push({ file, message: `duplicate id (also in ${seen.get(record.id)})` });
     seen.set(record.id, file);
     if (record.status === "retired") continue;
-    if (!(await exists(path.join(root, record.mechanism.implementation)))) {
+    if (verifyFiles && !(await exists(path.join(root, record.mechanism.implementation)))) {
       loaded.problems.push({ file, message: `implementation not found: ${record.mechanism.implementation}` });
     }
     if (record.status === "active" && record.evidence.tests.length === 0) {
       loaded.problems.push({ file, message: "active regulator cites no tests" });
     }
     for (const test of record.evidence.tests) {
-      if (!(await exists(path.join(root, test)))) loaded.problems.push({ file, message: `cited test not found: ${test}` });
+      if (verifyFiles && !(await exists(path.join(root, test)))) loaded.problems.push({ file, message: `cited test not found: ${test}` });
     }
     if (record.mechanism.level === "deterministic-gate" && !record.limitations?.length) {
       loaded.problems.push({ file, message: "a gate must state at least one limitation (its enforcement boundary)" });

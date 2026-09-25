@@ -119,9 +119,32 @@ test("checkRegistry accepts a record that shows what it claims and renders it", 
   assert.match(boundary, /## Example \(`reg\.control\.example\.v1`\)\n\nEnforced at `tool_call` in `src\/gate\.ts`; S3, deterministic-gate\.\n\nNot covered:\n\n- lexical only/);
 });
 
+test("checkRegistry verifies implementation and test paths only in a source checkout, and says which it did", async (t) => {
+  // An installed package ships dist/ and no sibling sources: the paths a record cites are provenance there, verified at
+  // the release by `pnpm check`. `doctor` on an instance must not report every record as broken (0.1.1).
+  const installed = await tempDir(t, "regulator-registry-installed-");
+  await mkdir(path.join(installed, "registry/regulators"), { recursive: true });
+  await mkdir(path.join(installed, "dist"));
+  await writeFile(path.join(installed, "registry/regulators/example.json"), JSON.stringify(record));
+  const skipped = await checkRegistry(path.join(installed, "registry"), installed);
+  assert.equal(skipped.filesVerified, false);
+  assert.deepEqual(skipped.problems, [], "no source tree: the paths are not checked");
+  const forced = await checkRegistry(path.join(installed, "registry"), installed, { verifyFiles: true });
+  assert.equal(forced.filesVerified, true);
+  assert.deepEqual(forced.problems.map((p) => p.message).sort(), ["cited test not found: src/gate.test.ts", "implementation not found: src/gate.ts"]);
+  const checkout = await tempDir(t, "regulator-registry-checkout-");
+  await mkdir(path.join(checkout, "registry/regulators"), { recursive: true });
+  await mkdir(path.join(checkout, "src"));
+  await writeFile(path.join(checkout, "registry/regulators/example.json"), JSON.stringify(record));
+  const verified = await checkRegistry(path.join(checkout, "registry"), checkout);
+  assert.equal(verified.filesVerified, true, "a src/ directory beside the registry is a source checkout");
+  assert.equal(verified.problems.length, 2);
+});
+
 test("checkRegistry rejects a record that claims what it cannot show", async (t) => {
   const root = await tempDir(t, "regulator-registry-bad-");
   await mkdir(path.join(root, "registry/regulators"), { recursive: true });
+  await mkdir(path.join(root, "src")); // a source checkout: the cited files are expected to exist
   await writeFile(path.join(root, "registry/regulators/example.json"), JSON.stringify({ ...record, limitations: [] }));
   await writeFile(path.join(root, "registry/regulators/dupe.json"), JSON.stringify({ ...record, limitations: [] }));
   await writeFile(path.join(root, "registry/regulators/broken.json"), "{not json");
