@@ -2,7 +2,7 @@
 
 ## Purpose
 
-regulator is a coding-agent harness on Pi with an explicit cybernetic control plane. It provides its own orchestrator — the S3 loop, generic over workloads — and regulates it ([ADR 0001](decisions/0001-own-orchestrator.md)). GSD-Pi is comparison material in the course, not a dependency.
+regulator is an agent harness on Pi with an explicit cybernetic control plane. It provides its own orchestrator — the S3 loop, generic over workloads — and regulates it ([ADR 0001](decisions/0001-own-orchestrator.md)). GSD-Pi is comparison material in the course, not a dependency.
 
 The central architectural distinction is between **control functions** and **agents**. S1-S5 are responsibilities and communication relationships. An LLM may participate in one of those functions, but the function's authority should live in durable mechanisms wherever possible.
 

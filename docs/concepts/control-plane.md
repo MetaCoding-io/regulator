@@ -1,6 +1,6 @@
 # The control plane
 
-`regulator` treats a coding-agent harness as a control problem, not a cast of
+`regulator` treats an agent harness as a control problem, not a cast of
 characters. Stafford Beer's Viable System Model names five functions any organization
 needs to stay viable; here each is a *responsibility with an authority boundary*, held
 by a mechanism wherever a mechanism can hold it, and by a model's judgment only where it

@@ -1,7 +1,7 @@
 # Glossary and diagnostic table
 
 Three columns on purpose. The first is the cybernetic term, the second is what it means
-for a coding-agent harness, and the third is where the idea is already mechanism in Pi,
+for an agent harness, and the third is where the idea is already mechanism in Pi,
 GSD-Pi, or regulator. A term that has no third-column entry is one the course teaches
 learners to build themselves.
 
