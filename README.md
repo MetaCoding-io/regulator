@@ -4,7 +4,7 @@
 
 regulator (formerly VSM-Pi) is a coding-agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane. It asks whether Stafford Beer's Viable System Model can be made operational inside an autonomous software-development system—not as five chatbot personas, but as explicit functions, authority boundaries, typed channels, verification gates, and feedback loops—and it provides its own orchestrator to find out.
 
-The course, [Viable Agents](https://github.com/MetaCoding-io/viable-agents-course), builds regulator lesson by lesson in its own repository: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
+The course, [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), builds regulator lesson by lesson in its own repository: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
 
 The project starts from a simple premise:
 
@@ -78,7 +78,7 @@ vsm/example/      Example committed S5 artifacts
 
 ## Course: Viable Agents
 
-regulator is also what a course builds. [Viable Agents](https://github.com/MetaCoding-io/viable-agents-course) walks
+regulator is also what a course builds. [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html) walks
 fifteen lessons, one module of the product per lesson: each opens with a regulatory
 question an autonomous agent forces on you, derives the mechanism that answers it, and
 shows it in Pi, in GSD-Pi as the comparison case, and here. The course is a private
