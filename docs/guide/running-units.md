@@ -82,7 +82,8 @@ Everything a unit did is on record and replayable:
 - `effects` — the effect journal: every side-effecting tool call, its outcome, and its
   reconciliation on restart.
 - `memory` — operational memory: facts a unit recorded with `remember`, each with
-  provenance and an expiry; `memory retract` appends a retraction.
+  provenance and an expiry; `memory retract` appends a retraction. See
+  [intelligence and memory](/concepts/intelligence-and-memory).
 - `spans --json` — the instance as OpenTelemetry GenAI spans, with canaries redacted,
   for whatever collector you run.
 - `status` — the read model the [control room](/project/packages#metacoding-regulator-control-room)

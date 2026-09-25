@@ -31,7 +31,7 @@ not a hope.
 | **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, the effect journal reconciled on restart. | Mechanisms. There is no coordinator persona. |
 | **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator is the only execution authority. Regulators never schedule. |
 | **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, the closeout gate over protected paths. | Independent evidence the host owns. A model's review is an additional layer. |
-| **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation; it never replans. |
+| **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation; it never replans. See [intelligence and memory](/concepts/intelligence-and-memory). |
 | **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition, protected by the write gate and the `identity-untouched` check. | Files. A unit may propose; only a person with `actAsS5` in the interaction policy may accept, and the S5 decision path is the only writer. |
 
 ## The loop
@@ -121,7 +121,9 @@ A *regulator* is one mechanism that absorbs one class of failure. Each has a reg
 record — purpose, failure absorbed, mechanism level, implementation, enforcement points,
 tests, limitations, owner, review date, the eval arm that switches it off, and the
 condition under which it may be retired. `regulator check` refuses a record without a
-stated limitation and fails when a review date passes. The
+stated limitation and fails when a review date passes. Whether a regulator earns its
+place is measured, not asserted: see [evidence about the
+regulators](/concepts/evidence-about-the-regulators). The
 [regulators page](/reference/regulators) is rendered from the records; the
 [enforcement boundary](/reference/boundary) lists, for every gate, the routes around it.
 

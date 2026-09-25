@@ -60,6 +60,8 @@ export default defineConfig({
         items: [
           { text: "The control plane", link: "/concepts/control-plane" },
           { text: "Definition, instance, domain", link: "/concepts/definition-and-instance" },
+          { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
+          { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },
           { text: "Architecture", link: "/ARCHITECTURE" },
           { text: "Glossary", link: "/GLOSSARY" },
           { text: "Pathologies", link: "/PATHOLOGIES" },
