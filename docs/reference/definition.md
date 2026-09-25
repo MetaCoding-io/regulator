@@ -149,7 +149,9 @@ or live through the host.
 The harness can throw `check` and `extension` switches without a code change; a `loop`,
 `policy` or `tool` switch on a record says an ablation of that regulator needs one. A
 report carries a fingerprint of the definition, the host pin and the suite, and is not
-complete without an interpretation file.
+complete without an interpretation file. [Evidence about the
+regulators](/concepts/evidence-about-the-regulators) explains arms, ablation, the
+metrics and the interpretation rule.
 
 ## Registry records
 

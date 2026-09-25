@@ -27,7 +27,7 @@ learners to build themselves.
 | **S2 — Coordination** | Damping between operations: isolation, leases, sequencing, anti-oscillation, reintegration. Mechanism, not a coordinator persona. | GSD worktrees and leases; regulator S2 gap analysis (M05). |
 | **S3 — Control** | Operational control: planning, dispatch, budgets, recovery, authoritative work state. | GSD lifecycle kernel, auto orchestration; regulator work contracts (M06–M08). |
 | **S3\* — Audit** | Independent verification that does not depend on the executor's self-report. | GSD verification evidence and technical verdict; regulator audit finding and deterministic gates (M09, M10). |
-| **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel (M11). |
+| **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel (M11). [Intelligence and memory](concepts/intelligence-and-memory.md). |
 | **S5 — Identity / Policy** | What the system is: purpose, invariants, domain model, policy. Durable and version-controlled, never trapped in a context window. Not an agent. | `vsm/IDENTITY.md`, `vsm/INVARIANTS.md`, `AGENTS.md` (M12). |
 | **Separation of duty** | The function that did the work cannot be the function that certifies it. | regulator independence domains in the functional projection (M04, M09). |
 
@@ -46,7 +46,7 @@ learners to build themselves.
 | **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/regulator-pi/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
 | **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). |
 | **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `packages/regulator/registry/`; `regulator check`; the specification is archived as [CONTROL-REGISTRY.md](archive/2026-09/CONTROL-REGISTRY.md). |
-| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). |
+| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
 | **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
 | **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill (M10). |
 
@@ -77,10 +77,10 @@ learners to build themselves.
 | **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts` (M13). |
 | **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
 | **Identity** | What the system is. Committed, reviewed, S5. | `vsm/` (M12). |
-| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). |
+| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). [Intelligence and memory](concepts/intelligence-and-memory.md). |
 | **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.regulator/*.ndjson`, projected as OpenTelemetry GenAI spans by `regulator spans` (M09, M14). |
 | **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | regulator drift fixture (M12, M14). |
-| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | `packages/regulator/evals/drift.json`: arms change only what the definition declares (M14). |
+| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | `packages/regulator/evals/drift.json`: arms change only what the definition declares (M14). [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
 | **Outcome grader / trajectory grader** | An outcome grader reads the resulting environment and never the transcript; a trajectory grader reads the records of how it got there. Both are needed. | `packages/regulator/src/graders.ts` (M14). |
 | **Behaviour-bound check** | A criterion observed by content: an evidence expectation carries a check the host runs, and the record binds to that criterion alone. | `export-signature` (M14). |
 
