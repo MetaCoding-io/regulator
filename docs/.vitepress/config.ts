@@ -6,7 +6,8 @@ import { defineConfig } from "vitepress";
  * The site is the `docs/` directory rendered as-is, plus what `scripts/generate.mjs`
  * writes into `docs/generated/` from the product (the CLI usage table, the registry
  * documents, the operating note, the changelog). Generated pages are rewritten to
- * their place in the sidebar; `docs/archive/` is design history and is not built.
+ * their place in the sidebar; `docs/archive/` (design history) and `docs/research/` (design
+ * notes on what comes next) are not built.
  *
  * A relative link that leaves `docs/` — a source file, a fixture, a definition file —
  * becomes a link into the repository on GitHub, so the same Markdown reads on GitHub
@@ -23,7 +24,7 @@ export default defineConfig({
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
-  srcExclude: ["archive/**", "README.md"],
+  srcExclude: ["archive/**", "research/**", "README.md"],
   rewrites: {
     "generated/cli.md": "reference/cli.md",
     "generated/regulators.md": "reference/regulators.md",

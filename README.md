@@ -70,7 +70,7 @@ packages/
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
 agents/           Judgment-oriented S1/S4/S3* prompt profiles
-docs/             ARCHITECTURE.md, GLOSSARY.md, PATHOLOGIES.md, examples/, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), archive/
+docs/             ARCHITECTURE.md, GLOSSARY.md, PATHOLOGIES.md, examples/, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), research/ (notes on what comes next), archive/
 experiments/      Longitudinal drift scenarios and run artifacts
 fixtures/         Tiny projects used by checks and experiments
 vsm/example/      Example committed S5 artifacts
