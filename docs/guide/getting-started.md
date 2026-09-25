@@ -1,14 +1,14 @@
 # Getting started
 
 `regulator` installs into a git repository you already have and runs *units* of work
-against it: each unit is a coding-agent session under a work contract, in its own
+against it: each unit is an agent session under a work contract, in its own
 worktree, verified by checks the host runs, and closed only when the evidence says so.
 This page takes you from an empty shell to a first closed unit.
 
 ## What you need
 
 - Node 22.19 or later (both Node 22 and 24 are tested).
-- [Pi](https://pi.dev/) 0.87.0 — the coding agent the units run on — and at least one
+- [Pi](https://pi.dev/) 0.87.0 — the agent runtime the units run on — and at least one
   model provider key in Pi's environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …).
   The model routes in the default policy name Anthropic, OpenAI and Google models; edit
   [`policies/default.json`](/reference/definition#budget-and-model-policy) if you use

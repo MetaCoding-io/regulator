@@ -3,7 +3,7 @@
 > *"I want a set of agents to manage my finances."*
 
 The course builds `regulator` against a software repository, because that is where
-coding agents live. But the control plane is generic over workloads, and the fastest
+agents are most common today. But the control plane is generic over workloads, and the fastest
 way to see that — and to see which parts of the design are *yours* to make — is to
 put a second domain under it. This example takes a household's finances: a plain-text
 ledger of one checking account, closed once a month.

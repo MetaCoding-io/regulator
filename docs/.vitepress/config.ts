@@ -18,7 +18,7 @@ const REPO = "https://github.com/MetaCoding-io/regulator";
 
 export default defineConfig({
   title: "regulator",
-  description: "A coding-agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
+  description: "An agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
   base: "/regulator/",
   lang: "en-US",
   lastUpdated: true,
