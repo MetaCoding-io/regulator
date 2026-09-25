@@ -20,7 +20,8 @@ contract ──► dispatch ──► verify ──► route ──► close
    the unit, creates `.regulator/worktrees/<id>` on a branch, resolves the unit type's
    profile, budget and model route, and opens a session through the host. The session
    sees the identity, the contract and the profile's advice; it may use only the tools
-   the profile grants, and may write directly only under the profile's paths.
+   the profile grants ([session tools](/reference/tools)), and may write directly only
+   under the profile's paths.
 3. **Verify.** When the session ends, the host runs the checks the workload names for
    the unit type at the unit's revision and records each as evidence. The technical
    verdict is theirs; the unit's own report is a claim beside it.
@@ -32,7 +33,11 @@ contract ──► dispatch ──► verify ──► route ──► close
 5. **Close.** A passing verdict with every required expectation met reintegrates the
    branch into the base and retires the lease. A criterion no check can observe waits
    for `unit accept <id> <criterion> --by <who>`; `unit close <id>` re-audits a blocked
-   unit without a new attempt.
+   unit without a new attempt. After the merge the host runs `run_tests` and
+   `run_checks` once more on the base at the merge commit: the branch passed on its own
+   tree, and two units that change disjoint files can still break each other. A failure
+   there is an audit finding with no unit, an obligation owed to S3 that holds every
+   dispatch until it is dispositioned; nothing is reverted by itself.
 
 ## Working by hand
 
@@ -53,7 +58,8 @@ revision.
 
 ## Obligations
 
-`regulator obligations` is the ledger: what is owed, to whom (`S3`, `S5` or `human`),
+`regulator obligations` is the ledger ([obligations](/concepts/obligations) is the long
+version): what is owed, to whom (`S3`, `S5` or `human`),
 at which severity, and whether it currently vetoes a unit's dispatch and close. An
 obligation is closed by a disposition with a rationale, and the disposition is checked
 against the interaction policy's people before anything is written:
@@ -61,7 +67,7 @@ against the interaction policy's people before anything is written:
 | Command | What it records |
 | --- | --- |
 | `obligation ack <id> --by <who>` | seen, not yet resolved; the veto stands |
-| `obligation resolve <id> --by <who> --disposition <d> --rationale <t>` | `accepted`, `rejected`, `accepted-risk`, `remediated` or `superseded` |
+| `obligation resolve <id> --by <who> --disposition <d> --rationale <t>` | closed with a [disposition](/concepts/obligations#dispositions): `no-action`, `accepted-risk`, `rework`, `replan`, `fixed`, `verified`, `rejected`, `research-requested`, `audit-requested` or `policy-clarification-requested` |
 | `obligation escalate <id> --by <who> --to <consumer> --rationale <t>` | a successor obligation for another consumer; the veto moves with it |
 | `answer <id> --by <who> --answer <t>` | the answer to a unit's question; the next attempt carries it |
 | `identity accept <id> --by <who> --file <name>.md --from <path> --rationale <t>` | the S5 decision on a proposal: the file is written and committed under S5 authority |
@@ -86,5 +92,5 @@ Everything a unit did is on record and replayable:
   [intelligence and memory](/concepts/intelligence-and-memory).
 - `spans --json` — the instance as OpenTelemetry GenAI spans, with canaries redacted,
   for whatever collector you run.
-- `status` — the read model the [control room](/project/packages#metacoding-regulator-control-room)
-  renders: units, obligations, budgets, review dates, on one page.
+- `status` — the read model the [control room](/guide/control-room) renders: units,
+  obligations, budgets, review dates, on one page; `--json` for a script.

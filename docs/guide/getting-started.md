@@ -10,9 +10,10 @@ This page takes you from an empty shell to a first closed unit.
 - Node 22.19 or later (both Node 22 and 24 are tested).
 - [Pi](https://pi.dev/) 0.87.0 — the agent runtime the units run on — and at least one
   model provider key in Pi's environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, …).
-  The model routes in the default policy name Anthropic, OpenAI and Google models; edit
-  [`policies/default.json`](/reference/definition#budget-and-model-policy) if you use
-  others.
+  The model routes in the default policy name Anthropic, OpenAI and Google models; if
+  you use others, copy [`policies/default.json`](/reference/definition#budget-and-model-policy)
+  out of the installed package, change the routes, and pass it as `--policy <file>` to
+  `unit drive` (see [customizing the definition](/guide/operating#customizing-the-definition)).
 - A git repository with a clean tree, on the branch units should land on.
 
 ## Install
@@ -55,6 +56,37 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
 `--writable` is where the implement profile may write directly (its own default is
 `src/` and `test/`); `--protected` adds to what the closeout refuses to accept a change
 under. `regulator/identity/` is always protected, and `vendor/` is when it exists.
+
+## Declare who may answer
+
+Every command that dispositions something — `answer`, `obligation resolve`, `obligation
+ack`, `obligation escalate`, `identity accept`, `identity reject`, `identity promote`,
+`memory retract` — takes `--by <who>` and checks the name against the
+[interaction policy's](/reference/definition#interaction-policy) `people` before it writes
+anything. A name the policy does not list may disposition nothing. The shipped policy
+names three people — `course-lab`, `alice` and `bob` — which is why the examples on
+this site say `--by alice`.
+
+To act under your own name, copy the policy out of the installed package, add
+yourself, and point the CLI at your copy:
+
+```sh
+cp node_modules/@metacoding.io/regulator/policies/interaction.json regulator/interaction.json
+```
+
+```json
+{ "name": "sam", "resolveUpTo": "critical", "acceptRisk": true, "actAsS5": true }
+```
+
+```sh
+regulator answer 3f2a --by sam --answer "yes" --interaction regulator/interaction.json
+export REGULATOR_INTERACTION_POLICY=$PWD/regulator/interaction.json   # for sessions you run by hand
+```
+
+`resolveUpTo` is the highest severity the person may resolve, `acceptRisk` whether they
+may disposition an obligation as `accepted-risk`, and `actAsS5` whether they may accept or
+reject an identity proposal. Three commands record `--by` without checking it: `init`,
+`unit accept` and `eval`. Their name is provenance, not authority.
 
 ## Check the instance
 

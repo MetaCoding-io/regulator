@@ -26,6 +26,12 @@ The shipped `software-development` workload declares `plan`, `research`, `implem
 `verify`, `integrate` and `close`; `personal-finance` declares the monthly close over a
 ledger. A contract is loaded with the workload it names, so an instance may run several.
 
+A unit type and the profile it runs under are named separately on purpose, and the
+names do not line up one to one: `implement` and `integrate` run under the `implement`
+profile; `plan`, `verify` and `close` run under `research` (read-only); the `research`
+unit type runs under `intelligence`, which is `research` plus `report_intelligence`. The
+profile is the grant; the unit type is the kind of work and the checks that judge it.
+
 ## Capability profiles
 
 `profiles/<name>.json` — what a unit may use and where it may write. A profile is a
@@ -66,8 +72,9 @@ reached; the cause is `budget-exhausted`.
 ## Recovery policy
 
 `policies/recovery.json` — what S3 does with a blocked unit. The Nth failure of a cause
-on one unit takes the Nth action of its rule; the last action repeats; a rule that runs
-out falls through to `fallback`.
+on one unit takes the Nth action of its rule, and the last action repeats once the rule
+runs out. `fallback` is the rule for a cause no rule names (`unknown`, or a cause a
+shorter policy leaves out).
 
 | Causes | Actions |
 | --- | --- |
@@ -121,18 +128,30 @@ path never sets `provenance.createdBy`.
 | `unitId`, `unitType` | the type must exist in the workload named by `workload.name`/`workload.version` |
 | `objective`, `contribution` | what, and why it matters to the whole |
 | `constraintRefs[]` | regulator ids or invariant ids the unit runs under |
-| `fixed[]` | decisions already made: `id`, `subject`, `decision`, `authorityRef` (an invariant, an accepted decision, a planning record), optional `rationale` |
+| `fixed[]` | decisions already made: `id`, `subject`, `decision`, `authorityRef`, optional `rationale`. An authority reference is one of four forms and must resolve, or the contract is refused: `INV-nnn` (an invariant the instance's identity declares), `reg.<area>.<name>.v<n>` (a registry record), `human:<name>` (a person; the name is trusted as given), or `obligation:<id>` (an open obligation, typically an accepted decision) |
 | `delegated[]` | decisions the unit may make: `id`, `subject`, `bounds`; a delegation without bounds is abdication; the choice made must appear in the report unless `requiredReport` is `false` |
-| `unresolved[]` | decisions nobody has made: `id`, `subject`, `reason`, `handling` (`resolve-before-execution`, `defer`, `stub-boundary`, `research`), optional `obligationRef` |
+| `unresolved[]` | decisions nobody has made: `id`, `subject`, `reason`, `handling` (`resolve-before-execution`, `defer`, `stub-boundary`, `research`, `policy-clarification`), optional `obligationRef` |
 | `expectedEvidence[]` | `id`, `description`, `class` (`file`, `command`, `test`, `runtime`, `semantic`, `model`), `required`, and optionally a `check` the host can observe: `{ kind: "export-signature", module, export, arity }` or `{ kind: "inherited-tests", exempt[] }`. A `semantic` or `model` expectation without a check needs a human acceptance to count |
 | `provenance` | `createdBy: "S3"`, `createdAt`, optional `sourceRevision` and `predecessor` |
 
-The unit answers with a **result report**: its evidence refs, the choice made for each
-delegated decision, the outcome of each unresolved one, emergent decisions, deviations
-from a fixed decision, a constraint, the scope or an interface, and residual
-uncertainty. A report is bound to a contract version and an attempt and is never
-revised; the contract check refuses a report that leaves a delegated decision unreported
-or a required expectation unaddressed.
+The unit answers with a **result report** through `report_result`
+([session tools](/reference/tools#report_result)):
+
+| Field | Meaning |
+| --- | --- |
+| `summary` | what was done |
+| `evidence[]` | refs by `class` (`file`, `command`, `test`, `runtime`, `semantic`, `model`) with an optional observation and revision |
+| `delegatedResults[]` | per delegated decision: `decisionId`, `choice`, optional `rationale`; required unless the delegation said `requiredReport: false` |
+| `unresolvedOutcomes[]` | per unresolved decision: `preserved` (left as found) or `surfaced` (raised for someone else); there is no *settled*, because settling is not the unit's to do |
+| `emergentDecisions[]` | decisions the contract did not allocate: `subject`, `choiceOrQuestion`, `consequenceIfWrong` (`low`, `medium`, `high`) |
+| `deviations[]` | from a `fixed-decision`, a `constraint`, the `scope` or an `interface`, with an optional `ref` |
+| `residualUncertainty[]` | `subject`, `reason`, `consequenceIfWrong` |
+
+A report is bound to a contract version and an attempt and is never revised; the
+contract check refuses a report that leaves a delegated decision unreported or a required
+expectation unaddressed. At close, each emergent decision and deviation becomes an
+`operational-signal` and each residual uncertainty an `uncertainty-signal`, routed like
+any other message.
 
 ## Eval suites
 
@@ -180,11 +199,38 @@ are rendered from these records by `regulator docs`.
 ## Identity seed
 
 `identity/IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` — the four S5
-files. `INVARIANTS.md` lists invariants as `INV-NNN` with a statement each; the parser
-refuses a malformed one. `GLOSSARY.md` has a section, "Words this instance does not
-use", that `glossary-lint` reads. `BOUNDARIES.md` is generated from the registry. The
-seed is copied into an instance by `init`; the instance's copy is what units see and
-what `identity accept` writes; `identity promote` carries an accepted file back.
+files, written by a person and read by the parser. The seed is copied into an instance
+by `init`; the instance's copy is what units see and what `identity accept` writes;
+`identity promote` carries an accepted file back.
+
+`INVARIANTS.md` declares one invariant per section, and the parser refuses a file with
+none or a malformed heading:
+
+```markdown
+## INV-005 — The statement is the bank's
+
+No unit writes under `statements/`.
+
+Checked by: the manifest's protected prefixes at the profile grant; `identity-untouched` at closeout.
+```
+
+The shipped seed declares four: **INV-001** identity is write-protected, **INV-002** a
+proposal is not policy, **INV-003** audit is independent of self-report, **INV-004**
+memory is not identity. Each names the mechanism that checks it. A contract cites one
+as `authorityRef: "INV-003"`, and the routing policy's shipped floor raises any message
+that names one to `blocking`.
+
+`GLOSSARY.md` has a section, `## Words this instance does not use`, that `glossary-lint`
+reads; each line is a refused word or a comma-separated list, and the word to say
+instead:
+
+```markdown
+- task, job, ticket (say unit)
+```
+
+`BOUNDARIES.md` is the identity's own statement of what the system does not do; it is
+written by hand. The enforcement boundary the registry renders (`BOUNDARY.md`) is a
+different document.
 
 ## Instance manifest
 

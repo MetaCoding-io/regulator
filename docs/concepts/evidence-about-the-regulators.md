@@ -71,6 +71,7 @@ it off. A record with no switch fails `regulator check`. A switch is `none` or
 | `extension:` | `extension:intelligence` | yes, for a live arm: the dispatcher does not load the extension. A scripted run loads no extensions. |
 | `loop:` | `loop:progression-veto` | no: switching it off needs a code change |
 | `policy:` | `policy:routing.floors` | no: it needs a second policy file |
+| `tool:` | `tool:report_result` | no: a session without the tool is a different host |
 | `none` | the eval harness itself | no; the record's note says why |
 
 The switch is recorded even when the harness cannot throw it. That way the lifecycle

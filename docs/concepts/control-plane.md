@@ -78,7 +78,7 @@ not a hope.
     <text x="408" y="168" text-anchor="start">dispositioned: run again</text>
   </g>
 </svg>
-<figcaption>The S3 loop. The host, not the session, decides whether a unit passed; a failure the policy cannot absorb by itself becomes an obligation that holds the unit until someone dispositions it.</figcaption>
+<figcaption>The S3 loop. The host, not the session, decides whether a unit passed; a failure the policy cannot absorb by itself becomes an obligation that holds the unit until someone dispositions it. After a close reintegrates the branch, the base is checked again at the merge commit, and a failure there holds every unit until S3 decides.</figcaption>
 </figure>
 
 Three things about the loop are deliberate:
@@ -100,20 +100,21 @@ Three things about the loop are deliberate:
 
 Messages between functions carry control semantics, and the type says which:
 
-| Kind | From | Means | Routed to |
-| --- | --- | --- | --- |
-| `operational-signal` | S1 | something about the work: a blocker, a deviation | S3 |
-| `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claim to a severity | S3 |
-| `coordination-signal` | S2 | a lease expired, a conflict, oscillation | S3 |
-| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | S3 |
-| `intelligence-signal` | S4 | the environment changed, or will | S3 |
-| `policy-proposal` | any | a request to change identity or policy; never a mutation | S5 |
-| `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | a person |
-| `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | the unit |
+| Kind | From | Means | Emitted by | Routed to |
+| --- | --- | --- | --- | --- |
+| `operational-signal` | S1 | something about the work: a blocker, a deviation | the loop, from a result report's `emergentDecisions` and `deviations` | S3 |
+| `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claim to a severity | the loop, from a result report's `residualUncertainty` | S3 |
+| `coordination-signal` | S2 | a lease expired, a conflict, oscillation | the thrash detector in the session; reintegration on a conflict | S3 |
+| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout; the post-merge check | S3 |
+| `intelligence-signal` | S4 | the environment changed, or will | `report_intelligence` in a research unit | S3 |
+| `policy-proposal` | any | a request to change identity or policy; never a mutation | `propose_policy_change` | S5 |
+| `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate` | a person |
+| `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | declared in the protocol and the routing policy; nothing emits one yet — a unit's constraints reach it as the contract's `constraintRefs` and the rendered identity | the unit |
 
 A signal is not an audit; an audit is not a policy decision; a proposal does not mutate
 policy. The [routing policy](/reference/definition#routing-policy) declares, per kind,
-the severity at which a message opens an obligation and for whom.
+the severity at which a message opens an obligation and for whom; [obligations](/concepts/obligations)
+are what the router opens and a consumer closes.
 
 ## The regulators
 

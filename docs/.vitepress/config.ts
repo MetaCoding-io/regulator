@@ -51,6 +51,7 @@ export default defineConfig({
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Running units", link: "/guide/running-units" },
+          { text: "The control room", link: "/guide/control-room" },
           { text: "Operating", link: "/guide/operating" },
           { text: "Worked example: a household ledger", link: "/examples/personal-finance" },
         ],
@@ -60,6 +61,7 @@ export default defineConfig({
         items: [
           { text: "The control plane", link: "/concepts/control-plane" },
           { text: "Definition, instance, domain", link: "/concepts/definition-and-instance" },
+          { text: "Obligations", link: "/concepts/obligations" },
           { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
           { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },
           { text: "Architecture", link: "/ARCHITECTURE" },
@@ -74,6 +76,7 @@ export default defineConfig({
           { text: "CLI", link: "/reference/cli" },
           { text: "Definition files", link: "/reference/definition" },
           { text: "Instance layout", link: "/reference/instance" },
+          { text: "Session tools", link: "/reference/tools" },
           { text: "Host checks", link: "/reference/host-checks" },
           { text: "Regulators", link: "/reference/regulators" },
           { text: "Enforcement boundary", link: "/reference/boundary" },
