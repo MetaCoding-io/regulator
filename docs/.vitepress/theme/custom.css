@@ -1,0 +1,39 @@
+/* The sidebar toggle: a tab on the sidebar's right edge, desktop only. */
+.sidebar-toggle { display: none; }
+
+@media (min-width: 960px) {
+  .sidebar-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: fixed;
+    z-index: 30;
+    top: calc(var(--vp-nav-height) + var(--vp-layout-top-height, 0px) + 14px);
+    left: var(--vp-sidebar-width);
+    width: 20px;
+    height: 30px;
+    margin-left: -1px;
+    border: 1px solid var(--vp-c-divider);
+    border-left: none;
+    border-radius: 0 6px 6px 0;
+    background: var(--vp-c-bg);
+    color: var(--vp-c-text-3);
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s, background-color 0.2s;
+  }
+  .sidebar-toggle:hover { color: var(--vp-c-brand-1); background: var(--vp-c-bg-soft); }
+
+  /* Every sidebar-dependent offset in the default theme is a multiple of this variable. */
+  html.sidebar-hidden { --vp-sidebar-width: 0px; }
+  html.sidebar-hidden .VPSidebar { display: none; }
+  html.sidebar-hidden .VPNavBar.has-sidebar .title { position: static; width: auto; padding: 0; }
+  html.sidebar-hidden .VPNavBarTitle.has-sidebar .title { border-bottom-color: transparent; }
+  html.sidebar-hidden .sidebar-toggle { left: 0; margin-left: 0; }
+}
+
+@media (min-width: 1440px) {
+  .sidebar-toggle { left: calc((100vw - var(--vp-layout-max-width)) / 2 + var(--vp-sidebar-width)); }
+  html.sidebar-hidden .sidebar-toggle { left: 0; }
+}
