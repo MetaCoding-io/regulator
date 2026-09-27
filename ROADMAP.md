@@ -87,7 +87,7 @@ names the issue its current slice is in.
 | Units that run a program, not a session | [open questions §3](docs/research/2026-09-25-open-questions.md#3-must-every-unit-run-a-pi-session) | answered: the dispatcher seam already allows it | A `command` runner per unit type in the workload definition | 0.3, beside #58 |
 | Predictive S4: predictions as intelligence signals that resolve and are graded on calibration | [open questions §4](docs/research/2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then) | exploratory | Waits on the live eval report (#46); then an instrument record kind in the registry | after 0.2 |
 | ArticleMiner as a knowledge-production workload | [ArticleMiner note §5](docs/research/2026-09-25-articleminer-knowledge-production.md#5-phases-against-the-features) | proposed, in phases | Phase 1: declared checks for non-Node domains (§4.1) | 0.3, under #61 |
-| A homelab control plane, designed with its infrastructure | [`HOMELAB-CONTROL-PLANE.md`](docs/HOMELAB-CONTROL-PLANE.md) | design note | Its open decisions (§9) | unscheduled |
+| A homelab control plane, designed with its infrastructure | [homelab note §7](docs/research/2026-09-27-homelab-control-plane.md#7-architectural-conflicts) | design note; ten of thirteen decisions made (§9) | Choose the file service (§9, decision 11); then stage 0 in a separate homelab repository | unscheduled |
 | The control room accepts the CLI's dispositions | [open questions §5](docs/research/2026-09-25-open-questions.md#5-should-the-control-room-write) | deferred: the control room stays read-only for now | None until reopened | — |
 
 The open questions' backlog (§6) holds smaller items with no design yet; one becomes a
