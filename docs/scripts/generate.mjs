@@ -23,6 +23,8 @@ const ROOT = path.resolve(DOCS, "..");
 const PRODUCT = path.join(ROOT, "packages", "regulator");
 const OUT = path.join(DOCS, "generated");
 const REPO = "https://github.com/MetaCoding-io/regulator/blob/main";
+/** Directories under `docs/` the site does not build (as in `.vitepress/config.ts`); a link into one goes to GitHub. */
+const OFF_SITE = ["archive", "research"];
 
 /** Where `.vitepress/config.ts` rewrites each generated page to; links are re-based against that location. */
 const PLACEMENT = {
@@ -58,7 +60,7 @@ function rebaseLinks(markdown, sourceDir, placedAt) {
     const resolved = path.resolve(sourceDir, target);
     const absolute = COPIED.get(resolved) ?? resolved;
     const suffix = hash ? `#${hash}` : "";
-    if (absolute.startsWith(DOCS) && !absolute.startsWith(path.join(DOCS, "archive"))) {
+    if (absolute.startsWith(DOCS) && !OFF_SITE.some((dir) => absolute.startsWith(path.join(DOCS, dir)))) {
       let rel = path.relative(placedDir, absolute).split(path.sep).join("/");
       if (!rel.startsWith(".")) rel = `./${rel}`;
       return `](${rel}${suffix})`;

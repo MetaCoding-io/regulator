@@ -16,6 +16,8 @@ import { defineConfig } from "vitepress";
 const DOCS = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = path.resolve(DOCS, "..");
 const REPO = "https://github.com/MetaCoding-io/regulator";
+/** Directories under `docs/` the site does not build; a link into one goes to GitHub. */
+const OFF_SITE = ["archive", "research"];
 
 export default defineConfig({
   title: "regulator",
@@ -24,7 +26,7 @@ export default defineConfig({
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
-  srcExclude: ["archive/**", "research/**", "README.md"],
+  srcExclude: [...OFF_SITE.map((dir) => `${dir}/**`), "README.md"],
   rewrites: {
     "generated/cli.md": "reference/cli.md",
     "generated/regulators.md": "reference/regulators.md",
@@ -120,7 +122,7 @@ export default defineConfig({
         if (href && file && !/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(href)) {
           const [target, hash] = href.split("#");
           const absolute = path.resolve(path.dirname(file), target!);
-          if (!absolute.startsWith(DOCS) || absolute.startsWith(path.join(DOCS, "archive"))) {
+          if (!absolute.startsWith(DOCS) || OFF_SITE.some((dir) => absolute.startsWith(path.join(DOCS, dir)))) {
             const relative = path.relative(ROOT, absolute).split(path.sep).join("/");
             token.attrSet("href", `${REPO}/blob/main/${relative}${hash ? `#${hash}` : ""}`);
           }

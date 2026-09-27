@@ -2,7 +2,8 @@
 
 - **Status:** open, running. Items are added as they come up and struck when they
   graduate to an issue, a debt row or an ADR. Not a roadmap; the roadmap is what has
-  been decided.
+  been decided. Items with a next step are rows in the roadmap's
+  [threads](../../ROADMAP.md#threads--designed-not-yet-scheduled) table.
 - **Source:** design conversations (2026-09-25 onward). Where an item is a reading of
   the code, the file is cited.
 
@@ -49,6 +50,40 @@ The cybernetic reason this matters: the registry is the claim that every failure
 has a regulator; a picture that places every regulator on the path a unit takes is the
 cheapest way to see a gap in that claim (a step with no gate on it) and an overlap (two
 gates on the same step with the same channel).
+
+**Wider than one figure.** Every diagram on the website's how-it-works page draws something
+the definition already declares, or could:
+
+| Website figure | Projection of | Gap |
+| --- | --- | --- |
+| One unit through the loop | registry `enforcementPoints` on the loop's steps | the points are free text (the typed field above) |
+| Where the gates sit in a session | the same field on the host's lifecycle; *can refuse* vs *records only* from `mechanism.level` and `authority.may` | the same |
+| Six unit types, one workload | the workload definition (unit types, profiles, closeout checks) | none: already data |
+| The recovery lattice | `policies/recovery.json` | none: already data |
+| Six states (the unit lifecycle) | nothing yet — obligations have a transition table (`packages/core/src/obligations.ts`), units do not | a typed unit transition table in `protocol` that the loop enforces and the figure draws |
+| Who writes where | roughly, `scope.resources` and `channels` | resources are free text (`.regulator/signals.ndjson` beside "the instance's .regulator/"); a closed list of stores |
+
+So the generator is one module over `DefinitionView` that emits SVG per figure, and the
+instance view paints the same figures: units per lifecycle state, the recovery decisions
+actually taken on the lattice, one unit's replay placed at its steps. The gap and
+overlap the picture shows can also be a `regulator check` warning (a warning: some steps
+rightly carry no gate).
+
+**Decided (2026-09-25).**
+
+- The generated figures are additional views of the definition, alongside the six-column
+  topology rather than in place of it; the topology stays. They need not share a screen
+  with it — tabs, or any other arrangement, is a layout choice made when the page is
+  built.
+- The control room stays read-only (§5).
+- `regulator docs --write` renders the SVGs into the docs site, so `docs --check` catches
+  drift the way it does for `REGULATORS.md` and `BOUNDARY.md`.
+- The website pulls copies of the generated SVGs rather than drawing its own; the
+  generator is the only author of a figure.
+- Order: typed enforcement points → the generator and `docs --write` → the control-room
+  alternatives → the instance overlay. The first two pay in the docs even if the control
+  room never changes.
+- Writes are a separate question: §5.
 
 ## 2. A person should be able to create S4 intelligence
 
@@ -189,7 +224,55 @@ step. And it can be self-fulfilling: predict escalation, route to the cheaper mo
 save budget, cause the escalation. Calibration catches that only if the resolution
 records the route actually taken beside the outcome.
 
-## 5. Backlog — smaller things to think about
+## 5. Should the control room write?
+
+**Decided for now (2026-09-27): no.** The control room stays read-only; the figures of §1
+are built on the read-only page. This entry holds the design for when the question is
+reopened.
+
+**Today.** It will not, by rule: every non-GET request is refused with 405
+(`packages/control-room/src/server.ts`), citing the archived
+[CONTROL-REGISTRY.md](../archive/2026-09/CONTROL-REGISTRY.md) §6 — "the moment it grows a
+*raise budget* or *dismiss obligation* button it has quietly become an S3/S5 authority
+surface." The same section leaves the door open: "Actions come later, only as typed
+proposals or explicitly authorized commands with their own audit trail." A person who
+sees an obligation in the control room has to switch to a terminal to answer it.
+
+**What already exists.** The authorized commands are the CLI's dispositions —
+`obligation ack | resolve | escalate`, `answer`, `unit accept`, `memory retract`,
+`identity accept | reject` — each with a `--by` checked by `checkDispositionAuthority`
+against the interaction policy's people before anything is written
+(`packages/regulator/src/cli.ts`, `authorized`). The question is not whether the control
+room gets authority; it is whether it may be a second front end to the authority the CLI
+already carries.
+
+**A shape that would keep the rule's intent.**
+
+- *One command table, two front ends.* The disposition handlers move out of `cli.ts` into
+  a module with runtime schemas for their inputs; the CLI and the server both call it.
+  The server owns no write logic.
+- *No new powers.* Only the commands that exist. Not dispatch or drive (execution
+  authority stays with the orchestrator, and they are long-running); not budgets; not
+  editing policies, profiles or the registry — a change to the definition goes through
+  `propose_policy_change` → obligation → the S5 decision path, as it does now.
+- *The actor is the weak point.* `--by` on the CLI is a name typed at a terminal; over
+  HTTP any local process or a cross-site request can POST. At least: bind to
+  127.0.0.1, a per-launch token the CLI prints, the actor chosen from the interaction
+  policy's people rather than typed, and the surface recorded in the disposition's
+  provenance (`via: control-room`).
+- *It is a regulator surface, so it has a record.* The control room's write path becomes
+  an enforcement point on `disposition-authority`, with the limitation stated (the
+  actor is only as strong as the token) and a `docs/DEBT.md` row for it.
+- *The rule changes by decision, not by deletion.* An ADR under `docs/decisions/` names
+  the permitted commands and supersedes CONTROL-REGISTRY §6's read-only line; the 405
+  test changes with it.
+
+**Open.** Whether a first slice of obligations and answers only — what is owed to a
+person, which is most of what a person needs to act on — is worth the surface; and
+whether a person's identity should be stronger than a name before any of it ships
+(the CLI has the same weakness, and fixing it there first fixes both).
+
+## 6. Backlog — smaller things to think about
 
 Items with no design yet. Each gets a section above when it has one.
 
@@ -203,11 +286,13 @@ Items with no design yet. Each gets a section above when it has one.
 | Evidence-gated policy promotion; workload graders over a corpus | same, §4.6 | the adaptive loop's gate |
 | Where the identity lives when the domain is not a repository | same, §6 | decides whether an instance is "a repository plus a domain" |
 | The `regulator status` read model as JSON for other renderers | §1 above | the control room is the only consumer; a generated diagram needs the same projection |
-| Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule |
+| Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule; scheduled as [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
 | Predictions as intelligence signals that resolve; an instrument record kind in the registry with levels, graded on calibration | §4 above | |
 | Eval metrics are a closed list of fifteen trajectory counts (`EVAL_METRICS`); a workload or an instrument cannot declare its own | §4 above; the ArticleMiner note §4.6 | calibration (Brier) and a corpus F₁ both need an open metric with a declared grader |
 | ~~The docs do not explain intelligence, memory or evals as concepts~~ | this conversation | Done: [Intelligence and memory](../concepts/intelligence-and-memory.md) and [Evidence about the regulators](../concepts/evidence-about-the-regulators.md), linked from the control-plane page, the glossary, the running-units guide and the definition reference |
 | Attention as the scarcest budget, shown as one | the interaction policy | `attention.blockingPerAttempt` exists; nothing shows how much of a person's attention an instance has spent this week |
-| The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link |
+| The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link. The figures: §1 (the website copies the generated SVGs) |
+| A typed unit lifecycle transition table | §1 above | the lifecycle figure needs it; obligations already have one |
+| A closed list of stores for `scope.resources` | §1 above | the who-writes-where figure needs it |

@@ -5,8 +5,10 @@ Design notes on where `regulator` could go next, written before any of it is on 
 conversation — and asks two questions of it: what could run under the control plane
 today, and what the control plane would have to grow to run it well.
 
-A note is not a commitment. It graduates by becoming something that is: an issue with
-acceptance criteria, a row in [`DEBT.md`](../DEBT.md) when a card's limitation names it,
+A note is not a commitment. The roadmap's
+[threads](../../ROADMAP.md#threads--designed-not-yet-scheduled) table lists every open
+note's next step, so the notes are found from there. A note graduates by becoming
+something that is: an issue with acceptance criteria, a row in [`DEBT.md`](../DEBT.md) when a card's limitation names it,
 an ADR under [`decisions/`](../decisions/) when it changes the architecture, or a roadmap
 item. When it does, the note says so at the top and stays as the record of why.
 
@@ -25,5 +27,5 @@ Like `archive/`, this directory is not built into the documentation site.
 | Note | Status |
 | --- | --- |
 | [ArticleMiner as a knowledge-production workload](2026-09-25-articleminer-knowledge-production.md) | open |
-| [Open questions and things to think about](2026-09-25-open-questions.md) — the control room's system view, person-raised S4 intelligence, units without a session, predictive S4, and a running backlog | open, running |
+| [Open questions and things to think about](2026-09-25-open-questions.md) — the control room's system view, person-raised S4 intelligence, units without a session, predictive S4, whether the control room should write, and a running backlog | open, running |
 | [Documentation and website gaps](2026-09-25-docs-and-site-gaps.md) — a coverage audit of the docs site and the product website, with one probable product bug and a ranked work list | open, work list |
