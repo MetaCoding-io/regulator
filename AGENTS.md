@@ -89,6 +89,15 @@ For extension work, test registration and handlers independently where possible 
 - If a requested change would violate an explicit invariant, stop and surface the conflict or create the appropriate typed proposal.
 - Preserve provenance: who/what emitted a finding, what source revision/evidence it refers to, and what authority acted on it.
 
+## Tracking work
+
+Work is tracked in four places — a design note under `docs/research/`, a row in `docs/DEBT.md`, a row in the roadmap's threads table, a GitHub issue in a roadmap milestone — and `ROADMAP.md` § "How this page is kept" is the procedure. Follow it; do not track work anywhere else (a chat, a TODO in code, a new list file). In particular:
+
+- A design or decision reached in conversation is written into `docs/research/2026-09-25-open-questions.md` (or its own note) before it is acted on.
+- A note that names a next step gets a row in `ROADMAP.md`'s threads table in the same change.
+- Re-check a work list against `main` before filing an issue from it.
+- The `Next:` line under "Current goal" is a summary; the roadmap is the order.
+
 ## Before finishing an issue
 
 Confirm:
@@ -99,4 +108,5 @@ Confirm:
 4. S5 mutation boundaries remain explicit.
 5. Tests/typechecks were run and results are reported.
 6. Every new registry limitation that names a later lesson, a milestone or "not yet" has a row in `docs/DEBT.md`; a change that pays a row strikes it.
-7. The final response lists files changed and exact verification commands.
+7. The tracking is current: the roadmap's milestone and threads tables, `docs/DEBT.md` and the design note say what this change did (`ROADMAP.md`, "How this page is kept").
+8. The final response lists files changed and exact verification commands.

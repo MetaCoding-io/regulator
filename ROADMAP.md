@@ -116,13 +116,31 @@ material in the course, not a dependency.
 
 ## How this page is kept
 
-- Work enters as a design note under [`docs/research/`](docs/research/) or a debt row,
-  becomes a thread above when the note names a next step, and an item in a milestone
-  when that step has an issue. One place per stage: the note holds the design, this
-  page holds the order, the issue holds the acceptance criteria.
-- An item moves here from a card's limitation or a debt row with an issue number; the
-  issue carries the acceptance criteria and the rows it pays.
-- The change that pays a row strikes it in `DEBT.md`, updates the card, and removes the
-  item here in the same pull request.
+This section is how work is tracked in this repository, for people and for agents;
+`AGENTS.md` and `CONTRIBUTING.md` point here rather than restate it.
+
+Work moves through four places, one per stage, and each thing is written in one of them:
+
+| Stage | Where | What it holds |
+| --- | --- | --- |
+| An idea or a question | [`docs/research/2026-09-25-open-questions.md`](docs/research/2026-09-25-open-questions.md) (running), or a note of its own under [`docs/research/`](docs/research/) when it has one source | the design, and why |
+| A gap a card already names | a row in [`docs/DEBT.md`](docs/DEBT.md) | what is owed, and which card says so |
+| Designed, with a next step | a row in the threads table above | the order and the one next step |
+| Scheduled | a GitHub issue with a `roadmap:0.x` label, and a row in that milestone's table | the acceptance criteria and the rows it pays |
+
+- A design that comes up in conversation is written into a note before it is acted on;
+  a decision taken in conversation is recorded in the note it decides (a
+  "Decided (date)" paragraph), not only in the chat.
+- A note that names a next step gets a threads row in the same change. When that step
+  becomes an issue, the issue joins a milestone table and the threads row names it; the
+  row leaves when nothing designed is left behind it.
+- An issue is written as *What* (the gap, citing the file), *Why* (the note or row it
+  comes from), *Debt paid* when it pays rows, and *Done when* (checks a reviewer can
+  run), and ends with its roadmap line. Labels: `roadmap:0.x`, plus `bug`,
+  `good first issue` or `proposal` where they apply.
+- Before an issue is filed from a work list, the list is re-checked against `main`:
+  lists go stale, and an item already fixed is struck in the note, not filed.
+- The change that lands an issue removes its row from the milestone table, strikes what
+  it pays in `DEBT.md` and the note, and updates the card, in the same pull request.
 - A milestone closes with a changelog entry and a tag; the next milestone's list is
   reviewed at that point, not before.
