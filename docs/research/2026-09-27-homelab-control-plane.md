@@ -1,11 +1,15 @@
 # Homelab control plane — a design note
 
-> **Status (2026-09-27): design note.** Nothing here is implemented. It records an idea,
+- **Status:** open.
+- **Source:** a design conversation (2026-09-27) about building a homelab and its
+  control plane together. Claims about what `regulator` does today cite the file.
+
+> Nothing here is implemented. It records an idea,
 > the technology choices proposed for it, and the architectural conflicts it raises
-> against VSM-Pi as built, so that the homelab and its control plane can be built side
+> against `regulator` as built, so that the homelab and its control plane can be built side
 > by side — by a person, with an agent helping — without either being bolted onto the
 > other afterwards. Choices marked **proposed** are defaults, not decisions; §9 lists
-> what is still open. A fully worked example (`course/examples/homelab.md`, a fixture,
+> what is still open. A fully worked example (`docs/examples/homelab.md`, a fixture,
 > a workload under `pnpm check`) is the later step, not this one.
 
 ## 1. The idea
@@ -33,16 +37,16 @@ first, and the grant is what it earns.
 
 ## 2. What changes when the domain is infrastructure
 
-VSM-Pi was built against a repository. Several of its assumptions hold for
+`regulator` was built against a repository. Several of its assumptions hold for
 infrastructure only if the architecture is chosen to make them hold. That is the
 design opportunity of building both at once.
 
-| VSM-Pi assumes | Brownfield infrastructure | Chosen so it holds |
+| `regulator` assumes | Brownfield infrastructure | Chosen so it holds |
 | --- | --- | --- |
-| Domain output lives in the repository (AGENTS.md, architectural boundaries) | Live hosts are the truth; the repository is what someone hoped | The IaC repository is the only write path; live state is *observed*, and the difference between declared and observed is a check (§7, conflict 1) |
+| Domain output lives in the repository ([AGENTS.md](../../AGENTS.md), architectural boundaries) | Live hosts are the truth; the repository is what someone hoped | The IaC repository is the only write path; live state is *observed*, and the difference between declared and observed is a check (§7, conflict 1) |
 | Isolation is a git worktree; reintegration is a merge | No equivalent | Two layers: the worktree isolates the *change*, the environment isolates the *effect*. Staging is the worktree of the world; promotion is reintegration (§5) |
 | Evidence is host-run and the unit cannot author it | The agent reads the same logs it can influence | Monitoring runs on credentials the agent never holds, ideally on separate hardware (§7, conflict 9) |
-| Tools are typed with declared effects | The shell *is* the tool; `DEBT.md` row 8 | No profile gets a shell on a managed host. Write tools are job templates with a schema; the architecture removes the limitation instead of documenting it |
+| Tools are typed with declared effects | The shell *is* the tool; [`DEBT.md`](../DEBT.md) row 8 | No profile gets a shell on a managed host. Write tools are job templates with a schema; the architecture removes the limitation instead of documenting it |
 | Leases cover files | Two remediations fight over one host | Leases cover hosts and failure domains; maintenance windows are declared policy |
 
 ## 3. Technology — proposed stack
@@ -57,9 +61,10 @@ choice.
 S5  identity           homelab repo: identity/ (purpose, invariants, boundaries, glossary)
 S3  orchestrator       regulator, running on a control node (laptop for staging)
 S3* evidence           Prometheus + Alertmanager + blackbox exporter; promtool-tested rules
-S1  write path         Ansible roles, launched as AWX job templates (production)
+S1  write path         Ansible roles, launched as AWX job templates (both environments)
     provisioning       OpenTofu over Proxmox (production) | Vagrant (staging)
-    substrate          Proxmox VE on the homelab hardware | laptop hypervisor
+    substrate          Proxmox VE on the homelab host + a separate monitoring box
+                       | libvirt/KVM on the laptop (Ubuntu 24.04, x86)
 S4  intelligence       advisory feeds, upstream releases, Proxmox/Debian changelogs
 ```
 
@@ -68,29 +73,38 @@ S4  intelligence       advisory feeds, upstream releases, Proxmox/Debian changel
 | Layer | Proposed | Why, in control-plane terms | Alternatives considered |
 | --- | --- | --- | --- |
 | Hypervisor (production) | **Proxmox VE** | Snapshots and backups through an API: reversibility becomes something a check can ask for, not a hope. Cloud-init templates make a guest a declaration | Incus (lighter, good API, smaller ecosystem); bare Debian + libvirt |
-| Guest OS | **Debian stable, cloud image** | Boring, well-understood by Ansible; the course audience can follow it | NixOS (declared state *is* live state and every change has a rollback generation — strongest for drift and reversibility, highest learning cost); Fedora CoreOS |
+| Guest OS (decided) | **Debian stable, cloud image**; Ubuntu LTS where a service packages better | Boring, well-understood by Ansible; the course audience can follow it; the laptop is Ubuntu 24.04 already | NixOS (declared state *is* live state and every change has a rollback generation — strongest for drift and reversibility, highest learning cost); Fedora CoreOS |
 | Provisioning (production) | **OpenTofu** with a Proxmox provider | `tofu plan` is a dry run a host check can run and bind to a revision; state is explicit | Ansible's Proxmox modules only (one tool fewer, weaker plan) |
-| Provisioning (staging) | **Vagrant** | Named in the brief; one command to rebuild the world | Incus/LXD VMs, Multipass |
+| Provisioning (staging) | **Vagrant** with the **libvirt** provider (`vagrant-libvirt`) on KVM | Named in the brief; one command to rebuild the world. On an x86 Ubuntu laptop, KVM is native and is the same hypervisor family Proxmox runs, so guests boot the same way in both environments; VirtualBox cannot run while the KVM modules are loaded | VirtualBox, Incus/LXD VMs, Multipass |
 | Configuration | **Ansible** roles and playbooks | Existing expertise; `--check --diff` is a dry run; idempotence is itself a check (a second run reports no change) | Salt, NixOS modules |
-| Execution authority (production) | **AWX** job templates | A job template is a typed tool: its survey spec is the runtime schema, its credential is held by AWX, not the agent; RBAC scopes who may launch what | Semaphore (lighter, fewer controls); `ansible-runner` behind a small typed service |
-| Monitoring and evidence | **Prometheus, Alertmanager, blackbox exporter** | Rules and alerts are files in git, and `promtool test rules` is a unit test for an alert; queries are an API a host check can call | **Zabbix** (existing expertise; configuration lives in its database and is exported rather than declared — weaker as a declared artifact, see §9) |
+| Execution authority (both environments, decided) | **AWX** job templates, declared as code with the `awx.awx` collection | A job template is a typed tool: its survey spec is the runtime schema, its credential is held by AWX, not the agent; RBAC scopes who may launch what | Semaphore (lighter, fewer controls); `ansible-runner` behind a small typed service |
+| Monitoring and evidence (decided) | **Prometheus, Alertmanager, blackbox exporter**, on the monitoring box | Rules and alerts are files in git, and `promtool test rules` is a unit test for an alert; queries are an API a host check can call | **Zabbix** (existing expertise; configuration lives in its database and is exported rather than declared — weaker as a declared artifact, see §9) |
 | Logs | **Loki** (later) | Evidence for "why", not "whether"; not needed before stage 5 | journald over SSH, read-only |
 | Secrets | **SOPS + age** in the repository | Encrypted at rest in git; the decryption key lives with AWX and the operator, never in a unit's session | Vault (heavier), AWX credentials alone |
 | Backups | **Proxmox Backup Server** or restic | The object of the first invariant (§4); a restore test is a check | — |
 
-### 3.3 The two parity boundaries
+### 3.3 The parity boundaries
 
 Staging and production cannot share every layer. The design declares where they differ
-instead of pretending they do not:
+instead of pretending they do not. With AWX in both environments and an x86 laptop
+(§9, decisions 2 and 3), what remains is:
 
 - **Below the guest** (substrate and provisioning): Vagrant versus OpenTofu over
   Proxmox. Staging does not test provisioning code. This is a stated limitation of the
   staging environment, not a gap to discover.
-- **The execution authority**: AWX in production; in staging either AWX as well (it
-  needs a Kubernetes node — k3s in one more VM — and several GB of RAM) or the same
-  playbooks through `ansible-runner`. If staging skips AWX, the survey schema and RBAC
-  are untested there, and the typed tool's backend differs by environment (§9,
-  decision 3).
+- **The base image**: a Vagrant box is not a Proxmox cloud-init template, even when
+  both are Debian stable. The baseline role must assume nothing a box provides and a
+  template does not (the `vagrant` user, synced folders, the NAT interface). Building
+  both from the same Debian cloud image (Packer, later) would narrow this.
+- **Failure domains are logical in staging.** Staging declares the same two domains as
+  production (§5.1), and powering off the monitoring VM simulates losing the monitoring
+  box; but both run on one laptop, so staging cannot show what a real power or network
+  split does.
+
+The execution authority is no longer a boundary: AWX runs in both, from the same
+job-template declarations, so the survey schemas, RBAC and the credential split are
+tested in staging before production relies on them. The cost is a k3s VM on the laptop
+for the AWX operator — budget several GB of RAM for it and measure it at stage 5.
 
 Everything from the guest's OS upward — roles, playbooks, monitoring rules, the
 regulator definition — is identical in both, and that is what staging proves.
@@ -113,9 +127,45 @@ argued with:
   - **HL-INV-004** The evidence channel is never changed by the unit it verifies.
     Mechanism: the monitoring paths are protected in every profile but one, and that one
     changes nothing else.
-- **Boundaries.** What the homelab does not do (no public services in phase one; no
-  data the household cannot lose without a backup).
-- **Glossary.** The lab's glossary refuses the word *job*; AWX calls its runs jobs. The
+  - **HL-INV-005** Household data in the file service (§4.1) is never deleted, moved or
+    re-permissioned by a unit, and no upgrade that migrates it runs without consent.
+    Mechanism: no job template writes the data volume; upgrade templates are
+    consent-class; a host check compares file counts and a checksum sample of a
+    probe-owned folder before and after every change to the service.
+- **Boundaries.** What the homelab does not do in phase one: no public services, no
+  access from outside the LAN, no network gear under declaration (§9, decision 6), and
+  no data the household cannot lose without a backup.
+
+### 4.1 The first real service: shared files
+
+After DNS, the first service is file sharing for two people — the operator and their
+fiancée — in the ownCloud family (§9, decision 11). It is the first place the homelab
+holds something that matters to someone other than the person running it, and the
+design treats that as the point:
+
+- **A second person is a principal, not a user account.** She is named in the
+  identity's purpose and in the interaction policy: a person who is told about
+  maintenance windows and whose data the invariants protect, not a person who
+  dispositions obligations. Who may accept a risk to *her* data is an explicit line in
+  the policy, not an assumption.
+- **The data outranks the service.** The service can be rebuilt from the repository in
+  minutes; the files cannot. Backups of the data volume, and a restore test into
+  staging on a schedule, come before the service is offered to anyone (evidence before
+  authority, applied to a person rather than an agent).
+- **Probes.** The web front end answers; an authenticated WebDAV listing with a
+  probe account returns the probe folder; the backup's last success is recent; a
+  restore test's last success is recent. Each is a Prometheus observation a closeout
+  can cite.
+- **Upgrades are the dangerous change.** A version bump can migrate data and cannot be
+  undone by re-running a role. It is consent-class, is rehearsed in staging against a
+  restored copy of production data first, and is preceded by a Proxmox snapshot of the
+  service VM *and* a fresh backup of the data volume (conflict 6).
+- **Remote access is deferred with networking.** Phone access away from home is the
+  obvious next ask; it needs an accepted exposure proposal under HL-INV-002 and the
+  networking work that phase one leaves out.
+- **Glossary.** The shipped identity's glossary refuses the word *job*
+  ([`packages/regulator/identity/GLOSSARY.md`](../../packages/regulator/identity/GLOSSARY.md));
+  AWX calls its runs jobs. The
   homelab instance declares its own glossary (§7, conflict 10).
 
 ## 5. Environments
@@ -126,27 +176,60 @@ A single environment spec per environment is the source of truth for what hosts 
 Both provisioners read it; neither is edited by hand to add a host.
 
 ```yaml
-# environments/staging.yaml   (production.yaml has the same shape)
+# environments/staging.yaml
 name: staging
-substrate: vagrant            # or: proxmox
-arch: amd64                   # see §9, decision 2
-failureDomains:
-  - name: laptop
+substrate: vagrant-libvirt
+arch: amd64
+failureDomains:               # logical in staging: both run on the laptop (§3.3)
+  - name: lab                 # stands in for the Proxmox host
+  - name: monitoring          # stands in for the monitoring box
 hosts:
   - name: dns1
     role: dns
     cpus: 1
     memoryMb: 512
-    failureDomain: laptop
+    failureDomain: lab
+  - name: awx1
+    role: awx                 # k3s + the AWX operator
+    cpus: 4
+    memoryMb: 8192
+    failureDomain: lab
   - name: mon1
     role: monitoring
     cpus: 2
     memoryMb: 2048
-    failureDomain: laptop
+    failureDomain: monitoring
 networks:
   - name: lan
     cidr: 10.20.0.0/24
 ```
+
+```yaml
+# environments/production.yaml — same schema, different substrate
+name: production
+substrate: proxmox
+arch: amd64
+failureDomains:
+  - name: lab                 # the Proxmox host
+  - name: monitoring          # the separate box
+hosts:
+  - name: dns1
+    role: dns
+    failureDomain: lab
+    # cpus / memoryMb as staging, or larger
+  - name: awx1
+    role: awx
+    failureDomain: lab
+  - name: mon1
+    role: monitoring
+    failureDomain: monitoring
+    placement: bare-metal     # installed on the box, not a Proxmox guest
+```
+
+The numbers are placeholders; the shape is the point. `placement: bare-metal` is the one
+place the renderers differ in kind: OpenTofu creates nothing for that host, and its
+operating system is installed by hand (or PXE, later) and then enrolled by the same
+baseline role.
 
 - The `Vagrantfile` loads `environments/staging.yaml` and defines one VM per host.
 - OpenTofu reads `environments/production.yaml` (via `yamldecode`) and defines one
@@ -202,7 +285,7 @@ homelab/
 ```
 
 The regulator definition — the `homelab` workload, its profiles, policies and registry
-cards — lives with the other definitions in `course/lab/` when it becomes the worked
+cards — lives with the other definitions in `packages/regulator/` when it becomes the worked
 example; the homelab repository is an *instance* of it, created by `regulator init`.
 
 ## 6. Build order — infrastructure and regulator together
@@ -216,15 +299,15 @@ promotion gate once stage 3 exists.
 | 0 | None. The repository, `identity/`, `environments/` with its schema | Identity protected; `env-spec-valid`; `regulator init` | `regulator doctor` passes on an empty homelab |
 | 1 | Staging: Vagrant guests from the spec; Ansible baseline role (users, SSH, updates, time) | `inventory-matches-spec`; idempotence check (second run changes nothing); `ansible --check` as a dry run | A fresh `vagrant up` plus baseline converges twice with no changes |
 | 2 | Monitoring host: Prometheus, Alertmanager, blackbox; rules tested with promtool | Probe-backed checks: a criterion like "dns1 answers for lan names" is observed by a query, not reported | A unit's closeout can cite a Prometheus observation bound to revision and environment |
-| 3 | First services (DNS, then one more); production hardware with Proxmox; OpenTofu | Promotion gate; evidence names its environment; host leases | A change reaches production only with staging evidence at the same revision |
+| 3 | First services (DNS, then one more); production: the Proxmox host, the monitoring box enrolled, OpenTofu | Promotion gate; evidence names its environment; host leases | A change reaches production only with staging evidence at the same revision |
 | 4 | Agent, read-only: an `investigator` profile over Prometheus queries and read-only host facts | Alerts arrive as signals; routing policy opens obligations; nothing is remediated | An injected fault produces an obligation with the evidence attached, and no write |
-| 5 | AWX in production; job templates with surveys; an `operator` profile granted named templates only | Work contract per remediation; `ask_human` for consent-class templates; effect journal over launches | A remediation runs under a contract, is verified by a probe, and is dispositioned |
+| 5 | AWX (staging first, then production); job templates with surveys; an `operator` profile granted named templates only | Work contract per remediation; `ask_human` for consent-class templates; effect journal over launches | A remediation runs under a contract, is verified by a probe, and is dispositioned |
 | 6 | Maintenance windows and failure domains declared | Standing contracts for pre-authorized runbooks; recovery lattice; pause gate; escalation when verification stays uncertain | An alert at 3 a.m. is either fixed-and-verified inside a window or escalated with evidence — never silently retried |
 | 7 | Fault injection (a stopped service, a full disk, a misleading alert, two competing remediations) | Eval arms: control, treatment, ablation per regulator | A report, honest about where a regulator cost more than it absorbed |
 
 ## 7. Architectural conflicts
 
-Recorded, per AGENTS.md, rather than resolved by bending the architecture to fit. Each
+Recorded, per [AGENTS.md](../../AGENTS.md), rather than resolved by bending the architecture to fit. Each
 names the existing mechanism it pushes on.
 
 1. **Domain state outside the repository.** AGENTS.md: "Domain output (the code, the
@@ -243,8 +326,10 @@ names the existing mechanism it pushes on.
 
 3. **Evidence names the wrong environment.** `DEBT.md` row 4: "The environment an
    evidence record carries is the orchestrator's host." For infrastructure that is
-   wrong by construction — the laptop is not the homelab. The evidence record's
-   environment must be the target environment the check observed. This pays row 4 for
+   wrong by construction — the laptop is not the homelab. Today the record's environment
+   is `node`, `platform` and `arch` (`EvidenceEnvironmentSchema` in
+   [`packages/protocol/src/audit.ts`](../../packages/protocol/src/audit.ts)); it must also
+   name the target environment the check observed. This pays row 4 for
    this workload and is a protocol change, not a workload one.
 
 4. **Leases over hosts, not files.** The lease store covers paths. Two units editing
@@ -282,14 +367,20 @@ names the existing mechanism it pushes on.
 
 9. **Independent evidence on shared hardware.** If Prometheus runs on the Proxmox host
    it monitors, a host failure takes the evidence with it, and a unit with a
-   hypervisor-level grant can reach the evidence channel. Options: a small separate box
-   for monitoring (a Raspberry Pi is enough), or an explicit registry limitation that
-   the evidence shares a failure domain with its subject.
+   hypervisor-level grant can reach the evidence channel. **Decided:** a separate
+   monitoring box in production (§9, decision 1). Two things remain. Who watches the
+   watcher: an always-firing watchdog alert whose *absence* is the signal, received
+   outside the monitoring box (by the regulator's intake on the control node), so a
+   dead box is an algedonic signal and not a quiet evidence channel. And staging: the
+   monitoring VM shares the laptop with its subjects, a limitation stated on the
+   promotion gate's card.
 
 10. **Vocabulary.** The lab's identity refuses *job* and *task*; AWX's domain language
     uses both. The homelab instance's glossary declares its own refused words, and
-    `glossary-lint` reads the instance's glossary, not the lab's — which it already does
-    per instance. Worth a test when the workload lands.
+    `glossary-lint` must read the instance's glossary, not the shipped one. The check
+    takes its words as an option ([`packages/checks/src/verify.ts`](../../packages/checks/src/verify.ts));
+    where the controller sources them from is to be confirmed with a test when the
+    workload lands.
 
 11. **Staging does not test provisioning.** §3.3. Stated as a limitation on the
     promotion gate's registry card: passing in staging says nothing about OpenTofu over
@@ -310,32 +401,46 @@ for that agent:
   channel does not exist yet (§1).
 - **Decisions are the person's.** When a choice in §9 is needed, lay out the options
   with their control-plane consequences and ask; record the answer in
-  `decisions/` in the homelab repository and strike it here.
+  `decisions/` in the homelab repository and move it to *Decided* here.
 - **Staging first, always.** Nothing runs against production that has not converged in
   staging at the same revision, including the agent's own suggestions typed by hand.
-- **Record conflicts, do not resolve them silently.** A new conflict with VSM-Pi's
+- **Record conflicts, do not resolve them silently.** A new conflict with `regulator`'s
   architecture gets a numbered entry in §7.
 - **Keep identity out of reach.** The agent may propose changes to `identity/`; the
   person commits them.
 
-## 9. Open decisions
+## 9. Decisions
+
+### Decided (2026-09-27)
+
+| # | Decision | Chosen | Consequence recorded in |
+| --- | --- | --- | --- |
+| 1 | Production hardware | One Proxmox host plus a separate monitoring box | Two failure domains in both environment specs (§5.1); conflict 9 |
+| 2 | Laptop OS and CPU architecture | Ubuntu 24.04 (KDE), x86 | Staging and production are both amd64; Vagrant uses libvirt/KVM (§3.2) |
+| 3 | AWX in staging | Yes, in both environments | The execution authority is no longer a parity boundary (§3.3); a k3s VM on the laptop |
+| 4 | Evidence channel | Prometheus (prior experience), not Zabbix | §3.2 |
+| 5 | Guest OS | Debian stable; Ubuntu LTS where a service packages better. Not NixOS | §3.2 |
+| 6 | Network gear under declaration | Out of scope for now | HL-INV-002 has nothing to observe yet; LAN-only in phase one (§4) |
+| 7 | Where the homelab lives | A new, separate repository, later | This note stays the design until then; the repository layout is §5.3 |
+| 8 | First service after DNS | Shared files for two people, ownCloud family | §4.1; HL-INV-005 |
+| 9 | The monitoring box's hardware | A small x86 mini PC | Every host is amd64 and matches staging |
+| 10 | The laptop's RAM budget | 64 GB | Staging can run every stage's VMs at once, AWX included; no per-stage bring-up needed |
+
+### Open
 
 | # | Decision | Default proposed | What it changes |
 | --- | --- | --- | --- |
-| 1 | Production hardware: one Proxmox host, a small cluster, or one host plus a separate monitoring box | One host plus a small monitoring box | Whether evidence is independent of its subject (conflict 9); whether failure domains mean anything |
-| 2 | Laptop OS and CPU architecture | — | On an ARM laptop, Vagrant guests are arm64 while an x86 homelab is amd64: images, packages and exporters differ, and parity weakens. Provider choice (libvirt, VirtualBox, VMware, Parallels, QEMU) follows from it |
-| 3 | AWX in staging, or `ansible-runner` behind the same typed interface | `ansible-runner` in staging, AWX in production | AWX in both keeps the typed tool's backend and RBAC identical across environments, at the cost of a k3s VM on the laptop |
-| 4 | Prometheus or Zabbix for evidence | Prometheus | Zabbix is existing expertise; Prometheus rules are declared files with unit tests. Both is possible, with Prometheus as the evidence channel |
-| 5 | Debian + Ansible, or NixOS | Debian + Ansible | NixOS makes drift and rollback nearly free but moves the course away from its likely audience |
-| 6 | Network gear under declaration (router/firewall, VLANs) | Out of scope for phase one | Exposure invariant HL-INV-002 needs something to observe; a declared firewall makes it a check |
-| 7 | Where the homelab repository lives, and whether it is public | Separate private repository; public once secrets discipline is proven | A public repository is course material; also a larger blast radius for a mistake |
-| 8 | Which services come first after DNS | — | Each service brings its own probes, backups and invariants |
+| 11 | Which file service: ownCloud Infinite Scale, classic ownCloud, or Nextcloud | Compare before stage 3 | The storage layout decides what a backup and a restore test are, whether a database needs its own backup, and how an upgrade migrates data. Worth choosing for how declarable and backup-able it is, not only for features |
+| 12 | What the Raspberry Pis are for | Nothing in phase one | A Pi would be the only arm64 host; a role for one (a second DNS, the watchdog receiver, an off-site backup target) is a later decision with its own parity cost |
+| 13 | Remote access to the file service | Deferred with networking | An exposure proposal under HL-INV-002; a VPN keeps it a LAN service |
 
 ## 10. Relationship to the course
 
 If this works, it is the course's third workload and possibly an infrastructure track:
 the first ten modules' method is unchanged, the fixture and workload are new, and
 lessons 05 (leases), 08 (recovery), 09 (evidence) and 13 (algedonic) are where the
-domain bites hardest. Conflicts 2, 3, 5 and 7 are changes to VSM-Pi itself and would be
+domain bites hardest. Conflicts 2, 3, 5 and 7 are changes to `regulator` itself and would be
 paid in `packages/`, not in the workload. Nothing in this note changes the course or
-the packages yet.
+the packages yet. The note graduates as the research README says: an ADR under
+[`decisions/`](../decisions/) for conflicts 2 and 7, a [`DEBT.md`](../DEBT.md) change
+for conflict 3, and issues for the rest.
