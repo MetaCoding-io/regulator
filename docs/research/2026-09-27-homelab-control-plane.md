@@ -73,7 +73,7 @@ S4  intelligence       advisory feeds, upstream releases, Proxmox/Debian changel
 | Layer | Proposed | Why, in control-plane terms | Alternatives considered |
 | --- | --- | --- | --- |
 | Hypervisor (production) | **Proxmox VE** | Snapshots and backups through an API: reversibility becomes something a check can ask for, not a hope. Cloud-init templates make a guest a declaration | Incus (lighter, good API, smaller ecosystem); bare Debian + libvirt |
-| Guest OS | **Debian stable, cloud image** | Boring, well-understood by Ansible; the course audience can follow it | NixOS (declared state *is* live state and every change has a rollback generation — strongest for drift and reversibility, highest learning cost); Fedora CoreOS |
+| Guest OS (decided) | **Debian stable, cloud image**; Ubuntu LTS where a service packages better | Boring, well-understood by Ansible; the course audience can follow it; the laptop is Ubuntu 24.04 already | NixOS (declared state *is* live state and every change has a rollback generation — strongest for drift and reversibility, highest learning cost); Fedora CoreOS |
 | Provisioning (production) | **OpenTofu** with a Proxmox provider | `tofu plan` is a dry run a host check can run and bind to a revision; state is explicit | Ansible's Proxmox modules only (one tool fewer, weaker plan) |
 | Provisioning (staging) | **Vagrant** with the **libvirt** provider (`vagrant-libvirt`) on KVM | Named in the brief; one command to rebuild the world. On an x86 Ubuntu laptop, KVM is native and is the same hypervisor family Proxmox runs, so guests boot the same way in both environments; VirtualBox cannot run while the KVM modules are loaded | VirtualBox, Incus/LXD VMs, Multipass |
 | Configuration | **Ansible** roles and playbooks | Existing expertise; `--check --diff` is a dry run; idempotence is itself a check (a second run reports no change) | Salt, NixOS modules |
@@ -127,8 +127,42 @@ argued with:
   - **HL-INV-004** The evidence channel is never changed by the unit it verifies.
     Mechanism: the monitoring paths are protected in every profile but one, and that one
     changes nothing else.
-- **Boundaries.** What the homelab does not do (no public services in phase one; no
-  data the household cannot lose without a backup).
+  - **HL-INV-005** Household data in the file service (§4.1) is never deleted, moved or
+    re-permissioned by a unit, and no upgrade that migrates it runs without consent.
+    Mechanism: no job template writes the data volume; upgrade templates are
+    consent-class; a host check compares file counts and a checksum sample of a
+    probe-owned folder before and after every change to the service.
+- **Boundaries.** What the homelab does not do in phase one: no public services, no
+  access from outside the LAN, no network gear under declaration (§9, decision 6), and
+  no data the household cannot lose without a backup.
+
+### 4.1 The first real service: shared files
+
+After DNS, the first service is file sharing for two people — the operator and their
+fiancée — in the ownCloud family (§9, decision 11). It is the first place the homelab
+holds something that matters to someone other than the person running it, and the
+design treats that as the point:
+
+- **A second person is a principal, not a user account.** She is named in the
+  identity's purpose and in the interaction policy: a person who is told about
+  maintenance windows and whose data the invariants protect, not a person who
+  dispositions obligations. Who may accept a risk to *her* data is an explicit line in
+  the policy, not an assumption.
+- **The data outranks the service.** The service can be rebuilt from the repository in
+  minutes; the files cannot. Backups of the data volume, and a restore test into
+  staging on a schedule, come before the service is offered to anyone (evidence before
+  authority, applied to a person rather than an agent).
+- **Probes.** The web front end answers; an authenticated WebDAV listing with a
+  probe account returns the probe folder; the backup's last success is recent; a
+  restore test's last success is recent. Each is a Prometheus observation a closeout
+  can cite.
+- **Upgrades are the dangerous change.** A version bump can migrate data and cannot be
+  undone by re-running a role. It is consent-class, is rehearsed in staging against a
+  restored copy of production data first, and is preceded by a Proxmox snapshot of the
+  service VM *and* a fresh backup of the data volume (conflict 6).
+- **Remote access is deferred with networking.** Phone access away from home is the
+  obvious next ask; it needs an accepted exposure proposal under HL-INV-002 and the
+  networking work that phase one leaves out.
 - **Glossary.** The shipped identity's glossary refuses the word *job*
   ([`packages/regulator/identity/GLOSSARY.md`](../../packages/regulator/identity/GLOSSARY.md));
   AWX calls its runs jobs. The
@@ -385,17 +419,20 @@ for that agent:
 | 2 | Laptop OS and CPU architecture | Ubuntu 24.04 (KDE), x86 | Staging and production are both amd64; Vagrant uses libvirt/KVM (§3.2) |
 | 3 | AWX in staging | Yes, in both environments | The execution authority is no longer a parity boundary (§3.3); a k3s VM on the laptop |
 | 4 | Evidence channel | Prometheus (prior experience), not Zabbix | §3.2 |
+| 5 | Guest OS | Debian stable; Ubuntu LTS where a service packages better. Not NixOS | §3.2 |
+| 6 | Network gear under declaration | Out of scope for now | HL-INV-002 has nothing to observe yet; LAN-only in phase one (§4) |
+| 7 | Where the homelab lives | A new, separate repository, later | This note stays the design until then; the repository layout is §5.3 |
+| 8 | First service after DNS | Shared files for two people, ownCloud family | §4.1; HL-INV-005 |
+| 9 | The monitoring box's hardware | A small x86 mini PC | Every host is amd64 and matches staging |
+| 10 | The laptop's RAM budget | 64 GB | Staging can run every stage's VMs at once, AWX included; no per-stage bring-up needed |
 
 ### Open
 
 | # | Decision | Default proposed | What it changes |
 | --- | --- | --- | --- |
-| 5 | Debian + Ansible, or NixOS | Debian + Ansible | NixOS makes drift and rollback nearly free but moves the course away from its likely audience |
-| 6 | Network gear under declaration (router/firewall, VLANs) | Out of scope for phase one | Exposure invariant HL-INV-002 needs something to observe; a declared firewall makes it a check |
-| 7 | Where the homelab repository lives, and whether it is public | Separate private repository; public once secrets discipline is proven | A public repository is course material; also a larger blast radius for a mistake |
-| 8 | Which services come first after DNS | — | Each service brings its own probes, backups and invariants |
-| 9 | The monitoring box's hardware | A small x86 machine (a used mini PC) | An x86 box keeps every host amd64 and matches the staging VM. A Raspberry Pi works but would be the one arm64 host, with images and exporters staging does not exercise |
-| 10 | The laptop's RAM budget for staging | — | AWX's k3s VM is the largest guest; the budget decides how many service VMs staging can run beside it, and whether staging runs everything at once or per stage |
+| 11 | Which file service: ownCloud Infinite Scale, classic ownCloud, or Nextcloud | Compare before stage 3 | The storage layout decides what a backup and a restore test are, whether a database needs its own backup, and how an upgrade migrates data. Worth choosing for how declarable and backup-able it is, not only for features |
+| 12 | What the Raspberry Pis are for | Nothing in phase one | A Pi would be the only arm64 host; a role for one (a second DNS, the watchdog receiver, an off-site backup target) is a later decision with its own parity cost |
+| 13 | Remote access to the file service | Deferred with networking | An exposure proposal under HL-INV-002; a VPN keeps it a LAN service |
 
 ## 10. Relationship to the course
 
