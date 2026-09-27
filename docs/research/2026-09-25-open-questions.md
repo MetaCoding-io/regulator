@@ -2,7 +2,8 @@
 
 - **Status:** open, running. Items are added as they come up and struck when they
   graduate to an issue, a debt row or an ADR. Not a roadmap; the roadmap is what has
-  been decided.
+  been decided. Items with a next step are rows in the roadmap's
+  [threads](../../ROADMAP.md#threads--designed-not-yet-scheduled) table.
 - **Source:** design conversations (2026-09-25 onward). Where an item is a reading of
   the code, the file is cited.
 

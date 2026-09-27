@@ -68,6 +68,28 @@ Alongside: a contributor pathway ([`CONTRIBUTING.md`](CONTRIBUTING.md), issue te
 for a bug, a debt row and a proposal), and the course's first cohort pinned to a release
 tag.
 
+## Threads — designed, not yet scheduled
+
+Work that has a design note but no issue yet. Each row points at the note that holds
+the design and names the one next step, so a thread can be picked up without rereading
+the conversation that started it. A row leaves this table when its first slice becomes
+an issue in a milestone above (the row is then replaced by the issue), or when it is
+dropped (the note's status says why).
+
+| Thread | Design | State | Next step | Fits |
+| --- | --- | --- | --- | --- |
+| The system's figures generated from the definition: the loop, the session's gates, the workload, the recovery lattice, the unit lifecycle, who writes where — as views in the control room beside the six-column topology, in the docs by `regulator docs --write`, copied by the website | [open questions §1](docs/research/2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects) | decided | Enforcement points as a typed field (`where` and a closed `point` per `where`), refused by `regulator check` when unknown; every figure depends on it | 0.2 |
+| Documentation and website gaps: wrong CLI facts, missing concept and reference pages, the website's links into the docs | [docs and site gaps §7](docs/research/2026-09-25-docs-and-site-gaps.md#7-suggested-order) | work list; the product bug is fixed | The four wrong facts in §1 (one-line fixes; the CLI reference regenerates) | beside #45 |
+| A person can raise S4 intelligence; sensors declared in the definition | [open questions §2](docs/research/2026-09-25-open-questions.md#2-a-person-should-be-able-to-create-s4-intelligence) | proposed | `regulator intelligence report --by …` writing the same `intelligence-signal` under `human:<name>` provenance | 0.3, beside #59 |
+| Units that run a program, not a session | [open questions §3](docs/research/2026-09-25-open-questions.md#3-must-every-unit-run-a-pi-session) | answered: the dispatcher seam already allows it | A `command` runner per unit type in the workload definition | 0.3, beside #58 |
+| Predictive S4: predictions as intelligence signals that resolve and are graded on calibration | [open questions §4](docs/research/2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then) | exploratory | Waits on the live eval report (#46); then an instrument record kind in the registry | after 0.2 |
+| ArticleMiner as a knowledge-production workload | [ArticleMiner note §5](docs/research/2026-09-25-articleminer-knowledge-production.md#5-phases-against-the-features) | proposed, in phases | Phase 1: declared checks for non-Node domains (§4.1) | 0.3, under #61 |
+| A homelab control plane, designed with its infrastructure | [`HOMELAB-CONTROL-PLANE.md`](docs/HOMELAB-CONTROL-PLANE.md) | design note | Its open decisions (§9) | unscheduled |
+| The control room accepts the CLI's dispositions | [open questions §5](docs/research/2026-09-25-open-questions.md#5-should-the-control-room-write) | deferred: the control room stays read-only for now | None until reopened | — |
+
+The open questions' backlog (§6) holds smaller items with no design yet; one becomes a
+row here when it gets one.
+
 ## Not planned
 
 Rows that are the deployment's, or that go with work this project has deferred. Listed
@@ -91,6 +113,10 @@ material in the course, not a dependency.
 
 ## How this page is kept
 
+- Work enters as a design note under [`docs/research/`](docs/research/) or a debt row,
+  becomes a thread above when the note names a next step, and an item in a milestone
+  when that step has an issue. One place per stage: the note holds the design, this
+  page holds the order, the issue holds the acceptance criteria.
 - An item moves here from a card's limitation or a debt row with an issue number; the
   issue carries the acceptance criteria and the rows it pays.
 - The change that pays a row strikes it in `DEBT.md`, updates the card, and removes the

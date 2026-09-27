@@ -5,8 +5,10 @@ Design notes on where `regulator` could go next, written before any of it is on 
 conversation — and asks two questions of it: what could run under the control plane
 today, and what the control plane would have to grow to run it well.
 
-A note is not a commitment. It graduates by becoming something that is: an issue with
-acceptance criteria, a row in [`DEBT.md`](../DEBT.md) when a card's limitation names it,
+A note is not a commitment. The roadmap's
+[threads](../../ROADMAP.md#threads--designed-not-yet-scheduled) table lists every open
+note's next step, so the notes are found from there. A note graduates by becoming
+something that is: an issue with acceptance criteria, a row in [`DEBT.md`](../DEBT.md) when a card's limitation names it,
 an ADR under [`decisions/`](../decisions/) when it changes the architecture, or a roadmap
 item. When it does, the note says so at the top and stays as the record of why.
 
