@@ -70,8 +70,11 @@ rightly carry no gate).
 
 **Decided (2026-09-25).**
 
-- The generated figures sit *beside* the six-column topology in the Definition view, as
-  alternatives the viewer switches between; the topology stays.
+- The generated figures are additional views of the definition, alongside the six-column
+  topology rather than in place of it; the topology stays. They need not share a screen
+  with it — tabs, or any other arrangement, is a layout choice made when the page is
+  built.
+- The control room stays read-only (§5).
 - `regulator docs --write` renders the SVGs into the docs site, so `docs --check` catches
   drift the way it does for `REGULATORS.md` and `BOUNDARY.md`.
 - The website pulls copies of the generated SVGs rather than drawing its own; the
@@ -221,6 +224,10 @@ save budget, cause the escalation. Calibration catches that only if the resoluti
 records the route actually taken beside the outcome.
 
 ## 5. Should the control room write?
+
+**Decided for now (2026-09-27): no.** The control room stays read-only; the figures of §1
+are built on the read-only page. This entry holds the design for when the question is
+reopened.
 
 **Today.** It will not, by rule: every non-GET request is refused with 405
 (`packages/control-room/src/server.ts`), citing the archived
