@@ -150,10 +150,11 @@ policy, not the gates, made that cost larger than it needed to be. The sloppy re
 calls itself the over-regulation case: `glossary-lint` refused correct work over a word
 in a commit message.
 
-The rule is only partly mechanized. `regulator eval` without `--interpretation <file>`
-writes a placeholder ("not yet interpreted by a person", by "nobody yet"), and that
-placeholder satisfies the schema. The committed reports under `evals/reports/` are
-validated by `regulator check` and each carries a written interpretation. Whether an
+The rule is partly mechanized. `regulator eval` without `--interpretation <file>`
+writes a placeholder ("not yet interpreted by a person", by "nobody yet"). The schema
+accepts it, so a run's output is still a valid report, but `regulator check` refuses a
+report under `evals/reports/` that carries it, including one run with `--by` and no
+interpretation file. A report is committed only once a person has read it. Whether the
 interpretation says where the gated arm lost is for a reviewer to judge.
 
 ## Scripted and live runs

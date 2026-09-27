@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { isEvalReport, type EvalRun } from "@metacoding.io/regulator-protocol";
-import { loadRegistry } from "@metacoding.io/regulator-core";
+import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isUninterpreted, type EvalRun } from "@metacoding.io/regulator-protocol";
+import { checkDefinition, loadRegistry } from "@metacoding.io/regulator-core";
 import { EVALS_DIR, ablationCoverage, loadSuite, runSuite, workloadForArm } from "./evals.js";
 import { BEHAVIOURS, scriptedDispatchers } from "./evals-scripted.js";
 import { gitExec } from "./git-support.js";
@@ -135,7 +136,21 @@ test("the committed reports validate, report on the committed suite, and carry a
     assert.equal(report.suite.name, "drift");
     assert.ok(report.arms.length >= 2, `${file}: both arms`);
     assert.match(report.interpretation, /scripted/i, `${file}: the interpretation says the units were scripted`);
-    assert.notEqual(report.interpretedBy, "nobody yet");
+    assert.ok(!isUninterpreted(report), `${file}: not the placeholder regulator eval writes without --interpretation`);
     assert.match(report.fingerprint.harnessRevision, /^[0-9a-f]{40}$/);
   }
+});
+
+test("regulator check refuses a committed report that still carries the placeholder interpretation", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-uninterpreted-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const committed = JSON.parse(await readFile(path.join(EVALS_DIR, "reports", "drift-scripted-reference.json"), "utf8")) as Record<string, unknown>;
+  await mkdir(path.join(dir, "evals", "reports"), { recursive: true });
+  await writeFile(path.join(dir, "evals", "drift.json"), await readFile(path.join(EVALS_DIR, "drift.json"), "utf8"), "utf8");
+  await writeFile(path.join(dir, "evals", "reports", "read.json"), JSON.stringify(committed), "utf8");
+  await writeFile(path.join(dir, "evals", "reports", "unread.json"), JSON.stringify({ ...committed, interpretation: `Run by \`regulator eval\` with the scripted reference unit; ${UNINTERPRETED_MARKER}.`, interpretedBy: UNINTERPRETED_BY }), "utf8");
+  await writeFile(path.join(dir, "evals", "reports", "named.json"), JSON.stringify({ ...committed, interpretation: `Run by \`regulator eval\` with live units; ${UNINTERPRETED_MARKER}.`, interpretedBy: "alice" }), "utf8");
+  const problems = (await checkDefinition(dir)).problems.filter((p) => p.file.startsWith("evals/reports/"));
+  assert.deepEqual(problems.map((p) => p.file).sort(), ["evals/reports/named.json", "evals/reports/unread.json"], "--by without --interpretation is still the placeholder; the interpreted report passes");
+  assert.match(problems[0]!.message, /placeholder interpretation.*--interpretation <file> --by <who>/);
 });

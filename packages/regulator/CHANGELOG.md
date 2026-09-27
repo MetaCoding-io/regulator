@@ -7,6 +7,9 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+### Changed
+- `regulator check` refuses a committed eval report under `evals/reports/` that still carries the placeholder interpretation `regulator eval` writes without `--interpretation` (by "nobody yet", or "not yet interpreted by a person" in the text). The placeholder is exported from the protocol as `UNINTERPRETED_BY`, `UNINTERPRETED_MARKER` and `isUninterpreted`.
+
 ## [0.1.1] — 2026-09-25
 
 The first install from npm found two things the workspace never exercised.

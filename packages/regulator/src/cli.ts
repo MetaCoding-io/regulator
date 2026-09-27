@@ -65,7 +65,7 @@ import { randomUUID } from "node:crypto";
 import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -459,7 +459,7 @@ ${rationale}`]]) {
     const arms = rest.flatMap((a, i) => (a === "--arm" && rest[i + 1] ? [rest[i + 1]!] : []));
     const reps = flag("reps") ? Number(flag("reps")) : undefined;
     const interpretationFile = flag("interpretation");
-    const interpretation = interpretationFile ? (await readFile(path.resolve(interpretationFile), "utf8")).trim() : `Run by \`regulator eval\` with ${behaviour ? `the scripted ${behaviour} unit` : "live units"}; not yet interpreted by a person.`;
+    const interpretation = interpretationFile ? (await readFile(path.resolve(interpretationFile), "utf8")).trim() : `Run by \`regulator eval\` with ${behaviour ? `the scripted ${behaviour} unit` : "live units"}; ${UNINTERPRETED_MARKER}.`;
     const coverage = ablationCoverage(suite, (await loadRegistry(path.join(labRoot, "registry"))).records.map((r) => r.id));
     if (coverage.unknown.length) throw new Error(`suite ablates ${coverage.unknown.join(", ")}, which the registry does not declare`);
     console.log(`suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s), ${arms.length ? arms.join(", ") : suite.arms.map((a) => a.name).join(", ")} × ${reps ?? suite.repetitions} repetition(s); ${behaviour ? `scripted ${behaviour}` : "live"}; ablation arms cover ${coverage.covered.length} of ${coverage.covered.length + coverage.uncovered.length} regulators`);
@@ -468,7 +468,7 @@ ${rationale}`]]) {
       suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
       dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
       owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
-      interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : "nobody yet"), keepInstances: rest.includes("--keep"),
+      interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
       onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
     });
     for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s)}`).join("; ")}`);

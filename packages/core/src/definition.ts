@@ -9,7 +9,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted,
   type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
@@ -147,6 +147,8 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       assertValid(EvalReportSchema, value, `eval report ${file}`);
       out.reports.push(value);
       if (!out.evals.some((s) => s.name === value.suite.name)) problem(`evals/reports/${file}`, `reports on suite "${value.suite.name}", which evals/ does not declare`);
+      // The number is never the conclusion: a committed report without a person's reading of it is a table, not evidence.
+      if (isUninterpreted(value)) problem(`evals/reports/${file}`, `carries the placeholder interpretation ("${UNINTERPRETED_MARKER}", by "${value.interpretedBy}"); re-run with --interpretation <file> --by <who>, or do not commit it`);
     } catch (error) {
       problem(`evals/reports/${file}`, (error as Error).message);
     }
