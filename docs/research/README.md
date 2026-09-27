@@ -29,3 +29,4 @@ Like `archive/`, this directory is not built into the documentation site.
 | [ArticleMiner as a knowledge-production workload](2026-09-25-articleminer-knowledge-production.md) | open |
 | [Open questions and things to think about](2026-09-25-open-questions.md) — the control room's system view, person-raised S4 intelligence, units without a session, predictive S4, whether the control room should write, and a running backlog | open, running |
 | [Documentation and website gaps](2026-09-25-docs-and-site-gaps.md) — a coverage audit of the docs site and the product website, with one probable product bug and a ranked work list | open, work list |
+| [Homelab control plane](2026-09-27-homelab-control-plane.md) — building infrastructure and its control plane together: evidence before authority, a proposed stack, staging and production from one environment spec, and twelve conflicts with the architecture | open |

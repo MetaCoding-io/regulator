@@ -1,11 +1,15 @@
 # Homelab control plane — a design note
 
-> **Status (2026-09-27): design note.** Nothing here is implemented. It records an idea,
+- **Status:** open.
+- **Source:** a design conversation (2026-09-27) about building a homelab and its
+  control plane together. Claims about what `regulator` does today cite the file.
+
+> Nothing here is implemented. It records an idea,
 > the technology choices proposed for it, and the architectural conflicts it raises
-> against VSM-Pi as built, so that the homelab and its control plane can be built side
+> against `regulator` as built, so that the homelab and its control plane can be built side
 > by side — by a person, with an agent helping — without either being bolted onto the
 > other afterwards. Choices marked **proposed** are defaults, not decisions; §9 lists
-> what is still open. A fully worked example (`course/examples/homelab.md`, a fixture,
+> what is still open. A fully worked example (`docs/examples/homelab.md`, a fixture,
 > a workload under `pnpm check`) is the later step, not this one.
 
 ## 1. The idea
@@ -33,16 +37,16 @@ first, and the grant is what it earns.
 
 ## 2. What changes when the domain is infrastructure
 
-VSM-Pi was built against a repository. Several of its assumptions hold for
+`regulator` was built against a repository. Several of its assumptions hold for
 infrastructure only if the architecture is chosen to make them hold. That is the
 design opportunity of building both at once.
 
-| VSM-Pi assumes | Brownfield infrastructure | Chosen so it holds |
+| `regulator` assumes | Brownfield infrastructure | Chosen so it holds |
 | --- | --- | --- |
-| Domain output lives in the repository (AGENTS.md, architectural boundaries) | Live hosts are the truth; the repository is what someone hoped | The IaC repository is the only write path; live state is *observed*, and the difference between declared and observed is a check (§7, conflict 1) |
+| Domain output lives in the repository ([AGENTS.md](../../AGENTS.md), architectural boundaries) | Live hosts are the truth; the repository is what someone hoped | The IaC repository is the only write path; live state is *observed*, and the difference between declared and observed is a check (§7, conflict 1) |
 | Isolation is a git worktree; reintegration is a merge | No equivalent | Two layers: the worktree isolates the *change*, the environment isolates the *effect*. Staging is the worktree of the world; promotion is reintegration (§5) |
 | Evidence is host-run and the unit cannot author it | The agent reads the same logs it can influence | Monitoring runs on credentials the agent never holds, ideally on separate hardware (§7, conflict 9) |
-| Tools are typed with declared effects | The shell *is* the tool; `DEBT.md` row 8 | No profile gets a shell on a managed host. Write tools are job templates with a schema; the architecture removes the limitation instead of documenting it |
+| Tools are typed with declared effects | The shell *is* the tool; [`DEBT.md`](../DEBT.md) row 8 | No profile gets a shell on a managed host. Write tools are job templates with a schema; the architecture removes the limitation instead of documenting it |
 | Leases cover files | Two remediations fight over one host | Leases cover hosts and failure domains; maintenance windows are declared policy |
 
 ## 3. Technology — proposed stack
@@ -115,7 +119,9 @@ argued with:
     changes nothing else.
 - **Boundaries.** What the homelab does not do (no public services in phase one; no
   data the household cannot lose without a backup).
-- **Glossary.** The lab's glossary refuses the word *job*; AWX calls its runs jobs. The
+- **Glossary.** The shipped identity's glossary refuses the word *job*
+  ([`packages/regulator/identity/GLOSSARY.md`](../../packages/regulator/identity/GLOSSARY.md));
+  AWX calls its runs jobs. The
   homelab instance declares its own glossary (§7, conflict 10).
 
 ## 5. Environments
@@ -202,7 +208,7 @@ homelab/
 ```
 
 The regulator definition — the `homelab` workload, its profiles, policies and registry
-cards — lives with the other definitions in `course/lab/` when it becomes the worked
+cards — lives with the other definitions in `packages/regulator/` when it becomes the worked
 example; the homelab repository is an *instance* of it, created by `regulator init`.
 
 ## 6. Build order — infrastructure and regulator together
@@ -224,7 +230,7 @@ promotion gate once stage 3 exists.
 
 ## 7. Architectural conflicts
 
-Recorded, per AGENTS.md, rather than resolved by bending the architecture to fit. Each
+Recorded, per [AGENTS.md](../../AGENTS.md), rather than resolved by bending the architecture to fit. Each
 names the existing mechanism it pushes on.
 
 1. **Domain state outside the repository.** AGENTS.md: "Domain output (the code, the
@@ -243,8 +249,10 @@ names the existing mechanism it pushes on.
 
 3. **Evidence names the wrong environment.** `DEBT.md` row 4: "The environment an
    evidence record carries is the orchestrator's host." For infrastructure that is
-   wrong by construction — the laptop is not the homelab. The evidence record's
-   environment must be the target environment the check observed. This pays row 4 for
+   wrong by construction — the laptop is not the homelab. Today the record's environment
+   is `node`, `platform` and `arch` (`EvidenceEnvironmentSchema` in
+   [`packages/protocol/src/audit.ts`](../../packages/protocol/src/audit.ts)); it must also
+   name the target environment the check observed. This pays row 4 for
    this workload and is a protocol change, not a workload one.
 
 4. **Leases over hosts, not files.** The lease store covers paths. Two units editing
@@ -288,8 +296,10 @@ names the existing mechanism it pushes on.
 
 10. **Vocabulary.** The lab's identity refuses *job* and *task*; AWX's domain language
     uses both. The homelab instance's glossary declares its own refused words, and
-    `glossary-lint` reads the instance's glossary, not the lab's — which it already does
-    per instance. Worth a test when the workload lands.
+    `glossary-lint` must read the instance's glossary, not the shipped one. The check
+    takes its words as an option ([`packages/checks/src/verify.ts`](../../packages/checks/src/verify.ts));
+    where the controller sources them from is to be confirmed with a test when the
+    workload lands.
 
 11. **Staging does not test provisioning.** §3.3. Stated as a limitation on the
     promotion gate's registry card: passing in staging says nothing about OpenTofu over
@@ -313,7 +323,7 @@ for that agent:
   `decisions/` in the homelab repository and strike it here.
 - **Staging first, always.** Nothing runs against production that has not converged in
   staging at the same revision, including the agent's own suggestions typed by hand.
-- **Record conflicts, do not resolve them silently.** A new conflict with VSM-Pi's
+- **Record conflicts, do not resolve them silently.** A new conflict with `regulator`'s
   architecture gets a numbered entry in §7.
 - **Keep identity out of reach.** The agent may propose changes to `identity/`; the
   person commits them.
@@ -336,6 +346,8 @@ for that agent:
 If this works, it is the course's third workload and possibly an infrastructure track:
 the first ten modules' method is unchanged, the fixture and workload are new, and
 lessons 05 (leases), 08 (recovery), 09 (evidence) and 13 (algedonic) are where the
-domain bites hardest. Conflicts 2, 3, 5 and 7 are changes to VSM-Pi itself and would be
+domain bites hardest. Conflicts 2, 3, 5 and 7 are changes to `regulator` itself and would be
 paid in `packages/`, not in the workload. Nothing in this note changes the course or
-the packages yet.
+the packages yet. The note graduates as the research README says: an ADR under
+[`decisions/`](../decisions/) for conflicts 2 and 7, a [`DEBT.md`](../DEBT.md) change
+for conflict 3, and issues for the rest.
