@@ -61,9 +61,10 @@ choice.
 S5  identity           homelab repo: identity/ (purpose, invariants, boundaries, glossary)
 S3  orchestrator       regulator, running on a control node (laptop for staging)
 S3* evidence           Prometheus + Alertmanager + blackbox exporter; promtool-tested rules
-S1  write path         Ansible roles, launched as AWX job templates (production)
+S1  write path         Ansible roles, launched as AWX job templates (both environments)
     provisioning       OpenTofu over Proxmox (production) | Vagrant (staging)
-    substrate          Proxmox VE on the homelab hardware | laptop hypervisor
+    substrate          Proxmox VE on the homelab host + a separate monitoring box
+                       | libvirt/KVM on the laptop (Ubuntu 24.04, x86)
 S4  intelligence       advisory feeds, upstream releases, Proxmox/Debian changelogs
 ```
 
@@ -74,27 +75,36 @@ S4  intelligence       advisory feeds, upstream releases, Proxmox/Debian changel
 | Hypervisor (production) | **Proxmox VE** | Snapshots and backups through an API: reversibility becomes something a check can ask for, not a hope. Cloud-init templates make a guest a declaration | Incus (lighter, good API, smaller ecosystem); bare Debian + libvirt |
 | Guest OS | **Debian stable, cloud image** | Boring, well-understood by Ansible; the course audience can follow it | NixOS (declared state *is* live state and every change has a rollback generation — strongest for drift and reversibility, highest learning cost); Fedora CoreOS |
 | Provisioning (production) | **OpenTofu** with a Proxmox provider | `tofu plan` is a dry run a host check can run and bind to a revision; state is explicit | Ansible's Proxmox modules only (one tool fewer, weaker plan) |
-| Provisioning (staging) | **Vagrant** | Named in the brief; one command to rebuild the world | Incus/LXD VMs, Multipass |
+| Provisioning (staging) | **Vagrant** with the **libvirt** provider (`vagrant-libvirt`) on KVM | Named in the brief; one command to rebuild the world. On an x86 Ubuntu laptop, KVM is native and is the same hypervisor family Proxmox runs, so guests boot the same way in both environments; VirtualBox cannot run while the KVM modules are loaded | VirtualBox, Incus/LXD VMs, Multipass |
 | Configuration | **Ansible** roles and playbooks | Existing expertise; `--check --diff` is a dry run; idempotence is itself a check (a second run reports no change) | Salt, NixOS modules |
-| Execution authority (production) | **AWX** job templates | A job template is a typed tool: its survey spec is the runtime schema, its credential is held by AWX, not the agent; RBAC scopes who may launch what | Semaphore (lighter, fewer controls); `ansible-runner` behind a small typed service |
-| Monitoring and evidence | **Prometheus, Alertmanager, blackbox exporter** | Rules and alerts are files in git, and `promtool test rules` is a unit test for an alert; queries are an API a host check can call | **Zabbix** (existing expertise; configuration lives in its database and is exported rather than declared — weaker as a declared artifact, see §9) |
+| Execution authority (both environments, decided) | **AWX** job templates, declared as code with the `awx.awx` collection | A job template is a typed tool: its survey spec is the runtime schema, its credential is held by AWX, not the agent; RBAC scopes who may launch what | Semaphore (lighter, fewer controls); `ansible-runner` behind a small typed service |
+| Monitoring and evidence (decided) | **Prometheus, Alertmanager, blackbox exporter**, on the monitoring box | Rules and alerts are files in git, and `promtool test rules` is a unit test for an alert; queries are an API a host check can call | **Zabbix** (existing expertise; configuration lives in its database and is exported rather than declared — weaker as a declared artifact, see §9) |
 | Logs | **Loki** (later) | Evidence for "why", not "whether"; not needed before stage 5 | journald over SSH, read-only |
 | Secrets | **SOPS + age** in the repository | Encrypted at rest in git; the decryption key lives with AWX and the operator, never in a unit's session | Vault (heavier), AWX credentials alone |
 | Backups | **Proxmox Backup Server** or restic | The object of the first invariant (§4); a restore test is a check | — |
 
-### 3.3 The two parity boundaries
+### 3.3 The parity boundaries
 
 Staging and production cannot share every layer. The design declares where they differ
-instead of pretending they do not:
+instead of pretending they do not. With AWX in both environments and an x86 laptop
+(§9, decisions 2 and 3), what remains is:
 
 - **Below the guest** (substrate and provisioning): Vagrant versus OpenTofu over
   Proxmox. Staging does not test provisioning code. This is a stated limitation of the
   staging environment, not a gap to discover.
-- **The execution authority**: AWX in production; in staging either AWX as well (it
-  needs a Kubernetes node — k3s in one more VM — and several GB of RAM) or the same
-  playbooks through `ansible-runner`. If staging skips AWX, the survey schema and RBAC
-  are untested there, and the typed tool's backend differs by environment (§9,
-  decision 3).
+- **The base image**: a Vagrant box is not a Proxmox cloud-init template, even when
+  both are Debian stable. The baseline role must assume nothing a box provides and a
+  template does not (the `vagrant` user, synced folders, the NAT interface). Building
+  both from the same Debian cloud image (Packer, later) would narrow this.
+- **Failure domains are logical in staging.** Staging declares the same two domains as
+  production (§5.1), and powering off the monitoring VM simulates losing the monitoring
+  box; but both run on one laptop, so staging cannot show what a real power or network
+  split does.
+
+The execution authority is no longer a boundary: AWX runs in both, from the same
+job-template declarations, so the survey schemas, RBAC and the credential split are
+tested in staging before production relies on them. The cost is a k3s VM on the laptop
+for the AWX operator — budget several GB of RAM for it and measure it at stage 5.
 
 Everything from the guest's OS upward — roles, playbooks, monitoring rules, the
 regulator definition — is identical in both, and that is what staging proves.
@@ -132,27 +142,60 @@ A single environment spec per environment is the source of truth for what hosts 
 Both provisioners read it; neither is edited by hand to add a host.
 
 ```yaml
-# environments/staging.yaml   (production.yaml has the same shape)
+# environments/staging.yaml
 name: staging
-substrate: vagrant            # or: proxmox
-arch: amd64                   # see §9, decision 2
-failureDomains:
-  - name: laptop
+substrate: vagrant-libvirt
+arch: amd64
+failureDomains:               # logical in staging: both run on the laptop (§3.3)
+  - name: lab                 # stands in for the Proxmox host
+  - name: monitoring          # stands in for the monitoring box
 hosts:
   - name: dns1
     role: dns
     cpus: 1
     memoryMb: 512
-    failureDomain: laptop
+    failureDomain: lab
+  - name: awx1
+    role: awx                 # k3s + the AWX operator
+    cpus: 4
+    memoryMb: 8192
+    failureDomain: lab
   - name: mon1
     role: monitoring
     cpus: 2
     memoryMb: 2048
-    failureDomain: laptop
+    failureDomain: monitoring
 networks:
   - name: lan
     cidr: 10.20.0.0/24
 ```
+
+```yaml
+# environments/production.yaml — same schema, different substrate
+name: production
+substrate: proxmox
+arch: amd64
+failureDomains:
+  - name: lab                 # the Proxmox host
+  - name: monitoring          # the separate box
+hosts:
+  - name: dns1
+    role: dns
+    failureDomain: lab
+    # cpus / memoryMb as staging, or larger
+  - name: awx1
+    role: awx
+    failureDomain: lab
+  - name: mon1
+    role: monitoring
+    failureDomain: monitoring
+    placement: bare-metal     # installed on the box, not a Proxmox guest
+```
+
+The numbers are placeholders; the shape is the point. `placement: bare-metal` is the one
+place the renderers differ in kind: OpenTofu creates nothing for that host, and its
+operating system is installed by hand (or PXE, later) and then enrolled by the same
+baseline role.
 
 - The `Vagrantfile` loads `environments/staging.yaml` and defines one VM per host.
 - OpenTofu reads `environments/production.yaml` (via `yamldecode`) and defines one
@@ -222,9 +265,9 @@ promotion gate once stage 3 exists.
 | 0 | None. The repository, `identity/`, `environments/` with its schema | Identity protected; `env-spec-valid`; `regulator init` | `regulator doctor` passes on an empty homelab |
 | 1 | Staging: Vagrant guests from the spec; Ansible baseline role (users, SSH, updates, time) | `inventory-matches-spec`; idempotence check (second run changes nothing); `ansible --check` as a dry run | A fresh `vagrant up` plus baseline converges twice with no changes |
 | 2 | Monitoring host: Prometheus, Alertmanager, blackbox; rules tested with promtool | Probe-backed checks: a criterion like "dns1 answers for lan names" is observed by a query, not reported | A unit's closeout can cite a Prometheus observation bound to revision and environment |
-| 3 | First services (DNS, then one more); production hardware with Proxmox; OpenTofu | Promotion gate; evidence names its environment; host leases | A change reaches production only with staging evidence at the same revision |
+| 3 | First services (DNS, then one more); production: the Proxmox host, the monitoring box enrolled, OpenTofu | Promotion gate; evidence names its environment; host leases | A change reaches production only with staging evidence at the same revision |
 | 4 | Agent, read-only: an `investigator` profile over Prometheus queries and read-only host facts | Alerts arrive as signals; routing policy opens obligations; nothing is remediated | An injected fault produces an obligation with the evidence attached, and no write |
-| 5 | AWX in production; job templates with surveys; an `operator` profile granted named templates only | Work contract per remediation; `ask_human` for consent-class templates; effect journal over launches | A remediation runs under a contract, is verified by a probe, and is dispositioned |
+| 5 | AWX (staging first, then production); job templates with surveys; an `operator` profile granted named templates only | Work contract per remediation; `ask_human` for consent-class templates; effect journal over launches | A remediation runs under a contract, is verified by a probe, and is dispositioned |
 | 6 | Maintenance windows and failure domains declared | Standing contracts for pre-authorized runbooks; recovery lattice; pause gate; escalation when verification stays uncertain | An alert at 3 a.m. is either fixed-and-verified inside a window or escalated with evidence — never silently retried |
 | 7 | Fault injection (a stopped service, a full disk, a misleading alert, two competing remediations) | Eval arms: control, treatment, ablation per regulator | A report, honest about where a regulator cost more than it absorbed |
 
@@ -290,9 +333,13 @@ names the existing mechanism it pushes on.
 
 9. **Independent evidence on shared hardware.** If Prometheus runs on the Proxmox host
    it monitors, a host failure takes the evidence with it, and a unit with a
-   hypervisor-level grant can reach the evidence channel. Options: a small separate box
-   for monitoring (a Raspberry Pi is enough), or an explicit registry limitation that
-   the evidence shares a failure domain with its subject.
+   hypervisor-level grant can reach the evidence channel. **Decided:** a separate
+   monitoring box in production (§9, decision 1). Two things remain. Who watches the
+   watcher: an always-firing watchdog alert whose *absence* is the signal, received
+   outside the monitoring box (by the regulator's intake on the control node), so a
+   dead box is an algedonic signal and not a quiet evidence channel. And staging: the
+   monitoring VM shares the laptop with its subjects, a limitation stated on the
+   promotion gate's card.
 
 10. **Vocabulary.** The lab's identity refuses *job* and *task*; AWX's domain language
     uses both. The homelab instance's glossary declares its own refused words, and
@@ -320,7 +367,7 @@ for that agent:
   channel does not exist yet (§1).
 - **Decisions are the person's.** When a choice in §9 is needed, lay out the options
   with their control-plane consequences and ask; record the answer in
-  `decisions/` in the homelab repository and strike it here.
+  `decisions/` in the homelab repository and move it to *Decided* here.
 - **Staging first, always.** Nothing runs against production that has not converged in
   staging at the same revision, including the agent's own suggestions typed by hand.
 - **Record conflicts, do not resolve them silently.** A new conflict with `regulator`'s
@@ -328,18 +375,27 @@ for that agent:
 - **Keep identity out of reach.** The agent may propose changes to `identity/`; the
   person commits them.
 
-## 9. Open decisions
+## 9. Decisions
+
+### Decided (2026-09-27)
+
+| # | Decision | Chosen | Consequence recorded in |
+| --- | --- | --- | --- |
+| 1 | Production hardware | One Proxmox host plus a separate monitoring box | Two failure domains in both environment specs (§5.1); conflict 9 |
+| 2 | Laptop OS and CPU architecture | Ubuntu 24.04 (KDE), x86 | Staging and production are both amd64; Vagrant uses libvirt/KVM (§3.2) |
+| 3 | AWX in staging | Yes, in both environments | The execution authority is no longer a parity boundary (§3.3); a k3s VM on the laptop |
+| 4 | Evidence channel | Prometheus (prior experience), not Zabbix | §3.2 |
+
+### Open
 
 | # | Decision | Default proposed | What it changes |
 | --- | --- | --- | --- |
-| 1 | Production hardware: one Proxmox host, a small cluster, or one host plus a separate monitoring box | One host plus a small monitoring box | Whether evidence is independent of its subject (conflict 9); whether failure domains mean anything |
-| 2 | Laptop OS and CPU architecture | — | On an ARM laptop, Vagrant guests are arm64 while an x86 homelab is amd64: images, packages and exporters differ, and parity weakens. Provider choice (libvirt, VirtualBox, VMware, Parallels, QEMU) follows from it |
-| 3 | AWX in staging, or `ansible-runner` behind the same typed interface | `ansible-runner` in staging, AWX in production | AWX in both keeps the typed tool's backend and RBAC identical across environments, at the cost of a k3s VM on the laptop |
-| 4 | Prometheus or Zabbix for evidence | Prometheus | Zabbix is existing expertise; Prometheus rules are declared files with unit tests. Both is possible, with Prometheus as the evidence channel |
 | 5 | Debian + Ansible, or NixOS | Debian + Ansible | NixOS makes drift and rollback nearly free but moves the course away from its likely audience |
 | 6 | Network gear under declaration (router/firewall, VLANs) | Out of scope for phase one | Exposure invariant HL-INV-002 needs something to observe; a declared firewall makes it a check |
 | 7 | Where the homelab repository lives, and whether it is public | Separate private repository; public once secrets discipline is proven | A public repository is course material; also a larger blast radius for a mistake |
 | 8 | Which services come first after DNS | — | Each service brings its own probes, backups and invariants |
+| 9 | The monitoring box's hardware | A small x86 machine (a used mini PC) | An x86 box keeps every host amd64 and matches the staging VM. A Raspberry Pi works but would be the one arm64 host, with images and exporters staging does not exercise |
+| 10 | The laptop's RAM budget for staging | — | AWX's k3s VM is the largest guest; the budget decides how many service VMs staging can run beside it, and whether staging runs everything at once or per stage |
 
 ## 10. Relationship to the course
 
