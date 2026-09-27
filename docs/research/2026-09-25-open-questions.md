@@ -286,7 +286,7 @@ Items with no design yet. Each gets a section above when it has one.
 | Evidence-gated policy promotion; workload graders over a corpus | same, §4.6 | the adaptive loop's gate |
 | Where the identity lives when the domain is not a repository | same, §6 | decides whether an instance is "a repository plus a domain" |
 | The `regulator status` read model as JSON for other renderers | §1 above | the control room is the only consumer; a generated diagram needs the same projection |
-| Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule |
+| Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule; scheduled as [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
 | Predictions as intelligence signals that resolve; an instrument record kind in the registry with levels, graded on calibration | §4 above | |
