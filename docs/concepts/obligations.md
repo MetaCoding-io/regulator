@@ -132,7 +132,9 @@ Every `--by` on the commands above is checked against the
 is written: the name must be listed, `resolveUpTo` must reach the obligation's severity,
 `acceptRisk` must be set for that disposition, and `actAsS5` for an identity decision.
 The name is asserted, not authenticated; authentication is the deployment's. A function
-(`S3`) dispositions through the loop, never by hand.
+(`S3`) dispositions through the loop, never by hand. An `interaction` obligation, one a
+unit opened by asking, is closed with `regulator answer`; [asking a
+person](/concepts/asking-a-person) covers that path and the pause it ends.
 
 ## Delivery
 

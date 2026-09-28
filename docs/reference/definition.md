@@ -120,7 +120,8 @@ Severities, lowest first: `info`, `advisory`, `blocking`, `critical`.
 Only `recap` continues without an answer; that is a protocol constant, not a policy
 choice, so no policy can make silence into consent. Every `--by` on the CLI is checked
 here: a name not listed may disposition nothing. The name is asserted, not
-authenticated; authentication is the deployment's.
+authenticated; authentication is the deployment's. [Asking a person](/concepts/asking-a-person)
+explains the kinds, the pause and the attention budget.
 
 ## Work contracts
 

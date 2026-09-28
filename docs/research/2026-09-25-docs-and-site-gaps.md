@@ -253,10 +253,12 @@ page. Each item is one concepts page and one pull request.
    effect journal and its reconciliation, and profiles as grants over effects. Found on
    the way: the `reintegration` card's third limitation ("Nothing runs the checks after
    the merge yet") is stale since `post-merge-check`; the card needs that line struck.
-5. **Asking a person, and attention as a budget.** Interaction kinds and the
-   continue-without-answer constant, the pause gate and the paused attempt, the
-   attention budget (`attention.blockingPerAttempt`) and what spends it, reminders.
-   Complements `concepts/obligations.md`, which covers delivery and disposition.
+5. ~~**Asking a person, and attention as a budget.**~~ Landed as
+   `concepts/asking-a-person.md`: the two paths to a person (a unit asks; the loop
+   escalates), the five kinds, the fixed rule that silence is never consent and what
+   each answer means, the pause gate and the paused attempt (it counts against the
+   attempt ceiling and is not routed), `regulator answer` and the answer as the next
+   hint, the attention budget, and escalation.
 6. **Hosts.** The host seam as a concept: the control plane never imports a host, what
    a host provides (a dispatcher, session extensions, host checks), and what a second
    host would take. §2 item 9 asks for the reference half in `project/packages.md`.

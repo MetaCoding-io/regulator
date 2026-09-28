@@ -17,7 +17,7 @@ learners to build themselves.
 | **Feedback delay** | Time between a wrong assumption and the signal that reveals it. The dominant quality variable in agentic work. | Vertical-slice decomposition, early integration checkpoints (M06). |
 | **Homeostat** | Two subsystems that pull against each other and are balanced by a higher function. In VSM, S3 (inside/now) and S4 (outside/then), balanced by S5. | Intelligence veto vs sprint commitment (M11). |
 | **Recursion** | Every viable system contains and is contained by viable systems with the same structure. A subagent is a recursive S1; the harness itself is a viable system. | Subagent driver (M11); harness-as-viable-system (M15). |
-| **Algedonic signal** | An exceptional alert that bypasses the normal reporting hierarchy — pain or pleasure, in Beer's term. | regulator `algedonic` channel, severity `[blocking, critical]`; escalation path (M13). |
+| **Algedonic signal** | An exceptional alert that bypasses the normal reporting hierarchy — pain or pleasure, in Beer's term. | regulator `algedonic` channel, severity `[blocking, critical]`; escalation path (M13). [Asking a person](concepts/asking-a-person.md). |
 
 ## 2. VSM functions
 
@@ -73,8 +73,8 @@ learners to build themselves.
 | **Evidence** | An observation tied to a criterion, an attempt, a source revision and an environment, produced by the host, with freshness. | GSD Verification Evidence (M09). |
 | **Technical verdict** | Pass / fail / inconclusive derived mechanically from required evidence. | GSD (M09). |
 | **Human acceptance** | A person's disposition of a subjective check, separate from the technical verdict. | GSD Subjective UAT (M09, M13). |
-| **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts` (M13). |
-| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts` (M13). |
+| **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts` (M13). [Asking a person](concepts/asking-a-person.md). |
+| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts` (M13). [Asking a person](concepts/asking-a-person.md). |
 | **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
 | **Identity** | What the system is. Committed, reviewed, S5. | `regulator/identity/` in an instance; `vsm/` for this repository (M12). [Protecting identity](concepts/identity.md). |
 | **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). [Intelligence and memory](concepts/intelligence-and-memory.md). |
