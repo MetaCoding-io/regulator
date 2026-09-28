@@ -189,6 +189,7 @@ Website:
 | intelligence and memory mentions | `concepts/intelligence-and-memory` |
 | contract, report, verdict mentions | `concepts/contracts` |
 | write gate, identity, proposal mentions | `concepts/identity` |
+| how-it-works recovery | `concepts/recovery` |
 | personal finance | `examples/personal-finance`, `guide/operating` |
 | glossary tooltips | `GLOSSARY`; pathology mentions → `PATHOLOGIES` |
 
@@ -240,10 +241,11 @@ page. Each item is one concepts page and one pull request.
 2. ~~**Protecting identity.**~~ Landed as `concepts/identity.md`: the layers (trust
    rule, rendering, write gate, bash watch, `identity-untouched`) with what gets past
    each, which paths each layer protects, propose → decide → promote, the canary watch.
-3. **Recovery, budgets, model routes and compaction.** How a failure becomes a
-   normalized cause, the Nth occurrence mapped to an action, the attempt ceiling,
-   budgets and model routes with fallback, and contract-preserving compaction (a
-   registered regulator explained only in the glossary and the pathologies).
+3. ~~**Recovery, budgets, model routes and compaction.**~~ Landed as
+   `concepts/recovery.md`: causes and their precedence, the shipped policy table, the
+   attempt ceiling, each action and who acts on it, budgets and the guard, model routes
+   and failover, contract-preserving compaction. It records that the `ambiguity` cause
+   has a policy rule but no classification that produces it.
 4. **Coordination (S2).** Leases and their TTL, one worktree per unit, reintegration,
    the post-merge check on the base, the thrash detector, the effect journal and its
    reconciliation on restart; and profiles as grants over effects ("read-only by

@@ -63,10 +63,10 @@ learners to build themselves.
 | **Result report** | The unit's closing record: delegated choices made, evidence, deviations, emergent decisions, residual uncertainty. | `ResultReport` in `packages/protocol/src/contracts.ts`, written by `report_result` (M06). [Work contracts and reports](concepts/contracts.md). |
 | **Residual uncertainty** | Where the unit's model of the system became uncertain. Regulatory information, not a confidence score. | `docs/ARCHITECTURE.md`; uncertainty signal (M06). |
 | **Vertical slice** | The thinnest end-to-end path that produces an observable outcome and closes a feedback loop early. | A planning principle (`docs/ARCHITECTURE.md`); the slice-level contract designed for M06 was never built — a unit's `contribution` is the only trace of it. |
-| **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard (M07). |
-| **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). |
+| **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard (M07). [Recovery, budgets and model routes](concepts/recovery.md). |
+| **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). [Recovery, budgets and model routes](concepts/recovery.md). |
 | **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result (M08). |
-| **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). |
+| **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). [Recovery, budgets and model routes](concepts/recovery.md). |
 | **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector (M05, M08). |
 | **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation (M05). |
 | **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back (M05). |

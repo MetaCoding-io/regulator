@@ -83,7 +83,8 @@ shorter policy leaves out).
 `retry` and `repair` spend an attempt and become `escalate` when the unit's attempt
 ceiling is reached. The other five are *waiting* actions: the loop records the decision
 and opens an obligation for the consumer the routing policy names, and the unit holds
-until it is dispositioned.
+until it is dispositioned. [Recovery, budgets and model routes](/concepts/recovery)
+explains how a failure becomes a cause and a cause an action.
 
 ## Routing policy
 
