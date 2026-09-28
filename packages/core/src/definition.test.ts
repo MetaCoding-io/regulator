@@ -19,7 +19,8 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
 
   await write(dir, "profiles/research.json", { name: "research", description: "Read-only.", tools: ["read", "run_tests"], writablePaths: [], advice: [] });
   await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
-  await write(dir, "workload/sd.json", { name: "sd", version: 1, description: "d", unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: ["run_tests", "lint"], requiresContract: true }, { name: "plan", description: "d", profile: "nope", checks: [], requiresContract: false }, { name: "sketch", description: "d", profile: "research", checks: [], requiresContract: false }] });
+  await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
+  await write(dir, "workload/sd.json", { name: "sd", version: 1, description: "d", unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: ["run_tests", "lint"], requiresContract: true }, { name: "plan", description: "d", profile: "nope", checks: [], requiresContract: false }, { name: "sketch", description: "d", profile: "research", checks: [], requiresContract: false }, { name: "build", description: "d", profile: "builder", checks: [], requiresContract: true }] });
   await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
   await write(dir, "policies/routing.json", { name: "routing", version: 1, description: "d", rules: [], impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking", floors: [{ pattern: "(", severity: "blocking", reason: "r" }] });
   await write(dir, "policies/odd.json", { name: "odd" });
@@ -34,6 +35,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "workload/sd.json: unit type \"implement\" names check \"lint\", which the host does not run (known: run_tests, run_checks, identity-untouched, export-signature, glossary-lint, inherited-tests)",
     "workload/sd.json: unit type \"plan\" runs under profile \"nope\", which is not declared under profiles/",
     "workload/sd.json: unit type \"sketch\" runs without a contract but its profile \"research\" grants run_tests, whose effects are not read-only: a unit no contract bounds may not write",
+    "workload/sd.json: unit type \"build\" runs under a contract but its profile \"builder\" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
     "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",
     "policies/routing.json: floor pattern \"(\" is not a regular expression",
@@ -41,5 +43,5 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
   ]);
   assert.deepEqual(checked.identity.invariants.map((i) => i.id), ["INV-001"]);
-  assert.equal(checked.profiles.length, 2, "a profile with a naming problem is still loaded; the problem is reported");
+  assert.equal(checked.profiles.length, 3, "a profile with a naming problem is still loaded; the problem is reported");
 });

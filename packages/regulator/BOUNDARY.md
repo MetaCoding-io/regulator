@@ -60,7 +60,7 @@ Not covered:
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
-Enforced at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)` in `src/registry-cli.ts`; S5, deterministic-gate.
+Enforced at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`, `checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)` in `src/registry-cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -105,7 +105,7 @@ Enforced at `runSuite (one instance per arm × repetition, the tasks through dri
 
 Not covered:
 
-- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement.
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement. The live path itself is covered headlessly (the dispatcher opens and binds a session with no model, ../regulator-pi/src/dispatcher.test.ts); what a model does under the gates is not.
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
 - Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.

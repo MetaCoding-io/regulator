@@ -15,7 +15,8 @@
     "remember",
     "ask_human",
     "notify_owner",
-    "propose_policy_change"
+    "propose_policy_change",
+    "report_result"
   ],
   "writablePaths": [
     "src/",

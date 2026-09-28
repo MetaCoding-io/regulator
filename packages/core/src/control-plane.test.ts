@@ -58,6 +58,8 @@ test("read-only is a claim about effects, not tool names", () => {
   assert.deepEqual(readOnlyViolations(["read", "run_tests"]), ["run_tests"], "a one-string schema that runs the project is not read-only");
   assert.deepEqual(readOnlyViolations(["read", "mystery_tool"]), ["mystery_tool"], "an undeclared effect is a violation");
   assert.deepEqual(readOnlyViolations(["bash"]), ["bash"]);
+  assert.deepEqual(readOnlyViolations(["read", "report_result", "report_intelligence", "propose_policy_change", "remember"]), [], "a record in the control plane's stores is not a write to the domain: a read-only unit can still report");
+  assert.deepEqual(readOnlyViolations(["read", "notify_owner", "ask_human", "write"]), ["notify_owner", "ask_human", "write"], "what cannot be undone, and what changes the domain, is not read-only");
 });
 
 const research: CapabilityProfile = {

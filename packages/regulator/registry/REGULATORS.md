@@ -326,11 +326,11 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 `reg.identity.definition-check.v1` · S5 · deterministic-gate · active · introduced in M12
 
-**Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.
+**Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.
 
 **Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
 
-**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`
+**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`, `checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)`
 
 **Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
 
@@ -508,7 +508,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `src/evals.test.ts`, `../core/src/evals.test.ts`
 
 **Limitations.**
-- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement.
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement. The live path itself is covered headlessly (the dispatcher opens and binds a session with no model, ../regulator-pi/src/dispatcher.test.ts); what a model does under the gates is not.
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
 - Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
@@ -1026,7 +1026,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - upgrade or downgrade on judgement of task difficulty
 - change the route
 
-**Evidence.** `../core/src/policy.test.ts`
+**Evidence.** `../core/src/policy.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
 - Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.
@@ -1303,7 +1303,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - make untrusted content safe (trust is an input-loading guard, not a sandbox)
 - prevent the model from reading a project file that carries instructions
 
-**Evidence.** `../regulator-pi/src/authority.test.ts`
+**Evidence.** `../regulator-pi/src/authority.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
 - Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.

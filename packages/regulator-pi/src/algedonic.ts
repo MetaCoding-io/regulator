@@ -34,7 +34,7 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 import { InteractionKindSchema, InteractionPolicySchema, ReportedEvidenceSchema, assertValid, type InteractionKind, type InteractionOutcome, type InteractionPolicy } from "@metacoding.io/regulator-protocol";
-import { ExecutionStore, ObligationLedger, TOOL_EFFECTS, continuesWithoutAnswer, dispositionForAnswer, isReadOnlyEffect, severityForKind } from "@metacoding.io/regulator-core";
+import { ExecutionStore, ObligationLedger, TOOL_EFFECTS, continuesWithoutAnswer, dispositionForAnswer, isEffectFree, severityForKind } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
 import { INTERACTION_POLICY_PATH } from "@metacoding.io/regulator";
 import { leaseStoreFor } from "@metacoding.io/regulator";
@@ -110,7 +110,7 @@ export function createAlgedonicExtension(options: AlgedonicExtensionOptions = {}
     pi.on("tool_call", (event): ToolCallEventResult | undefined => {
       if (!paused) return undefined;
       const effect = TOOL_EFFECTS[event.toolName];
-      if (effect && isReadOnlyEffect(effect)) return undefined;
+      if (effect && isEffectFree(effect)) return undefined;
       if (event.toolName === "report_result") return undefined;
       return { block: true, reason: `regulator: the unit is paused — a ${paused.kind} question ("${paused.question.slice(0, 120)}") has no answer, and ${paused.kind === "consent" ? "silence is not consent" : "work waits for one"}. Nothing with an effect runs until a person answers (obligation ${paused.obligationId.slice(0, 8)}). Call report_result with what you have and stop.` };
     });

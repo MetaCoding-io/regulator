@@ -78,6 +78,11 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         else if (!type.requiresContract && !isReadOnlyProfile(profile)) {
           problem(`workload/${file}`, `unit type "${type.name}" runs without a contract but its profile "${type.profile}" grants ${readOnlyViolations(profile.tools).join(", ")}, whose effects are not read-only: a unit no contract bounds may not write`);
         }
+        // A contracted unit closes only by reporting: a profile that does not grant the report tool makes every unit of
+        // the type end as no-report (found by the first live drift run, 0.1.2). The grant is the profile's to declare.
+        else if (type.requiresContract && !profile.tools.includes("report_result")) {
+          problem(`workload/${file}`, `unit type "${type.name}" runs under a contract but its profile "${type.profile}" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)`);
+        }
         for (const check of type.checks) {
           if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`workload/${file}`, `unit type "${type.name}" names check "${check}", which the host does not run (known: ${HOST_CHECK_NAMES.join(", ")})`);
         }
