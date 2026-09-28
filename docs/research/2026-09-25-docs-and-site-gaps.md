@@ -103,14 +103,15 @@ wrong claim is worse than none.
    choice, clarification and uat, the attention budget, and `people` /
    `resolveUpTo` / `actAsS5` are absent. → a `how-it-works` #algedonic section with a
    small ask_human → pause gate → outbox → answer figure.
-5. **S5 identity has no section of its own**: the four files, INV-nnn, refused words,
+5. ~~**S5 identity has no section of its own**~~ (landed 2026-09-28: `product.html#identity`, the four layers and propose → accept → promote, linking `concepts/identity`): the four files, INV-nnn, refused words,
    write gate + bash restore + identity-untouched, and the proposal → accept →
    promote direction. → "Identity you cannot prompt away" on `product.html`.
 6. **Definition versus instance versus domain** is drawn as three stores but the
    direction (the definition is the product; an instance is one repository; promotion
    flows instance → definition by a person) is not stated.
-7. **Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
-   listed. **Evals:** pre-registered metrics, outcome versus trajectory graders and the
+7. ~~**Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
+   listed.~~ (landed 2026-09-28 in `product.html#orchestrator`, with the post-merge check
+   and the effect journal, linking `concepts/recovery` and `concepts/coordination`) **Evals:** pre-registered metrics, outcome versus trajectory graders and the
    interpretation rule are only gestured at. **S4 versus memory:** expiry and affected
    units are absent. **Registry card anatomy:** mechanism level, `review --due`,
    retirement by a person. One short section each, linking the concept pages.
