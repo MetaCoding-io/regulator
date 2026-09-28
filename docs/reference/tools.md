@@ -111,7 +111,7 @@ resolves the obligation and the next attempt is told the answer as its hint.
 That only a recap continues without an answer is a protocol constant, so no policy can
 make silence into consent. The policy's `attention.blockingPerAttempt` caps how many
 waiting questions one attempt may ask; the tool refuses past it. Attention is the
-scarcest budget.
+scarcest budget. [Asking a person](/concepts/asking-a-person) explains why.
 
 ## `notify_owner`
 

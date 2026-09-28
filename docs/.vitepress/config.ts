@@ -70,6 +70,7 @@ export default defineConfig({
           { text: "Recovery, budgets and model routes", link: "/concepts/recovery" },
           { text: "Coordination", link: "/concepts/coordination" },
           { text: "Obligations", link: "/concepts/obligations" },
+          { text: "Asking a person", link: "/concepts/asking-a-person" },
           { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
           { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },
           { text: "Architecture", link: "/ARCHITECTURE" },

@@ -108,7 +108,7 @@ Messages between functions carry control semantics, and the type says which:
 | `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout; the post-merge check | S3 |
 | `intelligence-signal` | S4 | the environment changed, or will | `report_intelligence` in a research unit | S3 |
 | `policy-proposal` | any | a request to change identity or policy; never a mutation | `propose_policy_change` | S5 |
-| `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate` | a person |
+| `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate`; see [asking a person](/concepts/asking-a-person) | a person |
 | `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | declared in the protocol and the routing policy; nothing emits one yet — a unit's constraints reach it as the contract's `constraintRefs` and the rendered identity | the unit |
 
 A signal is not an audit; an audit is not a policy decision; a proposal does not mutate
