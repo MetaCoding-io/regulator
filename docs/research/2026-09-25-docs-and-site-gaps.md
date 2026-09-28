@@ -252,7 +252,8 @@ page. Each item is one concepts page and one pull request.
    and the lease gate, reintegration and the post-merge check, the thrash detector, the
    effect journal and its reconciliation, and profiles as grants over effects. Found on
    the way: the `reintegration` card's third limitation ("Nothing runs the checks after
-   the merge yet") is stale since `post-merge-check`; the card needs that line struck.
+   the merge yet") was stale since `post-merge-check`; ~~the card needs that line struck~~
+   replaced (2026-09-28) with a line that names the post-merge check.
 5. ~~**Asking a person, and attention as a budget.**~~ Landed as
    `concepts/asking-a-person.md`: the two paths to a person (a unit asks; the loop
    escalates), the five kinds, the fixed rule that silence is never consent and what
@@ -265,8 +266,13 @@ page. Each item is one concepts page and one pull request.
    the session), the Pi host's eleven extensions, and a note on the two senses of
    "host" (the agent host; the machine the host checks run on). §2 item 9, the
    reference half in `project/packages.md`, now links it; issue #58 is the second host.
-7. **Smaller:** a paragraph on the OpenTelemetry spans and their redaction.
+7. ~~**Smaller:** a paragraph on the OpenTelemetry spans and their redaction.~~ Landed
+   as "Tracing a run" in `guide/running-units.md`, with a screenshot of `regulator spans`
+   on a scripted drift run (`guide/img/spans.webp`) and the commands to reproduce it.
 
 Website, same review: attention, the canary watch and the effect journal's restart
-reconciliation are absent, and compaction is mentioned once.
+reconciliation are absent, and compaction is mentioned once. (2026-09-28: three now
+appear on `product.html`: the canary watch in #identity, the effect journal and
+compaction in #orchestrator. Attention is only linked, through "Asking a person" in the
+operating section; the how-it-works algedonic section in §3 item 4 would show it.)
 
