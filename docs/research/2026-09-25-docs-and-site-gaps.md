@@ -103,14 +103,15 @@ wrong claim is worse than none.
    choice, clarification and uat, the attention budget, and `people` /
    `resolveUpTo` / `actAsS5` are absent. → a `how-it-works` #algedonic section with a
    small ask_human → pause gate → outbox → answer figure.
-5. **S5 identity has no section of its own**: the four files, INV-nnn, refused words,
+5. ~~**S5 identity has no section of its own**~~ (landed 2026-09-28: `product.html#identity`, the four layers and propose → accept → promote, linking `concepts/identity`): the four files, INV-nnn, refused words,
    write gate + bash restore + identity-untouched, and the proposal → accept →
    promote direction. → "Identity you cannot prompt away" on `product.html`.
 6. **Definition versus instance versus domain** is drawn as three stores but the
    direction (the definition is the product; an instance is one repository; promotion
    flows instance → definition by a person) is not stated.
-7. **Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
-   listed. **Evals:** pre-registered metrics, outcome versus trajectory graders and the
+7. ~~**Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
+   listed.~~ (landed 2026-09-28 in `product.html#orchestrator`, with the post-merge check
+   and the effect journal, linking `concepts/recovery` and `concepts/coordination`) **Evals:** pre-registered metrics, outcome versus trajectory graders and the
    interpretation rule are only gestured at. **S4 versus memory:** expiry and affected
    units are absent. **Registry card anatomy:** mechanism level, `review --due`,
    retirement by a person. One short section each, linking the concept pages.
@@ -190,6 +191,7 @@ Website:
 | contract, report, verdict mentions | `concepts/contracts` |
 | write gate, identity, proposal mentions | `concepts/identity` |
 | how-it-works recovery | `concepts/recovery` |
+| how-it-works loop (leases, worktrees, reintegration) | `concepts/coordination` |
 | personal finance | `examples/personal-finance`, `guide/operating` |
 | glossary tooltips | `GLOSSARY`; pathology mentions → `PATHOLOGIES` |
 
@@ -246,10 +248,11 @@ page. Each item is one concepts page and one pull request.
    attempt ceiling, each action and who acts on it, budgets and the guard, model routes
    and failover, contract-preserving compaction. It records that the `ambiguity` cause
    has a policy rule but no classification that produces it.
-4. **Coordination (S2).** Leases and their TTL, one worktree per unit, reintegration,
-   the post-merge check on the base, the thrash detector, the effect journal and its
-   reconciliation on restart; and profiles as grants over effects ("read-only by
-   effect, not by tool name").
+4. ~~**Coordination (S2).**~~ Landed as `concepts/coordination.md`: worktrees, leases
+   and the lease gate, reintegration and the post-merge check, the thrash detector, the
+   effect journal and its reconciliation, and profiles as grants over effects. Found on
+   the way: the `reintegration` card's third limitation ("Nothing runs the checks after
+   the merge yet") is stale since `post-merge-check`; the card needs that line struck.
 5. **Asking a person, and attention as a budget.** Interaction kinds and the
    continue-without-answer constant, the pause gate and the paused attempt, the
    attention budget (`attention.blockingPerAttempt`) and what spends it, reminders.

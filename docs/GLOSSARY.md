@@ -24,7 +24,7 @@ learners to build themselves.
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
 | **S1 — Operations** | The units that do the work and touch the environment. Specialized by capability profile, not persona. | GSD `execute-task`; regulator S1 capability profiles (M03, M04). |
-| **S2 — Coordination** | Damping between operations: isolation, leases, sequencing, anti-oscillation, reintegration. Mechanism, not a coordinator persona. | GSD worktrees and leases; regulator S2 gap analysis (M05). |
+| **S2 — Coordination** | Damping between operations: isolation, leases, sequencing, anti-oscillation, reintegration. Mechanism, not a coordinator persona. | GSD worktrees and leases; regulator S2 gap analysis (M05). [Coordination](concepts/coordination.md). |
 | **S3 — Control** | Operational control: planning, dispatch, budgets, recovery, authoritative work state. | GSD lifecycle kernel, auto orchestration; regulator work contracts (M06–M08). |
 | **S3\* — Audit** | Independent verification that does not depend on the executor's self-report. | GSD verification evidence and technical verdict; regulator audit finding and deterministic gates (M09, M10). |
 | **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel (M11). [Intelligence and memory](concepts/intelligence-and-memory.md). |
@@ -44,7 +44,7 @@ learners to build themselves.
 | **Signal** | Ordinary upward operational feedback, including residual uncertainty. | regulator uncertainty signal tool. |
 | **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `packages/core/src/obligations.ts` and `packages/regulator/policies/routing.json` (M08, M11); design record archived as `docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md`. |
 | **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/regulator-pi/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
-| **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). |
+| **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). [Coordination](concepts/coordination.md). |
 | **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `packages/regulator/registry/`; `regulator check`; the specification is archived as [CONTROL-REGISTRY.md](archive/2026-09/CONTROL-REGISTRY.md). |
 | **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
 | **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
@@ -56,7 +56,7 @@ learners to build themselves.
 | --- | --- | --- |
 | **Mechanism hierarchy** | Type → deterministic gate → typed tool → model judgment → prompt. An ordering by reliability under adversarial pressure. | regulator prime directive; M02. |
 | **Gate** | A deterministic check that can block. | `tool_call` preflight; closeout gate (M09). |
-| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`; `packages/regulator/profiles/*.json`, one per kind of work, named by the workload's unit types (M04). GSD phases are the comparison: routing keys, not grants. |
+| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`; `packages/regulator/profiles/*.json`, one per kind of work, named by the workload's unit types (M04). GSD phases are the comparison: routing keys, not grants. [Coordination](concepts/coordination.md). |
 | **Unit** | The smallest dispatched, executable workflow step: one contract, one worktree, one or more attempts. | The orchestrator's unit record (`packages/protocol/src/execution.ts`); a workload's unit types (`plan`, `implement`, …). GSD units (`plan-slice`, `execute-task`) are the comparison. |
 | **Phase** | A coarse routing bucket for model and reasoning selection. Not a unit. | GSD `research`, `planning`, `execution`, `validation`, `uat`… (M04, M07). |
 | **Work contract** | What S3 authorizes a unit to decide: FIXED / DELEGATED / UNRESOLVED. | `WorkContract` in `packages/protocol/src/contracts.ts` (M06); design record archived as `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md`. [Work contracts and reports](concepts/contracts.md). |
@@ -67,9 +67,9 @@ learners to build themselves.
 | **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). [Recovery, budgets and model routes](concepts/recovery.md). |
 | **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result (M08). |
 | **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). [Recovery, budgets and model routes](concepts/recovery.md). |
-| **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector (M05, M08). |
-| **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation (M05). |
-| **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back (M05). |
+| **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector (M05, M08). [Coordination](concepts/coordination.md). |
+| **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation (M05). [Coordination](concepts/coordination.md). |
+| **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back (M05). [Coordination](concepts/coordination.md). |
 | **Evidence** | An observation tied to a criterion, an attempt, a source revision and an environment, produced by the host, with freshness. | GSD Verification Evidence (M09). |
 | **Technical verdict** | Pass / fail / inconclusive derived mechanically from required evidence. | GSD (M09). |
 | **Human acceptance** | A person's disposition of a subjective check, separate from the technical verdict. | GSD Subjective UAT (M09, M13). |

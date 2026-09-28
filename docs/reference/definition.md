@@ -53,7 +53,8 @@ profile can still report; a profile a contracted unit type runs under must grant
 
 Shipped: `implement` (write and edit under `src/` and `test/`, `bash` un-gated by
 path), `research` (read-only), `intelligence` (read-only plus `report_intelligence`),
-`bookkeeper` and `auditor` for the ledger.
+`bookkeeper` and `auditor` for the ledger. [Coordination](/concepts/coordination#profiles-grant-tools-by-effect)
+explains the effect axes and what counts as read-only.
 
 ## Budget and model policy
 
