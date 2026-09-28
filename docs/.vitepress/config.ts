@@ -68,6 +68,7 @@ export default defineConfig({
           { text: "Work contracts and reports", link: "/concepts/contracts" },
           { text: "Protecting identity", link: "/concepts/identity" },
           { text: "Recovery, budgets and model routes", link: "/concepts/recovery" },
+          { text: "Coordination", link: "/concepts/coordination" },
           { text: "Obligations", link: "/concepts/obligations" },
           { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
           { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },
