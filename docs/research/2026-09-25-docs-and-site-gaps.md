@@ -259,9 +259,12 @@ page. Each item is one concepts page and one pull request.
    each answer means, the pause gate and the paused attempt (it counts against the
    attempt ceiling and is not routed), `regulator answer` and the answer as the next
    hint, the attention budget, and escalation.
-6. **Hosts.** The host seam as a concept: the control plane never imports a host, what
-   a host provides (a dispatcher, session extensions, host checks), and what a second
-   host would take. §2 item 9 asks for the reference half in `project/packages.md`.
+6. ~~**Hosts.**~~ Landed as `concepts/hosts.md`: the dispatcher and the `Host` export,
+   how a host is resolved, what the loop reads back after a dispatch (the contract a
+   host meets), the regulators on each side of the seam (22 in the control plane, 20 in
+   the session), the Pi host's eleven extensions, and a note on the two senses of
+   "host" (the agent host; the machine the host checks run on). §2 item 9, the
+   reference half in `project/packages.md`, now links it; issue #58 is the second host.
 7. **Smaller:** a paragraph on the OpenTelemetry spans and their redaction.
 
 Website, same review: attention, the canary watch and the effect journal's restart

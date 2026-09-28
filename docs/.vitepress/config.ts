@@ -69,6 +69,7 @@ export default defineConfig({
           { text: "Protecting identity", link: "/concepts/identity" },
           { text: "Recovery, budgets and model routes", link: "/concepts/recovery" },
           { text: "Coordination", link: "/concepts/coordination" },
+          { text: "Hosts", link: "/concepts/hosts" },
           { text: "Obligations", link: "/concepts/obligations" },
           { text: "Asking a person", link: "/concepts/asking-a-person" },
           { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },

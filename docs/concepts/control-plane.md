@@ -27,7 +27,7 @@ not a hope.
 
 | Function | In `regulator` | Held by |
 | --- | --- | --- |
-| **S1 Operations** | A unit: one session under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects; the writable paths, the tool set and the budget are enforced by the host, not by the profile's advice. |
+| **S1 Operations** | A unit: one session under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects; the writable paths, the tool set and the budget are enforced by the host, not by the profile's advice. A [host](/concepts/hosts) runs the session. |
 | **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, the effect journal reconciled on restart. | Mechanisms. There is no coordinator persona. See [coordination](/concepts/coordination). |
 | **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator is the only execution authority. Regulators never schedule. See [work contracts](/concepts/contracts) and [recovery](/concepts/recovery). |
 | **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, the closeout gate over protected paths. | Independent evidence the host owns. A model's review is an additional layer. |
