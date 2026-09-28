@@ -9,6 +9,13 @@
 import type { ToolEffect } from "@metacoding.io/regulator-protocol";
 
 const READ_ONLY: ToolEffect = { filesystem: "read", execution: "none", network: "none", sideEffects: "none" };
+/**
+ * A record in the control plane's own stores — a report, a proposal, intelligence, a fact. The domain is untouched
+ * (`filesystem: none`: nothing under the repository changes) and every record can be superseded, rejected or
+ * retracted (`reversible`). Read-only admits records: they are how a unit talks to S3, and a unit that cannot
+ * report cannot close (found by the first live drift run, 0.1.2).
+ */
+const RECORD: ToolEffect = { filesystem: "none", execution: "none", network: "none", sideEffects: "reversible" };
 
 export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   read: READ_ONLY,
@@ -25,25 +32,31 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   // Runs the project's test suite: whatever that suite does, this tool does.
   run_tests: { filesystem: "write", execution: "project-code", network: "unknown", sideEffects: "unknown" },
   // Lesson 08: a message to the unit's owner, outside the repository. Cannot be unsent; journaled before it is sent.
-  notify_owner: { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" },
+  notify_owner: { filesystem: "none", execution: "none", network: "none", sideEffects: "irreversible" },
   // Lesson 10: records a typed proposal in the regulatory log. It never changes policy or identity.
-  propose_policy_change: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  propose_policy_change: RECORD,
   // Lesson 06: writes the result report to the execution store, once; the domain is untouched.
-  report_result: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  report_result: RECORD,
   // Lesson 11: records typed intelligence in the regulatory log. Advice to S3; it never applies anything.
-  report_intelligence: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  report_intelligence: RECORD,
   // Lesson 12: appends a fact with provenance and an expiry to the operational memory store. Never identity.
-  remember: { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" },
+  remember: RECORD,
   // Lesson 13: interrupts a person. Attention spent cannot be returned, and the obligation it opens is owed.
-  ask_human: { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" },
+  ask_human: { filesystem: "none", execution: "none", network: "none", sideEffects: "irreversible" },
 };
 
 export function effectOf(toolName: string): ToolEffect | undefined {
   return TOOL_EFFECTS[toolName];
 }
 
+/** Effect-free: reads and nothing else. What a paused unit may still do (the pause gate), stricter than read-only: a record is an effect too. */
+export function isEffectFree(effect: ToolEffect): boolean {
+  return effect.filesystem !== "write" && effect.execution === "none" && effect.network === "none" && effect.sideEffects === "none";
+}
+
+/** Read-only is about the domain and the world: no write under the repository, no execution, no network, and no effect that cannot be undone. A control-plane record (see `RECORD`) is admitted. */
 export function isReadOnlyEffect(effect: ToolEffect): boolean {
-  return effect.filesystem !== "write" && effect.execution === "none" && effect.sideEffects === "none";
+  return effect.filesystem !== "write" && effect.execution === "none" && effect.network === "none" && (effect.sideEffects === "none" || effect.sideEffects === "reversible");
 }
 
 /**

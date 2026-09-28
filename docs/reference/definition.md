@@ -30,7 +30,11 @@ ledger. A contract is loaded with the workload it names, so an instance may run 
 
 `profiles/<name>.json` — what a unit may use and where it may write. A profile is a
 grant over declared tool *effects*, not a personality: read-only means every granted
-tool's effect is read-only, and the check refuses a profile that says otherwise.
+tool's effect is read-only, and the check refuses a profile that says otherwise. A record
+in the control plane's own stores — `report_result`, `report_intelligence`,
+`propose_policy_change`, `remember` — is not a write to the domain, so a read-only
+profile can still report; a profile a contracted unit type runs under must grant
+`report_result`, or no unit of that type could close.
 
 | Field | Type | Meaning |
 | --- | --- | --- |

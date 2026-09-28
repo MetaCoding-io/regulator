@@ -26,7 +26,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, SettingsManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, SettingsManager, type AgentSession } from "@earendil-works/pi-coding-agent";
 import { chooseModels } from "@metacoding.io/regulator-core";
 import { LAB_ROOT, type Dispatcher, type Host, type HostDispatcherOptions } from "@metacoding.io/regulator";
 
@@ -86,9 +86,66 @@ export function definitionResourceLoader(options: DefinitionLoaderOptions): Defi
   return { loader, refused };
 }
 
+export interface OpenUnitSessionOptions {
+  worktree: string;
+  unitId: string;
+  contractPath: string;
+  profile: string;
+  policyPath: string;
+  /** The model the session runs on; a session without one can be opened and bound but not prompted (tests). */
+  model?: NonNullable<Parameters<typeof createAgentSession>[0]>["model"];
+  modelRuntime?: ModelRuntime;
+  extensionPaths?: readonly string[];
+  echo?: boolean;
+  /** Where the session's entries go; Pi's session directory for the worktree unless a test says otherwise. */
+  sessionManager?: SessionManager;
+  agentDir?: string;
+}
+
+export interface OpenedUnitSession {
+  session: AgentSession;
+  /** Discovered extensions the definition does not declare, refused by the loader. */
+  refused: string[];
+  /** Extension handler errors reported while the session ran, oldest first. */
+  extensionErrors: string[];
+}
+
+/**
+ * Open a unit's session the way Pi's own modes do: load the definition's extensions, hand them the unit, profile,
+ * contract and policy as flags, create the session, then *bind* it. Binding is what emits `session_start`; without
+ * it every extension that initializes there — the contract, the profile grant, the budget guard, the identity — is
+ * loaded but inert, and the model runs as a plain coding agent (found by the first live drift run, 0.1.2).
+ */
+export async function openUnitSession(options: OpenUnitSessionOptions): Promise<OpenedUnitSession> {
+  const agentDir = options.agentDir ?? getAgentDir();
+  const settingsManager = await definitionSettings();
+  const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: options.worktree, agentDir, settingsManager, ...(options.extensionPaths ? { extensionPaths: options.extensionPaths } : {}) });
+  await resourceLoader.reload();
+  const { errors, runtime } = resourceLoader.getExtensions();
+  if (errors.length) throw new Error(`extension load errors: ${errors.map((e) => `${e.path}: ${e.error}`).join("; ")}`);
+  // The same values `pi --unit … --profile … --contract … --policy …` would set on the command line.
+  // (Checkpoint 6 reads none of the first three: it finds the unit from the lease and the contract from the store.)
+  for (const [name, value] of [["unit", options.unitId], ["profile", options.profile], ["contract", options.contractPath], ["policy", options.policyPath]] as const) runtime.flagValues.set(name, value);
+  const { session } = await createAgentSession({
+    cwd: options.worktree, agentDir, resourceLoader, settingsManager,
+    sessionManager: options.sessionManager ?? SessionManager.create(options.worktree),
+    ...(options.model ? { model: options.model } : {}), ...(options.modelRuntime ? { modelRuntime: options.modelRuntime } : {}),
+  });
+  const extensionErrors: string[] = [];
+  // No UI: notices and statuses go nowhere, so an extension's own errors are the only signal and are kept.
+  await session.bindExtensions({
+    mode: "print",
+    onError: (error) => {
+      const line = `${path.basename(error.extensionPath)}: ${error.error}`;
+      extensionErrors.push(line);
+      if (options.echo) process.stderr.write(`[regulator] extension error — ${line}\n`);
+    },
+  });
+  return { session, refused, extensionErrors };
+}
+
 export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
   return async ({ worktree, unitId, contract, contractPath, profile, route, policyPath, hint }) => {
-    const agentDir = getAgentDir();
     const modelRuntime = await ModelRuntime.create();
     const available = (await modelRuntime.getAvailable()).map((m) => `${m.provider}/${m.id}`);
     const candidates = chooseModels(route, available);
@@ -100,16 +157,11 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
       const slash = ref.indexOf("/");
       const model = modelRuntime.getModel(ref.slice(0, slash), ref.slice(slash + 1));
       if (!model) continue;
-      const settingsManager = await definitionSettings();
-      const { loader: resourceLoader, refused } = definitionResourceLoader({ cwd: worktree, agentDir, settingsManager, ...(options.extensionPaths ? { extensionPaths: options.extensionPaths } : {}) });
-      await resourceLoader.reload();
-      const { errors, runtime } = resourceLoader.getExtensions();
-      if (errors.length) throw new Error(`extension load errors: ${errors.map((e) => `${e.path}: ${e.error}`).join("; ")}`);
+      const { session, refused, extensionErrors } = await openUnitSession({
+        worktree, unitId, contractPath, profile, policyPath, model, modelRuntime,
+        ...(options.extensionPaths ? { extensionPaths: options.extensionPaths } : {}), ...(options.echo === undefined ? {} : { echo: options.echo }),
+      });
       if (refused.length && options.echo) process.stdout.write(`[regulator] refused ${refused.length} extension(s) the definition does not declare: ${refused.join(", ")}\n`);
-      // The same values `pi --unit … --profile … --contract … --policy …` would set on the command line.
-      // (Checkpoint 6 reads none of the first three: it finds the unit from the lease and the contract from the store.)
-      for (const [name, value] of [["unit", unitId], ["profile", profile], ["contract", contractPath], ["policy", policyPath]] as const) runtime.flagValues.set(name, value);
-      const { session } = await createAgentSession({ cwd: worktree, agentDir, model, modelRuntime, resourceLoader, settingsManager, sessionManager: SessionManager.create(worktree) });
       try {
         if (options.echo) {
           process.stdout.write(`[regulator] unit ${unitId} on ${ref}\n`);
@@ -125,8 +177,11 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
           if (options.echo) process.stdout.write(`[regulator] ${ref} failed: ${lastError}; trying the next declared fallback\n`);
           continue;
         }
+        if (extensionErrors.length && options.echo) process.stderr.write(`[regulator] ${extensionErrors.length} extension error(s) during unit ${unitId}\n`);
         return { sessionId: session.sessionId };
       } finally {
+        // Pi's modes emit `session_shutdown` before disposing; `dispose()` alone does not, and the guards' last writes hang on it.
+        await session.extensionRunner.emit({ type: "session_shutdown", reason: "quit" }).catch(() => undefined);
         session.dispose();
       }
     }

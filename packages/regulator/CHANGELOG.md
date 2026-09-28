@@ -7,6 +7,15 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-09-28
+
+The first live drift run (issue #46) found the live dispatch path had never been
+exercised end to end.
+
+### Fixed
+- Live units ran with every session-bound regulator inert. The dispatcher created a Pi session and prompted it, but never called `session.bindExtensions(...)`, which is what emits `session_start` in Pi's own modes. The contract, the profile grant, the budget guard, the identity section and the algedonic path all initialize on that event, so a live unit ran as a plain coding agent: no contract in its prompt, `report_result` refused for want of a contract, nothing metered, every unit blocked as `no-report`. `openUnitSession` now opens and binds the session the way `pi -p` does, emits `session_shutdown` before disposing, and a headless test drives the real path with no model and asserts the contract is bound, the profile's tool surface is set and the ledger is written before the first prompt.
+- Binding the session exposed the next gap: the `implement`, `research`, `bookkeeper` and `auditor` profiles did not grant `report_result`, so a bound unit could never close either. Every profile a contracted unit type runs under now grants it, `regulator check` refuses a contracted unit type whose profile does not, and the effect declarations distinguish a control-plane record (a report, a proposal, intelligence, a fact: the domain untouched, the record reversible) from a domain write, so a read-only profile can still report.
+
 ## [0.1.1] — 2026-09-25
 
 The first install from npm found two things the workspace never exercised.
@@ -28,6 +37,7 @@ the former `@metacoding/vsm-pi-cli`.
 - The definition beside the code: forty-three registry records (forty-two active; the lexical vendor write gate of lesson 02 retired, superseded by the authority extension and the manifest's protected prefixes) with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
 - Host checks at closeout: `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature`, `glossary-lint`.
 
-[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/MetaCoding-io/regulator/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/MetaCoding-io/regulator/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MetaCoding-io/regulator/releases/tag/v0.1.0

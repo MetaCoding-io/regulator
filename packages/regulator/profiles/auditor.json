@@ -1,7 +1,15 @@
 {
   "name": "auditor",
   "description": "Read and report. No write, edit or shell tools, and no execution of project code: every granted tool has a declared read-only effect. The reconciliation itself is the host's run of the ledger's checks at closeout, not this profile's.",
-  "tools": ["read", "grep", "find", "ls", "read_conventions", "run_checks"],
+  "tools": [
+    "read",
+    "grep",
+    "find",
+    "ls",
+    "read_conventions",
+    "run_checks",
+    "report_result"
+  ],
   "writablePaths": [],
   "thinkingLevel": "medium",
   "advice": [
