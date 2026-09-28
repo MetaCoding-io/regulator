@@ -90,7 +90,31 @@ Everything a unit did is on record and replayable:
 - `memory` — operational memory: facts a unit recorded with `remember`, each with
   provenance and an expiry; `memory retract` appends a retraction. See
   [intelligence and memory](/concepts/intelligence-and-memory).
-- `spans --json` — the instance as OpenTelemetry GenAI spans, with canaries redacted,
-  for whatever collector you run.
+- `spans` — the instance as OpenTelemetry GenAI spans; see [tracing a run](#tracing-a-run).
 - `status` — the read model the [control room](/guide/control-room) renders: units,
   obligations, budgets, review dates, on one page; `--json` for a script.
+
+### Tracing a run
+
+`regulator spans` reads the instance's records as
+[OpenTelemetry GenAI](https://opentelemetry.io/docs/specs/semconv/gen-ai/) spans: one
+trace per unit, an `invoke_agent` span per attempt, an `execute_tool` span for each
+host-run check, journaled effect and delivery, and a `chat` span for what the budget
+ledger knows of the model calls. Obligations, recovery decisions and interactions become
+events on the unit's span. Every span carries the `gen_ai.*` attributes a collector
+expects and `vsm.*` attributes for the rest: the VSM function, the regulator that
+produced it, the unit, the attempt, the revision. The transcript is never read.
+
+![regulator spans on a scripted drift run: unit d1-fix's first attempt, where run_tests and identity-untouched pass, export-signature and glossary-lint fail and the verdict is an error; below it, the export-signature span as JSON, with the regulator that produced it and the observation that slugify declares two parameters where the contract fixes one](./img/spans.webp)
+
+Without `--json` the output is one line per span, as above; with it, one JSON span per
+line, for whatever collector you run. Every string attribute is redacted before it
+leaves the store: the instance's canaries and anything shaped like a credential are
+replaced, and a span that had something removed says so. To see a trace like this one
+without a model, run a scripted eval, keep its instance, and ask it:
+
+```sh
+regulator eval packages/regulator/evals/drift.json --behaviour drifter --arm treatment --reps 1 --keep
+cd <the instance the eval printed> && regulator spans
+```
+
