@@ -140,7 +140,8 @@ verified. The harness reads it as evidence at a revision (the host checks) and n
 state. Two files are the exception, and they are the domain's only harness-owned
 content: `regulator/identity/` — the instance's copy of the S5 files, committed, and
 protected by the write gate, the bash snapshot-and-restore and the `identity-untouched`
-check — and the `.regulator/` line in `.gitignore`.
+check — and the `.regulator/` line in `.gitignore`. [Protecting identity](/concepts/identity)
+explains those layers and the one path that changes an identity file.
 
 ## Why the split matters
 

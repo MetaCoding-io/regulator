@@ -187,6 +187,9 @@ Website:
 | registry mentions | `reference/regulators`, `reference/boundary` |
 | eval mentions | `concepts/evidence-about-the-regulators` |
 | intelligence and memory mentions | `concepts/intelligence-and-memory` |
+| contract, report, verdict mentions | `concepts/contracts` |
+| write gate, identity, proposal mentions | `concepts/identity` |
+| how-it-works recovery | `concepts/recovery` |
 | personal finance | `examples/personal-finance`, `guide/operating` |
 | glossary tooltips | `GLOSSARY`; pathology mentions → `PATHOLOGIES` |
 
@@ -224,3 +227,38 @@ as `pi`.
 5. The rest of §2 and §3 as separate small pull requests, one page each.
 6. The course-vocabulary sweep last, since the cards are its source and #56 is already
    scheduled to change them.
+
+## 8. Concept pages still missing (review of 2026-09-28)
+
+A second pass, over the concepts rather than the facts: which of the product's ideas are
+explained only as fields, commands or table rows, with no page that says why. Most of
+their parts are *mentioned* in several places and *explained* only on the regulators
+page. Each item is one concepts page and one pull request.
+
+1. ~~**Work contracts and result reports.**~~ Landed as `concepts/contracts.md`: the
+   three kinds of decision, authority references, evidence classes and content checks,
+   the technical verdict, what the report raises, versions and replanning.
+2. ~~**Protecting identity.**~~ Landed as `concepts/identity.md`: the layers (trust
+   rule, rendering, write gate, bash watch, `identity-untouched`) with what gets past
+   each, which paths each layer protects, propose → decide → promote, the canary watch.
+3. ~~**Recovery, budgets, model routes and compaction.**~~ Landed as
+   `concepts/recovery.md`: causes and their precedence, the shipped policy table, the
+   attempt ceiling, each action and who acts on it, budgets and the guard, model routes
+   and failover, contract-preserving compaction. It records that the `ambiguity` cause
+   has a policy rule but no classification that produces it.
+4. **Coordination (S2).** Leases and their TTL, one worktree per unit, reintegration,
+   the post-merge check on the base, the thrash detector, the effect journal and its
+   reconciliation on restart; and profiles as grants over effects ("read-only by
+   effect, not by tool name").
+5. **Asking a person, and attention as a budget.** Interaction kinds and the
+   continue-without-answer constant, the pause gate and the paused attempt, the
+   attention budget (`attention.blockingPerAttempt`) and what spends it, reminders.
+   Complements `concepts/obligations.md`, which covers delivery and disposition.
+6. **Hosts.** The host seam as a concept: the control plane never imports a host, what
+   a host provides (a dispatcher, session extensions, host checks), and what a second
+   host would take. §2 item 9 asks for the reference half in `project/packages.md`.
+7. **Smaller:** a paragraph on the OpenTelemetry spans and their redaction.
+
+Website, same review: attention, the canary watch and the effect journal's restart
+reconciliation are absent, and compaction is mentioned once.
+

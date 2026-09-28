@@ -87,7 +87,8 @@ shorter policy leaves out).
 `retry` and `repair` spend an attempt and become `escalate` when the unit's attempt
 ceiling is reached. The other five are *waiting* actions: the loop records the decision
 and opens an obligation for the consumer the routing policy names, and the unit holds
-until it is dispositioned.
+until it is dispositioned. [Recovery, budgets and model routes](/concepts/recovery)
+explains how a failure becomes a cause and a cause an action.
 
 ## Routing policy
 
@@ -135,7 +136,7 @@ path never sets `provenance.createdBy`.
 | `fixed[]` | decisions already made: `id`, `subject`, `decision`, `authorityRef`, optional `rationale`. An authority reference is one of four forms and must resolve, or the contract is refused: `INV-nnn` (an invariant the instance's identity declares), `reg.<area>.<name>.v<n>` (a registry record), `human:<name>` (a person; the name is trusted as given), or `obligation:<id>` (an open obligation, typically an accepted decision) |
 | `delegated[]` | decisions the unit may make: `id`, `subject`, `bounds`; a delegation without bounds is abdication; the choice made must appear in the report unless `requiredReport` is `false` |
 | `unresolved[]` | decisions nobody has made: `id`, `subject`, `reason`, `handling` (`resolve-before-execution`, `defer`, `stub-boundary`, `research`, `policy-clarification`), optional `obligationRef` |
-| `expectedEvidence[]` | `id`, `description`, `class` (`file`, `command`, `test`, `runtime`, `semantic`, `model`), `required`, and optionally a `check` the host can observe: `{ kind: "export-signature", module, export, arity }` or `{ kind: "inherited-tests", exempt[] }`. A `semantic` or `model` expectation without a check needs a human acceptance to count |
+| `expectedEvidence[]` | `id`, `description`, `class` (`file`, `command`, `test`, `runtime`, `semantic`, `model`), `required`, and optionally a `check` the host can observe: `{ kind: "export-signature", module, export, arity }` or `{ kind: "inherited-tests", exempt[] }`. A `runtime`, `semantic` or `model` expectation without a check needs a human acceptance to count |
 | `provenance` | `createdBy: "S3"`, `createdAt`, optional `sourceRevision` and `predecessor` |
 
 The unit answers with a **result report** through `report_result`
@@ -155,7 +156,8 @@ A report is bound to a contract version and an attempt and is never revised; the
 contract check refuses a report that leaves a delegated decision unreported or a required
 expectation unaddressed. At close, each emergent decision and deviation becomes an
 `operational-signal` and each residual uncertainty an `uncertainty-signal`, routed like
-any other message.
+any other message. [Work contracts and reports](/concepts/contracts) explains why the
+contract is shaped this way and how the verdict reads it.
 
 ## Eval suites
 
