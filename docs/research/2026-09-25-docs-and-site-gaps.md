@@ -252,7 +252,8 @@ page. Each item is one concepts page and one pull request.
    and the lease gate, reintegration and the post-merge check, the thrash detector, the
    effect journal and its reconciliation, and profiles as grants over effects. Found on
    the way: the `reintegration` card's third limitation ("Nothing runs the checks after
-   the merge yet") is stale since `post-merge-check`; the card needs that line struck.
+   the merge yet") was stale since `post-merge-check`; ~~the card needs that line struck~~
+   replaced (2026-09-28) with a line that names the post-merge check.
 5. ~~**Asking a person, and attention as a budget.**~~ Landed as
    `concepts/asking-a-person.md`: the two paths to a person (a unit asks; the loop
    escalates), the five kinds, the fixed rule that silence is never consent and what

@@ -345,7 +345,7 @@ Not covered:
 
 - Detects file-level conflicts only; two units can change disjoint files and still break each other (the S2 gap analysis's semantic-conflict case).
 - Merge commits only; no rebase, squash or fast-forward policy.
-- Nothing runs the checks after the merge yet; lesson 09 adds evidence at closeout.
+- The merge itself verifies nothing: the branch was verified at closeout, and the base at the merge commit is verified afterwards by the post-merge check (reg.audit.post-merge-check.v1), so the base is red while S3 decides a failure there.
 
 ## Result report gate (`reg.control.result-report-gate.v1`)
 
