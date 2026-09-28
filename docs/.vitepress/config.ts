@@ -65,6 +65,8 @@ export default defineConfig({
         items: [
           { text: "The control plane", link: "/concepts/control-plane" },
           { text: "Definition, instance, domain", link: "/concepts/definition-and-instance" },
+          { text: "Work contracts and reports", link: "/concepts/contracts" },
+          { text: "Protecting identity", link: "/concepts/identity" },
           { text: "Obligations", link: "/concepts/obligations" },
           { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
           { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },

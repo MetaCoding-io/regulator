@@ -29,10 +29,10 @@ not a hope.
 | --- | --- | --- |
 | **S1 Operations** | A unit: one session under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects; the writable paths, the tool set and the budget are enforced by the host, not by the profile's advice. |
 | **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, the effect journal reconciled on restart. | Mechanisms. There is no coordinator persona. |
-| **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator is the only execution authority. Regulators never schedule. |
+| **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator is the only execution authority. Regulators never schedule. See [work contracts](/concepts/contracts). |
 | **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, the closeout gate over protected paths. | Independent evidence the host owns. A model's review is an additional layer. |
 | **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation; it never replans. See [intelligence and memory](/concepts/intelligence-and-memory). |
-| **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition, protected by the write gate and the `identity-untouched` check. | Files. A unit may propose; only a person with `actAsS5` in the interaction policy may accept, and the S5 decision path is the only writer. |
+| **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition, protected by the write gate and the `identity-untouched` check. | Files. A unit may propose; only a person with `actAsS5` in the interaction policy may accept, and the S5 decision path is the only writer. See [protecting identity](/concepts/identity). |
 
 ## The loop
 
