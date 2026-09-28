@@ -99,7 +99,7 @@ wrong claim is worse than none.
 3. **Typed channels and the routing policy are absent**: the eight kinds, the severity
    line, the floors, "a signal is not an audit; a proposal does not mutate policy". →
    a `how-it-works` #channels section from the control-plane table.
-4. **The algedonic path is thin**: only consent is explained; recap is mentioned;
+4. ~~**The algedonic path is thin**~~ (landed 2026-09-28: `how-it-works.html#algedonic`, the kinds, obligation first, dialog or pause, outbox and reminders, `regulator answer`, the answer as the next hint, escalation, and the attention budget, drawn; links `concepts/asking-a-person`): only consent is explained; recap is mentioned;
    choice, clarification and uat, the attention budget, and `people` /
    `resolveUpTo` / `actAsS5` are absent. → a `how-it-works` #algedonic section with a
    small ask_human → pause gate → outbox → answer figure.
@@ -273,6 +273,6 @@ page. Each item is one concepts page and one pull request.
 Website, same review: attention, the canary watch and the effect journal's restart
 reconciliation are absent, and compaction is mentioned once. (2026-09-28: three now
 appear on `product.html`: the canary watch in #identity, the effect journal and
-compaction in #orchestrator. Attention is only linked, through "Asking a person" in the
-operating section; the how-it-works algedonic section in §3 item 4 would show it.)
+compaction in #orchestrator. Attention is only linked from `product.html`; `how-it-works.html#algedonic` now draws
+it.)
 
