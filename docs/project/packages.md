@@ -21,7 +21,8 @@ into a repository; every other command runs against the definition as shipped.
 The host seam is a name: `unit dispatch` and `unit drive` resolve
 `@metacoding.io/regulator-pi` (or `--host` / `REGULATOR_HOST`) from the project, then
 beside the CLI, and call its dispatcher. `doctor`, `status`, `check` and a scripted eval
-need no host.
+need no host. [Hosts](/concepts/hosts) explains the seam and what a host must write
+back.
 
 ## `@metacoding.io/regulator-pi`
 
