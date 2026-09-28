@@ -377,7 +377,7 @@ export {
 } from "./interaction.js";
 export {
   ArmSummarySchema, AblationSwitchSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
-  GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricSummarySchema, isEvalReport, isEvalSuite,
+  GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isEvalSuite, isUninterpreted,
   type AblationSwitch, type ArmSummary, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
   type GraderVerdict, type Lift, type MetricSummary,
 } from "./evals.js";

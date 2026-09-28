@@ -22,8 +22,8 @@
   },
   "evidence": { "tests": ["src/controller.test.ts", "src/cli.test.ts", "../core/src/interaction.test.ts"] },
   "limitations": [
-    "The outbox is a file; no real channel (mail, chat, a daemon that watches the file) exists, so delivery reaches a person who reads the file. The channel is a property of the deployment, not of this lesson.",
-    "Reminders run on demand (`regulator remind`) and at the loop's steps; nothing schedules them. A quiet instance reminds nobody until someone runs something.",
+    "The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names (lesson 15), and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.",
+    "Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.",
     "One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },

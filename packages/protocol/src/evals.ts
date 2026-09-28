@@ -149,6 +149,18 @@ export const EvalReportSchema = Type.Object({
 }, { additionalProperties: false });
 export type EvalReport = Static<typeof EvalReportSchema>;
 
+/**
+ * What `regulator eval` writes when no person has read the numbers yet. Such a report is a
+ * run's output, not evidence: `regulator check` refuses one committed under `evals/reports/`.
+ */
+export const UNINTERPRETED_BY = "nobody yet";
+export const UNINTERPRETED_MARKER = "not yet interpreted by a person";
+
+/** True when a report still carries the placeholder interpretation or interpreter. */
+export function isUninterpreted(report: Pick<EvalReport, "interpretation" | "interpretedBy">): boolean {
+  return report.interpretedBy.trim() === UNINTERPRETED_BY || report.interpretation.includes(UNINTERPRETED_MARKER);
+}
+
 export function isEvalSuite(value: unknown): value is EvalSuite {
   return Value.Check(EvalSuiteSchema, value);
 }

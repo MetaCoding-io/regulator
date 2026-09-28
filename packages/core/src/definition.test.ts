@@ -35,7 +35,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "workload/sd.json: unit type \"implement\" names check \"lint\", which the host does not run (known: run_tests, run_checks, identity-untouched, export-signature, glossary-lint, inherited-tests)",
     "workload/sd.json: unit type \"plan\" runs under profile \"nope\", which is not declared under profiles/",
     "workload/sd.json: unit type \"sketch\" runs without a contract but its profile \"research\" grants run_tests, whose effects are not read-only: a unit no contract bounds may not write",
-    "workload/sd.json: unit type \"build\" runs under a contract but its profile \"builder\" does not grant report_result: no unit of this type could ever close",
+    "workload/sd.json: unit type \"build\" runs under a contract but its profile \"builder\" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
     "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",
     "policies/routing.json: floor pattern \"(\" is not a regular expression",

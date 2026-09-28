@@ -45,6 +45,9 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
 | Registry records carry the release version they shipped in, not a checkpoint number | — | [#56](https://github.com/MetaCoding-io/regulator/issues/56) |
 | The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
+| Enforcement points as a typed field, refused by `regulator check` when unknown; the first slice of the generated figures | — | [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
+| `regulator unit accept` goes through the disposition-authority check its card claims | — | [#77](https://github.com/MetaCoding-io/regulator/issues/77) |
+| `regulator unit start` prints `pi -e` paths the host gives, not paths under the control plane that do not exist | — | [#79](https://github.com/MetaCoding-io/regulator/issues/79) |
 
 0.2 is done when the live report is committed, every row above is struck or moved to
 "not planned" with a reason, and `regulator review --due` is clean at the first review
@@ -67,6 +70,29 @@ polled.*
 Alongside: a contributor pathway ([`CONTRIBUTING.md`](CONTRIBUTING.md), issue templates
 for a bug, a debt row and a proposal), and the course's first cohort pinned to a release
 tag.
+
+## Threads — designed, not yet scheduled
+
+Work that has a design note but no issue yet. Each row points at the note that holds
+the design and names the one next step, so a thread can be picked up without rereading
+the conversation that started it. A row leaves this table when its first slice becomes
+an issue in a milestone above and nothing designed is left behind it, or when it is
+dropped (the note's status says why). A thread with later slices keeps its row and
+names the issue its current slice is in.
+
+| Thread | Design | State | Next step | Fits |
+| --- | --- | --- | --- | --- |
+| The system's figures generated from the definition: the loop, the session's gates, the workload, the recovery lattice, the unit lifecycle, who writes where — as views in the control room beside the six-column topology, in the docs by `regulator docs --write`, copied by the website | [open questions §1](docs/research/2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects) | decided; first slice scheduled | Enforcement points as a typed field ([#76](https://github.com/MetaCoding-io/regulator/issues/76)); every figure depends on it. After it: the generator and `regulator docs --write` | 0.2 |
+| Documentation and website gaps: wrong CLI facts, missing concept and reference pages, the website's links into the docs | [docs and site gaps §7](docs/research/2026-09-25-docs-and-site-gaps.md#7-suggested-order) | work list, partly landed: the product bug and two of §1's facts are fixed (707f4d7), the third is [#77](https://github.com/MetaCoding-io/regulator/issues/77); `concepts/obligations.md` exists | Re-verify §2–§4 against `main` and strike what has landed, then take §7's order from where it stands | beside #45 |
+| A person can raise S4 intelligence; sensors declared in the definition | [open questions §2](docs/research/2026-09-25-open-questions.md#2-a-person-should-be-able-to-create-s4-intelligence) | proposed | `regulator intelligence report --by …` writing the same `intelligence-signal` under `human:<name>` provenance | 0.3, beside #59 |
+| Units that run a program, not a session | [open questions §3](docs/research/2026-09-25-open-questions.md#3-must-every-unit-run-a-pi-session) | answered: the dispatcher seam already allows it | A `command` runner per unit type in the workload definition | 0.3, beside #58 |
+| Predictive S4: predictions as intelligence signals that resolve and are graded on calibration | [open questions §4](docs/research/2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then) | exploratory | Waits on the live eval report (#46); then an instrument record kind in the registry | after 0.2 |
+| ArticleMiner as a knowledge-production workload | [ArticleMiner note §5](docs/research/2026-09-25-articleminer-knowledge-production.md#5-phases-against-the-features) | proposed, in phases | Phase 1: declared checks for non-Node domains (§4.1) | 0.3, under #61 |
+| A homelab control plane, designed with its infrastructure | [homelab note §7](docs/research/2026-09-27-homelab-control-plane.md#7-architectural-conflicts) | design note; ten of thirteen decisions made (§9) | Choose the file service (§9, decision 11); then stage 0 in a separate homelab repository | unscheduled |
+| The control room accepts the CLI's dispositions | [open questions §5](docs/research/2026-09-25-open-questions.md#5-should-the-control-room-write) | deferred: the control room stays read-only for now | None until reopened | — |
+
+The open questions' backlog (§6) holds smaller items with no design yet; one becomes a
+row here when it gets one.
 
 ## Not planned
 
@@ -91,9 +117,31 @@ material in the course, not a dependency.
 
 ## How this page is kept
 
-- An item moves here from a card's limitation or a debt row with an issue number; the
-  issue carries the acceptance criteria and the rows it pays.
-- The change that pays a row strikes it in `DEBT.md`, updates the card, and removes the
-  item here in the same pull request.
+This section is how work is tracked in this repository, for people and for agents;
+`AGENTS.md` and `CONTRIBUTING.md` point here rather than restate it.
+
+Work moves through four places, one per stage, and each thing is written in one of them:
+
+| Stage | Where | What it holds |
+| --- | --- | --- |
+| An idea or a question | [`docs/research/2026-09-25-open-questions.md`](docs/research/2026-09-25-open-questions.md) (running), or a note of its own under [`docs/research/`](docs/research/) when it has one source | the design, and why |
+| A gap a card already names | a row in [`docs/DEBT.md`](docs/DEBT.md) | what is owed, and which card says so |
+| Designed, with a next step | a row in the threads table above | the order and the one next step |
+| Scheduled | a GitHub issue with a `roadmap:0.x` label, and a row in that milestone's table | the acceptance criteria and the rows it pays |
+
+- A design that comes up in conversation is written into a note before it is acted on;
+  a decision taken in conversation is recorded in the note it decides (a
+  "Decided (date)" paragraph), not only in the chat.
+- A note that names a next step gets a threads row in the same change. When that step
+  becomes an issue, the issue joins a milestone table and the threads row names it; the
+  row leaves when nothing designed is left behind it.
+- An issue is written as *What* (the gap, citing the file), *Why* (the note or row it
+  comes from), *Debt paid* when it pays rows, and *Done when* (checks a reviewer can
+  run), and ends with its roadmap line. Labels: `roadmap:0.x`, plus `bug`,
+  `good first issue` or `proposal` where they apply.
+- Before an issue is filed from a work list, the list is re-checked against `main`:
+  lists go stale, and an item already fixed is struck in the note, not filed.
+- The change that lands an issue removes its row from the milestone table, strikes what
+  it pays in `DEBT.md` and the note, and updates the card, in the same pull request.
 - A milestone closes with a changelog entry and a tag; the next milestone's list is
   reviewed at that point, not before.

@@ -1,11 +1,11 @@
 ---
 layout: home
 title: regulator
-titleTemplate: A cybernetic control plane for coding agents
+titleTemplate: A cybernetic control plane for agents
 
 hero:
   name: regulator
-  text: A control plane for coding agents
+  text: A control plane for agents
   tagline: An orchestrator on Pi that applies Stafford Beer's Viable System Model as a control architecture. Prompts advise. Types describe. Gates enforce.
   actions:
     - theme: brand

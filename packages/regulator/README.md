@@ -11,7 +11,7 @@ registry records.
 - **Run it:** [`OPERATING.md`](OPERATING.md) — install (this package for the CLI, `pi install ./packages/regulator-pi` for the Pi host),
   install into a repository (`regulator init`), the CI entry point (`regulator
   doctor`), upgrading, the security posture, and who owns what.
-- **Learn it:** the course, [Viable Agents](https://github.com/MetaCoding-io/viable-agents-course), one lesson per module; the [glossary](../../docs/GLOSSARY.md) and the [pathology catalog](../../docs/PATHOLOGIES.md) are public.
+- **Learn it:** the course, [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), one lesson per module; the [glossary](../../docs/GLOSSARY.md) and the [pathology catalog](../../docs/PATHOLOGIES.md) are public.
 - **Check it:** `pnpm check` from the repository root; `node dist/registry-cli.js
   check` for the definition alone.
 - **Second workload:** `workload/personal-finance.json` over `fixture-finance/`, with

@@ -9,7 +9,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted,
   type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
 import { readIdentity, type IdentitySet } from "./identity.js";
@@ -81,7 +81,7 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         // A contracted unit closes only by reporting: a profile that does not grant the report tool makes every unit of
         // the type end as no-report (found by the first live drift run, 0.1.2). The grant is the profile's to declare.
         else if (type.requiresContract && !profile.tools.includes("report_result")) {
-          problem(`workload/${file}`, `unit type "${type.name}" runs under a contract but its profile "${type.profile}" does not grant report_result: no unit of this type could ever close`);
+          problem(`workload/${file}`, `unit type "${type.name}" runs under a contract but its profile "${type.profile}" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)`);
         }
         for (const check of type.checks) {
           if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`workload/${file}`, `unit type "${type.name}" names check "${check}", which the host does not run (known: ${HOST_CHECK_NAMES.join(", ")})`);
@@ -152,6 +152,8 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       assertValid(EvalReportSchema, value, `eval report ${file}`);
       out.reports.push(value);
       if (!out.evals.some((s) => s.name === value.suite.name)) problem(`evals/reports/${file}`, `reports on suite "${value.suite.name}", which evals/ does not declare`);
+      // The number is never the conclusion: a committed report without a person's reading of it is a table, not evidence.
+      if (isUninterpreted(value)) problem(`evals/reports/${file}`, `carries the placeholder interpretation ("${UNINTERPRETED_MARKER}", by "${value.interpretedBy}"); re-run with --interpretation <file> --by <who>, or do not commit it`);
     } catch (error) {
       problem(`evals/reports/${file}`, (error as Error).message);
     }

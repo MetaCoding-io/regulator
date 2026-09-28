@@ -1,6 +1,6 @@
 # Contributing
 
-`regulator` is a coding-agent harness with a cybernetic control plane. Contributions
+`regulator` is an agent harness with a cybernetic control plane. Contributions
 that fit are mechanisms, evidence and documentation; the prime directive applies to
 every one of them:
 
@@ -13,8 +13,12 @@ asked to move it down the hierarchy.
 
 ## Where to start
 
-- [`ROADMAP.md`](ROADMAP.md) maps the open work to issues. Issues labelled
-  `good first issue` are bounded and self-contained.
+- [`ROADMAP.md`](ROADMAP.md) maps the open work to issues, and its threads table lists
+  work that is designed but not yet scheduled, each with its next step. Issues labelled
+  `good first issue` are bounded and self-contained. How work moves from an idea to an
+  issue is its last section, "How this page is kept".
+- [`docs/research/`](docs/research/) holds the design notes behind the threads,
+  including a running list of open questions.
 - [`docs/DEBT.md`](docs/DEBT.md) is what the build knows it has not yet absorbed, one
   row each, with the registry card that records it.
 - [`AGENTS.md`](AGENTS.md) is the project's own operating rules — the architectural

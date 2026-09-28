@@ -64,6 +64,10 @@ export function createContractExtension(options: ContractExtensionOptions = {}):
         return;
       }
       pi.appendEntry(CONTRACT_ENTRY_TYPE, contract);
+      // A contracted unit must be able to report, whatever the profile lists: the profiles extension has already set
+      // the surface (it loads first), so report_result joins it here. A session with no contract never gets it.
+      const active = pi.getActiveTools();
+      if (!active.includes("report_result")) pi.setActiveTools([...active, "report_result"]);
       ctx.ui.setStatus("contract", `contract: ${contract.id} v${contract.version}`);
     });
 

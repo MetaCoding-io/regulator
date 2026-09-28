@@ -83,6 +83,33 @@ rule, lesson 10).
 Nothing in the instance is configuration: `.regulator/` holds records, the manifest and
 the outbox, and a person edits none of it by hand.
 
+## Customizing the definition
+
+The definition ships with the package and is read from there. Nothing in an instance
+overrides it by being edited in place; a change is a file you pass, so it is visible on
+the command line and in the record.
+
+| To change | Pass | To which commands |
+| --- | --- | --- |
+| budgets and model routes | `--policy <file>` (a copy of `policies/default.json`) | `unit drive`, `unit dispatch`, `unit route`; `REGULATOR_POLICY` for a session run by hand |
+| what S3 does with a blocked unit | `--recovery <file>` (a copy of `policies/recovery.json`) | `unit drive`, `unit route` |
+| what becomes an obligation, for whom, and what vetoes | `--routing <file>` (a copy of `policies/routing.json`) | `unit drive`, `unit dispatch`, `unit route`, `unit close` |
+| who may answer, timeouts, reminders, attention | `--interaction <file>` (a copy of `policies/interaction.json`) | every command that takes `--by`, and `answer`, `remind`, `watch`, `unit route`, `unit close`; `REGULATOR_INTERACTION_POLICY` for a session run by hand |
+| the identity seed, profiles, workloads, registry | a forked definition directory | `init --definition <dir>`; `identity promote --definition <dir>`; `status --definition <dir>`; `doctor --definition <dir>` |
+
+A copied policy keeps its `name` and bumps its `version`; the read model and the
+eval fingerprint record which version ran. The shipped interaction policy names
+`course-lab`, `alice` and `bob`; a team's first change is a copy with its own people
+(see [getting started](../../docs/guide/getting-started.md#declare-who-may-answer)).
+
+A forked definition is the way to change what a copied policy cannot: the identity
+seed's invariants and glossary for your domain, a profile's grant, a workload's unit
+types, a registry record. Copy the package's definition directory, change it, run its
+check (`node dist/registry-cli.js check` in the copy, or `regulator doctor --definition
+<dir>`), and initialize instances from it. The worked example under
+[`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) is a fork
+of exactly this kind.
+
 ## Headless and CI
 
 - `regulator doctor --json` — runtime, git, the Pi pin against what is installed, the

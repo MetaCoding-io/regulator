@@ -6,7 +6,8 @@ import { defineConfig } from "vitepress";
  * The site is the `docs/` directory rendered as-is, plus what `scripts/generate.mjs`
  * writes into `docs/generated/` from the product (the CLI usage table, the registry
  * documents, the operating note, the changelog). Generated pages are rewritten to
- * their place in the sidebar; `docs/archive/` is design history and is not built.
+ * their place in the sidebar; `docs/archive/` (design history) and `docs/research/` (design
+ * notes on what comes next) are not built.
  *
  * A relative link that leaves `docs/` — a source file, a fixture, a definition file —
  * becomes a link into the repository on GitHub, so the same Markdown reads on GitHub
@@ -15,15 +16,17 @@ import { defineConfig } from "vitepress";
 const DOCS = fileURLToPath(new URL("..", import.meta.url));
 const ROOT = path.resolve(DOCS, "..");
 const REPO = "https://github.com/MetaCoding-io/regulator";
+/** Directories under `docs/` the site does not build; a link into one goes to GitHub. */
+const OFF_SITE = ["archive", "research"];
 
 export default defineConfig({
   title: "regulator",
-  description: "A coding-agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
+  description: "An agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
   base: "/regulator/",
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
-  srcExclude: ["archive/**", "README.md"],
+  srcExclude: [...OFF_SITE.map((dir) => `${dir}/**`), "README.md"],
   rewrites: {
     "generated/cli.md": "reference/cli.md",
     "generated/regulators.md": "reference/regulators.md",
@@ -42,23 +45,29 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/control-plane" },
       { text: "Reference", link: "/reference/cli" },
       { text: "Project", link: "/project/roadmap" },
-      { text: "Course", link: "https://github.com/MetaCoding-io/viable-agents-course" },
+      { text: "Course", link: "https://metacoding-io.github.io/regulator-website/index.html" },
     ],
     sidebar: [
       {
         text: "Guide",
+        collapsed: false,
         items: [
           { text: "Getting started", link: "/guide/getting-started" },
           { text: "Running units", link: "/guide/running-units" },
+          { text: "The control room", link: "/guide/control-room" },
           { text: "Operating", link: "/guide/operating" },
           { text: "Worked example: a household ledger", link: "/examples/personal-finance" },
         ],
       },
       {
         text: "Concepts",
+        collapsed: false,
         items: [
           { text: "The control plane", link: "/concepts/control-plane" },
           { text: "Definition, instance, domain", link: "/concepts/definition-and-instance" },
+          { text: "Obligations", link: "/concepts/obligations" },
+          { text: "Intelligence and memory", link: "/concepts/intelligence-and-memory" },
+          { text: "Evidence about the regulators", link: "/concepts/evidence-about-the-regulators" },
           { text: "Architecture", link: "/ARCHITECTURE" },
           { text: "Glossary", link: "/GLOSSARY" },
           { text: "Pathologies", link: "/PATHOLOGIES" },
@@ -67,10 +76,12 @@ export default defineConfig({
       },
       {
         text: "Reference",
+        collapsed: false,
         items: [
           { text: "CLI", link: "/reference/cli" },
           { text: "Definition files", link: "/reference/definition" },
           { text: "Instance layout", link: "/reference/instance" },
+          { text: "Session tools", link: "/reference/tools" },
           { text: "Host checks", link: "/reference/host-checks" },
           { text: "Regulators", link: "/reference/regulators" },
           { text: "Enforcement boundary", link: "/reference/boundary" },
@@ -78,6 +89,7 @@ export default defineConfig({
       },
       {
         text: "Project",
+        collapsed: false,
         items: [
           { text: "Roadmap", link: "/project/roadmap" },
           { text: "Changelog", link: "/project/changelog" },
@@ -110,7 +122,7 @@ export default defineConfig({
         if (href && file && !/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(href)) {
           const [target, hash] = href.split("#");
           const absolute = path.resolve(path.dirname(file), target!);
-          if (!absolute.startsWith(DOCS) || absolute.startsWith(path.join(DOCS, "archive"))) {
+          if (!absolute.startsWith(DOCS) || OFF_SITE.some((dir) => absolute.startsWith(path.join(DOCS, dir)))) {
             const relative = path.relative(ROOT, absolute).split(path.sep).join("/");
             token.attrSet("href", `${REPO}/blob/main/${relative}${hash ? `#${hash}` : ""}`);
           }

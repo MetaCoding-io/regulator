@@ -20,9 +20,10 @@ tests is a claim beside the evidence, never the evidence.
 - **Not a sandbox.** The checks read the worktree at a revision; they do not confine the
   session. Real isolation is the operating system's or a container's, and the
   [enforcement boundary](/reference/boundary) lists what each gate does not cover.
-- **Not the model's review.** A `verify` unit may also read the diff and report; that is
-  a `model-judgment` layer on top of the checks, recorded as an audit finding and routed
-  like one.
+- **Not the model's review.** A `verify` unit may also read the diff and say what it found
+  in its result report; that is a `model-judgment` layer on top of the checks, and what it
+  reports as an emergent decision, a deviation or a residual uncertainty is routed like
+  any other report finding.
 - **Not a criterion no host can observe.** An expectation of class `semantic` or `model`
   without a content check waits for `unit accept <id> <criterion> --by <who>`; the
   acceptance is recorded beside the verdict, not folded into it.
