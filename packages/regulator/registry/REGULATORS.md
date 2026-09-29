@@ -2,6 +2,16 @@
 
 Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by hand.
 
+Every regulator in the control plane has a record here: the failure it absorbs, the level of the mechanism hierarchy it
+works at (a type, a deterministic gate, a typed tool, model judgment, or prompt advice), where in the code it bites,
+the tests that show it, what it may and may not do, and — the field that matters most — what it does not catch. A gate
+with no stated limitation does not pass `regulator check`; the limitations are collected into `BOUNDARY.md`, the
+enforcement boundary. Each record also names the switch that turns it off for an eval arm, the condition under which it
+would be retired, and the date by which a person reviews it; `regulator review --due` lists what is owed.
+
+The table is the index; the cards below it, one per record, are the source of truth for what each regulator does and
+does not do. `since` is the package version that first shipped the record.
+
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
 | `reg.algedonic.delivery.v1` | Algedonic delivery | S5 | deterministic-gate | active | 2026-12-01 |
@@ -32,7 +42,8 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 | `reg.control.obligation-router.v1` | Obligation router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.outbox-watcher.v1` | Outbox watcher | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.pause-gate.v1` | Pause gate | S3 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | retired | 2026-12-01 |
+| `reg.audit.pre-merge-trial.v1` | Pre-merge trial | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.progression-veto.v1` | Progression veto | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
@@ -50,13 +61,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Algedonic delivery
 
-`reg.algedonic.delivery.v1` · S5 · deterministic-gate · active · introduced in M13
+`reg.algedonic.delivery.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Put what is owed to a person in front of one. Every open obligation whose consumer is human and that nothing has delivered is written to the owner's outbox — the same file `notify_owner` uses, an effect that cannot be unsent — through the effect journal under an idempotency key, once, at every step of the loop and on `regulator signals route`; the delivery is recorded on the obligation. `regulator remind` delivers again every obligation owed to a person whose last delivery is older than the policy's reminder interval, marked as a reminder. Delivery is not a disposition: the obligation stays open until a person answers.
 
 **Absorbs.** `owed-but-unseen` — The read model shows twelve obligations owed to a person; the person did not know, because nothing told them, and the units waited on nobody.
 
-**Mechanism.** `src/deliver.ts` at `deliverPending (undelivered → outbox, journaled, ledger.deliver)`, `remindDue (remindable → outbox, reminder)`, `routeAndDeliver in the loop`, `signals route / remind (CLI)`
+**Mechanism.** `src/deliver.ts` at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder), `cli:signals route` (deliverPending after routing), `cli:remind` (remindDue)
 
 **Channels.** consumes `obligation ledger (open, owed to a person, deliveries)`, `interaction policy (reminderAfterMs)` · emits `outbox line (deliver:<obligation>:<n>)`, `effect journal entry`, `obligation-delivered (channel outbox, reminder)`
 
@@ -90,13 +101,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Behaviour check (export-signature)
 
-`reg.audit.behaviour-check.v1` · S3* · deterministic-gate · active · introduced in M14
+`reg.audit.behaviour-check.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Observe a criterion by content, not by class. An evidence expectation may carry a check — `export-signature` names a module, an export and the parameter count it must keep — and at closeout the host imports the module in its own process at the unit's HEAD and reads the function. The record binds to that one criterion, so a passing suite that never exercises the behaviour cannot satisfy it, and a runtime-class criterion with host evidence no longer waits for a person: acceptance is asked only where no probe exists. The drift scenario's signature is the first behaviour-bound check; the mechanism is any expectation's to carry.
 
 **Absorbs.** `evidence-by-class` — The contract fixed slugify's signature; the unit added a second parameter with a default; every test still passed; the verdict was pass, because test-class evidence satisfied a test-class criterion and nothing looked at the export.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)`, `bindEvidence (criterion binding)`, `technicalVerdict (host evidence before acceptance for runtime criteria)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (export-signature: the probe run at HEAD, one result per carrying expectation), `loop:auditUnit` (bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria)
 
 **Channels.** consumes `contract expectations that carry a check`, `the worktree at HEAD` · emits `evidence record (class runtime, bound to the criterion)`
 
@@ -129,13 +140,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Budget guard
 
-`reg.control.budget-guard.v1` · S3 · deterministic-gate · active · introduced in M07
+`reg.control.budget-guard.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
-**Mechanism.** `../regulator-pi/src/budget.ts` at `session_start (ledger written, or resumed on an attempt already metered)`, `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `host:session_start` (ledger written, or resumed on an attempt already metered), `host:turn_end` (ctx.abort), `host:tool_call`, `loop:runUnit` (close: budget-exhausted attempt)
 
 **Channels.** consumes `policy (budgets)`, `message_end usage`, `model_select` · emits `budget ledger (execution store)`
 
@@ -171,13 +182,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Canary watch
 
-`reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · introduced in M10
+`reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_result (redact)`, `message_end (record)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `host:tool_result` (redact), `host:message_end` (record)
 
 **Channels.** consumes `tool_result`, `message_end`, `.regulator/canaries` · emits `audit-finding → S3 (secret-exposure, critical)`
 
@@ -209,13 +220,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Closeout gate
 
-`reg.audit.closeout-gate.v1` · S3* · deterministic-gate · active · introduced in M09
+`reg.audit.closeout-gate.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Refuse to close a unit unless the harness's own evidence says its contract is met: after a valid result report, run the checks the workload names for the unit type with the orchestrator's process runner against the unit's committed revision, bind every result to the unit, attempt, contract, revision, environment and the criteria it speaks to, append it to the audit log, and derive the technical verdict from the evidence that is fresh for that revision — plus a human acceptance for each required criterion no check can observe. Missing, stale, failing or contradicted evidence blocks closeout; the report's claims satisfy nothing.
 
 **Absorbs.** `self-certified-completion` — The unit says the tests pass. Nothing ran them, or they ran three commits ago, or they ran and failed and the report says otherwise; the loop closes on the sentence.
 
-**Mechanism.** `src/controller.ts` at `auditUnit (after the report check, before reintegration)`, `closeUnit (re-audit without an attempt)`
+**Mechanism.** `src/controller.ts` at `loop:auditUnit` (after the report check, before reintegration), `loop:closeUnit` (re-audit without an attempt)
 
 **Channels.** consumes `result report`, `workload unit-type checks`, `worktree at HEAD`, `human acceptance (audit log)` · emits `evidence record (audit log)`, `technical verdict (audit log)`, `audit-finding → S3 (closeout refused)`
 
@@ -252,13 +263,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Contract advice section
 
-`reg.control.contract-advice.v1` · S3 · prompt · active · introduced in M06
+`reg.control.contract-advice.v1` · S3 · prompt · active · since 0.1.0
 
 **Purpose.** Render the governing contract — fixed, delegated, unresolved, expected evidence, and the obligation to call report_result — as a system-prompt section, so the unit knows what freedom it has. This is advice: it changes what the model is told, not what it can do.
 
 **Absorbs.** `uninformed-unit` — The gates refuse a bad report, but a unit that never saw the allocation produces one by accident and burns an attempt learning the contract from refusals.
 
-**Mechanism.** `../regulator-pi/src/contract.ts` at `before_agent_start`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `host:before_agent_start`
 
 **Channels.** consumes `work contract (S3)` · emits nothing
 
@@ -285,13 +296,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Contract-preserving compaction
 
-`reg.control.contract-preserving-compaction.v1` · S3 · model-judgment · active · introduced in M07
+`reg.control.contract-preserving-compaction.v1` · S3 · model-judgment · active · since 0.1.0
 
 **Purpose.** Replace the default compaction summary with a deterministic block — the contract's identity and allocation, the evidence gathered so far, the files touched — followed by a model summary of the conversation when one is available. What the loop needs to continue never depends on the summary being good.
 
 **Absorbs.** `compaction-amnesia` — After a threshold compaction the unit no longer knows which decisions were fixed, which were unresolved, or what it already proved; it re-does settled work or quietly violates a constraint the summary dropped.
 
-**Mechanism.** `../regulator-pi/src/budget.ts` at `session_before_compact`, `session_compact`, `session_compact_failed`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `host:session_before_compact`, `host:session_compact`, `host:session_compact_failed`
 
 **Channels.** consumes `work contract`, `budget ledger`, `compaction preparation (messages, file ops)` · emits `compaction entry`
 
@@ -325,13 +336,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Definition check
 
-`reg.identity.definition-check.v1` · S5 · deterministic-gate · active · introduced in M12
+`reg.identity.definition-check.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.
 
 **Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
 
-**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`, `checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)`
+**Mechanism.** `src/registry-cli.ts` at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)
 
 **Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
 
@@ -364,13 +375,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Disposition authority
 
-`reg.authority.disposition-authority.v1` · S5 · deterministic-gate · active · introduced in M13
+`reg.authority.disposition-authority.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Check who may disposition what before anything is written. The interaction policy names people with three grants — the highest severity they may disposition, whether they may resolve as accepted-risk, whether they may act as S5 — and every `--by` on the CLI (`answer`, `obligation ack|resolve|escalate`, `memory retract`, `unit accept`, `identity accept|reject`) is checked against it: a name not listed may disposition nothing, and a listed person is refused above their severity, for a risk they may not accept, or for an S5 decision they may not make. `answer` additionally refuses an option the question did not offer, and turns a consent answer into accepted or rejected by the protocol's rule, never by the person's wording.
 
 **Absorbs.** `disposition-by-anyone` — A critical algedonic obligation is resolved as accepted-risk by `--by intern`, honestly recorded and wrong: the record said who, and nothing said whether they could.
 
-**Mechanism.** `src/cli.ts` at `authorized() before every write that takes --by (checkDispositionAuthority)`, `answer (options check, dispositionForAnswer)`
+**Mechanism.** `src/cli.ts` at `cli:answer` (authorized() before every write that takes --by (checkDispositionAuthority); the options check and dispositionForAnswer), `cli:obligation ack`, `cli:obligation resolve`, `cli:obligation escalate`, `cli:memory retract`, `cli:unit accept` (at blocking: a criterion has no severity of its own), `cli:identity accept` (as S5), `cli:identity reject` (as S5), `cli:identity promote` (as S5)
 
 **Channels.** consumes `interaction policy (people)`, `the obligation's severity and concern` · emits `refusal (nothing written)`, `interaction-answered (channel cli)`, `obligation-resolved / acknowledged / escalated by a named, authorized person`
 
@@ -403,13 +414,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Doctor (the operating check)
 
-`reg.audit.doctor.v1` · S3* · deterministic-gate · active · introduced in M15
+`reg.audit.doctor.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** One headless pass over everything a person would check before trusting an installation, machine-readable, exit 1 on any problem: the Node floor, git, the Pi pin against what is installed, the registry check (with review dates) and the definition check, reviews due within thirty days, and — in an instance — the manifest, whether the instance was initialized under this definition revision, the identity's presence, the base's cleanliness, and what is owed, undelivered or holding the whole instance. The CI entry point, and the first command of the day.
 
 **Absorbs.** `works-on-my-laptop` — The definition was upgraded, a card's review date passed, the base had a stray file and an obligation nobody delivered was holding every unit — four things four people knew, none of them written where the next run would read them.
 
-**Mechanism.** `src/instance.ts` at `doctor (every check, ok or not, with its detail)`, `regulator doctor (exit code)`
+**Mechanism.** `src/instance.ts` at `cli:doctor` (every check, ok or not, with its detail; the exit code)
 
 **Channels.** consumes `the runtime`, `the definition`, `the instance's manifest, base and ledger` · emits `doctor report (JSON or text)`
 
@@ -441,13 +452,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Effect journal
 
-`reg.coordination.effect-journal.v1` · S2 · deterministic-gate · active · introduced in M08
+`reg.coordination.effect-journal.v1` · S2 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Make a side-effecting tool durable: write `intended` under an idempotency key before the effect and `committed` after; refuse to act again on a key that is committed or confirmed; on every session start reconcile each `intended` with no outcome against the world (confirmed or absent) before any new effect. A harness that loses its process between an effect and its record neither repeats the effect nor forgets it.
 
 **Absorbs.** `duplicated-effect` — The notification was sent, the process died before it wrote that down, the retry sends it again; or the sandbox vanished mid-unit and nobody knows whether the external operation happened.
 
-**Mechanism.** `../regulator-pi/src/recovery.ts` at `notify_owner (execute: begin/commit)`, `session_start (reconcile)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `tool:notify_owner` (execute: begin/commit), `host:session_start` (reconcile)
 
 **Channels.** consumes `tool call (notify_owner)`, `outbox (the world)` · emits `effect journal (.regulator/effects.ndjson)`
 
@@ -481,13 +492,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Eval harness and graders
 
-`reg.assurance.eval-harness.v1` · S3* · deterministic-gate · active · introduced in M14
+`reg.assurance.eval-harness.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Evidence about the regulators: lesson 09 one recursion level up. A suite declares the fixture, the tasks in order, the arms (which checkpoint extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose) and trajectory graders (the records: refusals, retries, escalations, invariant violations), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.
 
 **Absorbs.** `regulation-without-evidence` — Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves.
 
-**Mechanism.** `src/evals.ts` at `runSuite (one instance per arm × repetition, the tasks through driveUnit)`, `contractForArm / workloadForArm (an arm changes only what the definition declares)`, `graders.ts (outcome and trajectory graders, no judge model)`, `checkDefinition (suites and committed reports validate; ablation arms name their switch)`
+**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch)
 
 **Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
 
@@ -523,13 +534,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Evidence preflight
 
-`reg.control.evidence-preflight.v1` · S3 · deterministic-gate · active · introduced in M09
+`reg.control.evidence-preflight.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Stamp every run_tests and run_checks result with the revision it ran against and whether the tree was dirty, as a typed session entry and in the text the model sees; and block report_result before the report is written when it cites a test or command run that did not happen in this session, ran on another revision or a dirty tree, or did not pass. The cheap lie is refused where it is told.
 
 **Absorbs.** `claimed-evidence` — The report cites run_tests; run_tests never ran, or ran before the last edit, or ran and failed. Without a preflight the lie costs a full closeout audit to catch.
 
-**Mechanism.** `../regulator-pi/src/evidence.ts` at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)`
+**Mechanism.** `../regulator-pi/src/evidence.ts` at `host:tool_result` (run_tests, run_checks: provenance), `host:tool_call` (report_result: block)
 
 **Channels.** consumes `tool_result`, `tool_call (report_result)` · emits `evidence-provenance entry (session)`
 
@@ -562,13 +573,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Failure observer
 
-`reg.control.failure-observer.v1` · S3 · deterministic-gate · active · introduced in M08
+`reg.control.failure-observer.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Normalize every tool error and provider error in a session to a cause (environment, timeout, tool-error; a refused report_result is invalid-report) and append it to the unit's observations, so that an attempt that ends without a report is routed by what went wrong rather than by the fact that it went silent.
 
 **Absorbs.** `opaque-failure` — The transcript knows the tests could not load a module; the orchestrator only knows the unit did not report. Retrying is the wrong action and nothing in the record says so.
 
-**Mechanism.** `../regulator-pi/src/recovery.ts` at `tool_execution_end (isError)`, `agent_end (stopReason error)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `host:tool_execution_end` (isError), `host:agent_end` (stopReason error)
 
 **Channels.** consumes `tool_execution_end`, `agent_end` · emits `failure observation (execution store)`
 
@@ -600,13 +611,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Glossary lint
 
-`reg.audit.glossary-lint.v1` · S3* · deterministic-gate · active · introduced in M15
+`reg.audit.glossary-lint.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** The identity's glossary names the words this instance does not use, with the word to say instead (`## Words this instance does not use`: `- task, job, ticket (say unit)`). At closeout the host reads the branch's added comment lines under the writable prefixes and its commit messages for them; a hit is failing evidence of class command, bound to the command-class criteria. Identifiers in code are not read: a variable named `task` is the project's business, a comment that calls a unit a task is drift. The check lesson 14's sloppy report showed was missing.
 
 **Absorbs.** `vocabulary-drift` — Six units later the comments say task, the commit log says ticket, and a new reader cannot tell a unit from an obligation — the glossary was in every prompt and enforced by nothing.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)`, `parseForbiddenTerms (the glossary section)`, `auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch; parseForbiddenTerms reads the glossary section), `loop:auditUnit` (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)
 
 **Channels.** consumes `regulator/identity/GLOSSARY.md`, `the unit's branch` · emits `evidence record (class command)`
 
@@ -627,7 +638,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Limitations.**
 - A word list with a plural: `tasks` is caught, `tasking` and a synonym are not. Prose in the writable prefixes that is not a comment (a README under src/) is read line by line like a comment when a line carries a comment marker, and otherwise not at all.
-- It is blocking wherever the workload declares it: one word in a commit message costs an attempt. The drift suite's sloppy report shows the cost; making the commit-message half advisory is a workload's declaration to make, and none makes it yet (docs/DEBT.md row 36).
+- The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
@@ -639,13 +650,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Identity context
 
-`reg.identity.identity-context.v1` · S5 · prompt · active · introduced in M12
+`reg.identity.identity-context.v1` · S5 · prompt · active · since 0.1.0
 
 **Purpose.** Render the instance's identity set — IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md under regulator/identity/ — into every unit's system prompt from the files on each run, and current operational memory beside it as facts that expire. Identity never lives in the transcript: compaction cannot lose it, a fork cannot diverge from it, a model version cannot reinterpret it from memory. The dispatcher loads no context files from the worktree, so this is the identity a unit sees.
 
 **Absorbs.** `identity-in-context` — The rules the system runs by exist as a paragraph in a context window that gets compacted, forked and re-read by a different model; six months later the same harness is a different system and nobody changed a file.
 
-**Mechanism.** `../regulator-pi/src/identity.ts` at `before_agent_start (sections regulator_identity, regulator_memory)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `host:before_agent_start` (sections regulator_identity, regulator_memory; one advisory operational-signal per session when the rendering is truncated)
 
 **Channels.** consumes `regulator/identity/* (worktree)`, `memory store (current entries)` · emits `system-prompt sections`
 
@@ -662,12 +673,12 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - make identity binding (the gate and the closeout check do)
 - render expired memory
 
-**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/identity.test.ts`
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/identity.test.ts`, `src/instance.test.ts`
 
 **Limitations.**
 - Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.
 - The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.
-- Rendering is truncated at 6000 characters; an identity set longer than that is partly advice the model never sees, and the status line does not say so.
+- Rendering is truncated at 6000 characters, a constant and not a policy field; a set longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the files cut, the session's status line says so, and one advisory operational-signal per session records it on the unit — and refuses nothing: shortening the set is a person's decision.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -678,13 +689,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Identity promotion (the release path)
 
-`reg.authority.identity-promotion.v1` · S5 · deterministic-gate · active · introduced in M15
+`reg.authority.identity-promotion.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** An identity decision accepted in an instance (`regulator identity accept`) changes that instance's copy; the definition's seed, which every later `init` starts from, is a file in the definition's repository. `regulator identity promote <file>.md` is the release path: run by a person the interaction policy lets act as S5, it copies the instance's identity file into the definition's seed, refuses a promotion that would leave the seed's identity set invalid or that changes nothing or that lands on a dirty definition, and commits in the definition's repository citing the instance and its revision. The S5 decision path (lesson 12) decides for an instance; this carries the decision to the definition, once, on the record.
 
 **Absorbs.** `decision-stays-in-one-instance` — INV-005 was proposed, decided and committed in one instance; the next fixture started from the seed without it, and the decision had to be made again — or was forgotten.
 
-**Mechanism.** `src/cli.ts` at `identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)`
+**Mechanism.** `src/cli.ts` at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)
 
 **Channels.** consumes `the instance's regulator/identity/<file>`, `the definition's identity/ seed`, `the interaction policy's people` · emits `a commit in the definition's repository`
 
@@ -718,13 +729,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Identity-untouched check
 
-`reg.audit.identity-untouched-check.v1` · S3* · deterministic-gate · active · introduced in M12
+`reg.audit.identity-untouched-check.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the identity and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
 
 **Absorbs.** `committed-around-the-gate` — A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration)
 
 **Channels.** consumes `worktree branch vs base`, `protected prefixes (identity + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
 
@@ -756,13 +767,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Identity write gate
 
-`reg.authority.identity-write-gate.v1` · S5 · deterministic-gate · active · introduced in M10
+`reg.authority.identity-write-gate.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Refuse every write or edit that would touch the instance's identity (regulator/identity/), the committed S5 artifacts, the project's protected paths, or any of their parents — through any spelling Pi expands, any traversal, and any filesystem alias (symbolic link, hard link, non-directory parent) — and execute exactly the normalized path that was checked. For bash, which no hook can sandbox, snapshot the protected files before the command and restore them after: a change is reverted from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001.
 
 **Absorbs.** `identity-mutation` — The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `host:tool_call` (write, edit: prepareWritePath), `host:tool_call` (bash: snapshot), `host:tool_result` (bash: restore and report)
 
 **Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
 
@@ -798,13 +809,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Inherited tests check
 
-`reg.audit.inherited-tests-check.v1` · S3* · deterministic-gate · active · introduced in M09
+`reg.audit.inherited-tests-check.v1` · S3* · deterministic-gate · active · since 0.1.0
 
 **Purpose.** The suite that judges a unit is the one it inherited: the test files and package.json at the branch point (the merge base of the unit's branch and the base), not whatever the base has become since — a change that landed after the branch is the post-merge check's business. At closeout the host stages that suite over the unit's committed tree and runs it, and runs the same suite against the branch point's own tree: a test that fails on both is the project's known issue, one that passed there and fails now is the unit's regression. It also compares each inherited test file at HEAD with the branch point by test and assertion lines: a file deleted or shrunk on the branch is a failing check. A unit may add cases under test/; it may not weaken the cases that were there, and its own run_tests says nothing about them. A contract exempts, by an expectation carrying an inherited-tests check, the files whose expectations it changes on purpose.
 
 **Absorbs.** `self-weakened-verification` — The unit cannot make the failing test pass, so it makes the test stop failing: an assertion rewritten to the current output, a case deleted, a file removed. Its report cites run_tests passing, which is true of the suite it left behind, and the closeout that trusts that run closes a defect as fixed.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts), `loop:auditUnit` (the base branch from the repository; exemptions from the contract's expectations)
 
 **Channels.** consumes `the base ref and its test/ tree`, `the unit's committed tree`, `expectations carrying an inherited-tests check (exemptions)` · emits `evidence record (class test; bound to the carrying criterion when the contract has one, else to every test criterion)`
 
@@ -840,13 +851,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Instance manifest (regulator init)
 
-`reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · introduced in M15
+`reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Install the definition into a repository as a declaration. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity, ignores `.regulator/`, records canaries from a committed `.env`, commits the identity on the base branch, and writes `.regulator/instance.json`: which definition, at which harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
-**Mechanism.** `src/instance.ts` at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)`
+**Mechanism.** `src/instance.ts` at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)
 
 **Channels.** consumes `a git repository`, `the definition (registry, identity seed, package pin)`, `a person's declaration` · emits `.regulator/instance.json`, `a commit on the base branch (identity, .gitignore)`, `.regulator/canaries`
 
@@ -881,13 +892,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Intelligence intake
 
-`reg.intelligence.intelligence-intake.v1` · S4 · typed-tool · active · introduced in M11
+`reg.intelligence.intelligence-intake.v1` · S4 · typed-tool · active · since 0.1.0
 
 **Purpose.** Give a research unit exactly one way to say what it found out about the environment: report_intelligence, a typed tool that records an intelligence-signal (S4 → S3) in the regulatory log — claim, observation, evidence, confidence, recency, expiry, affected units — with the unit, revision and time as provenance the model does not supply. It changes nothing: no unit, no policy, no file. A research unit runs like any unit — its own contract, budget, model route and profile, dispatched by S3 — so intelligence has a source, a cost and a boundary.
 
 **Absorbs.** `intelligence-as-authority` — A research finding is written straight into the plan, the code or the policy: the advisory that was true last month rewrites working code this month, and nobody can say who decided.
 
-**Mechanism.** `../regulator-pi/src/intelligence.ts` at `report_intelligence (tool execute)`
+**Mechanism.** `../regulator-pi/src/intelligence.ts` at `tool:report_intelligence` (execute)
 
 **Channels.** consumes `tool call (report_intelligence)`, `lease (unit provenance)`, `worktree HEAD (revision provenance)` · emits `intelligence-signal → S3 (regulatory log)`, `regulator:intelligence (session entry)`
 
@@ -922,13 +933,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Interaction contract (ask_human)
 
-`reg.algedonic.interaction-contract.v1` · S5 · typed-tool · active · introduced in M13
+`reg.algedonic.interaction-contract.v1` · S5 · typed-tool · active · since 0.1.0
 
 **Purpose.** Give a unit one typed way to interrupt a person, `ask_human`, under an interaction kind whose contract is fixed in the protocol: a recap offers decisions for correction and continues; choice, clarification and uat wait; consent asks authorization for an irreversible action and nothing but a yes is a yes. Every call opens an obligation owed to a person before anything is asked, records the request and its outcome (answered, timed out, cancelled, unavailable) beside it, and — with a person present — asks through Pi's dialogs with the policy's timeout for the kind. An answer given in the dialog is recorded as that person's disposition on the spot; consent needs a stated action, choice needs options, and a blocking question past the policy's attention budget is refused. The algedonic channel of VSM: from the unit straight to the person, bypassing the loop, typed.
 
 **Absorbs.** `silence-as-consent` — A unit asks whether it may force-push, nobody is there, and it proceeds because the prompt said to 'use judgment' — or it asks five times per attempt until the person stops reading. The question and the non-answer were never a record anyone could act on.
 
-**Mechanism.** `../regulator-pi/src/algedonic.ts` at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `tool:ask_human` (execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout)
 
 **Channels.** consumes `tool call (ask_human)`, `interaction policy (timeouts, attention)`, `lease (unit provenance)`, `ctx.hasUI / ctx.mode (channel)` · emits `obligation-opened (interaction, owed to a person)`, `interaction-requested / interaction-answered`, `obligation-resolved (answered in the session)`, `regulator:interaction (session entry)`
 
@@ -964,13 +975,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Operational memory store
 
-`reg.control.memory-store.v1` · S3 · typed-tool · active · introduced in M12
+`reg.control.memory-store.v1` · S3 · typed-tool · active · since 0.1.0
 
 **Purpose.** Give units one typed way to record what they learn about the environment — remember — into an append-only store separate from identity and from evidence. Every entry carries host-stamped provenance (unit, revision, time) and a required review-by date within the store's limit, after which it is expired: shown by the read model, rendered to no unit. A retraction is an appended event by a named person. Nothing here can reach an identity file (INV-004).
 
 **Absorbs.** `memory-becomes-policy` — A note that tests need FOO=1 is written into AGENTS.md as a temporary reminder; a year later it is an undocumented rule nobody can date, source or retire.
 
-**Mechanism.** `../regulator-pi/src/identity.ts` at `remember (tool execute)`, `MemoryStore.record (expiry bounds)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `tool:remember` (execute; MemoryStore.record bounds the expiry)
 
 **Channels.** consumes `tool call (remember)`, `lease (unit provenance)`, `worktree HEAD (revision)` · emits `memory-recorded / memory-retracted (.regulator/memory.ndjson)`, `regulator:memory (session entry)`
 
@@ -1004,13 +1015,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Model router
 
-`reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
+`reg.control.model-router.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session on the same attempt. Nothing outside the route is ever tried, every model an attempt ran on is in its one ledger, and a halt by the budget guard is not a failure to fail over from.
 
 **Absorbs.** `single-model-dependence` — A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why.
 
-**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `piDispatcher (model choice, failover)`, `attemptEnd (halt vs provider failure, from the ledger)`, `model_select (ledger)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `host:dispatcher` (piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger), `host:model_select` (ledger)
 
 **Channels.** consumes `policy (models)`, `model availability (ModelRuntime)`, `budget ledger (exhausted)` · emits `budget ledger models[]`
 
@@ -1044,13 +1055,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Obligation router
 
-`reg.control.obligation-router.v1` · S3 · deterministic-gate · active · introduced in M11
+`reg.control.obligation-router.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Route every message the instance records — findings, proposals, coordination and operational signals, uncertainty, intelligence, escalations — under the versioned routing policy: at or above the policy's line for its kind it opens an obligation for the named consumer (S3, S5 or a person) with the router's effective severity; below it, or with no rule, it is noted with the reason and stays trace. Recovery decisions the loop cannot apply open the obligation the unit waits on, and S3's own decision dispositions what S3 was routed. State is the fold of appended events: open → acknowledged → resolved | escalated | superseded, terminal records never reopen, an escalation always has a successor.
 
 **Absorbs.** `signal-into-a-log` — A recovery decision, a proposal, an escalation or a finding is recorded and then nothing: nobody is named as owing a response, nothing reminds anyone, and the unit either waits forever or is quietly moved on.
 
-**Mechanism.** `src/controller.ts` at `runUnit (after the session, after the audit, after the report's signals)`, `closeUnit (after the audit)`, `routeUnit (before and after the recovery decision)`, `regulator signals route`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (after the session, after the audit, after the report's signals), `loop:closeUnit` (after the audit), `loop:routeUnit` (before and after the recovery decision), `cli:signals route`
 
 **Channels.** consumes `every message kind (regulatory log)`, `recovery decision`, `routing policy` · emits `obligation-opened / -acknowledged / -resolved / -escalated / -superseded (regulatory log)`, `message-noted (regulatory log)`
 
@@ -1088,13 +1099,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Outbox watcher
 
-`reg.algedonic.outbox-watcher.v1` · S5 · deterministic-gate · active · introduced in M15
+`reg.algedonic.outbox-watcher.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** The process a quiet instance was missing. `regulator watch` ticks on an interval (or once, for CI): delivers what is pending, reminds what is due under the interaction policy, and forwards every outbox line it has not forwarded yet to the channel command the deployment names — mail, chat, a webhook — with the line as the command's last argument, remembering how far it got in a cursor file so a restart forwards nothing twice and a failed forward moves nothing. The outbox stays the record; the channel is the deployment's.
 
 **Absorbs.** `owed-and-nobody-running` — Lesson 13 delivered to the outbox at the loop's steps and on demand; an instance where nothing ran for a week reminded nobody, and an obligation owed to a person sat in a file nobody opened.
 
-**Mechanism.** `src/deliver.ts` at `watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)`, `regulator watch (once, or the loop)`
+**Mechanism.** `src/deliver.ts` at `cli:watch` (watchOutbox tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded; --once, or the loop)
 
 **Channels.** consumes `the obligation ledger`, `the outbox`, `.regulator/outbox.cursor` · emits `a channel command invocation per line`, `obligation-delivered (via delivery and reminders)`
 
@@ -1127,13 +1138,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Pause gate
 
-`reg.algedonic.pause-gate.v1` · S3 · deterministic-gate · active · introduced in M13
+`reg.algedonic.pause-gate.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Make 'work waits for an answer' a mechanism in two places. In the session: once a blocking question (choice, clarification, consent, uat) went unanswered, the `tool_call` gate refuses every tool whose declared effect is not read-only except `report_result`, and `agent_before_settle` records the pause and ends the turn. In the loop: after the session, an open blocking interaction obligation on the unit records the attempt as `paused`, holds the unit as blocked awaiting a person, and the recovery router says nothing about it — no retry, no repair, no attempt spent; `runUnit` refuses re-dispatch through the progression veto until a person answers, and the next attempt carries the answer as its hint.
 
 **Absorbs.** `waiting-in-name-only` — The tool told the model the question had no answer, and the model, with the tools still live, did the thing anyway — or the orchestrator, seeing an attempt with no close, retried the unit and it asked again, and again.
 
-**Mechanism.** `../regulator-pi/src/algedonic.ts` at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `host:tool_call` (paused → block unless read-only effect or report_result), `host:agent_before_settle` (regulator:paused entry, continue: false), `loop:runUnit` (open blocking interaction obligation → attempt outcome paused, status blocked; the progression veto refuses a re-dispatch until it is dispositioned), `loop:routeUnit` (no decision while paused)
 
 **Channels.** consumes `the session's own unanswered question`, `obligation ledger (open blocking interaction on the unit)` · emits `tool_call block`, `regulator:paused (session entry)`, `attempt record (paused)`, `unit status blocked: paused`
 
@@ -1157,7 +1168,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Limitations.**
 - The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
 - The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
-- A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays.
+- A paused unit holds its lease and its worktree while it waits, and by default nothing expires the wait: a question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays. The interaction policy may declare `waitCeilingMs`; past it the loop routes the unit under the recovery policy's `timeout` cause and releases the lease, but the question stays open with its veto — nothing answers on anyone's behalf, and the worktree is kept for the attempt that follows the answer.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 
@@ -1168,13 +1179,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Post-merge check
 
-`reg.audit.post-merge-check.v1` · S3* · deterministic-gate · active · introduced in M15
+`reg.audit.post-merge-check.v1` · S3* · deterministic-gate · retired · since 0.1.0
 
-**Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.
+**Purpose.** Retired in 0.1.4 — replaced by the pre-merge trial (reg.audit.pre-merge-trial.v1): the same checks run on a temporary merge commit before anything lands, and a failure refuses the reintegration instead of recording a red base for S3 to decide about. The instance-level obligation this check opened (an audit finding with no unit, holding every dispatch) is no longer produced by the loop; the router and the veto still honour one if something else raises it. Originally: The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.
 
 **Absorbs.** `green-branches-red-base` — Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand.
 
-**Mechanism.** `src/controller.ts` at `verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)`, `progressionVeto (an open blocking obligation with no unit holds every dispatch)`
+**Mechanism.** `src/controller.ts` at `loop:finishUnit` (verifyBase ran after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding (retired: the step is gone, the trial runs inside finishUnit)), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch)
 
 **Channels.** consumes `the base at the merge commit`, `the workload's check list` · emits `evidence (post-merge:<check>)`, `audit-finding with no unit → obligation on the instance`
 
@@ -1195,7 +1206,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 **Evidence.** `src/controller.test.ts`, `src/instance.test.ts`
 
 **Limitations.**
-- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
@@ -1203,18 +1214,59 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Ablation.** `loop:post-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures.
 
-**Retirement condition.** Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it.
+**Retirement condition.** Retired in 0.1.4: the pre-merge trial replaced it (docs/DEBT.md row 37). The record stays as history, the way vendor-write-gate does.
+
+
+## Pre-merge trial
+
+`reg.audit.pre-merge-trial.v1` · S3* · deterministic-gate · active · since 0.1.4
+
+**Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. Before anything lands, the loop merges the unit's branch in a temporary worktree detached at the base's HEAD, runs the workload's `run_tests` and `run_checks` on that merged tree, and appends the results to the audit log as evidence bound to the trial commit and to the unit that would land it. A tree that passes is landed by fast-forward to the very commit that was verified, so what the evidence is bound to is what the base carries. A tree that fails lands nothing: the base is exactly as it was, S2 records a `conflict` coordination signal saying what the merged tree failed, and the unit is blocked with the cause `conflict` — `repair` under the shipped recovery policy, with the failing checks as the hint. `unit finish` by hand runs the same trial with the project's own two checks. Replaces the post-merge check (reg.audit.post-merge-check.v1), which recorded a red base for S3 to decide about; here the base is never red.
+
+**Absorbs.** `semantic-conflict` — Two units pass every check on their own branches, merge without a conflict, and the base fails its suite: a coupling neither could see from its worktree, and the post-merge form of this check found it only after the base carried it.
+
+**Mechanism.** `src/worktree.ts` at `loop:finishUnit` (reintegrate with a trial: the temporary worktree under .regulator/trials/, the merge there, the trial, then merge --ff-only to the trial commit; trialMerge in controller.ts runs the workload's checks and binds the evidence), `cli:unit finish` (the same trial with run_tests and run_checks as the conventions discover them)
+
+**Channels.** consumes `the unit's branch and the base at HEAD`, `the workload's run_tests and run_checks (the unit type's; the project's own from the CLI)` · emits `evidence (pre-merge:*) bound to the trial commit`, `coordination-signal (conflict, blocking) when the merged tree fails`
+
+**Scope.** subjects unit, base · resources .regulator/trials/, .regulator/audit.ndjson, .regulator/signals.ndjson
+
+**Cost.** A second worktree per close (`git worktree add --detach`, removed before the close returns) and the project's test command once more, on the merged tree, before it lands. Measured on the drift fixture with the scripted reference unit, treatment arm, three repetitions: see `measured`. (measured: no measurable difference against the post-merge check it replaced: 862 ms → 836 ms per closed unit (mean of 18 closes each, scripted reference unit, treatment arm, three repetitions, 2026-09-29, one machine). The checks ran once more either way; what the trial adds is a worktree add and remove and a fast-forward, tens of milliseconds, inside the noise.)
+
+**May.**
+- refuse a reintegration whose merged tree fails the workload's checks, and say what failed
+- land exactly the commit that was verified, by fast-forward
+- refuse to land when the base moved between the trial and the landing
+
+**May not.**
+- resolve a conflict or repair a failing tree
+- revert anything: it lands or it does not
+- run the branch-relative checks (identity-untouched, export-signature, glossary-lint, inherited-tests) on a merged tree, where they have no meaning
+
+**Evidence.** `src/worktree.test.ts`, `src/controller.test.ts`, `src/instance.test.ts`, `src/finance.test.ts`
+
+**Limitations.**
+- Only `run_tests` and `run_checks` run on the merged tree; a coupling those two do not exercise lands. A workload cannot yet name a trial-only check.
+- The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.
+- A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
+- An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
+
+**Ownership.** course-lab · introduced 2026-09-29 · review by 2026-12-01
+
+**Ablation.** `loop:pre-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base; without the trial a semantic conflict would land and show as later units' check failures.
+
+**Retirement condition.** Never while two units can share a base: the trial is what makes a clean merge mean something.
 
 
 ## Profile write grant
 
-`reg.control.profile-write-grant.v1` · S3 · deterministic-gate · active · introduced in M04
+`reg.control.profile-write-grant.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools.
 
 **Absorbs.** `ungranted-capability-use` — Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise.
 
-**Mechanism.** `../regulator-pi/src/profiles.ts` at `session_start`, `tool_call`
+**Mechanism.** `../regulator-pi/src/profiles.ts` at `host:session_start`, `host:tool_call`
 
 **May.**
 - set the active tool set when a profile is applied
@@ -1241,13 +1293,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Progression veto
 
-`reg.control.progression-veto.v1` · S3 · deterministic-gate · active · introduced in M11
+`reg.control.progression-veto.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Refuse to dispatch or close a unit while an obligation at or above the routing policy's blocking line is open on it, whoever it is owed to. The S3–S4 homeostat, mechanised: intelligence that names a unit holds that unit until S3 or a person dispositions the obligation it raised — it never replans, never edits, never applies itself. A clarification a person answered reaches the next attempt as the hint.
 
 **Absorbs.** `last-signal-wins` — An advisory arrives against a commitment and whichever came last decides: the unit is dispatched anyway because nothing stood in the loop's path, or the advisory rewrites working code because a prompt said it should.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before the lease is taken)`, `closeUnit (before the re-audit)`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (before the lease is taken), `loop:closeUnit` (before the re-audit)
 
 **Channels.** consumes `open obligations naming the unit (regulatory log)`, `routing policy (blocksAtOrAbove)` · emits `contract problem: obligations (refusal)`
 
@@ -1282,13 +1334,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Project trust rule
 
-`reg.authority.project-trust-rule.v1` · S5 · deterministic-gate · active · introduced in M10
+`reg.authority.project-trust-rule.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Load into a unit's session the extensions the definition declares and nothing the project supplies. The SDK's resource loader discovers a project's own .pi/extensions, skills, prompt templates and themes from the working directory without asking — Pi's project_trust event is the CLI's, not the loader's — so the dispatcher builds every session with a loader that turns project resources off and filters the extensions it finds to the definition's list, recording what it refused. The CLI path answers project_trust with 'no' as well. A unit's project is data the unit works on, never a source of control for the harness.
 
 **Absorbs.** `trust-boundary-crossing` — The target repository ships .pi/extensions/helpful.ts, which registers a tool that widens the surface or rewrites results; the harness loads it because the directory looked like a project.
 
-**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (authority.ts, CLI sessions)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `host:dispatcher` (definitionResourceLoader: extensionsOverride, no project skills/prompts/themes), `host:project_trust` (authority.ts, CLI sessions)
 
 **Channels.** consumes `resource loader (discovered extensions)`, `project_trust` · emits `refused extension list (dispatcher echo)`
 
@@ -1322,13 +1374,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Proposal intake
 
-`reg.authority.proposal-intake.v1` · S5 · typed-tool · active · introduced in M10
+`reg.authority.proposal-intake.v1` · S5 · typed-tool · active · since 0.1.0
 
 **Purpose.** Give a unit a typed way to ask for a change to identity, policy or a protected path — propose_policy_change — that records a policy-proposal message on the proposal channel for S5 and changes nothing: no file, no policy, no grant. The right to ask is mechanically separate from the right to change (INV-002).
 
 **Absorbs.** `proposal-as-policy` — A unit that cannot edit the invariant argues its case in the transcript and then edits the invariant; or a harness that lets a 'proposal' tool apply the change it proposes.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `propose_policy_change (tool execute)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `tool:propose_policy_change` (execute)
 
 **Channels.** consumes `tool call (propose_policy_change)` · emits `policy-proposal → S5 (regulatory log)`
 
@@ -1360,13 +1412,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Recovery router
 
-`reg.control.recovery-router.v1` · S3 · deterministic-gate · active · introduced in M08
+`reg.control.recovery-router.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
 
 **Absorbs.** `naive-retry` — A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why.
 
-**Mechanism.** `src/controller.ts` at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)`
+**Mechanism.** `src/controller.ts` at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the autoloop)
 
 **Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
 
@@ -1404,13 +1456,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Regulator lifecycle
 
-`reg.identity.regulator-lifecycle.v1` · S5 · deterministic-gate · active · introduced in M14
+`reg.identity.regulator-lifecycle.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Every regulator was added to absorb a failure a particular model produced on a particular day, and models change. Every active record now carries an ablation switch — the arm that turns it off, or `none` with the reason the harness cannot — and a retirement condition, or `regulator check` refuses it. `regulator review --due` lists what is overdue for review by the date each record carries; the read model and the control room's lifecycle view show, per record, the switch, whether a committed eval report covers it, and the condition under which it may go. Retiring a regulator is a recorded decision: the record's status becomes `retired` and it keeps its history.
 
 **Absorbs.** `control-system-that-only-grows` — A workaround for one model's habit, still costing latency and attention on every run three model versions later, because nothing ever asked whether the habit persisted and nobody owned the question.
 
-**Mechanism.** `../core/src/registry.ts` at `checkRegistry (active record without ablation or retirement is a problem)`, `reviewDue`, `regulator review --due (CLI)`, `the lifecycle view (read model, control room)`
+**Mechanism.** `../core/src/registry.ts` at `check:checkRegistry` (an active record without ablation or retirement is a problem; so is an overdue review date), `cli:review` (--due: reviewDue), `cli:status` (the lifecycle view of the read model, rendered by the control room)
 
 **Channels.** consumes `registry records`, `eval suites and committed reports` · emits `registry problems`, `the lifecycle view`
 
@@ -1445,13 +1497,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Reintegration guard
 
-`reg.coordination.reintegration.v1` · S2 · deterministic-gate · active · introduced in M05
+`reg.coordination.reintegration.v1` · S2 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Merge a unit's branch back into the base only from a clean checkout on the base branch; on conflict, abort, leave the base exactly as found, and hand the conflicting paths to S3 as a coordination signal.
 
 **Absorbs.** `hidden-coupling` — Work done in isolation looks finished until it meets the base; a merge that auto-resolves, or that lands on a dirty checkout, hides the coupling instead of surfacing it.
 
-**Mechanism.** `src/worktree.ts` at `regulator unit finish`
+**Mechanism.** `src/worktree.ts` at `loop:finishUnit`, `cli:unit finish`
 
 **Channels.** consumes `unit branch`, `base branch` · emits `coordination-signal (conflict) → S3`
 
@@ -1483,13 +1535,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Result report gate
 
-`reg.control.result-report-gate.v1` · S3 · deterministic-gate · active · introduced in M06
+`reg.control.result-report-gate.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Close a unit only from a result report that honours the exact contract version: every delegated choice reported, every unresolved decision preserved or surfaced (never settled), required evidence present, fixed-decision deviations referenced. Refuses the report at the tool and again at close; a unit with no report or an invalid one is blocked, not closed.
 
 **Absorbs.** `silent-closure` — A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript.
 
-**Mechanism.** `../regulator-pi/src/contract.ts` at `report_result (tool execute)`, `runUnit (close)`, `session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `tool:report_result` (execute), `loop:runUnit` (close), `host:session_start` (a loaded contract puts report_result on the active tool surface, whatever the profile lists)
 
 **Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
 
@@ -1522,13 +1574,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## S5 decision path
 
-`reg.authority.s5-decision.v1` · S5 · deterministic-gate · active · introduced in M12
+`reg.authority.s5-decision.v1` · S5 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** The one path that changes an identity file: `regulator identity accept`, run by a named person, on an obligation owed to S5 that a proposal opened. It writes the proposed file under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a result that leaves the identity set invalid, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `identity reject` resolves it as rejected and changes nothing. INV-002 with a workflow: the right to ask is the proposal tool; the right to change is this, and only this.
 
 **Absorbs.** `proposal-with-no-decider` — A proposal is recorded and owed to S5, and then a person edits the identity file by hand with no link to what was asked, or never does, and the obligation sits open with no way to close it honestly.
 
-**Mechanism.** `src/cli.ts` at `identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)`, `identity reject (ledger.resolve rejected)`
+**Mechanism.** `src/cli.ts` at `cli:identity accept` (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted), `cli:identity reject` (ledger.resolve rejected)
 
 **Channels.** consumes `obligation (policy-proposal, owed to S5)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
 
@@ -1563,13 +1615,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Span projection (OpenTelemetry GenAI)
 
-`reg.assurance.span-projection.v1` · S3* · type · active · introduced in M14
+`reg.assurance.span-projection.v1` · S3* · type · active · since 0.1.0
 
 **Purpose.** One read of every append-only record an instance keeps — units, attempts, budgets, evidence, verdicts, decisions, effects, obligations, interactions, memory — as OpenTelemetry GenAI spans (`invoke_agent` per attempt, `execute_tool` for checks, effects and deliveries, `chat` for what the budget ledger knows of the model calls), correlated by `vsm.unit.id`, `vsm.attempt`, `vsm.evidence.id`, `vsm.obligation.id`, `vsm.regulator.id` and the policy version, so a tracing backend joins runtime events to registry records without a vendor adapter. Every string attribute passes redaction — the instance's canaries and credential shapes — before it leaves the store, and a span that had something redacted says so. The transcript is never projected.
 
 **Absorbs.** `evidence-nobody-can-join` — Six NDJSON logs and a SQLite store, each honest on its own, and no way to ask which regulator fired on which attempt of which unit without reading them all by hand — or a way that shipped the API key in the tool output.
 
-**Mechanism.** `../core/src/spans.ts` at `projectSpans (schema-validated SpanRecord per record; redact on every string attribute)`, `reportSpans (one span per eval run)`, `regulator spans (CLI)`
+**Mechanism.** `../core/src/spans.ts` at `cli:spans` (projectSpans: a schema-validated SpanRecord per record; redact on every string attribute), `cli:eval` (reportSpans: one span per eval run)
 
 **Channels.** consumes `.regulator/units/`, `audit.ndjson`, `signals.ndjson`, `effects.ndjson`, `memory.ndjson`, `.regulator/canaries` · emits `span records (NDJSON)`
 
@@ -1605,13 +1657,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Thrash detector
 
-`reg.coordination.thrash-detector.v1` · S2 · deterministic-gate · active · introduced in M05
+`reg.coordination.thrash-detector.v1` · S2 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Count write and edit calls per file within a unit and emit a typed coordination signal past a threshold, so oscillation between two fixes becomes visible to S3 instead of burning budget silently.
 
 **Absorbs.** `oscillation` — Fix A breaks B, fix B breaks A; each individual edit is locally reasonable and nothing in the loop notices the pattern.
 
-**Mechanism.** `../regulator-pi/src/coordination.ts` at `tool_execution_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `host:tool_execution_end`
 
 **Channels.** consumes `tool_execution_end (write, edit)` · emits `coordination-signal (oscillation) → S3`
 
@@ -1641,13 +1693,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Unit lease gate
 
-`reg.coordination.unit-lease.v1` · S2 · deterministic-gate · active · introduced in M05
+`reg.coordination.unit-lease.v1` · S2 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Refuse every tool with a non-read-only effect unless the session's unit holds a live lease on the worktree it runs in, so two units cannot write the same checkout and a dead session cannot hold a claim forever.
 
 **Absorbs.** `write-collision` — Two sessions writing one checkout corrupt each other's work; a session that died mid-unit blocks the resource until someone notices.
 
-**Mechanism.** `../regulator-pi/src/coordination.ts` at `session_start`, `tool_call`, `turn_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `host:session_start`, `host:tool_call`, `host:turn_end`
 
 **Channels.** consumes `lease (.regulator/leases)` · emits nothing
 
@@ -1678,13 +1730,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Vendor write gate
 
-`reg.authority.vendor-write-gate.v1` · S5 · deterministic-gate · retired · introduced in M02
+`reg.authority.vendor-write-gate.v1` · S5 · deterministic-gate · retired · since 0.1.0
 
 **Purpose.** Retired in 0.1.0 — Every arm loads the authority extension (the identity write gate with the filesystem walk and the bash snapshot-and-restore), and the instance manifest's protected prefixes cover vendor/; the lexical gate of lesson 02 lives on only in the course's own lab. Originally: Refuse write and edit calls under vendor/ so that vendored code stays upstream's, whatever the model is asked.
 
 **Absorbs.** `protected-path-mutation` — The smallest diff for a request is often inside a vendored file; a rule stated only in prose holds inconsistently under pressure.
 
-**Mechanism.** `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)` at `tool_call`
+**Mechanism.** `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)` at `host:tool_call`
 
 **May.**
 - block a write or edit whose normalized path is under vendor/
@@ -1710,13 +1762,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 ## Work contract gate
 
-`reg.control.work-contract-gate.v1` · S3 · deterministic-gate · active · introduced in M06
+`reg.control.work-contract-gate.v1` · S3 · deterministic-gate · active · since 0.1.0
 
 **Purpose.** Refuse to dispatch a unit whose contract cannot be honoured: colliding decision ids, an unresolved decision that must be resolved before execution, a unit type the workload does not declare, or a workload the instance does not run. Dispatch happens only against a recorded, immutable contract version.
 
 **Absorbs.** `implicit-delegation` — A task description hands S1 every decision the planner did not think of; the unit settles them by omission and the choices disappear into the diff.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (before createUnit), `host:session_start` (contract), `cli:unit start` (--type: the contract-less path refuses a unit type whose workload declares requiresContract)
 
 **Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
 

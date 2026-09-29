@@ -16,6 +16,7 @@
  * has no ablation evidence, rather than pretending one exists.
  */
 import { Type, type Static } from "typebox";
+import { CheckEntrySchema } from "./workload.js";
 import { Value } from "typebox/value";
 
 const NonEmpty = Type.String({ minLength: 1 });
@@ -32,8 +33,8 @@ export const EvalArmSchema = Type.Object({
   description: NonEmpty,
   /** Checkpoint extensions the dispatcher loads for a live run (file stems, e.g. `authority`). Ignored by a scripted run. */
   extensions: Type.Array(NonEmpty),
-  /** Host checks the workload's implement unit type runs under this arm; overrides the workload's list. */
-  checks: Type.Array(NonEmpty),
+  /** Host checks the workload's implement unit type runs under this arm; overrides the workload's list. A name, or a name with options. */
+  checks: Type.Array(CheckEntrySchema),
   /** Whether the instance carries the definition's identity set. */
   identity: Type.Boolean(),
   /** The registry record this arm switches off, when it is an ablation arm. */

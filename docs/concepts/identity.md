@@ -48,8 +48,11 @@ Two more mechanisms stand beside the layers:
   claimed. Anything about S5 holds the unit it concerns until a consumer dispositions it.
 - **`glossary-lint`.** The glossary lists the words the instance does not use, with the
   word to say instead. At closeout the host reads the branch's added comments and its
-  commit messages for them, and a hit is failing evidence. Identity covers vocabulary
-  as well as files.
+  commit messages for them. A hit in a comment is failing evidence; a hit in a commit
+  message is too, unless the workload declares that half advisory, in which case it is
+  recorded as evidence and a finding at `advisory` and refuses nothing — the software
+  workload does, after the drift suite showed a correct unit refused three times for one
+  word in a commit message. Identity covers vocabulary as well as files.
 
 ## Which paths each layer protects
 
@@ -119,7 +122,11 @@ ones that matter most:
   the next run reads it; the closeout diff turns that into a failing check, not a
   changed rule.
 - **Rendering is capped at 6000 characters.** Past that, part of the identity is advice
-  the model never sees, and the status line does not say so.
+  the model never sees. The cut is reported, never refused: `regulator check` and
+  `regulator doctor` warn with the size, the limit and the files cut, the session's
+  status line says so, and one advisory `operational-signal` per session records on the
+  unit that it ran with part of its identity unseen. The limit is a constant in the
+  code, not a policy field.
 - **The person deciding supplies the file.** `identity accept` writes the file the
   person points to; nothing derives it from the proposal's requested change or diffs it
   against the request.

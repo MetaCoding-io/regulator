@@ -15,7 +15,7 @@
  * Units
  *   regulator unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>]   the autoloop: run, route, and run again while the policy says so
  *   regulator unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet]   run one unit through the S3 loop with a live host session
- *   regulator unit start <id> [--type <unitType>] [--workload <name>] [--ttl <min>]   lease + worktree + branch by hand (run in the base checkout)
+ *   regulator unit start <id> [--type <unitType>] [--workload <name>] [--ttl <min>] [--host <package>]   lease + worktree + branch by hand (run in the base checkout); prints the host's session command
  *   regulator unit finish <id>                 reintegrate a unit started by hand, or surface the conflict
  *   regulator unit status                      leases and their liveness
  *   regulator unit show <id>                   the unit record, attempts, decisions, report and obligations
@@ -40,8 +40,8 @@
  *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
  *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
  *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
- *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text>
- *                                                         the release path: copy the instance's accepted identity file into the definition's seed and commit it there
+ *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text> [--definition <dir>]
+ *                                                         the release path: copy the instance's accepted identity file into the definition's seed (the manifest's, or --definition) and commit it there
  *   regulator memory [--all]                   operational memory: current facts; --all includes expired and retracted
  *   regulator memory retract <id> --by <who> --reason <text>   retract a fact; the retraction is appended, nothing is deleted
  *
@@ -49,12 +49,13 @@
  *   regulator effects                          the effect journal: every side-effecting tool call, its outcome and its reconciliation
  *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
  *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
- *                                 [--interpretation <file>] [--by <who>] [--keep]   run a suite: scripted units headlessly, or live units through the host's dispatcher
+ *                                 [--interpretation <file>] [--by <who>] [--keep] [--host <package>]   run a suite: scripted units headlessly, or live units through the host's dispatcher
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
  * Every `--by` that dispositions something is checked against the interaction policy's people: a name not listed may
- * disposition nothing, and what a listed person may do (severity, accepted-risk, S5) is declared there. `init`,
- * `unit accept` and `eval` record `--by` as provenance without the check. The name itself is asserted, not authenticated.
+ * disposition nothing, and what a listed person may do (severity, accepted-risk, S5) is declared there; `unit accept` is
+ * checked at blocking. `init` and `eval` record `--by` as provenance without the check. The name itself is asserted, not
+ * authenticated.
  * `regulator check` and `regulator docs` (the definition check and the generated registry documents) are implemented in
  * `registry-cli.ts` and reached through this entry point.
  */
@@ -62,7 +63,7 @@ import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { summarizeVerdict } from "@metacoding.io/regulator-checks";
+import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
 import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
@@ -90,7 +91,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -151,8 +152,11 @@ try {
     const report = await doctor(realExec, { ...(manifestHere || sub === "--instance" || rest.includes("--instance") ? { repo: process.cwd() } : {}), ...(flag("today") ? { today: flag("today")! } : {}), ...(flag("definition") ? { definitionRoot: path.resolve(flag("definition")!) } : {}) });
     if (rest.includes("--json") || sub === "--json") console.log(JSON.stringify(report, null, 2));
     else {
-      for (const c of report.checks) console.log(`${c.ok ? "ok      " : "PROBLEM "} ${c.name.padEnd(17)} ${c.detail}`);
-      console.log(`${report.problems} problem(s)`);
+      for (const c of report.checks) {
+        console.log(`${c.ok ? "ok      " : "PROBLEM "} ${c.name.padEnd(17)} ${c.detail}`);
+        if (c.warning) console.log(`warning  ${"".padEnd(17)} ${c.warning}`);
+      }
+      console.log(`${report.problems} problem(s)${report.warnings ? `, ${report.warnings} warning(s)` : ""}`);
     }
     process.exit(report.problems ? 1 : 0);
   } else if (command === "watch") {
@@ -223,13 +227,33 @@ ${rationale}`]]) {
     const started = await startUnit(realExec, ttlMs ? { repo: process.cwd(), unitId, owner, ttlMs } : { repo: process.cwd(), unitId, owner });
     console.log(`unit ${unitId}: branch ${started.worktree.branch} from ${started.base}, worktree ${started.worktree.path}`);
     console.log(`lease held by ${started.lease.owner} until ${new Date(started.lease.expiresAt).toISOString()}`);
-    console.log(`next: cd ${started.worktree.path} && pi -e ${path.join(labRoot, "dist/tools.js")} -e ${path.join(labRoot, "dist/coordination.js")} --unit ${unitId}`);
+    // The session's extensions are the host's files, not the control plane's: ask the host where they are (--host and
+    // REGULATOR_HOST are honoured as in `unit dispatch`). The start itself needs no host; without one it still holds.
+    const resolvedHost = await loadHost(flag("host")).catch((error: Error) => error);
+    if (resolvedHost instanceof Error) {
+      console.log(`next: cd ${started.worktree.path}; running a session there needs a host — ${resolvedHost.message}`);
+    } else {
+      const { host } = resolvedHost;
+      console.log(`next: cd ${started.worktree.path} && pi -e ${host.extensionPath("tools")} -e ${host.extensionPath("coordination")} --unit ${unitId}`);
+    }
   } else if (command === "unit" && sub === "finish" && rest[0]) {
-    const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0] });
+    // A unit finished by hand has no contract to name its checks; the trial runs the project's own (#48): run_tests and run_checks,
+    // as the conventions discover them on the merged tree. Nothing lands unless they pass.
+    const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0], trial: async (trial) => {
+      const results = await runHostChecks(realExec, { cwd: trial.cwd, checks: ["run_tests", "run_checks"], conventions: await discoverConventions(trial.cwd) });
+      const failing = results.filter((r) => r.verdict === "fail");
+      return { ok: failing.length === 0, reasons: failing.map((r) => `pre-merge:${r.check}: ${r.observation.split("\n").slice(0, 3).join("; ")}`) };
+    } });
     if (finished.result.merged) {
-      console.log(`unit ${rest[0]}: reintegrated as ${finished.result.sha}; worktree and branch removed; lease ${finished.released ? "released" : "was not held"}`);
+      console.log(`unit ${rest[0]}: reintegrated as ${finished.result.sha} (the merged tree passed run_tests and run_checks first); worktree and branch removed; lease ${finished.released ? "released" : "was not held"}`);
     } else if (finished.result.reason === "conflict") {
       console.error(`unit ${rest[0]}: conflict in ${finished.result.conflicts.join(", ")} — merge aborted, nothing resolved, coordination signal recorded in .regulator/signals.ndjson`);
+      process.exit(1);
+    } else if (finished.result.reason === "trial-failed") {
+      console.error(`unit ${rest[0]}: not reintegrated — the merged tree fails its checks at ${finished.result.sha.slice(0, 7)}: ${finished.result.reasons.join("; ")}. The base is as it was; coordination signal recorded in .regulator/signals.ndjson`);
+      process.exit(1);
+    } else if (finished.result.reason === "base-moved") {
+      console.error(`unit ${rest[0]}: not reintegrated — the base moved from ${finished.result.from.slice(0, 7)} to ${finished.result.to.slice(0, 7)} during the trial; run \`unit finish\` again`);
       process.exit(1);
     } else {
       console.error(`unit ${rest[0]}: not reintegrated (${finished.result.reason}${"current" in finished.result ? `: on ${finished.result.current}` : ""})`);
@@ -318,8 +342,9 @@ ${rationale}`]]) {
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
   } else if (command === "unit" && sub === "accept" && rest[0] && rest[1]) {
-    const by = flag("by");
-    if (!by) usage();
+    // An acceptance is a disposition: it satisfies a criterion no check can observe, and the closeout gate counts it. The
+    // criterion has no severity of its own, so the check is at blocking, the conservative choice (#77). --reject too.
+    const by = await authorized(flag("by"), { severity: "blocking" });
     const store = new ExecutionStore(process.cwd());
     const unit = await store.getUnit(rest[0]);
     if (!unit) throw new Error(`no unit "${rest[0]}"`);

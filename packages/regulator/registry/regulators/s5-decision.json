@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/cli.ts",
-    "enforcementPoints": ["identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)", "identity reject (ledger.resolve rejected)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "identity accept", "note": "authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted"},
+      {"where": "cli", "point": "identity reject", "note": "ledger.resolve rejected"}
+    ]
   },
   "channels": { "consumes": ["obligation (policy-proposal, owed to S5)", "a proposed file"], "emits": ["commit on the base branch", "obligation-resolved (accepted | rejected)"] },
   "scope": { "subjects": ["identity", "obligation"], "resources": ["regulator/identity/", "base branch"] },
@@ -29,5 +32,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand."},
   "retirement": {"condition": "Never: INV-002 names it as the only writer. Retire with the proposal path, not before."},
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

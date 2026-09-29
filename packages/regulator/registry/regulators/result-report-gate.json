@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/contract.ts",
-    "enforcementPoints": ["report_result (tool execute)", "runUnit (close)", "session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)"]
+    "enforcementPoints": [
+      {"where": "tool", "point": "report_result", "note": "execute"},
+      {"where": "loop", "point": "runUnit", "note": "close"},
+      {"where": "host", "point": "session_start", "note": "a loaded contract puts report_result on the active tool surface, whatever the profile lists"}
+    ]
   },
   "channels": { "consumes": ["result report (S1, via report_result)"], "emits": ["operational-signal → S3 (high-consequence emergent decisions, deviations)"] },
   "scope": { "subjects": ["unit", "contract"], "resources": ["execution store"] },
@@ -29,5 +33,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:contract", "note": "Shares checkpoint 5 with the contract section; without it a unit has no report_result tool and every attempt ends no-report."},
   "retirement": {"condition": "Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them."},
-  "introducedIn": "M06"
+  "introducedIn": "0.1.0"
 }

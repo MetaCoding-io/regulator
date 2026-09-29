@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/worktree.ts",
-    "enforcementPoints": ["regulator unit finish"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "finishUnit"},
+      {"where": "cli", "point": "unit finish"}
+    ]
   },
   "channels": { "consumes": ["unit branch", "base branch"], "emits": ["coordination-signal (conflict) → S3"] },
   "scope": { "subjects": ["unit"], "resources": ["base branch", "worktree"] },
@@ -28,5 +31,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "The merge is the loop's close step; an arm without it never lands work. Conflict handling is exercised by the coordination drills, not ablated."},
   "retirement": {"condition": "Never: reintegration is how domain output reaches the base. The conflict-signal path retires when two units cannot share a base."},
-  "introducedIn": "M05"
+  "introducedIn": "0.1.0"
 }

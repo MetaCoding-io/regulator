@@ -23,7 +23,7 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, loadRegistry, reviewDue, undelivered } from "@metacoding.io/regulator-core";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, identityContextBudget, loadRegistry, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
 import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR, canariesFromEnv } from "./unit.js";
@@ -133,12 +133,15 @@ export interface DoctorCheck {
   name: string;
   ok: boolean;
   detail: string;
+  /** True and worth knowing, and not a problem: the check passes with this said. */
+  warning?: string;
 }
 
 export interface DoctorReport {
   at: string;
   checks: DoctorCheck[];
   problems: number;
+  warnings: number;
 }
 
 export interface DoctorOptions {
@@ -160,7 +163,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
   const today = options.today ?? new Date(now()).toISOString().slice(0, 10);
   const definitionRoot = path.resolve(options.definitionRoot ?? LAB_ROOT);
   const checks: DoctorCheck[] = [];
-  const check = (name: string, ok: boolean, detail: string) => checks.push({ name, ok, detail });
+  const check = (name: string, ok: boolean, detail: string, warning?: string) => checks.push({ name, ok, detail, ...(warning ? { warning } : {}) });
 
   const node = (options.nodeVersion ?? process.version).replace(/^v/, "").split(".").map(Number) as [number, number, number];
   const nodeOk = node[0] > MIN_NODE[0] || (node[0] === MIN_NODE[0] && (node[1] > MIN_NODE[1] || (node[1] === MIN_NODE[1] && node[2] >= MIN_NODE[2])));
@@ -175,7 +178,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
   const registry = await checkRegistry(path.join(definitionRoot, "registry"), definitionRoot, { today });
   check("registry", registry.problems.length === 0, `${registry.records.length} record(s), ${registry.problems.length} problem(s)${registry.problems.length ? `: ${registry.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}${registry.filesVerified ? "" : "; implementation and test paths not verified here (an installed package ships no sources; they were verified at the release by `pnpm check`)"}`);
   const definition = await checkDefinition(definitionRoot);
-  check("definition", definition.problems.length === 0, `${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.evals.length} eval suite(s), ${definition.reports.length} report(s)${definition.problems.length ? `; problems: ${definition.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`);
+  check("definition", definition.problems.length === 0, `${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.evals.length} eval suite(s), ${definition.reports.length} report(s)${definition.problems.length ? `; problems: ${definition.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`, definition.warnings.map((w) => `${w.file}: ${w.message}`).join("; ") || undefined);
   const due = reviewDue((await loadRegistry(path.join(definitionRoot, "registry"))).records, today, 30);
   check("reviews", !due.some((d) => d.overdueDays > 0), due.length ? due.map((d) => `${d.record.id} ${d.overdueDays > 0 ? `overdue ${d.overdueDays}d` : `due in ${-d.overdueDays}d`}`).join(", ") : "nothing due within 30 days");
 
@@ -199,7 +202,14 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
       await readFile(path.join(repo, IDENTITY_RELATIVE_DIR, "INVARIANTS.md"));
       identityOk = true;
     } catch { /* missing */ }
-    check("identity", identityOk, identityOk ? `${IDENTITY_RELATIVE_DIR} present` : `${IDENTITY_RELATIVE_DIR} missing: run \`regulator init\``);
+    if (identityOk) {
+      // The instance's set, as a unit would see it: over the context budget it is partly unseen, and doctor says so (#51).
+      const identity = await readIdentity(path.join(repo, IDENTITY_RELATIVE_DIR));
+      const budget = identityContextBudget(identity);
+      check("identity", identity.problems.length === 0, `${IDENTITY_RELATIVE_DIR} present: ${identity.invariants.length} invariant(s), renders to ${budget.chars} of ${budget.max} characters${identity.problems.length ? `; problems: ${identity.problems.join("; ")}` : ""}`, budget.warning);
+    } else {
+      check("identity", false, `${IDENTITY_RELATIVE_DIR} missing: run \`regulator init\``);
+    }
     const clean = await isClean(exec, repo).catch(() => false);
     const branch = await currentBranch(exec, repo).catch(() => "?");
     check("base", clean, clean ? `clean, on ${branch}` : `the base checkout has uncommitted changes (on ${branch}); nothing dispatches until it is clean`);
@@ -210,5 +220,5 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     const baseHeld = open.filter((o) => o.blocks && o.unit === undefined);
     check("obligations", notDelivered.length === 0 && baseHeld.length === 0, `${open.length} open; ${owedToPeople.length} owed to a person, ${notDelivered.length} not delivered${baseHeld.length ? `; ${baseHeld.length} holding the whole instance: ${baseHeld.map((o) => o.subject).join("; ")}` : ""}`);
   }
-  return { at: new Date(now()).toISOString(), checks, problems: checks.filter((c) => !c.ok).length };
+  return { at: new Date(now()).toISOString(), checks, problems: checks.filter((c) => !c.ok).length, warnings: checks.filter((c) => c.warning).length };
 }

@@ -19,7 +19,7 @@ runs under. The loop is generic; this file is where a workload's behaviour lives
 | `unitTypes[].name` | string | the `unitType` a contract may name |
 | `unitTypes[].description` | string | shown to the session |
 | `unitTypes[].profile` | string | the capability profile the unit runs under; must exist |
-| `unitTypes[].checks` | [host check names](/reference/host-checks) | run by the host at the unit's revision to reach the technical verdict |
+| `unitTypes[].checks` | [host check names](/reference/host-checks), each a name or `{ "name", "options" }` | run by the host at the unit's revision to reach the technical verdict. Only `glossary-lint` takes an option, `commitMessages: "blocking" \| "advisory"`; an option a check does not take fails the definition check |
 | `unitTypes[].requiresContract` | boolean | `false` only for a type that may run without a contract, which must then run under a read-only profile |
 
 The shipped `software-development` workload declares `plan`, `research`, `implement`,
@@ -115,6 +115,7 @@ Severities, lowest first: `info`, `advisory`, `blocking`, `critical`.
 | `timeoutsMs` | per interaction kind (`recap`, `choice`, `clarification`, `consent`, `uat`); a timeout is recorded and the unit pauses |
 | `attention.blockingPerAttempt` | blocking interrupts an attempt may spend before `ask_human` refuses; attention is the scarcest budget |
 | `reminderAfterMs` | an obligation owed to a person and still open this long after its last delivery is delivered again (minimum one minute) |
+| `waitCeilingMs` | optional. A unit paused on a question nobody has answered for this long is routed under the recovery policy's `timeout` cause and its lease released; the question stays open and keeps its veto. Unset (the shipped default), the unit waits |
 | `people[]` | `name`, `resolveUpTo` (the highest severity this person may disposition), `acceptRisk`, `actAsS5` |
 
 Only `recap` continues without an answer; that is a protocol constant, not a policy
@@ -170,7 +171,7 @@ or live through the host.
 | --- | --- |
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
-| `arms[]` | `name`, `description`, `extensions[]` the dispatcher loads for a live run, `checks[]` the implement unit type runs under this arm, `identity` (whether the identity is seeded), and for an ablation arm the record it `ablates` and the `switch` (`none`, or `check:`, `extension:`, `loop:`, `policy:`, `tool:` and a target) |
+| `arms[]` | `name`, `description`, `extensions[]` the dispatcher loads for a live run, `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), `identity` (whether the identity is seeded), and for an ablation arm the record it `ablates` and the `switch` (`none`, or `check:`, `extension:`, `loop:`, `policy:`, `tool:` and a target) |
 | `repetitions`, `metrics[]`, `baseline` | how many runs per arm, the metrics the report summarizes (pre-registered, so the interpretation is a person's), and the arm the others are compared against |
 
 The harness can throw `check` and `extension` switches without a code change; a `loop`,
@@ -193,7 +194,7 @@ not pass the check; a record whose `reviewBy` has passed fails it.
 | `vsmFunction` | `S1`…`S5`, `S3*` |
 | `purpose`, `absorbs.failureClass`, `absorbs.description` | what it is for and the failure it absorbs |
 | `mechanism.level` | `type`, `deterministic-gate`, `typed-tool`, `model-judgment`, `prompt` |
-| `mechanism.implementation`, `mechanism.enforcementPoints[]` | the file, and where in it the gate applies |
+| `mechanism.implementation`, `mechanism.enforcementPoints[]` | the file, and where the gate bites: `{ where, point, note? }` with `where` one of `host` (a session event the Pi host subscribes to, or `dispatcher`), `tool` (a registered tool's execute), `loop` (a step of the S3 loop or the unit lifecycle), `cli` (a `regulator` subcommand) or `check` (`checkRegistry`, `checkDefinition`), and `point` from that place's closed list in `packages/protocol/src/registry.ts` (`ENFORCEMENT_POINTS`); a point not on a list fails the check |
 | `authority.may[]`, `authority.mayNot[]` | |
 | `evidence.tests[]` | test files that must exist |
 | `channels`, `scope`, `cost` | what it consumes and emits, what it applies to, what it costs |

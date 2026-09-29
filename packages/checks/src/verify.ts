@@ -22,7 +22,7 @@ import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type {
-  EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, ExpectationCheck, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
+  CheckOptions, EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, ExpectationCheck, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
 } from "@metacoding.io/regulator-protocol";
 import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectConventions } from "./conventions.js";
 import type { Exec } from "./exec.js";
@@ -36,6 +36,8 @@ export interface HostCheckResult {
   observation: string;
   /** Set when the check observed one criterion by content (lesson 14): the record binds to that criterion alone, not to every expectation of its class. */
   criterion?: string;
+  /** Set when the check passed at its declared severity but saw something the workload made advisory: what it saw, for a finding at `advisory` beside the evidence (#47). */
+  advisory?: string;
 }
 
 export interface RunHostChecksOptions {
@@ -51,6 +53,8 @@ export interface RunHostChecksOptions {
   expectations?: readonly EvidenceExpectation[];
   /** For `glossary-lint` (lesson 15): the words the identity's glossary refuses, and the prefixes whose added comment lines are read. */
   forbidden?: ReadonlyArray<{ term: string; say: string }>;
+  /** The options the workload declared per check name (`glossary-lint`: `commitMessages: "advisory"`). */
+  checkOptions?: Readonly<Record<string, CheckOptions>>;
   writablePaths?: readonly string[];
   conventions?: ProjectConventions;
   timeoutMs?: number;
@@ -192,18 +196,30 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
         results.push({ check: name, class: "command", verdict: "inconclusive", command: diffArgv, observation: `git failed: ${boundedTail((diff.stderr + log.stderr).trim(), max).text}` });
         continue;
       }
-      const hits: string[] = [];
+      const commentHits: string[] = [];
+      const commitHits: string[] = [];
       const patterns = terms.map((t) => ({ ...t, re: new RegExp(`\\b${t.term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}s?\\b`, "i") }));
       for (const line of diff.stdout.split("\n")) {
         if (!line.startsWith("+") || line.startsWith("+++")) continue;
         const comment = /(\/\/.*|\/\*.*|^\s*\*.*|#.*)$/.exec(line.slice(1))?.[1];
         if (!comment) continue;
-        for (const p of patterns) if (p.re.test(comment)) hits.push(`comment "${comment.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
+        for (const p of patterns) if (p.re.test(comment)) commentHits.push(`comment "${comment.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
       }
       for (const message of log.stdout.split("\n")) {
-        for (const p of patterns) if (p.re.test(message)) hits.push(`commit "${message.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
+        for (const p of patterns) if (p.re.test(message)) commitHits.push(`commit "${message.trim().slice(0, 80)}": ${p.term} (say ${p.say})`);
       }
-      results.push({ check: name, class: "command", verdict: hits.length ? "fail" : "pass", command: diffArgv, observation: hits.length ? boundedTail(`the glossary's words drifted on the branch: ${hits.join("; ")}`, max).text : `no refused word in added comments under ${prefixes.join(", ")} or in commit messages since ${options.base}` });
+      // The two halves at the severity the workload declared (#47): comments block; commit messages block unless the workload made
+      // them advisory, in which case a hit there is still evidence — observed, recorded — and a finding at advisory, not a refusal.
+      const commitsAdvisory = options.checkOptions?.[name]?.commitMessages === "advisory";
+      const blocking = commitsAdvisory ? commentHits : [...commentHits, ...commitHits];
+      const advisory = commitsAdvisory && commitHits.length ? boundedTail(`${commitHits.length} hit(s) in commit messages, which this workload made advisory: ${commitHits.join("; ")}`, max).text : undefined;
+      results.push({
+        check: name, class: "command", verdict: blocking.length ? "fail" : "pass", command: diffArgv,
+        observation: blocking.length
+          ? boundedTail(`the glossary's words drifted on the branch: ${blocking.join("; ")}${advisory ? `. Also, advisory: ${commitHits.length} hit(s) in commit messages` : ""}`, max).text
+          : `no refused word in added comments under ${prefixes.join(", ")}${commitsAdvisory ? "" : " or in commit messages"} since ${options.base}${advisory ? `; ${advisory}` : ""}`,
+        ...(advisory && !blocking.length ? { advisory } : {}),
+      });
     } else if (name === "inherited-tests") {
       // The suite that judges a unit is the one it inherited (lesson 09, revisited): the base's test files and test
       // configuration are run against the unit's committed tree, and compared with the same suite against the base's own

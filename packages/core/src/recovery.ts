@@ -135,6 +135,8 @@ export interface RouteOptions {
   attemptCeiling: number;
   signals: VsmMessage[];
   now?: () => number;
+  /** A cause the caller has already established (a paused unit past the interaction policy's wait ceiling is a `timeout`), with its evidence; the classifier is skipped. */
+  cause?: { cause: FailureCause; evidence: string[] };
 }
 
 /** Classify, decide, and record — once per blocked state. Returns the decision, or undefined if the unit is not blocked. */
@@ -145,7 +147,7 @@ export async function routeBlockedUnit(store: ExecutionStore, options: RouteOpti
   const attempts = await store.listAttempts(unit.unitId);
   const observations = await store.listObservations(unit.unitId);
   const prior = await store.listDecisions(unit.unitId);
-  const { cause, evidence } = classifyFailure({ unit, attempts, observations, signals: options.signals });
+  const { cause, evidence } = options.cause ?? classifyFailure({ unit, attempts, observations, signals: options.signals });
   const occurrence = prior.filter((d) => d.cause === cause).length + 1;
   const decided = decideRecovery({ policy: options.policy, cause, occurrence, attemptsUsed: unit.attempts, attemptCeiling: options.attemptCeiling });
   const hint = hintFor(cause, decided.action, evidence);

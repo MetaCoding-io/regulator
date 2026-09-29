@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/coordination.ts",
-    "enforcementPoints": ["session_start", "tool_call", "turn_end"]
+    "enforcementPoints": [
+      {"where": "host", "point": "session_start"},
+      {"where": "host", "point": "tool_call"},
+      {"where": "host", "point": "turn_end"}
+    ]
   },
   "channels": { "consumes": ["lease (.regulator/leases)"], "emits": [] },
   "scope": { "subjects": ["unit", "session"], "resources": ["worktree"] },
@@ -28,5 +32,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:lease", "note": "Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm."},
   "retirement": {"condition": "Never while two sessions can target one worktree."},
-  "introducedIn": "M05"
+  "introducedIn": "0.1.0"
 }

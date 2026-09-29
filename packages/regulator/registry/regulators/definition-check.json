@@ -12,9 +12,9 @@
     "level": "deterministic-gate",
     "implementation": "src/registry-cli.ts",
     "enforcementPoints": [
-      "regulator check (checkDefinition, under pnpm check)",
-      "checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)",
-      "checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)"
+      {"where": "cli", "point": "check", "note": "checkDefinition, under pnpm check"},
+      {"where": "check", "point": "checkDefinition", "note": "a unit type declared contract-less must run under a profile that is read-only by declared effect"},
+      {"where": "check", "point": "checkDefinition", "note": "a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close"}
     ]
   },
   "channels": {
@@ -73,5 +73,5 @@
   "retirement": {
     "condition": "Never: a declared control plane is checked as a whole or it is assembled."
   },
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

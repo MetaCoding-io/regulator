@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["runUnit (before the lease is taken)", "closeUnit (before the re-audit)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runUnit", "note": "before the lease is taken"},
+      {"where": "loop", "point": "closeUnit", "note": "before the re-audit"}
+    ]
   },
   "channels": { "consumes": ["open obligations naming the unit (regulatory log)", "routing policy (blocksAtOrAbove)"], "emits": ["contract problem: obligations (refusal)"] },
   "scope": { "subjects": ["unit"], "resources": [".regulator/signals.ndjson"] },
@@ -29,5 +32,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:progression-veto", "note": "The veto is the loop's check on open obligations at dispatch and close; not ablatable by the harness."},
   "retirement": {"condition": "Never: a blocking obligation that does not block is a note."},
-  "introducedIn": "M11"
+  "introducedIn": "0.1.0"
 }

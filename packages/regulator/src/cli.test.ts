@@ -200,7 +200,7 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 43 regulators\n/);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 44 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -228,16 +228,16 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.doesNotMatch(r.stdout, /manifest/);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(43 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(44 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
   r = await regulator(dir, "init");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /is already an instance/);
   r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /^ok {6} node/m);
-  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 43 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 44 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
   assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
-  assert.match(r.stdout, /\n0 problem\(s\)\n$/);
+  assert.match(r.stdout, /\n0 problem\(s\)(, \d+ warning\(s\))?\n$/, "a warning (the seed over its context budget, #51) is not a problem");
   r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");
   assert.equal(r.code, 1);
   const report = JSON.parse(r.stdout) as { checks: Array<{ name: string; ok: boolean; detail: string }>; problems: number };
@@ -299,4 +299,69 @@ test("the contract-less path (lesson 05) honours the workload's requiresContract
   const started = await regulator(repo, "unit", "start", "u1", "--type", "plan");
   assert.equal(started.code, 0, started.stderr);
   assert.match(started.stdout, /unit u1: branch/);
+});
+
+test("`unit accept` is a disposition (#77): --by is checked against the interaction policy at blocking before anything is written — a name not listed is refused with nothing in the audit log, a listed person's acceptance and rejection are recorded", async (t) => {
+  const { existsSync } = await import("node:fs");
+  const repo = await initRepo(t);
+  const { ExecutionStore, AuditLog } = await import("@metacoding.io/regulator-core");
+  const store = new ExecutionStore(repo);
+  await store.createUnit({ kind: "task", id: "tc-1", version: 1, unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [{ id: "e-readme", class: "semantic", description: "the README says what changed", required: true }], provenance: { createdBy: "S3", createdAt: "t" } });
+  const started = await regulator(repo, "unit", "start", "u1");
+  assert.equal(started.code, 0, started.stderr);
+
+  let r = await regulator(repo, "unit", "accept", "u1", "e-readme", "--by", "intern");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /intern/);
+  assert.ok(!existsSync(path.join(repo, ".regulator", "audit.ndjson")), "nothing written");
+  assert.equal((await new AuditLog(repo).forUnit("u1")).acceptances.length, 0);
+
+  r = await regulator(repo, "unit", "accept", "u1", "e-readme", "--reject", "--by", "intern");
+  assert.equal(r.code, 1, "--reject goes through the same check");
+  assert.equal((await new AuditLog(repo).forUnit("u1")).acceptances.length, 0);
+
+  r = await regulator(repo, "unit", "accept", "u1", "e-readme", "--by", "bob");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^unit u1: e-readme accepted by bob at revision [0-9a-f]{7}; run `regulator unit close u1` to re-audit\n$/);
+  r = await regulator(repo, "unit", "accept", "u1", "e-readme", "--reject", "--by", "alice", "--note", "not yet");
+  assert.equal(r.code, 0, r.stderr);
+  const { acceptances } = await new AuditLog(repo).forUnit("u1");
+  assert.deepEqual(acceptances.map((a) => [a.by, a.disposition]), [["bob", "accepted"], ["alice", "rejected"]]);
+});
+
+/** The `-e <path>` arguments of the `next:` line `unit start` prints. */
+function printedExtensionPaths(stdout: string): string[] {
+  const next = stdout.split("\n").find((line) => line.startsWith("next:"));
+  assert.ok(next, `no next: line in ${JSON.stringify(stdout)}`);
+  return [...next.matchAll(/ -e (\S+)/g)].map((m) => m[1]!);
+}
+
+test("`unit start` prints the host's session command (#79): every `pi -e` path exists, for the default host and for one named with --host; with no host resolvable the lease and worktree are still made and the line says a host is needed", async (t) => {
+  const { existsSync } = await import("node:fs");
+  const repo = await initRepo(t);
+
+  const byDefault = await regulator(repo, "unit", "start", "u1");
+  assert.equal(byDefault.code, 0, byDefault.stderr);
+  const defaultPaths = printedExtensionPaths(byDefault.stdout);
+  assert.deepEqual(defaultPaths.map((p) => path.basename(p)), ["tools.js", "coordination.js"]);
+  for (const p of defaultPaths) assert.ok(existsSync(p), `${p} does not exist`);
+  assert.ok(!defaultPaths.some((p) => p.startsWith(LAB_ROOT)), "the paths are the host's, not the control plane's");
+
+  const hostDir = path.resolve(LAB_ROOT, "../regulator-pi");
+  const named = await regulator(repo, "unit", "start", "u2", "--host", hostDir);
+  assert.equal(named.code, 0, named.stderr);
+  const namedPaths = printedExtensionPaths(named.stdout);
+  for (const p of namedPaths) {
+    assert.ok(existsSync(p), `${p} does not exist`);
+    assert.ok(p.startsWith(hostDir), `${p} is not under the named host`);
+  }
+
+  const none = await regulator(repo, "unit", "start", "u3", "--host", path.join(repo, "no-such-host"));
+  assert.equal(none.code, 0, none.stderr);
+  assert.match(none.stdout, /unit u3: branch unit\/u3 from main, worktree .*\/\.regulator\/worktrees\/u3\n/);
+  assert.match(none.stdout, /next: cd .*\/u3; running a session there needs a host — no host installed:/);
+  assert.doesNotMatch(none.stdout, / -e /, "no command that cannot work");
+  assert.ok(existsSync(path.join(repo, ".regulator/worktrees/u3")), "the worktree was made");
+  const status = await regulator(repo, "unit", "status");
+  assert.match(status.stdout, /u3/, "the lease is held");
 });

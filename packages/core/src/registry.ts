@@ -13,7 +13,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { isRegulatorRecord, type RegulatorRecord } from "@metacoding.io/regulator-protocol";
+import { isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
 
 export interface RegistryProblem {
   file: string;
@@ -36,6 +36,11 @@ async function exists(p: string): Promise<boolean> {
   }
 }
 
+/** `\`host:tool_call\` (write, edit: prepareWritePath)`: the point as the generated documents print it. */
+export function formatEnforcementPoint(point: EnforcementPoint): string {
+  return `\`${enforcementPointName(point)}\`${point.note ? ` (${point.note})` : ""}`;
+}
+
 /** Load every `regulators/*.json` record under `registryDir`, validating shape only. */
 export async function loadRegistry(registryDir: string): Promise<LoadedRegistry> {
   const dir = path.join(registryDir, "regulators");
@@ -51,7 +56,10 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
       continue;
     }
     if (!isRegulatorRecord(parsed)) {
-      problems.push({ file, message: "does not match the regulator record schema" });
+      // An enforcement point outside the closed lists is the likeliest way a hand-written record fails; name it.
+      const points = (parsed as { mechanism?: { enforcementPoints?: unknown } })?.mechanism?.enforcementPoints;
+      const unknown = Array.isArray(points) ? points.map(unknownEnforcementPoint).filter((m): m is string => m !== undefined) : [];
+      problems.push({ file, message: unknown.length ? unknown.join("; ") : "does not match the regulator record schema" });
       continue;
     }
     records.push(parsed);
@@ -130,6 +138,16 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
     "",
     "Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by hand.",
     "",
+    "Every regulator in the control plane has a record here: the failure it absorbs, the level of the mechanism hierarchy it",
+    "works at (a type, a deterministic gate, a typed tool, model judgment, or prompt advice), where in the code it bites,",
+    "the tests that show it, what it may and may not do, and — the field that matters most — what it does not catch. A gate",
+    "with no stated limitation does not pass `regulator check`; the limitations are collected into `BOUNDARY.md`, the",
+    "enforcement boundary. Each record also names the switch that turns it off for an eval arm, the condition under which it",
+    "would be retired, and the date by which a person reviews it; `regulator review --due` lists what is owed.",
+    "",
+    "The table is the index; the cards below it, one per record, are the source of truth for what each regulator does and",
+    "does not do. `since` is the package version that first shipped the record.",
+    "",
     "| ID | Name | Function | Level | Status | Review by |",
     "| --- | --- | --- | --- | --- | --- |",
   ];
@@ -137,10 +155,10 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
     lines.push(`| \`${r.id}\` | ${r.name} | ${r.vsmFunction} | ${r.mechanism.level} | ${r.status} | ${r.ownership.reviewBy} |`);
   }
   for (const r of records) {
-    lines.push("", `## ${r.name}`, "", `\`${r.id}\` · ${r.vsmFunction} · ${r.mechanism.level} · ${r.status}${r.introducedIn ? ` · introduced in ${r.introducedIn}` : ""}`, "");
+    lines.push("", `## ${r.name}`, "", `\`${r.id}\` · ${r.vsmFunction} · ${r.mechanism.level} · ${r.status}${r.introducedIn ? ` · since ${r.introducedIn}` : ""}`, "");
     lines.push(`**Purpose.** ${r.purpose.trim()}`, "");
     lines.push(`**Absorbs.** \`${r.absorbs.failureClass}\` — ${r.absorbs.description.trim()}`, "");
-    lines.push(`**Mechanism.** \`${r.mechanism.implementation}\` at ${r.mechanism.enforcementPoints.map((p) => `\`${p}\``).join(", ") || "(none)"}`, "");
+    lines.push(`**Mechanism.** \`${r.mechanism.implementation}\` at ${r.mechanism.enforcementPoints.map(formatEnforcementPoint).join(", ") || "(none)"}`, "");
     if (r.channels) lines.push(`**Channels.** consumes ${r.channels.consumes.map((c) => `\`${c}\``).join(", ") || "nothing"} · emits ${r.channels.emits.map((c) => `\`${c}\``).join(", ") || "nothing"}`, "");
     if (r.scope) lines.push(`**Scope.** subjects ${r.scope.subjects.join(", ") || "—"} · resources ${r.scope.resources.join(", ") || "—"}`, "");
     if (r.cost) lines.push(`**Cost.** ${r.cost.description.trim()}${r.cost.measured ? ` (measured: ${r.cost.measured})` : ""}`, "");
@@ -176,7 +194,7 @@ export function renderBoundaryMarkdown(records: readonly RegulatorRecord[]): str
   ];
   for (const r of gates) {
     lines.push(`## ${r.name} (\`${r.id}\`)`, "");
-    lines.push(`Enforced at ${r.mechanism.enforcementPoints.map((p) => `\`${p}\``).join(", ") || "(nowhere)"} in \`${r.mechanism.implementation}\`; ${r.vsmFunction}, ${r.mechanism.level}.`, "");
+    lines.push(`Enforced at ${r.mechanism.enforcementPoints.map(formatEnforcementPoint).join(", ") || "(nowhere)"} in \`${r.mechanism.implementation}\`; ${r.vsmFunction}, ${r.mechanism.level}.`, "");
     lines.push("Not covered:", "", ...(r.limitations?.length ? r.limitations.map((l) => `- ${l}`) : ["- (no limitation stated: this record would not pass `regulator check`)"]), "");
   }
   if (others.length) {

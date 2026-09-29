@@ -24,23 +24,23 @@ wrong claim is worse than none.
 | ~~**Probable product bug: a live `implement`, `research`, `bookkeeper` or `auditor` unit cannot call `report_result`.**~~ *Fixed: the contract extension adds `report_result` to the surface when a contract loads (#70); the profiles now declare the grant and the definition check requires it (#82). The first live run then found the deeper cause: the dispatcher never bound the session, so no session-bound extension started at all; #82 binds it and drives the path headlessly.* Only `profiles/intelligence.json` lists it, and the profiles extension sets the session's active tools to exactly the profile's list (`regulator-pi/src/profiles.ts:106`). Every live attempt under those profiles would end `no-report`. The scripted evals and the finance test never run a session, so nothing catches it; the live report (DEBT row 33) is still owed, so no live run has contradicted it. | yes | fix in the profiles, or grant `report_result` (and `remember`) by the contract extension regardless of profile, since a contracted unit *must* report; add a definition-check rule that a contracted unit type's profile grants `report_result` |
 | ~~`regulator check` and `regulator docs` are not commands of the installed `regulator` bin. They live in `registry-cli.js`; `regulator doctor` runs the same checks. About eleven passages on the site tell a user to run them.~~ *Fixed in 707f4d7: both are subcommands of the `regulator` bin.* | yes | `packages/regulator/package.json` `bin`; `src/cli.ts` has no branch; `src/registry-cli.ts:23` |
 | ~~The disposition list in the CLI usage (and so the generated CLI reference and `guide/running-units.md`) is wrong: it says `accepted, rejected, accepted-risk, remediated, superseded`; the schema has `no-action, accepted-risk, rework, replan, fixed, verified, rejected, accepted, research-requested, audit-requested, policy-clarification-requested`.~~ *Fixed in 707f4d7.* | yes | `src/cli.ts:30`; `protocol/src/obligations.ts:34` |
-| "Every `--by` is checked against the interaction policy" is false for `init`, `unit accept` and `eval`; the other seven `--by` sites go through `authorized()`. *The docs were corrected in 707f4d7; the code still does not check `unit accept`, which the `disposition-authority` card says it does: [#77](https://github.com/MetaCoding-io/regulator/issues/77).* | yes | `src/cli.ts` (`authorized` at 163, 356, 365, 373, 380, 399, 445; not at `init`, `unit accept`, `eval`) |
+| ~~"Every `--by` is checked against the interaction policy" is false for `init`, `unit accept` and `eval`; the other seven `--by` sites go through `authorized()`.~~ *The docs were corrected in 707f4d7; `unit accept` now goes through `authorized()` at `blocking` ([#77](https://github.com/MetaCoding-io/regulator/issues/77)), so only `init` and `eval` record `--by` unchecked, and the card is true as written.* | yes | `src/cli.ts` (`authorized` at 163, 356, 365, 373, 380, 399, 445; not at `init`, `unit accept`, `eval`) |
 
 ## 2. Docs site: largest gaps, ranked
 
-1. **Nobody but `alice`, `bob` and `course-lab` may disposition anything, and declaring
-   your own people is undocumented.** Getting started works only because `alice`
+1. ~~**Nobody but `alice`, `bob` and `course-lab` may disposition anything, and declaring
+   your own people is undocumented.**~~ *(landed: "Declare who may answer" in `guide/getting-started.md`; OPERATING.md § Customizing the definition)* Getting started works only because `alice`
    ships. The override is a copied `interaction.json` passed as `--interaction` to
    every command, and `REGULATOR_INTERACTION_POLICY` for sessions. → "Declare who may
    answer" in `guide/getting-started.md`; a "Customizing the definition" section in the
    operating guide covering `--policy`, `--recovery`, `--routing`, `--interaction`,
    `init --definition`.
-2. **Obligations have no concept page.** Severity semantics, the lifecycle (open → ack
+2. ~~**Obligations have no concept page.**~~ *(landed: `concepts/obligations.md`)* Severity semantics, the lifecycle (open → ack
    → resolve / escalate → successor), the instance-wide veto (an audit finding with no
    unit holds every dispatch), and what each disposition means are nowhere; the
    disposition list is wrong in two places (§1). → `concepts/obligations.md`; fix
    `cli.ts:30`.
-3. **The tools a unit session gets have no reference.** `report_result` and its
+3. ~~**The tools a unit session gets have no reference.**~~ *(landed: `reference/tools.md`, per tool)* `report_result` and its
    preflight; `ask_human` per kind and how an answer becomes a disposition (consent
    yes → `accepted`, uat yes → `verified`, else `fixed`; `core/src/interaction.ts:32`);
    `notify_owner` with the effect journal and idempotency; `propose_policy_change`;
@@ -48,55 +48,58 @@ wrong claim is worse than none.
    checks of the same name; and that the `vsm_*` tools are a separate generic
    extension not loaded into a unit's session. → `reference/tools.md`: per tool, the
    input fields, the effect, which profiles grant it, what it records.
-4. **`reference/instance.md` is wrong about the stores.** `events.db` holds only the
+4. ~~**`reference/instance.md` is wrong about the stores.**~~ *(landed: the rows are fixed in place)* `events.db` holds only the
    `vsm_*` reporting-tool events, not obligations; obligations fold from
    `signals.ndjson`, which also holds interaction events and is append-only, not a
    queue to drain; `canaries` and `outbox.cursor` are missing; "re-run `init`" is
    refused by the code. → fix the rows in place, against
    `concepts/definition-and-instance.md`, which is right.
-5. **Typed channels: nothing says what emits each kind.** In the code: coordination =
+5. ~~**Typed channels: nothing says what emits each kind.**~~ *(landed: the "Emitted by" column in `concepts/control-plane.md`; `constraint` flagged as declared with no emitter)* In the code: coordination =
    the thrash detector and `unit.ts`; audit-finding = the bash watch, closeout, post-
    merge; algedonic = the `escalate` recovery action; operational and uncertainty =
    report fields (`residualUncertainty`), not a tool. **`constraint` has no emitter**
    yet the table lists it. → an "emitted by" column in `concepts/control-plane.md`;
    drop or flag `constraint`.
-6. **The post-merge check is missing from the loop narrative** (running-units step 5
+6. ~~**The post-merge check is missing from the loop narrative**~~ *(landed: running-units step 5 and the figure caption carry the post-merge check)* (running-units step 5
    and the control-plane figure caption) though it holds the whole instance.
-7. **The control room has no page**: how to launch it (`regulator-control-room`, the
+7. ~~**The control room has no page**~~ *(landed: `guide/control-room.md`)*: how to launch it (`regulator-control-room`, the
    port, `--definition`/`--instance`), what each view shows, the `status --json` read
    model. → `guide/control-room.md`.
-8. **Identity seed format is undocumented and one claim is false.** The `## INV-001 —
+8. ~~**Identity seed format is undocumented and one claim is false.**~~ *(landed: `reference/definition.md` § Identity seed)* The `## INV-001 —
    Title` heading form, the refused-word line form, the seed's own INV-001…004 (no
    page lists them), and "`BOUNDARIES.md` is generated from the registry" (nothing
    generates it). → `reference/definition.md` § Identity seed.
-9. **The host seam.** The `Host` interface a second host must export
+9. ~~**The host seam.**~~ *(landed: `concepts/hosts.md`)* The `Host` interface a second host must export
    (`regulator/src/host.ts`) and how it is resolved are absent. → "Writing a host" in
    `project/packages.md` (issue #58 needs it anyway).
-10. **The regulators page has no introduction**: it opens with "Generated … do not
+10. ~~**The regulators page has no introduction**~~ *(landed: the introduction in the renderer (2026-09-29), and "since 0.1.0" for #56)*: it opens with "Generated … do not
     edit" and a 43-row table. → an introduction in the renderer
     (`core/src/registry.ts`), and render "introduced in M07" as a version.
-11. **`authorityRef` and report fields.** The reference says "an invariant, an accepted
+11. ~~**`authorityRef` and report fields.**~~ *(landed: `reference/definition.md` § Work contracts and `concepts/contracts.md`)* The reference says "an invariant, an accepted
     decision, a planning record"; the code accepts `INV-nnn`, `reg.…`, `human:<name>`,
     `obligation:<id>` and refuses free text. The report's field names and enums
     (`unresolvedOutcomes` preserved/surfaced; deviation kinds; consequence) and the
     `policy-clarification` handling are absent. → rewrite § Work contracts.
-12. **Smaller:** the workload's unit-type → profile mapping is never explained
-    (`research` runs under `intelligence`; `plan`, `verify`, `close` under `research`);
-    identity context's 6000-character limit, the evidence preflight and the failure
-    observer are card-only; lease TTL and liveness are card-only; `unit start`'s
-    `--contract`/`--unit`, `init --definition`, `identity promote --definition`, `eval
-    --host` are undocumented; `fixture`'s three fixtures are never described.
+12. **Smaller:** ~~the workload's unit-type → profile mapping is never explained~~
+    (`reference/definition.md` § Workload); ~~identity context's 6000-character limit~~
+    (`concepts/identity.md`, and reported since #51), ~~the evidence preflight~~
+    (`concepts/contracts.md`) and ~~the failure observer~~ (`concepts/recovery.md`) are
+    card-only; ~~lease TTL and liveness are card-only~~ (`concepts/coordination.md` §
+    Leases); `unit start`'s `--contract`/`--unit` do not exist, ~~`identity promote
+    --definition`, `eval --host` are undocumented~~ (in the usage since 2026-09-29;
+    `init` takes no `--definition`); ~~`fixture`'s three fixtures are never described~~
+    (`guide/running-units.md` § The fixtures).
 
 ## 3. Website: largest gaps, ranked
 
-1. **No link to the docs site anywhere, and no install path.** → a "Get started" block
+1. ~~**No link to the docs site anywhere, and no install path.**~~ *(landed: "Docs ↗" in the nav, the Documentation button, "In the docs" links under each section)* → a "Get started" block
    on `product.html` (`pnpm add -D @metacoding.io/regulator @metacoding.io/regulator-pi`,
    `init`, `doctor`, `unit drive`) linking `guide/getting-started`; a Docs link in
    every nav and footer; the deep-link table in §5.
-2. **Operating is barely shown.** Obligations, dispositions, `answer`, `watch`,
+2. ~~**Operating is barely shown.**~~ *(landed: `product.html#operating`)* Obligations, dispositions, `answer`, `watch`,
    `remind`, `identity accept/reject/promote`, `review --due`, `doctor` in CI appear
    only as words. → an "Operating an instance" section: what a person does day to day.
-3. **Typed channels and the routing policy are absent**: the eight kinds, the severity
+3. ~~**Typed channels and the routing policy are absent**~~ *(landed: `how-it-works.html#channels`, 2026-09-29, from the control-plane table)*: the eight kinds, the severity
    line, the floors, "a signal is not an audit; a proposal does not mutate policy". →
    a `how-it-works` #channels section from the control-plane table.
 4. ~~**The algedonic path is thin**~~ (landed 2026-09-28: `how-it-works.html#algedonic`, the kinds, obligation first, dialog or pause, outbox and reminders, `regulator answer`, the answer as the next hint, escalation, and the attention budget, drawn; links `concepts/asking-a-person`): only consent is explained; recap is mentioned;
@@ -106,7 +109,7 @@ wrong claim is worse than none.
 5. ~~**S5 identity has no section of its own**~~ (landed 2026-09-28: `product.html#identity`, the four layers and propose → accept → promote, linking `concepts/identity`): the four files, INV-nnn, refused words,
    write gate + bash restore + identity-untouched, and the proposal → accept →
    promote direction. → "Identity you cannot prompt away" on `product.html`.
-6. **Definition versus instance versus domain** is drawn as three stores but the
+6. ~~**Definition versus instance versus domain**~~ *(landed: the direction is stated in `how-it-works.html#stores`, 2026-09-29)* is drawn as three stores but the
    direction (the definition is the product; an instance is one repository; promotion
    flows instance → definition by a person) is not stated.
 7. ~~**Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
@@ -120,60 +123,60 @@ wrong claim is worse than none.
 
 Docs site:
 
-- `regulator check` / `regulator docs` as commands (§1), in control-plane,
+- ~~`regulator check` / `regulator docs` as commands (§1), in control-plane,
   definition-and-instance, reference/definition ×3, evidence page, PATHOLOGIES,
-  OPERATING, CONTRIBUTING.
-- Recovery fallback: the reference says a rule that runs out "falls through to
+  OPERATING, CONTRIBUTING.~~ *(707f4d7)*
+- ~~Recovery fallback: the reference says a rule that runs out "falls through to
   `fallback`"; the last action repeats, and `fallback` applies only to a cause with no
-  rule (`core/src/recovery.ts:93`).
-- Invariant numbers from the project's own `vsm/` (INV-005, INV-006) cited as if they
+  rule (`core/src/recovery.ts:93`).~~ *(`reference/definition.md` § Recovery policy says the last action repeats)*
+- ~~Invariant numbers from the project's own `vsm/` (INV-005, INV-006) cited as if they
   were the seed's; the seed has INV-001…004. The finance example reuses INV-005 for a
   different invariant. GLOSSARY's "where it lives" column points at `vsm/` files and
   `vsm_propose_policy_change`; an instance uses `regulator/identity/` and
-  `propose_policy_change`.
-- The evidence page's switch table omits `tool:`; host-checks says a `verify` unit may
-  report an audit finding, but the `research` profile grants no reporting tool.
-- GLOSSARY "Recovery action" lists seven actions and omits `escalate`.
-- `reference/boundary` (from the algedonic-delivery card) still says "no real channel …
-  nothing schedules them"; `regulator watch` paid that (DEBT row 27).
-- `DEBT.md`'s table is broken: the "Permanent limits" paragraph sits between rows 30
-  and 31, so rows 31–41 render as loose text.
-- Broken anchors: running-units → `packages#metacoding-regulator-control-room`
-  (VitePress slug is `metacoding-io-…`); PATHOLOGIES → a GitHub-style GLOSSARY anchor.
-- getting-started tells the reader to edit `policies/default.json` inside the
+  `propose_policy_change`.~~ *(the seed's INV-001…004 are listed under § Identity seed; the finance example keeps its own INV-005 as an example's)*
+- ~~The evidence page's switch table omits `tool:`; host-checks says a `verify` unit may
+  report an audit finding, but the `research` profile grants no reporting tool.~~
+- ~~GLOSSARY "Recovery action" lists seven actions and omits `escalate`.~~
+- ~~`reference/boundary` (from the algedonic-delivery card) still says "no real channel …
+  nothing schedules them"; `regulator watch` paid that (DEBT row 27).~~ *(the card was updated when `watch` paid row 27)*
+- ~~`DEBT.md`'s table is broken: the "Permanent limits" paragraph sits between rows 30
+  and 31, so rows 31–41 render as loose text.~~ *(the blank line is gone, 2026-09-29)*
+- ~~Broken anchors: running-units → `packages#metacoding-regulator-control-room`
+  (VitePress slug is `metacoding-io-…`); PATHOLOGIES → a GitHub-style GLOSSARY anchor.~~
+- ~~getting-started tells the reader to edit `policies/default.json` inside the
   installed package instead of passing `--policy`; the finance example's `regulator
-  fixture … && cd ~/ledger` block then uses source-checkout paths.
-- REPORTING.md is issue-era prose (`pnpm pi`, "this issue does not expand…", GSD
-  history); PATHOLOGIES names a `report_uncertainty` tool that does not exist.
+  fixture … && cd ~/ledger` block then uses source-checkout paths.~~
+- ~~REPORTING.md is issue-era prose (`pnpm pi`, "this issue does not expand…", GSD
+  history); PATHOLOGIES names a `report_uncertainty` tool that does not exist.~~
 - Course vocabulary a product user cannot follow, by page: GLOSSARY 78 occurrences,
   DEBT 41, regulators page 103 ("introduced in M13", "lesson 08", owner "course-lab"),
   boundary page 28, PATHOLOGIES 20, personal-finance 4. The cards are the source of
   most of it (issue #56 pays part).
-- "coding-agent harness" survives in CONTRIBUTING (→ the contributing page), README
+- ~~"coding-agent harness" survives in CONTRIBUTING (→ the contributing page), README
   line 1, both package descriptions and keywords, while the site and `docs/index.md`
   say "agents". ARCHITECTURE's S1 profiles "API, data, UI, infrastructure" do not
-  exist, and it sends readers to an archived GSD map "for the current mapping".
+  exist, and it sends readers to an archived GSD map "for the current mapping".~~
 
 Website:
 
-- `product.html` status card: "2 packages … 0.1.0". Six packages at 0.1.1.
-- `product.html` repository layout lists a `cli/` package (folded into `regulator` at
+- ~~`product.html` status card: "2 packages … 0.1.0". Six packages at 0.1.1.~~ *(six packages, and the version is kept current: 0.1.3 as of 2026-09-29)*
+- ~~`product.html` repository layout lists a `cli/` package (folded into `regulator` at
   0.1.0) and `course/lab/`, `course/modules/` (the course is private and not in this
-  repository); S1 row lists profiles that do not exist.
-- `how-it-works.html`: "drawn from the reference build at checkpoint 9"; "eight
+  repository); S1 row lists profiles that do not exist.~~
+- ~~`how-it-works.html`: "drawn from the reference build at checkpoint 9"; "eight
   extensions" labelled cp1–cp9 (there are eleven, named by concern); the sequence
   diagram's `<text>` uses cp4/cp5/cp6/cp7/cp8/cp9; the tools row omits six tools; the
-  contract shown as "unchanged" differs from the file and cites a retired regulator.
-- "43 regulators" on the site versus "forty-two active" in the docs: 43 records, 42
-  active. The finance example's manifest line says 42; `init` records 43.
-- `product.html` says consent before irreversible actions is "still design"; it
+  contract shown as "unchanged" differs from the file and cites a retired regulator.~~
+- ~~"43 regulators" on the site versus "forty-two active" in the docs: 43 records, 42
+  active. The finance example's manifest line says 42; `init` records 43.~~ *(43 records, 42 active and one retired, everywhere)*
+- ~~`product.html` says consent before irreversible actions is "still design"; it
   shipped; what is open is narrower (DEBT row 29). Says "all five views ship" and
-  lists four; the page renders seven.
-- Every "Full glossary ↗" and "the example in the repo ↗" links into the private
+  lists four; the page renders seven.~~ *(the card now says what is still design: S4 triggers, and whether an action needs consent derived from its effects (row 29))*
+- ~~Every "Full glossary ↗" and "the example in the repo ↗" links into the private
   course repository; `glossary.js` deep-links the archive by line number. The navmark
-  still reads "VSM · PI".
-- `personal-finance.html` "copy-paste order" breaks after `cd ~/ledger`; `regulator
-  check` again; "Six questions" heading over eight rows.
+  still reads "VSM · PI".~~ *(they link the docs site's glossary; `glossary.js` deep-links `docs/GLOSSARY.md` on GitHub by line)*
+- ~~`personal-finance.html` "copy-paste order" breaks after `cd ~/ledger`; `regulator
+  check` again; "Six questions" heading over eight rows.~~ *(the block installs the packages after `cd`; "Eight questions" over eight rows; `regulator check` is a real command since 707f4d7)*
 
 ## 5. Where the website should link into the docs
 
@@ -201,6 +204,8 @@ omits it; the site root is the course page, so a prospective product user has to
 
 ## 6. Corrections owed to the two new concept pages
 
+*Re-verified 2026-09-29: both pages carry the corrections below; the section stands as the record of what was wrong.*
+
 `concepts/intelligence-and-memory.md`:
 
 - "A finding that names no unit opens one obligation with no unit" is wrong: the
@@ -220,15 +225,19 @@ as `pi`.
 
 ## 7. Suggested order
 
-1. The product bug in §1, with a definition-check rule so it cannot recur.
-2. The four wrong facts in §1 (they are one-line fixes and the CLI reference regenerates).
-3. Docs gaps 1–5: people, obligations page, tools reference, the instance layout page,
-   channel emitters.
-4. Website gaps 1–2: the docs link and install path, and the operating section; then
-   the checkpoint-label and package-fact corrections, which are search-and-replace.
-5. The rest of §2 and §3 as separate small pull requests, one page each.
-6. The course-vocabulary sweep last, since the cards are its source and #56 is already
-   scheduled to change them.
+Re-checked against `main` on 2026-09-29. Items 1–5 have landed (§1, §2, §3 and §4 say
+where); what stands:
+
+1. ~~The product bug in §1, with a definition-check rule so it cannot recur.~~
+2. ~~The four wrong facts in §1.~~ (707f4d7; `unit accept` by #77.)
+3. ~~Docs gaps 1–5.~~
+4. ~~Website gaps 1–2, and the checkpoint-label and package-fact corrections.~~
+5. ~~The rest of §2 and §3 as separate small pull requests, one page each.~~ Left: §3
+   item 7's three short website sections (evals; S4 versus memory; registry card
+   anatomy), each linking its concept page.
+6. The course-vocabulary sweep last, since the cards are its source. #56 landed (the
+   cards say "since 0.1.0"); the sweep over "lesson 08", owner `course-lab` and the
+   GLOSSARY's "where it lives" column is what remains of it.
 
 ## 8. Concept pages still missing (review of 2026-09-28)
 

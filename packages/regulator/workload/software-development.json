@@ -27,7 +27,7 @@
         "inherited-tests",
         "identity-untouched",
         "export-signature",
-        "glossary-lint"
+        { "name": "glossary-lint", "options": { "commitMessages": "advisory" } }
       ],
       "requiresContract": true
     },
@@ -41,7 +41,7 @@
         "inherited-tests",
         "identity-untouched",
         "export-signature",
-        "glossary-lint"
+        { "name": "glossary-lint", "options": { "commitMessages": "advisory" } }
       ],
       "requiresContract": true
     },
@@ -54,7 +54,7 @@
         "inherited-tests",
         "identity-untouched",
         "export-signature",
-        "glossary-lint"
+        { "name": "glossary-lint", "options": { "commitMessages": "advisory" } }
       ],
       "requiresContract": true
     },

@@ -12,9 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
-      "piDispatcher (model choice, failover)",
-      "attemptEnd (halt vs provider failure, from the ledger)",
-      "model_select (ledger)"
+      {"where": "host", "point": "dispatcher", "note": "piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger"},
+      {"where": "host", "point": "model_select", "note": "ledger"}
     ]
   },
   "channels": {
@@ -74,5 +73,5 @@
   "retirement": {
     "condition": "No primary-model failure in a quarter of live runs, or a provider-side retry that makes the fallback redundant."
   },
-  "introducedIn": "M07"
+  "introducedIn": "0.1.0"
 }

@@ -12,10 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "src/evals.ts",
     "enforcementPoints": [
-      "runSuite (one instance per arm × repetition, the tasks through driveUnit)",
-      "contractForArm / workloadForArm (an arm changes only what the definition declares)",
-      "graders.ts (outcome and trajectory graders, no judge model)",
-      "checkDefinition (suites and committed reports validate; ablation arms name their switch)"
+      {"where": "cli", "point": "eval", "note": "runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model"},
+      {"where": "check", "point": "checkDefinition", "note": "suites and committed reports validate; ablation arms name their switch"}
     ]
   },
   "channels": {
@@ -79,5 +77,5 @@
   "retirement": {
     "condition": "Never: a control system that cannot measure itself only grows. Individual graders retire when the drift they measure has not appeared in a quarter of live runs."
   },
-  "introducedIn": "M14"
+  "introducedIn": "0.1.0"
 }

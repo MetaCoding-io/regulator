@@ -12,8 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
     "enforcementPoints": [
-      "runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)",
-      "auditUnit (the base branch from the repository; exemptions from the contract's expectations)"
+      {"where": "loop", "point": "runHostChecks", "note": "inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts"},
+      {"where": "loop", "point": "auditUnit", "note": "the base branch from the repository; exemptions from the contract's expectations"}
     ]
   },
   "channels": {
@@ -77,5 +77,5 @@
   "retirement": {
     "condition": "The suiteWeakened grader stays at zero across three model versions and the drift suite with the check off: no unit under this definition edits an inherited test to make it pass."
   },
-  "introducedIn": "M09"
+  "introducedIn": "0.1.0"
 }

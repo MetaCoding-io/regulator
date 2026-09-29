@@ -60,13 +60,13 @@ test("the definition declares the second workload: personal-finance runs under t
   await assert.rejects(loadWorkloadFor("payroll"), /declares no workload "payroll"/);
 });
 
-test("the August close, done as the contracts ask: four units close on the ledger's own checks run by the host, the base is verified after each merge, the unknown merchant is carried as an open item, and the payment waits on a person's consent until one answers", async (t) => {
+test("the August close, done as the contracts ask: four units close on the ledger's own checks run by the host, the merged tree is verified before each merge lands, the unknown merchant is carried as an open item, and the payment waits on a person's consent until one answers", async (t) => {
   const repo = await ledgerInstance(t);
   const outcomes = await close(repo, "bookkeeper", ["f1-ingest", "f2-categorize", "f3-reconcile", "f4-report"]);
   for (const o of outcomes) {
     assert.equal(o.final.status, "closed", `${o.unitId}: ${JSON.stringify(o.final)}`);
     assert.deepEqual(o.decisions, [], `${o.unitId} needed no recovery`);
-    if (o.final.status === "closed" && o.unitId !== "f3-reconcile") assert.equal(o.final.postMerge?.verdict, "pass", `${o.unitId}: the merged base passes the ledger's checks`);
+    if (o.final.status === "closed" && o.unitId !== "f3-reconcile") assert.equal(o.final.preMerge?.verdict, "pass", `${o.unitId}: the merged tree passes the ledger's checks before it lands`);
   }
   const ledger = await readFile(path.join(repo, "ledger", "2026-08.csv"), "utf8");
   assert.equal(ledger.split("\n").filter(Boolean).length, 13, "header plus the statement's twelve rows");
@@ -76,9 +76,9 @@ test("the August close, done as the contracts ask: four units close on the ledge
 
   const audit = new AuditLog(repo);
   const f1 = await audit.forUnit("f1-ingest");
-  assert.deepEqual(f1.evidence.filter((r) => r.attempt === 1 && !r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict]), [["run_checks:syntax:lib/ledger.js", "pass"], ["run_tests", "pass"], ["inherited-tests", "pass"], ["identity-untouched", "pass"], ["glossary-lint", "pass"]], "the workload's checks, with the ledger's suite discovered from package.json");
-  assert.deepEqual(f1.evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict]), [["post-merge:run_checks:syntax:lib/ledger.js", "pass"], ["post-merge:run_tests", "pass"]]);
-  assert.deepEqual((await audit.forUnit("f3-reconcile")).evidence.map((r) => r.check), ["run_tests", "inherited-tests", "identity-untouched", "post-merge:run_tests"], "a read-only unit is still verified by the host, and the base after its (empty) reintegration too");
+  assert.deepEqual(f1.evidence.filter((r) => r.attempt === 1 && !r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict]), [["run_checks:syntax:lib/ledger.js", "pass"], ["run_tests", "pass"], ["inherited-tests", "pass"], ["identity-untouched", "pass"], ["glossary-lint", "pass"]], "the workload's checks, with the ledger's suite discovered from package.json");
+  assert.deepEqual(f1.evidence.filter((r) => r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict]), [["pre-merge:run_checks:syntax:lib/ledger.js", "pass"], ["pre-merge:run_tests", "pass"]]);
+  assert.deepEqual((await audit.forUnit("f3-reconcile")).evidence.map((r) => r.check), ["run_tests", "inherited-tests", "identity-untouched", "pre-merge:run_tests"], "a read-only unit is still verified by the host, and the merged tree before its (empty) reintegration too");
   const memory = await new MemoryStore(repo, clock).current("categorize");
   assert.deepEqual(memory.map((m) => [m.subject, m.scope]), [["GREENGROCER 114", ["categorize", "reconcile"]]]);
   assert.deepEqual(await new MemoryStore(repo, clock).current("ingest"), [], "scoped memory is rendered to the unit types it names");

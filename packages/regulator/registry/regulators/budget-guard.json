@@ -11,7 +11,12 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/budget.ts",
-    "enforcementPoints": ["session_start (ledger written, or resumed on an attempt already metered)", "turn_end (ctx.abort)", "tool_call", "runUnit (close: budget-exhausted attempt)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "session_start", "note": "ledger written, or resumed on an attempt already metered"},
+      {"where": "host", "point": "turn_end", "note": "ctx.abort"},
+      {"where": "host", "point": "tool_call"},
+      {"where": "loop", "point": "runUnit", "note": "close: budget-exhausted attempt"}
+    ]
   },
   "channels": { "consumes": ["policy (budgets)", "message_end usage", "model_select"], "emits": ["budget ledger (execution store)"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["tokens", "cost", "wall-clock", "turns"] },
@@ -31,5 +36,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:budget", "note": "The harness drops checkpoint 6 from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},
   "retirement": {"condition": "No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models."},
-  "introducedIn": "M07"
+  "introducedIn": "0.1.0"
 }

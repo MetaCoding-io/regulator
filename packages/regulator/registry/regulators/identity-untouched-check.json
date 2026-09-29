@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
-    "enforcementPoints": ["runHostChecks (identity-untouched)", "auditUnit (before reintegration)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runHostChecks", "note": "identity-untouched"},
+      {"where": "loop", "point": "auditUnit", "note": "before reintegration"}
+    ]
   },
   "channels": { "consumes": ["worktree branch vs base", "protected prefixes (identity + conventions)"], "emits": ["evidence record (audit log)", "audit-finding → S3 on fail (via the closeout gate)"] },
   "scope": { "subjects": ["unit", "revision"], "resources": ["regulator/identity/", "vendor/", "worktree"] },
@@ -29,5 +32,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "check:identity-untouched", "note": "The drift suite's no-identity-check arm: the check is dropped from every unit type's list; the write gate and the bash watch still run in a live session."},
   "retirement": {"condition": "No protected path changes on any unit branch across three model versions and the drift suite with the check off — the session gates alone hold the line — measured by the boundary grader."},
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

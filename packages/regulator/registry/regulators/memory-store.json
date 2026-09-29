@@ -12,8 +12,7 @@
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/identity.ts",
     "enforcementPoints": [
-      "remember (tool execute)",
-      "MemoryStore.record (expiry bounds)"
+      {"where": "tool", "point": "remember", "note": "execute; MemoryStore.record bounds the expiry"}
     ]
   },
   "channels": {
@@ -73,5 +72,5 @@
   "retirement": {
     "condition": "The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact."
   },
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

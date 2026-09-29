@@ -12,7 +12,7 @@
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
-      "propose_policy_change (tool execute)"
+      {"where": "tool", "point": "propose_policy_change", "note": "execute"}
     ]
   },
   "channels": {
@@ -61,5 +61,5 @@
   },
   "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal."},
   "retirement": {"condition": "Retire when proposals arrive by another typed path (an S3 or S4 proposer) and units stop raising them."},
-  "introducedIn": "M10"
+  "introducedIn": "0.1.0"
 }

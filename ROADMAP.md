@@ -12,12 +12,10 @@ are not promised; order is.
 ## 0.1 — Operable
 
 *The reference build is a published product a team can install into a repository, run
-under CI, and read the documentation for.* Built; two operating steps remain.
-
-| Item | Issue |
-| --- | --- |
-| The six packages on npm at 0.1.0 (`NPM_TOKEN`, the `v0.1.0` tag, the release workflow) | [#44](https://github.com/MetaCoding-io/regulator/issues/44) |
-| The documentation site deployed to GitHub Pages | [#45](https://github.com/MetaCoding-io/regulator/issues/45) |
+under CI, and read the documentation for.* **Done.** The six packages are on npm
+([#44](https://github.com/MetaCoding-io/regulator/issues/44); 0.1.3 is current, each
+patch a live run's finding — the changelog says which) and the documentation site is on
+GitHub Pages ([#45](https://github.com/MetaCoding-io/regulator/issues/45)).
 
 Done in 0.1: the `regulator` CLI with `init` and `doctor`; the S3 loop over two
 workloads; forty-two active regulators with `REGULATORS.md` and `BOUNDARY.md` rendered
@@ -34,20 +32,12 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Item | Pays | Issue |
 | --- | --- | --- |
 | A live eval report over the drift scenario, with an interpretation; the model router's failover observed end to end | rows 33, 15 | [#46](https://github.com/MetaCoding-io/regulator/issues/46) |
-| Attenuated glossary lint: comments blocking, commit messages advisory, declared per workload | row 36 | [#47](https://github.com/MetaCoding-io/regulator/issues/47) |
-| Pre-merge trial on a temporary merge commit, retiring the post-merge check | row 37 | [#48](https://github.com/MetaCoding-io/regulator/issues/48) |
 | Planner-quality graders over the result reports' diagnostics | row 40 | [#49](https://github.com/MetaCoding-io/regulator/issues/49) |
 | `inherited-tests`: per-assertion diff, a test-layout convention, a cached base run | row 41 | [#50](https://github.com/MetaCoding-io/regulator/issues/50) |
-| Warn when the rendered identity exceeds its context budget | row 25 | [#51](https://github.com/MetaCoding-io/regulator/issues/51) |
-| A wait ceiling for paused units, declared in the interaction policy | row 30 | [#52](https://github.com/MetaCoding-io/regulator/issues/52) |
 | Definition versions: a migration note per release and `regulator upgrade` for instances | row 39 | [#53](https://github.com/MetaCoding-io/regulator/issues/53) |
 | Behaviour checks beyond `Function.length`: a probe a contract can carry | row 35 | [#54](https://github.com/MetaCoding-io/regulator/issues/54) |
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
-| Registry records carry the release version they shipped in, not a checkpoint number | — | [#56](https://github.com/MetaCoding-io/regulator/issues/56) |
 | The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
-| Enforcement points as a typed field, refused by `regulator check` when unknown; the first slice of the generated figures | — | [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
-| `regulator unit accept` goes through the disposition-authority check its card claims | — | [#77](https://github.com/MetaCoding-io/regulator/issues/77) |
-| `regulator unit start` prints `pi -e` paths the host gives, not paths under the control plane that do not exist | — | [#79](https://github.com/MetaCoding-io/regulator/issues/79) |
 
 0.2 is done when the live report is committed, every row above is struck or moved to
 "not planned" with a reason, and `regulator review --due` is clean at the first review
@@ -82,8 +72,8 @@ names the issue its current slice is in.
 
 | Thread | Design | State | Next step | Fits |
 | --- | --- | --- | --- | --- |
-| The system's figures generated from the definition: the loop, the session's gates, the workload, the recovery lattice, the unit lifecycle, who writes where — as views in the control room beside the six-column topology, in the docs by `regulator docs --write`, copied by the website | [open questions §1](docs/research/2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects) | decided; first slice scheduled | Enforcement points as a typed field ([#76](https://github.com/MetaCoding-io/regulator/issues/76)); every figure depends on it. After it: the generator and `regulator docs --write` | 0.2 |
-| Documentation and website gaps: wrong CLI facts, missing concept and reference pages, the website's links into the docs | [docs and site gaps §7](docs/research/2026-09-25-docs-and-site-gaps.md#7-suggested-order) | work list, partly landed: the product bug and two of §1's facts are fixed (707f4d7), the third is [#77](https://github.com/MetaCoding-io/regulator/issues/77); `concepts/obligations.md` exists; §8 lists the concept pages still missing, and `concepts/contracts.md`, `concepts/identity.md`, `concepts/recovery.md`, `concepts/coordination.md`, `concepts/asking-a-person.md` and `concepts/hosts.md` have landed | Re-verify §2–§4 against `main` and strike what has landed, then take §7's order from where it stands; §8's pages one per pull request | beside #45 |
+| The system's figures generated from the definition: the loop, the session's gates, the workload, the recovery lattice, the unit lifecycle, who writes where — as views in the control room beside the six-column topology, in the docs by `regulator docs --write`, copied by the website | [open questions §1](docs/research/2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects) | decided; first slice landed | The typed enforcement points landed ([#76](https://github.com/MetaCoding-io/regulator/issues/76): `ENFORCEMENT_POINTS` in `protocol`, five places with closed lists held against the code). Next: the generator over them and `regulator docs --write` for the SVGs | 0.2 |
+| Documentation and website gaps: wrong CLI facts, missing concept and reference pages, the website's links into the docs | [docs and site gaps §7](docs/research/2026-09-25-docs-and-site-gaps.md#7-suggested-order) | re-verified 2026-09-29 against `main`: §1's four facts are fixed (707f4d7, #77); of §2's twelve docs gaps, eleven have landed and the twelfth's parts are struck one by one; §4's stale claims are struck but for the course-vocabulary sweep; §8's seven concept pages have all landed; the website's §3 has its docs links, install path, operating, algedonic, identity, budgets and channels sections | §3 item 7's three short sections (evals, S4 versus memory, registry card anatomy) on the website; then the course-vocabulary sweep over the cards (§7 item 6), last | beside #45 |
 | A person can raise S4 intelligence; sensors declared in the definition | [open questions §2](docs/research/2026-09-25-open-questions.md#2-a-person-should-be-able-to-create-s4-intelligence) | proposed | `regulator intelligence report --by …` writing the same `intelligence-signal` under `human:<name>` provenance | 0.3, beside #59 |
 | Units that run a program, not a session | [open questions §3](docs/research/2026-09-25-open-questions.md#3-must-every-unit-run-a-pi-session) | answered: the dispatcher seam already allows it | A `command` runner per unit type in the workload definition | 0.3, beside #58 |
 | The first live drift runs: what each found, and what the live report must say | [live drift runs note §3](docs/research/2026-09-29-live-drift-run.md#3-what-the-report-must-say) | three defects found and fixed (0.1.2, 0.1.3); the numbers so far are interim | Rerun on 0.1.3 with the interpretation written; commit the report and close [#46](https://github.com/MetaCoding-io/regulator/issues/46) | 0.2 |

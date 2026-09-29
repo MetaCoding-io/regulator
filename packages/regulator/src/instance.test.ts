@@ -50,11 +50,39 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 43);
+  assert.equal(result.manifest.definition.registry, 44);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
   assert.match(await readFile(path.join(repo, "regulator/identity/INVARIANTS.md"), "utf8"), /INV-001/);
+});
+
+test("doctor says when the instance's identity set is over its context budget (#51): the identity check passes with a warning that names the size, the limit and the files cut, `--json` carries it, and nothing is a problem", async (t) => {
+  const repo = await unfamiliarRepo(t);
+  await initInstance(gitExec, { repo, writablePaths: ["lib/", "test/"], by: "alice", now: () => clock });
+  const commit = async (message: string) => { for (const args of [["add", "-A"], ["commit", "--quiet", "-m", message]]) await gitExec("git", args, { cwd: repo }); };
+  // A short glossary first: the seed shipped in 0.1.3 is itself over the budget (found by #51), and this test is about the check, not the seed.
+  await writeFile(path.join(repo, "regulator/identity/GLOSSARY.md"), "# Identity — glossary\n\n- **Unit** — one dispatched piece of work under a contract.\n");
+  await commit("a short glossary");
+  let report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
+  const identity = () => report.checks.find((c) => c.name === "identity")!;
+  /** Warnings other than the definition check's own, which the shipped seed raises today. */
+  const instanceWarnings = () => report.checks.filter((c) => c.warning && c.name !== "definition").length;
+  assert.equal(identity().ok, true);
+  assert.match(identity().detail, /^regulator\/identity\/ present: 4 invariant\(s\), renders to \d{4} of 6000 characters$/);
+  assert.equal(identity().warning, undefined);
+  assert.equal(instanceWarnings(), 0);
+
+  const boundaries = path.join(repo, "regulator/identity/BOUNDARIES.md");
+  await writeFile(boundaries, `${await readFile(boundaries, "utf8")}\n${"- A boundary, restated at length so the set is longer than a prompt carries.\n".repeat(120)}`);
+  await commit("a longer identity");
+  report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
+  assert.equal(identity().ok, true, "a long set is valid");
+  assert.match(identity().warning ?? "", /^the identity set renders to \d+ characters and a unit's prompt carries 6000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\. Shorten the set; the files are authoritative either way\.$/);
+  assert.equal(instanceWarnings(), 1);
+  assert.equal(report.warnings, report.checks.filter((c) => c.warning).length, "the report counts them");
+  assert.equal(report.problems, 0, "a warning refuses nothing");
+  assert.match(JSON.stringify(report), /"warning":"the identity set renders to/);
 });
 
 test("one unit end to end in the unfamiliar repository: the unit writes under lib/, the discovered npm test script and the declared prefixes verify it, glossary-lint reads the identity's refused words, and the merged base is checked after reintegration", async (t) => {
@@ -79,23 +107,31 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
     delegatedResults: [], unresolvedOutcomes: [], emergentDecisions: [], deviations: [], residualUncertainty: [],
   });
   // Attempt 1 writes a comment that calls the unit a task; the glossary's words are the identity's, seeded by init. The router
-  // says repair, and attempt 2 makes the same change in the glossary's words.
+  // says repair, and attempt 2 makes the same change in the glossary's words — and says "task" in its commit message, which the
+  // software workload made advisory (#47): recorded, not refused.
   const hints: Array<string | undefined> = [];
   const { final: outcome, decisions } = await driveUnit(gitExec, { ...base, contract, dispatcher: async (r) => {
     hints.push(r.hint);
     await writeFile(path.join(r.worktree, "lib", "greet.js"), `// ${r.attempt === 1 ? "task" : "unit g1"}: shout\nexport function greet(name) { return \`HI ${"$"}{name}\`; }\n`);
     await writeFile(path.join(r.worktree, "test", "greet.test.js"), 'import test from "node:test"; import assert from "node:assert/strict"; import { greet } from "../lib/greet.js"; test("greet", () => assert.equal(greet("x"), "HI x"));\n');
-    await gitExec("git", ["commit", "-qam", `g1: shout (attempt ${r.attempt})`], { cwd: r.worktree });
+    await gitExec("git", ["commit", "-qam", r.attempt === 1 ? "g1: shout (attempt 1)" : "g1: shout, task done (attempt 2)"], { cwd: r.worktree });
     await store.writeReport(report(r.attempt));
     return {};
   } });
   assert.deepEqual(decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"]]);
   assert.match(hints[1] ?? "", /glossary-lint — the glossary's words drifted on the branch: comment "\/\/ task: shout": task \(say unit\)/);
   assert.equal(outcome.status, "closed", JSON.stringify(outcome));
-  assert.deepEqual(outcome.status === "closed" ? outcome.postMerge : undefined, { verdict: "pass", sha: outcome.status === "closed" ? outcome.sha : "", reasons: [] }, "the merged base was checked with the discovered npm test script");
+  assert.deepEqual(outcome.status === "closed" ? outcome.preMerge : undefined, { verdict: "pass", sha: (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), reasons: [] }, "the merged tree was checked with the discovered npm test script before it landed, and what landed is the trial commit");
   assert.match(await readFile(path.join(repo, "lib", "greet.js"), "utf8"), /HI/);
   const evidence = (await new (await import("@metacoding.io/regulator-core")).AuditLog(repo).forUnit("g1")).evidence;
-  assert.deepEqual(evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict, r.revision === (outcome.status === "closed" ? outcome.sha : "")]), [["post-merge:run_checks:syntax:lib/greet.js", "pass", true], ["post-merge:run_tests", "pass", true]]);
-  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
+  assert.deepEqual(evidence.filter((r) => r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict, r.revision.startsWith(outcome.status === "closed" ? outcome.sha : "-")]), [["pre-merge:run_checks:syntax:lib/greet.js", "pass", true], ["pre-merge:run_tests", "pass", true]]);
+  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("pre-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
   assert.equal((await new ObligationLedger(repo).open()).filter((o) => o.blocks).length, 0);
+  const lint = evidence.find((r) => r.attempt === 2 && r.check === "glossary-lint")!;
+  assert.equal(lint.verdict, "pass", "the commit-message word is advisory under this workload");
+  assert.match(lint.observation, /; 1 hit\(s\) in commit messages, which this workload made advisory: commit "g1: shout, task done \(attempt 2\)": task \(say unit\)$/);
+  const { readSignals } = await import("@metacoding.io/regulator-core");
+  const advisories = (await readSignals(repo)).filter((s) => s.kind === "audit-finding" && s.severity === "advisory");
+  assert.deepEqual(advisories.map((s) => [s.unit, s.subject]), [["g1", "unit g1: glossary-lint saw drift the workload made advisory"]]);
+  assert.match((advisories[0] as { observation: string }).observation, /^1 hit\(s\) in commit messages, which this workload made advisory/);
 });

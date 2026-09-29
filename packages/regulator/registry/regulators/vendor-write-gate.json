@@ -12,7 +12,7 @@
     "level": "deterministic-gate",
     "implementation": "lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)",
     "enforcementPoints": [
-      "tool_call"
+      {"where": "host", "point": "tool_call"}
     ]
   },
   "authority": {
@@ -47,5 +47,5 @@
   "retirement": {
     "condition": "Already superseded: retire when checkpoint 9 is the minimum an arm loads, keeping the record as history."
   },
-  "introducedIn": "M02"
+  "introducedIn": "0.1.0"
 }

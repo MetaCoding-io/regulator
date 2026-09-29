@@ -11,7 +11,17 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/cli.ts",
-    "enforcementPoints": ["authorized() before every write that takes --by (checkDispositionAuthority)", "answer (options check, dispositionForAnswer)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "answer", "note": "authorized() before every write that takes --by (checkDispositionAuthority); the options check and dispositionForAnswer"},
+      {"where": "cli", "point": "obligation ack"},
+      {"where": "cli", "point": "obligation resolve"},
+      {"where": "cli", "point": "obligation escalate"},
+      {"where": "cli", "point": "memory retract"},
+      {"where": "cli", "point": "unit accept", "note": "at blocking: a criterion has no severity of its own"},
+      {"where": "cli", "point": "identity accept", "note": "as S5"},
+      {"where": "cli", "point": "identity reject", "note": "as S5"},
+      {"where": "cli", "point": "identity promote", "note": "as S5"}
+    ]
   },
   "channels": { "consumes": ["interaction policy (people)", "the obligation's severity and concern"], "emits": ["refusal (nothing written)", "interaction-answered (channel cli)", "obligation-resolved / acknowledged / escalated by a named, authorized person"] },
   "scope": { "subjects": ["obligation", "interaction", "identity", "memory"], "resources": [".regulator/signals.ndjson"] },
@@ -29,5 +39,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "policy:interaction.people", "note": "A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything."},
   "retirement": {"condition": "Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts."},
-  "introducedIn": "M13"
+  "introducedIn": "0.1.0"
 }

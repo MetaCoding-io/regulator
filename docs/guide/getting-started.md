@@ -85,8 +85,9 @@ export REGULATOR_INTERACTION_POLICY=$PWD/regulator/interaction.json   # for sess
 
 `resolveUpTo` is the highest severity the person may resolve, `acceptRisk` whether they
 may disposition an obligation as `accepted-risk`, and `actAsS5` whether they may accept or
-reject an identity proposal. Three commands record `--by` without checking it: `init`,
-`unit accept` and `eval`. Their name is provenance, not authority.
+reject an identity proposal. `unit accept` is checked at `blocking`, since a
+criterion has no severity of its own. Two commands record `--by` without checking it:
+`init` and `eval`. Their name is provenance, not authority.
 
 ## Check the instance
 

@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/algedonic.ts",
-    "enforcementPoints": ["ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)", "ctx.ui.confirm / select / input with the policy's timeout"]
+    "enforcementPoints": [
+      {"where": "tool", "point": "ask_human", "note": "execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout"}
+    ]
   },
   "channels": { "consumes": ["tool call (ask_human)", "interaction policy (timeouts, attention)", "lease (unit provenance)", "ctx.hasUI / ctx.mode (channel)"], "emits": ["obligation-opened (interaction, owed to a person)", "interaction-requested / interaction-answered", "obligation-resolved (answered in the session)", "regulator:interaction (session entry)"] },
   "scope": { "subjects": ["interaction", "obligation"], "resources": [".regulator/signals.ndjson", "the session's dialogs"] },
@@ -29,5 +31,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:algedonic", "note": "Shares checkpoint 12 with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows."},
   "retirement": {"condition": "Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads."},
-  "introducedIn": "M13"
+  "introducedIn": "0.1.0"
 }

@@ -26,7 +26,8 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ReportedEvidenceSchema } from "@metacoding.io/regulator-protocol";
-import { ExecutionStore, MemoryStore, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import { ExecutionStore, MemoryStore, appendSignal, identityContextBudget, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import { randomUUID } from "node:crypto";
 import type { Exec } from "@metacoding.io/regulator";
 import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding.io/regulator";
 import { baseRoot, headRevision } from "@metacoding.io/regulator";
@@ -62,12 +63,15 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     let unitType: string | undefined;
     let identity: IdentitySet | undefined;
     let memory: MemoryStore | undefined;
+    /** Whether this session has already said its identity is truncated: once per session, not per turn. */
+    let truncationSignalled = false;
 
     pi.on("session_start", async (_event, ctx) => {
       unitId = "";
       unitType = undefined;
       identity = undefined;
       memory = undefined;
+      truncationSignalled = false;
       try {
         base = await baseRoot(exec, ctx.cwd);
       } catch {
@@ -86,14 +90,31 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
       }
       const current = memory ? (await memory.current(unitType)).length : 0;
       const problems = identity.problems.length ? `; ${identity.problems.length} problem(s)` : "";
-      ctx.ui.setStatus("identity", identity.invariants.length ? `identity: ${identity.invariants.map((i) => i.id).join(", ")}${problems}; memory: ${current} current` : `identity: none found under ${IDENTITY_RELATIVE_DIR}${problems}`);
+      const budget = identityContextBudget(identity);
+      const truncated = budget.truncated ? `; truncated at ${budget.max} of ${budget.chars} characters` : "";
+      ctx.ui.setStatus("identity", identity.invariants.length ? `identity: ${identity.invariants.map((i) => i.id).join(", ")}${problems}${truncated}; memory: ${current} current` : `identity: none found under ${IDENTITY_RELATIVE_DIR}${problems}`);
       if (identity.problems.length) ctx.ui.notify(`regulator: identity problems — ${identity.problems.join("; ")}`, "warning");
     });
 
     // Level 5 by design: identity and memory are advice to the model. What makes identity binding is the gate
     // (checkpoint 9) and the closeout check (this lesson); what keeps memory honest is the expiry the tool enforces.
-    pi.on("before_agent_start", async (event) => {
-      if (identity && (identity.invariants.length || Object.keys(identity.files).length)) event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] = renderIdentitySection(identity);
+    pi.on("before_agent_start", async (event, ctx) => {
+      if (identity && (identity.invariants.length || Object.keys(identity.files).length)) {
+        event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] = renderIdentitySection(identity);
+        // The cut is recorded where the unit's other signals go (#51): the unit ran with part of its identity unseen.
+        // Advisory, from the unit, to S3 — the routing policy notes it as trace; a person reads it in the unit's record.
+        const budget = identityContextBudget(identity);
+        if (budget.warning && !truncationSignalled) {
+          truncationSignalled = true;
+          await appendSignal(base || ctx.cwd, {
+            id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S1", kind: "operational-signal", channel: "signal", destination: "S3", severity: "advisory",
+            subject: `identity truncated at ${budget.max} characters`, ...(unitId ? { unit: unitId } : {}),
+            observation: `This unit's prompt carries a truncated identity: ${budget.warning}`,
+            evidence: budget.cut.map((name) => ({ class: "file" as const, ref: path.join(IDENTITY_RELATIVE_DIR, name) })),
+          });
+          ctx.ui.notify(`regulator: ${budget.warning}`, "warning");
+        }
+      }
       if (memory) event.systemPromptOptions.sections[MEMORY_SECTION_TAG] = renderMemorySection(await memory.current(unitType));
       return undefined;
     });

@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/instance.ts",
-    "enforcementPoints": ["doctor (every check, ok or not, with its detail)", "regulator doctor (exit code)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "doctor", "note": "every check, ok or not, with its detail; the exit code"}
+    ]
   },
   "channels": { "consumes": ["the runtime", "the definition", "the instance's manifest, base and ledger"], "emits": ["doctor report (JSON or text)"] },
   "scope": { "subjects": ["registry", "identity", "execution", "obligation"], "resources": ["the definition", ".regulator/"] },
@@ -29,5 +31,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A check a person or CI runs; it takes part in no unit's run." },
   "retirement": { "condition": "Never as a mechanism; individual checks retire when what they check is checked earlier (a Pi pin enforced by the package manager retires the pin check)." },
-  "introducedIn": "M15"
+  "introducedIn": "0.1.0"
 }

@@ -8,7 +8,7 @@ to be covered. Nothing below is a sandbox: real isolation comes from the operati
 
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
 
-Enforced at `deliverPending (undelivered → outbox, journaled, ledger.deliver)`, `remindDue (remindable → outbox, reminder)`, `routeAndDeliver in the loop`, `signals route / remind (CLI)` in `src/deliver.ts`; S5, deterministic-gate.
+Enforced at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder), `cli:signals route` (deliverPending after routing), `cli:remind` (remindDue) in `src/deliver.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -18,7 +18,7 @@ Not covered:
 
 ## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
 
-Enforced at `runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)`, `bindEvidence (criterion binding)`, `technicalVerdict (host evidence before acceptance for runtime criteria)` in `../checks/src/verify.ts`; S3*, deterministic-gate.
+Enforced at `loop:runHostChecks` (export-signature: the probe run at HEAD, one result per carrying expectation), `loop:auditUnit` (bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -28,7 +28,7 @@ Not covered:
 
 ## Budget guard (`reg.control.budget-guard.v1`)
 
-Enforced at `session_start (ledger written, or resumed on an attempt already metered)`, `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `../regulator-pi/src/budget.ts`; S3, deterministic-gate.
+Enforced at `host:session_start` (ledger written, or resumed on an attempt already metered), `host:turn_end` (ctx.abort), `host:tool_call`, `loop:runUnit` (close: budget-exhausted attempt) in `../regulator-pi/src/budget.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -40,7 +40,7 @@ Not covered:
 
 ## Canary watch (`reg.audit.canary-watch.v1`)
 
-Enforced at `tool_result (redact)`, `message_end (record)` in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
+Enforced at `host:tool_result` (redact), `host:message_end` (record) in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -50,7 +50,7 @@ Not covered:
 
 ## Closeout gate (`reg.audit.closeout-gate.v1`)
 
-Enforced at `auditUnit (after the report check, before reintegration)`, `closeUnit (re-audit without an attempt)` in `src/controller.ts`; S3*, deterministic-gate.
+Enforced at `loop:auditUnit` (after the report check, before reintegration), `loop:closeUnit` (re-audit without an attempt) in `src/controller.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -61,7 +61,7 @@ Not covered:
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
-Enforced at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`, `checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)` in `src/registry-cli.ts`; S5, deterministic-gate.
+Enforced at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close) in `src/registry-cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -71,7 +71,7 @@ Not covered:
 
 ## Disposition authority (`reg.authority.disposition-authority.v1`)
 
-Enforced at `authorized() before every write that takes --by (checkDispositionAuthority)`, `answer (options check, dispositionForAnswer)` in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:answer` (authorized() before every write that takes --by (checkDispositionAuthority); the options check and dispositionForAnswer), `cli:obligation ack`, `cli:obligation resolve`, `cli:obligation escalate`, `cli:memory retract`, `cli:unit accept` (at blocking: a criterion has no severity of its own), `cli:identity accept` (as S5), `cli:identity reject` (as S5), `cli:identity promote` (as S5) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -81,7 +81,7 @@ Not covered:
 
 ## Doctor (the operating check) (`reg.audit.doctor.v1`)
 
-Enforced at `doctor (every check, ok or not, with its detail)`, `regulator doctor (exit code)` in `src/instance.ts`; S3*, deterministic-gate.
+Enforced at `cli:doctor` (every check, ok or not, with its detail; the exit code) in `src/instance.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -91,7 +91,7 @@ Not covered:
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
 
-Enforced at `notify_owner (execute: begin/commit)`, `session_start (reconcile)` in `../regulator-pi/src/recovery.ts`; S2, deterministic-gate.
+Enforced at `tool:notify_owner` (execute: begin/commit), `host:session_start` (reconcile) in `../regulator-pi/src/recovery.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -102,7 +102,7 @@ Not covered:
 
 ## Eval harness and graders (`reg.assurance.eval-harness.v1`)
 
-Enforced at `runSuite (one instance per arm × repetition, the tasks through driveUnit)`, `contractForArm / workloadForArm (an arm changes only what the definition declares)`, `graders.ts (outcome and trajectory graders, no judge model)`, `checkDefinition (suites and committed reports validate; ablation arms name their switch)` in `src/evals.ts`; S3*, deterministic-gate.
+Enforced at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch) in `src/evals.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -113,7 +113,7 @@ Not covered:
 
 ## Evidence preflight (`reg.control.evidence-preflight.v1`)
 
-Enforced at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)` in `../regulator-pi/src/evidence.ts`; S3, deterministic-gate.
+Enforced at `host:tool_result` (run_tests, run_checks: provenance), `host:tool_call` (report_result: block) in `../regulator-pi/src/evidence.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -123,7 +123,7 @@ Not covered:
 
 ## Failure observer (`reg.control.failure-observer.v1`)
 
-Enforced at `tool_execution_end (isError)`, `agent_end (stopReason error)` in `../regulator-pi/src/recovery.ts`; S3, deterministic-gate.
+Enforced at `host:tool_execution_end` (isError), `host:agent_end` (stopReason error) in `../regulator-pi/src/recovery.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -133,17 +133,17 @@ Not covered:
 
 ## Glossary lint (`reg.audit.glossary-lint.v1`)
 
-Enforced at `runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)`, `parseForbiddenTerms (the glossary section)`, `auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)` in `../checks/src/verify.ts`; S3*, deterministic-gate.
+Enforced at `loop:runHostChecks` (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch; parseForbiddenTerms reads the glossary section), `loop:auditUnit` (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
 - A word list with a plural: `tasks` is caught, `tasking` and a synonym are not. Prose in the writable prefixes that is not a comment (a README under src/) is read line by line like a comment when a line carries a comment marker, and otherwise not at all.
-- It is blocking wherever the workload declares it: one word in a commit message costs an attempt. The drift suite's sloppy report shows the cost; making the commit-message half advisory is a workload's declaration to make, and none makes it yet (docs/DEBT.md row 36).
+- The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
 ## Identity promotion (the release path) (`reg.authority.identity-promotion.v1`)
 
-Enforced at `identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)` in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -153,7 +153,7 @@ Not covered:
 
 ## Identity-untouched check (`reg.audit.identity-untouched-check.v1`)
 
-Enforced at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)` in `../checks/src/verify.ts`; S3*, deterministic-gate.
+Enforced at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -163,7 +163,7 @@ Not covered:
 
 ## Identity write gate (`reg.authority.identity-write-gate.v1`)
 
-Enforced at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)` in `../regulator-pi/src/authority.ts`; S5, deterministic-gate.
+Enforced at `host:tool_call` (write, edit: prepareWritePath), `host:tool_call` (bash: snapshot), `host:tool_result` (bash: restore and report) in `../regulator-pi/src/authority.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -174,7 +174,7 @@ Not covered:
 
 ## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
 
-Enforced at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)` in `../checks/src/verify.ts`; S3*, deterministic-gate.
+Enforced at `loop:runHostChecks` (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts), `loop:auditUnit` (the base branch from the repository; exemptions from the contract's expectations) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -185,7 +185,7 @@ Not covered:
 
 ## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
 
-Enforced at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)` in `src/instance.ts`; S5, deterministic-gate.
+Enforced at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint) in `src/instance.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -195,7 +195,7 @@ Not covered:
 
 ## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)
 
-Enforced at `report_intelligence (tool execute)` in `../regulator-pi/src/intelligence.ts`; S4, typed-tool.
+Enforced at `tool:report_intelligence` (execute) in `../regulator-pi/src/intelligence.ts`; S4, typed-tool.
 
 Not covered:
 
@@ -206,7 +206,7 @@ Not covered:
 
 ## Interaction contract (ask_human) (`reg.algedonic.interaction-contract.v1`)
 
-Enforced at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout` in `../regulator-pi/src/algedonic.ts`; S5, typed-tool.
+Enforced at `tool:ask_human` (execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout) in `../regulator-pi/src/algedonic.ts`; S5, typed-tool.
 
 Not covered:
 
@@ -216,7 +216,7 @@ Not covered:
 
 ## Operational memory store (`reg.control.memory-store.v1`)
 
-Enforced at `remember (tool execute)`, `MemoryStore.record (expiry bounds)` in `../regulator-pi/src/identity.ts`; S3, typed-tool.
+Enforced at `tool:remember` (execute; MemoryStore.record bounds the expiry) in `../regulator-pi/src/identity.ts`; S3, typed-tool.
 
 Not covered:
 
@@ -226,7 +226,7 @@ Not covered:
 
 ## Model router (`reg.control.model-router.v1`)
 
-Enforced at `piDispatcher (model choice, failover)`, `attemptEnd (halt vs provider failure, from the ledger)`, `model_select (ledger)` in `../regulator-pi/src/dispatcher.ts`; S3, deterministic-gate.
+Enforced at `host:dispatcher` (piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger), `host:model_select` (ledger) in `../regulator-pi/src/dispatcher.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -236,7 +236,7 @@ Not covered:
 
 ## Obligation router (`reg.control.obligation-router.v1`)
 
-Enforced at `runUnit (after the session, after the audit, after the report's signals)`, `closeUnit (after the audit)`, `routeUnit (before and after the recovery decision)`, `regulator signals route` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `loop:runUnit` (after the session, after the audit, after the report's signals), `loop:closeUnit` (after the audit), `loop:routeUnit` (before and after the recovery decision), `cli:signals route` in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -247,7 +247,7 @@ Not covered:
 
 ## Outbox watcher (`reg.algedonic.outbox-watcher.v1`)
 
-Enforced at `watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)`, `regulator watch (once, or the loop)` in `src/deliver.ts`; S5, deterministic-gate.
+Enforced at `cli:watch` (watchOutbox tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded; --once, or the loop) in `src/deliver.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -257,27 +257,38 @@ Not covered:
 
 ## Pause gate (`reg.algedonic.pause-gate.v1`)
 
-Enforced at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)` in `../regulator-pi/src/algedonic.ts`; S3, deterministic-gate.
+Enforced at `host:tool_call` (paused → block unless read-only effect or report_result), `host:agent_before_settle` (regulator:paused entry, continue: false), `loop:runUnit` (open blocking interaction obligation → attempt outcome paused, status blocked; the progression veto refuses a re-dispatch until it is dispositioned), `loop:routeUnit` (no decision while paused) in `../regulator-pi/src/algedonic.ts`; S3, deterministic-gate.
 
 Not covered:
 
 - The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
 - The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
-- A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays.
+- A paused unit holds its lease and its worktree while it waits, and by default nothing expires the wait: a question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays. The interaction policy may declare `waitCeilingMs`; past it the loop routes the unit under the recovery policy's `timeout` cause and releases the lease, but the question stays open with its veto — nothing answers on anyone's behalf, and the worktree is kept for the attempt that follows the answer.
 
 ## Post-merge check (`reg.audit.post-merge-check.v1`)
 
-Enforced at `verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)`, `progressionVeto (an open blocking obligation with no unit holds every dispatch)` in `src/controller.ts`; S3*, deterministic-gate.
+Enforced at `loop:finishUnit` (verifyBase ran after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding (retired: the step is gone, the trial runs inside finishUnit)), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch) in `src/controller.ts`; S3*, deterministic-gate.
 
 Not covered:
 
-- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
+## Pre-merge trial (`reg.audit.pre-merge-trial.v1`)
+
+Enforced at `loop:finishUnit` (reintegrate with a trial: the temporary worktree under .regulator/trials/, the merge there, the trial, then merge --ff-only to the trial commit; trialMerge in controller.ts runs the workload's checks and binds the evidence), `cli:unit finish` (the same trial with run_tests and run_checks as the conventions discover them) in `src/worktree.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- Only `run_tests` and `run_checks` run on the merged tree; a coupling those two do not exercise lands. A workload cannot yet name a trial-only check.
+- The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.
+- A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
+- An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
+
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
-Enforced at `session_start`, `tool_call` in `../regulator-pi/src/profiles.ts`; S3, deterministic-gate.
+Enforced at `host:session_start`, `host:tool_call` in `../regulator-pi/src/profiles.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -287,7 +298,7 @@ Not covered:
 
 ## Progression veto (`reg.control.progression-veto.v1`)
 
-Enforced at `runUnit (before the lease is taken)`, `closeUnit (before the re-audit)` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `loop:runUnit` (before the lease is taken), `loop:closeUnit` (before the re-audit) in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -297,7 +308,7 @@ Not covered:
 
 ## Project trust rule (`reg.authority.project-trust-rule.v1`)
 
-Enforced at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (authority.ts, CLI sessions)` in `../regulator-pi/src/dispatcher.ts`; S5, deterministic-gate.
+Enforced at `host:dispatcher` (definitionResourceLoader: extensionsOverride, no project skills/prompts/themes), `host:project_trust` (authority.ts, CLI sessions) in `../regulator-pi/src/dispatcher.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -308,7 +319,7 @@ Not covered:
 
 ## Proposal intake (`reg.authority.proposal-intake.v1`)
 
-Enforced at `propose_policy_change (tool execute)` in `../regulator-pi/src/authority.ts`; S5, typed-tool.
+Enforced at `tool:propose_policy_change` (execute) in `../regulator-pi/src/authority.ts`; S5, typed-tool.
 
 Not covered:
 
@@ -318,7 +329,7 @@ Not covered:
 
 ## Recovery router (`reg.control.recovery-router.v1`)
 
-Enforced at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the autoloop) in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -329,7 +340,7 @@ Not covered:
 
 ## Regulator lifecycle (`reg.identity.regulator-lifecycle.v1`)
 
-Enforced at `checkRegistry (active record without ablation or retirement is a problem)`, `reviewDue`, `regulator review --due (CLI)`, `the lifecycle view (read model, control room)` in `../core/src/registry.ts`; S5, deterministic-gate.
+Enforced at `check:checkRegistry` (an active record without ablation or retirement is a problem; so is an overdue review date), `cli:review` (--due: reviewDue), `cli:status` (the lifecycle view of the read model, rendered by the control room) in `../core/src/registry.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -340,7 +351,7 @@ Not covered:
 
 ## Reintegration guard (`reg.coordination.reintegration.v1`)
 
-Enforced at `regulator unit finish` in `src/worktree.ts`; S2, deterministic-gate.
+Enforced at `loop:finishUnit`, `cli:unit finish` in `src/worktree.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -350,7 +361,7 @@ Not covered:
 
 ## Result report gate (`reg.control.result-report-gate.v1`)
 
-Enforced at `report_result (tool execute)`, `runUnit (close)`, `session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)` in `../regulator-pi/src/contract.ts`; S3, deterministic-gate.
+Enforced at `tool:report_result` (execute), `loop:runUnit` (close), `host:session_start` (a loaded contract puts report_result on the active tool surface, whatever the profile lists) in `../regulator-pi/src/contract.ts`; S3, deterministic-gate.
 
 Not covered:
 
@@ -361,7 +372,7 @@ Not covered:
 
 ## S5 decision path (`reg.authority.s5-decision.v1`)
 
-Enforced at `identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)`, `identity reject (ledger.resolve rejected)` in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:identity accept` (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted), `cli:identity reject` (ledger.resolve rejected) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
@@ -371,7 +382,7 @@ Not covered:
 
 ## Span projection (OpenTelemetry GenAI) (`reg.assurance.span-projection.v1`)
 
-Enforced at `projectSpans (schema-validated SpanRecord per record; redact on every string attribute)`, `reportSpans (one span per eval run)`, `regulator spans (CLI)` in `../core/src/spans.ts`; S3*, type.
+Enforced at `cli:spans` (projectSpans: a schema-validated SpanRecord per record; redact on every string attribute), `cli:eval` (reportSpans: one span per eval run) in `../core/src/spans.ts`; S3*, type.
 
 Not covered:
 
@@ -382,7 +393,7 @@ Not covered:
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
 
-Enforced at `tool_execution_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
+Enforced at `host:tool_execution_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -392,7 +403,7 @@ Not covered:
 
 ## Unit lease gate (`reg.coordination.unit-lease.v1`)
 
-Enforced at `session_start`, `tool_call`, `turn_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
+Enforced at `host:session_start`, `host:tool_call`, `host:turn_end` in `../regulator-pi/src/coordination.ts`; S2, deterministic-gate.
 
 Not covered:
 
@@ -402,7 +413,7 @@ Not covered:
 
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
 
-Enforced at `tool_call` in `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)`; S5, deterministic-gate.
+Enforced at `host:tool_call` in `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)`; S5, deterministic-gate.
 
 Not covered:
 
@@ -411,7 +422,7 @@ Not covered:
 
 ## Work contract gate (`reg.control.work-contract-gate.v1`)
 
-Enforced at `runUnit (before createUnit)`, `session_start (contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)` in `src/controller.ts`; S3, deterministic-gate.
+Enforced at `loop:runUnit` (before createUnit), `host:session_start` (contract), `cli:unit start` (--type: the contract-less path refuses a unit type whose workload declares requiresContract) in `src/controller.ts`; S3, deterministic-gate.
 
 Not covered:
 

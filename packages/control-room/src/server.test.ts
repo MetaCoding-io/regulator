@@ -27,7 +27,7 @@ async function fixture(t: TestContext) {
   await writeFile(path.join(definition, "registry", "regulators", "gate.json"), JSON.stringify({
     id: "reg.test.gate.v1", name: "Gate", status: "active", vsmFunction: "S3", purpose: "p",
     absorbs: { failureClass: "f", description: "d" },
-    mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: ["tool_call"] },
+    mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: [{ where: "host", point: "tool_call" }] },
     evidence: { tests: ["src/gate.test.ts"] }, limitations: ["l"],
     ownership: { owner: "o", introduced: "2026-09-22", reviewBy: "2026-12-01" },
     ablation: { switch: "extension:gate", note: "n" }, retirement: { condition: "c" },

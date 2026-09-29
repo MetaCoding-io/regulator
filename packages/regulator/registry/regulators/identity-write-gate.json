@@ -12,9 +12,9 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
-      "tool_call (write, edit: prepareWritePath)",
-      "tool_call (bash: snapshot)",
-      "tool_result (bash: restore and report)"
+      {"where": "host", "point": "tool_call", "note": "write, edit: prepareWritePath"},
+      {"where": "host", "point": "tool_call", "note": "bash: snapshot"},
+      {"where": "host", "point": "tool_result", "note": "bash: restore and report"}
     ]
   },
   "channels": {
@@ -75,5 +75,5 @@
   },
   "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
   "retirement": {"condition": "No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable."},
-  "introducedIn": "M10"
+  "introducedIn": "0.1.0"
 }

@@ -147,8 +147,11 @@ table, not evidence.
 The committed interpretations are the model to follow. The drifter report says the
 treatment closed none of six tasks against the control's six, and that the recovery
 policy, not the gates, made that cost larger than it needed to be. The sloppy report
-calls itself the over-regulation case: `glossary-lint` refused correct work over a word
-in a commit message.
+was the over-regulation case: `glossary-lint` refused correct work over a word in a
+commit message, three attempts a unit. Its regenerated form runs under the attenuation
+that finding bought — the software workload declares the commit-message half advisory —
+and says what that costs instead: the four units close, the four words land on `main` as
+advisory findings, and only the drift in comments is still refused.
 
 The rule is partly mechanized. `regulator eval` without `--interpretation <file>`
 writes a placeholder ("not yet interpreted by a person", by "nobody yet"). The schema

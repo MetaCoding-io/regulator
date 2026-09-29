@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
-    "enforcementPoints": ["runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)", "bindEvidence (criterion binding)", "technicalVerdict (host evidence before acceptance for runtime criteria)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runHostChecks", "note": "export-signature: the probe run at HEAD, one result per carrying expectation"},
+      {"where": "loop", "point": "auditUnit", "note": "bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria"}
+    ]
   },
   "channels": { "consumes": ["contract expectations that carry a check", "the worktree at HEAD"], "emits": ["evidence record (class runtime, bound to the criterion)"] },
   "scope": { "subjects": ["evidence"], "resources": ["the unit's worktree"] },
@@ -29,5 +32,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "check:export-signature", "note": "The drift suite's no-behaviour-check arm drops the check from every unit type and the signature criterion from the contract: the signature is a fixed decision in prose only." },
   "retirement": { "condition": "Never as a mechanism; the export-signature kind retires when no contract in a quarter of runs carries it, and a richer behaviour check (a runtime probe over inputs) has replaced it." },
-  "introducedIn": "M14"
+  "introducedIn": "0.1.0"
 }

@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["routeUnit (after a blocked outcome)", "driveUnit (the autoloop)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "routeUnit", "note": "after a blocked outcome"},
+      {"where": "loop", "point": "driveUnit", "note": "the autoloop"}
+    ]
   },
   "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)", "obligation for the waiting action (via the obligation router)"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["attempts", "lease", "worktree"] },
@@ -30,5 +33,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "policy:recovery.rules", "note": "A policy whose every rule is escalate is the ablation: every blocked unit goes to a person. The harness does not throw policy switches."},
   "retirement": {"condition": "Never as a mechanism; individual rules retire when a cause is not seen in a quarter of runs."},
-  "introducedIn": "M08"
+  "introducedIn": "0.1.0"
 }

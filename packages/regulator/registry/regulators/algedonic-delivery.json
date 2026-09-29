@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/deliver.ts",
-    "enforcementPoints": ["deliverPending (undelivered → outbox, journaled, ledger.deliver)", "remindDue (remindable → outbox, reminder)", "routeAndDeliver in the loop", "signals route / remind (CLI)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "routeAndDeliver", "note": "deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder"},
+      {"where": "cli", "point": "signals route", "note": "deliverPending after routing"},
+      {"where": "cli", "point": "remind", "note": "remindDue"}
+    ]
   },
   "channels": { "consumes": ["obligation ledger (open, owed to a person, deliveries)", "interaction policy (reminderAfterMs)"], "emits": ["outbox line (deliver:<obligation>:<n>)", "effect journal entry", "obligation-delivered (channel outbox, reminder)"] },
   "scope": { "subjects": ["obligation"], "resources": [".regulator/outbox", ".regulator/effects.ndjson", ".regulator/signals.ndjson"] },
@@ -29,5 +33,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:deliver-pending", "note": "Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only."},
   "retirement": {"condition": "Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before."},
-  "introducedIn": "M13"
+  "introducedIn": "0.1.0"
 }

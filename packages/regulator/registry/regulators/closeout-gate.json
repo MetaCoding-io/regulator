@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["auditUnit (after the report check, before reintegration)", "closeUnit (re-audit without an attempt)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "auditUnit", "note": "after the report check, before reintegration"},
+      {"where": "loop", "point": "closeUnit", "note": "re-audit without an attempt"}
+    ]
   },
   "channels": { "consumes": ["result report", "workload unit-type checks", "worktree at HEAD", "human acceptance (audit log)"], "emits": ["evidence record (audit log)", "technical verdict (audit log)", "audit-finding → S3 (closeout refused)"] },
   "scope": { "subjects": ["unit", "attempt", "criterion"], "resources": ["worktree", "audit log"] },
@@ -30,5 +33,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature)."},
   "retirement": {"condition": "Never: independent verification is INV-003. Individual checks retire under their own conditions."},
-  "introducedIn": "M09"
+  "introducedIn": "0.1.0"
 }

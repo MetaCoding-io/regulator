@@ -9,10 +9,9 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted,
-  type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
 } from "@metacoding.io/regulator-protocol";
-import { readIdentity, type IdentitySet } from "./identity.js";
+import { identityContextBudget, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { isReadOnlyProfile } from "./profiles.js";
 
@@ -34,6 +33,8 @@ export interface CheckedDefinition {
   evals: EvalSuite[];
   reports: EvalReport[];
   problems: DefinitionProblem[];
+  /** What is true and worth knowing, and refuses nothing: the identity set over its context budget. */
+  warnings: DefinitionProblem[];
 }
 
 async function jsonFiles(dir: string): Promise<string[]> {
@@ -44,8 +45,15 @@ async function jsonFiles(dir: string): Promise<string[]> {
   }
 }
 
+/** The options a check entry carries that the check does not take. */
+function unknownCheckOptions(entry: CheckEntry): string[] {
+  if (typeof entry === "string") return [];
+  const takes: readonly string[] = CHECK_OPTIONS[entry.name] ?? [];
+  return Object.keys(entry.options).filter((o) => !takes.includes(o));
+}
+
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [], warnings: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
@@ -83,8 +91,10 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         else if (type.requiresContract && !profile.tools.includes("report_result")) {
           problem(`workload/${file}`, `unit type "${type.name}" runs under a contract but its profile "${type.profile}" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)`);
         }
-        for (const check of type.checks) {
+        for (const entry of type.checks) {
+          const check = checkName(entry);
           if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`workload/${file}`, `unit type "${type.name}" names check "${check}", which the host does not run (known: ${HOST_CHECK_NAMES.join(", ")})`);
+          for (const option of unknownCheckOptions(entry)) problem(`workload/${file}`, `unit type "${type.name}" gives check "${check}" the option "${option}", which it does not take${CHECK_OPTIONS[check]?.length ? ` (it takes ${CHECK_OPTIONS[check]!.join(", ")})` : ""}`);
         }
       }
     } catch (error) {
@@ -121,6 +131,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   if (!out.routing.length) problem("policies/", "no routing policy declared");
   if (!out.interaction.length) problem("policies/", "no interaction policy declared: nothing says how long to wait for a person or who may answer");
   for (const p of out.identity.problems) problem("identity/", p);
+  // A long set is valid and partly unseen (#51): a warning, not a problem, since the check refuses nothing over it.
+  const budget = identityContextBudget(out.identity);
+  if (budget.warning) out.warnings.push({ file: "identity/", message: budget.warning });
 
   // Evals (lesson 14): a suite is part of the declaration — its tasks must exist, its baseline must be an arm, its checks must be
   // ones the host runs, and an ablation arm must say which switch it throws. A committed report must validate, or it is a rumour.
@@ -134,9 +147,10 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       for (const arm of value.arms) {
         if (names.has(arm.name)) problem(`evals/${file}`, `arm "${arm.name}" is declared twice`);
         names.add(arm.name);
-        for (const check of arm.checks) if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`evals/${file}`, `arm "${arm.name}" names check "${check}", which the host does not run`);
+        for (const entry of arm.checks) for (const option of unknownCheckOptions(entry)) problem(`evals/${file}`, `arm "${arm.name}" gives check "${checkName(entry)}" the option "${option}", which it does not take`);
+        for (const check of checkNames(arm.checks)) if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`evals/${file}`, `arm "${arm.name}" names check "${check}", which the host does not run`);
         if (arm.ablates && !arm.switch) problem(`evals/${file}`, `arm "${arm.name}" ablates ${arm.ablates} but names no switch`);
-        if (arm.switch?.startsWith("check:") && arm.checks.includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
+        if (arm.switch?.startsWith("check:") && checkNames(arm.checks).includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
       }
       for (const task of value.tasks) {
         try { await readFile(path.join(dir, task)); } catch { problem(`evals/${file}`, `task "${task}" does not exist`); }

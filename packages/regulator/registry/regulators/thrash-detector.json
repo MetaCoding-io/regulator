@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/coordination.ts",
-    "enforcementPoints": ["tool_execution_end"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_execution_end"}
+    ]
   },
   "channels": { "consumes": ["tool_execution_end (write, edit)"], "emits": ["coordination-signal (oscillation) → S3"] },
   "scope": { "subjects": ["unit"], "resources": ["file"] },
@@ -28,5 +30,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:coordination", "note": "Shares checkpoint 4 with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later."},
   "retirement": {"condition": "No oscillation in the oscillation fixture across three model versions with the detector off: the models stop alternating on their own, or the ceiling catches it at acceptable cost."},
-  "introducedIn": "M05"
+  "introducedIn": "0.1.0"
 }

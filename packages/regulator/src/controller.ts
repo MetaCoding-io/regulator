@@ -44,14 +44,15 @@ import {
   dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem,
 } from "@metacoding.io/regulator-core";
+import { checkNames, checkOptions } from "@metacoding.io/regulator-protocol";
 import type {
   AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
-  TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
+  TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
 } from "@metacoding.io/regulator-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
-import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
+import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
@@ -111,8 +112,8 @@ async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dis
 
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
-  | { status: "closed"; report: ResultReport; sha: string; signals: number; postMerge?: PostMergeOutcome }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
+  | { status: "closed"; report: ResultReport; sha: string; signals: number; preMerge?: PreMergeOutcome }
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch" | "base-moved"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
@@ -248,35 +249,44 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
   const signals = await emitReportSignals(options.repo, contract, report, now);
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
 
-  const finished = await finishUnit(exec, { repo: options.repo, unitId: contract.unitId, now });
+  // The pre-merge trial (#48): the unit was verified at its own HEAD; the base after the merge is a different tree, and two
+  // units that change disjoint files can break each other. The merge is tried first, the workload's checks run on the trial
+  // commit, and only a tree that passed lands. A failing trial is a conflict for S3 — the shipped policy says repair — and the
+  // base is exactly as it was.
+  let preMerge: PreMergeOutcome | undefined;
+  const finished = await finishUnit(exec, {
+    repo: options.repo, unitId: contract.unitId, now,
+    trial: async (trial) => { preMerge = await trialMerge(exec, { cwd: trial.cwd, sha: trial.sha, repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, now }); return { ok: preMerge.verdict !== "fail", reasons: preMerge.reasons }; },
+  });
   if (!finished.result.merged) {
-    await store.setStatus(contract.unitId, "blocked", `reintegration: ${finished.result.reason}`);
-    return { status: "blocked", reason: finished.result.reason, ...(finished.signal ? { detail: finished.signal.observation } : {}) };
+    const reason = finished.result.reason === "trial-failed" ? "conflict" : finished.result.reason;
+    const detail = finished.signal?.observation ?? (finished.result.reason === "base-moved" ? `the base moved from ${finished.result.from.slice(0, 7)} to ${finished.result.to.slice(0, 7)} during the trial; nothing landed` : undefined);
+    await store.setStatus(contract.unitId, "blocked", `reintegration: ${reason}${detail ? ` — ${detail}` : ""}`);
+    return { status: "blocked", reason, ...(detail ? { detail } : {}) };
   }
   await store.setStatus(contract.unitId, "closed");
-  // Post-merge evidence (lesson 15): the unit was verified at its own HEAD; the base after the merge is a different tree.
-  const postMerge = await verifyBase(exec, { repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, sha: finished.result.sha, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
-  return { status: "closed", report, sha: finished.result.sha, signals, ...(postMerge ? { postMerge } : {}) };
+  return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
 }
 
-export interface PostMergeOutcome {
+export interface PreMergeOutcome {
   verdict: "pass" | "fail" | "inconclusive";
+  /** The trial commit: what the evidence is bound to, and — when it landed — what the base carries. */
   sha: string;
   reasons: string[];
 }
 
 /**
- * Run the workload's checks on the base at the merge commit. Two units can change disjoint files and break each other;
- * the closeout gate cannot see that, because it verifies a branch at its HEAD. A failure here is not the unit's — the
- * unit closed on fresh evidence — it is the instance's: an audit finding with no unit, which the router turns into an
- * obligation owed to S3 that holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision.
+ * The workload's `run_tests` and `run_checks` on the merged tree, in the trial worktree, before anything lands. The results
+ * are evidence bound to the trial commit and to the unit that would land it, whatever the verdict: a refused merge is on the
+ * record too. The branch-relative checks (identity-untouched, export-signature, glossary-lint, inherited-tests) have no
+ * meaning on a merged tree and are not run.
  */
-async function verifyBase(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; sha: string; now: () => number }): Promise<PostMergeOutcome | undefined> {
-  const checks = options.unitType.checks.filter((c) => c === "run_tests" || c === "run_checks");
-  if (!checks.length) return undefined;
-  const conventions = await discoverConventions(options.repo);
-  const results = (await runHostChecks(exec, { cwd: options.repo, checks, conventions })).map((r) => ({ ...r, check: `post-merge:${r.check}` }));
+async function trialMerge(exec: Exec, options: { cwd: string; sha: string; repo: string; contract: WorkContract; unitType: UnitType; attempt: number; now: () => number }): Promise<PreMergeOutcome> {
+  const checks = checkNames(options.unitType.checks).filter((c) => c === "run_tests" || c === "run_checks");
+  if (!checks.length) return { verdict: "pass", sha: options.sha, reasons: [] };
+  const conventions = await discoverConventions(options.cwd);
+  const results = (await runHostChecks(exec, { cwd: options.cwd, checks, conventions })).map((r) => ({ ...r, check: `pre-merge:${r.check}` }));
   const records = bindEvidence(results, { unitId: options.contract.unitId, attempt: options.attempt, contract: { id: options.contract.id, version: options.contract.version }, expectations: [], revision: options.sha, now: options.now });
   const log = new AuditLog(options.repo);
   for (const record of records) await log.appendEvidence(record);
@@ -284,16 +294,6 @@ async function verifyBase(exec: Exec, options: { repo: string; contract: WorkCon
   const inconclusive = results.filter((r) => r.verdict === "inconclusive");
   const verdict = failing.length ? "fail" : inconclusive.length === results.length ? "inconclusive" : "pass";
   const reasons = [...failing, ...inconclusive].map((r) => `${r.check}: ${r.observation.split("\n").slice(0, 3).join("; ")}`);
-  if (verdict === "fail") {
-    const finding: AuditFinding = {
-      id: randomUUID(), timestamp: new Date(options.now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking",
-      subject: `base ${options.sha.slice(0, 7)} fails its checks after reintegrating ${options.contract.unitId}`, invariant: "INV-003",
-      observation: `${failing.map((r) => `${r.check} — ${r.observation.split("\n").slice(0, 3).join("; ")}`).join("; ")}. The unit passed at its own HEAD; the merged base does not. Nothing was reverted.`,
-      evidence: records.map((r) => ({ class: r.class, ref: r.check, observation: r.observation.split("\n")[0] ?? "", sourceRevision: options.sha })),
-      suggestedAction: "decide on the base: revert the merge, or dispatch a repair unit against it; every dispatch is held until this is dispositioned",
-    };
-    await appendSignal(options.repo, finding);
-  }
   return { verdict, sha: options.sha, reasons };
 }
 
@@ -334,12 +334,25 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
     const protectedPaths = [...new Set([IDENTITY_RELATIVE_DIR, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
     const identity = await readIdentity(path.join(worktree, IDENTITY_RELATIVE_DIR));
     const results = await runHostChecks(exec, {
-      cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
+      cwd: worktree, checks: checkNames(unitType.checks), checkOptions: checkOptions(unitType.checks), fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
       base: await currentBranch(exec, options.repo), protectedPaths, conventions, expectations: contract.expectedEvidence,
       forbidden: identity.forbidden, writablePaths: manifest?.writablePaths ?? [...conventions.sourceDirs.map((d) => `${d}/`), "test/"],
     });
     records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
     for (const record of records) await log.appendEvidence(record);
+    // A check that passed at its declared severity and still saw something (#47): a finding at advisory, beside the evidence,
+    // so the drift is on the record and routed as trace; nothing is refused for it, because the workload said so.
+    for (const result of results) {
+      if (!result.advisory) continue;
+      const finding: AuditFinding = {
+        id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3",
+        severity: "advisory", subject: `unit ${unitId}: ${result.check} saw drift the workload made advisory`, unit: unitId,
+        observation: result.advisory,
+        evidence: [{ class: result.class, ref: result.check, observation: result.observation.split("\n")[0] ?? "", sourceRevision: revision }],
+        suggestedAction: "nothing to repair: the workload declared this half advisory; the glossary's words are the ones to say next time",
+      };
+      await appendSignal(options.repo, finding);
+    }
   }
   const held = await log.forUnit(unitId);
   let verdict = technicalVerdict({ contract, report, records: held.evidence, acceptances: held.acceptances, unitId, attempt: options.attempt, revision, now });
@@ -449,12 +462,26 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
   await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
-  // A unit paused on a question is not a failure to route: it waits for a person, and the recovery policy has nothing to say until one answers.
-  if ((await ledger.open(options.unitId)).some((o) => o.concern === "interaction" && o.blocks)) return undefined;
+  // A unit paused on a question is not a failure to route: it waits for a person, and the recovery policy has nothing to say until one
+  // answers — unless the interaction policy declares a wait ceiling and the oldest open question has passed it (#52). Then the wait is a
+  // `timeout` for the recovery policy, the lease is released so the worktree is not held by a unit going nowhere, and the question stays
+  // open with the veto it carries: nothing here answers on anyone's behalf. Each routing past the ceiling is one more occurrence.
+  const questions = (await ledger.open(options.unitId)).filter((o) => o.concern === "interaction" && o.blocks);
+  let pastCeiling: { cause: FailureCause; evidence: string[] } | undefined;
+  if (questions.length) {
+    const ceiling = options.interaction.waitCeilingMs;
+    const waitedMs = now() - Math.min(...questions.map((q) => Date.parse(q.openedAt)));
+    if (ceiling === undefined || waitedMs < ceiling) return undefined;
+    pastCeiling = { cause: "timeout", evidence: [`paused ${Math.round(waitedMs / 60_000)} min on ${questions.map((q) => `${q.subject} (obligation ${q.id.slice(0, 8)})`).join("; ")}; the interaction policy's wait ceiling is ${Math.round(ceiling / 60_000)} min`] };
+  }
   const decision = await routeBlockedUnit(store, {
     policy: options.recovery, unitId: options.unitId, attemptCeiling: ceilingFor(options.policy, unit.unitType).attempts,
-    signals: await readSignals(options.repo), now,
+    signals: await readSignals(options.repo), now, ...(pastCeiling ? { cause: pastCeiling } : {}),
   });
+  if (decision && pastCeiling) {
+    const released = await leaseStoreFor(options.repo, now).release(options.unitId);
+    for (const q of questions) await ledger.acknowledge(q.id, "S3", `${pastCeiling.evidence[0]}: routed under timeout → ${decision.action} (occurrence ${decision.occurrence}); lease ${released ? "released" : "was not held"}; the question stays open`);
+  }
   if (!decision) return undefined;
   const cites: string[] = [];
   if (decision.action === "abort") {

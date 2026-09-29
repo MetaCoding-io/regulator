@@ -11,7 +11,12 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/algedonic.ts",
-    "enforcementPoints": ["tool_call (paused → block unless read-only effect or report_result)", "agent_before_settle (regulator:paused entry, continue: false)", "runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)", "routeUnit (no decision while paused)", "progression veto (re-dispatch refused until dispositioned)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_call", "note": "paused → block unless read-only effect or report_result"},
+      {"where": "host", "point": "agent_before_settle", "note": "regulator:paused entry, continue: false"},
+      {"where": "loop", "point": "runUnit", "note": "open blocking interaction obligation → attempt outcome paused, status blocked; the progression veto refuses a re-dispatch until it is dispositioned"},
+      {"where": "loop", "point": "routeUnit", "note": "no decision while paused"}
+    ]
   },
   "channels": { "consumes": ["the session's own unanswered question", "obligation ledger (open blocking interaction on the unit)"], "emits": ["tool_call block", "regulator:paused (session entry)", "attempt record (paused)", "unit status blocked: paused"] },
   "scope": { "subjects": ["execution", "interaction"], "resources": ["the session's tools", ".regulator/units/"] },
@@ -24,10 +29,10 @@
   "limitations": [
     "The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.",
     "The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.",
-    "A paused unit holds its lease and its worktree while it waits; nothing expires the wait itself. A question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays."
+    "A paused unit holds its lease and its worktree while it waits, and by default nothing expires the wait: a question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays. The interaction policy may declare `waitCeilingMs`; past it the loop routes the unit under the recovery policy's `timeout` cause and releases the lease, but the question stays open with its veto — nothing answers on anyone's behalf, and the worktree is kept for the attempt that follows the answer."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:algedonic", "note": "Shares checkpoint 12 with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence."},
   "retirement": {"condition": "Never while a question can go unanswered: the gate is the meaning of 'waits'."},
-  "introducedIn": "M13"
+  "introducedIn": "0.1.0"
 }

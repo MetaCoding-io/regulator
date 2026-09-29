@@ -1,0 +1,91 @@
+{
+  "id": "reg.audit.pre-merge-trial.v1",
+  "name": "Pre-merge trial",
+  "status": "active",
+  "vsmFunction": "S3*",
+  "purpose": "The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. Before anything lands, the loop merges the unit's branch in a temporary worktree detached at the base's HEAD, runs the workload's `run_tests` and `run_checks` on that merged tree, and appends the results to the audit log as evidence bound to the trial commit and to the unit that would land it. A tree that passes is landed by fast-forward to the very commit that was verified, so what the evidence is bound to is what the base carries. A tree that fails lands nothing: the base is exactly as it was, S2 records a `conflict` coordination signal saying what the merged tree failed, and the unit is blocked with the cause `conflict` — `repair` under the shipped recovery policy, with the failing checks as the hint. `unit finish` by hand runs the same trial with the project's own two checks. Replaces the post-merge check (reg.audit.post-merge-check.v1), which recorded a red base for S3 to decide about; here the base is never red.",
+  "absorbs": {
+    "failureClass": "semantic-conflict",
+    "description": "Two units pass every check on their own branches, merge without a conflict, and the base fails its suite: a coupling neither could see from its worktree, and the post-merge form of this check found it only after the base carried it."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "src/worktree.ts",
+    "enforcementPoints": [
+      {
+        "where": "loop",
+        "point": "finishUnit",
+        "note": "reintegrate with a trial: the temporary worktree under .regulator/trials/, the merge there, the trial, then merge --ff-only to the trial commit; trialMerge in controller.ts runs the workload's checks and binds the evidence"
+      },
+      {
+        "where": "cli",
+        "point": "unit finish",
+        "note": "the same trial with run_tests and run_checks as the conventions discover them"
+      }
+    ]
+  },
+  "channels": {
+    "consumes": [
+      "the unit's branch and the base at HEAD",
+      "the workload's run_tests and run_checks (the unit type's; the project's own from the CLI)"
+    ],
+    "emits": [
+      "evidence (pre-merge:*) bound to the trial commit",
+      "coordination-signal (conflict, blocking) when the merged tree fails"
+    ]
+  },
+  "scope": {
+    "subjects": [
+      "unit",
+      "base"
+    ],
+    "resources": [
+      ".regulator/trials/",
+      ".regulator/audit.ndjson",
+      ".regulator/signals.ndjson"
+    ]
+  },
+  "cost": {
+    "description": "A second worktree per close (`git worktree add --detach`, removed before the close returns) and the project's test command once more, on the merged tree, before it lands. Measured on the drift fixture with the scripted reference unit, treatment arm, three repetitions: see `measured`.",
+    "measured": "no measurable difference against the post-merge check it replaced: 862 ms → 836 ms per closed unit (mean of 18 closes each, scripted reference unit, treatment arm, three repetitions, 2026-09-29, one machine). The checks ran once more either way; what the trial adds is a worktree add and remove and a fast-forward, tens of milliseconds, inside the noise."
+  },
+  "authority": {
+    "may": [
+      "refuse a reintegration whose merged tree fails the workload's checks, and say what failed",
+      "land exactly the commit that was verified, by fast-forward",
+      "refuse to land when the base moved between the trial and the landing"
+    ],
+    "mayNot": [
+      "resolve a conflict or repair a failing tree",
+      "revert anything: it lands or it does not",
+      "run the branch-relative checks (identity-untouched, export-signature, glossary-lint, inherited-tests) on a merged tree, where they have no meaning"
+    ]
+  },
+  "evidence": {
+    "tests": [
+      "src/worktree.test.ts",
+      "src/controller.test.ts",
+      "src/instance.test.ts",
+      "src/finance.test.ts"
+    ]
+  },
+  "limitations": [
+    "Only `run_tests` and `run_checks` run on the merged tree; a coupling those two do not exercise lands. A workload cannot yet name a trial-only check.",
+    "The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.",
+    "A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.",
+    "An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses."
+  ],
+  "ownership": {
+    "owner": "course-lab",
+    "introduced": "2026-09-29",
+    "reviewBy": "2026-12-01"
+  },
+  "ablation": {
+    "switch": "loop:pre-merge",
+    "note": "A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base; without the trial a semantic conflict would land and show as later units' check failures."
+  },
+  "retirement": {
+    "condition": "Never while two units can share a base: the trial is what makes a clean merge mean something."
+  },
+  "introducedIn": "0.1.4"
+}

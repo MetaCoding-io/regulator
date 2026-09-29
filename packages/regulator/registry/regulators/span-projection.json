@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "type",
     "implementation": "../core/src/spans.ts",
-    "enforcementPoints": ["projectSpans (schema-validated SpanRecord per record; redact on every string attribute)", "reportSpans (one span per eval run)", "regulator spans (CLI)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "spans", "note": "projectSpans: a schema-validated SpanRecord per record; redact on every string attribute"},
+      {"where": "cli", "point": "eval", "note": "reportSpans: one span per eval run"}
+    ]
   },
   "channels": { "consumes": [".regulator/units/", "audit.ndjson", "signals.ndjson", "effects.ndjson", "memory.ndjson", ".regulator/canaries"], "emits": ["span records (NDJSON)"] },
   "scope": { "subjects": ["evidence", "execution", "obligation"], "resources": ["the instance's .regulator/"] },
@@ -30,5 +33,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A read model over the stores; switching it off changes no run." },
   "retirement": { "condition": "Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate." },
-  "introducedIn": "M14"
+  "introducedIn": "0.1.0"
 }

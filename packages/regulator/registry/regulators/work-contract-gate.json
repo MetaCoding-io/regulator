@@ -12,9 +12,9 @@
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
     "enforcementPoints": [
-      "runUnit (before createUnit)",
-      "session_start (contract)",
-      "unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)"
+      {"where": "loop", "point": "runUnit", "note": "before createUnit"},
+      {"where": "host", "point": "session_start", "note": "contract"},
+      {"where": "cli", "point": "unit start", "note": "--type: the contract-less path refuses a unit type whose workload declares requiresContract"}
     ]
   },
   "channels": {
@@ -67,5 +67,5 @@
   "retirement": {
     "condition": "Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect."
   },
-  "introducedIn": "M06"
+  "introducedIn": "0.1.0"
 }
