@@ -87,5 +87,5 @@
   "retirement": {
     "condition": "Never while two units can share a base: the trial is what makes a clean merge mean something."
   },
-  "introducedIn": "0.1.4"
+  "introducedIn": "unreleased"
 }

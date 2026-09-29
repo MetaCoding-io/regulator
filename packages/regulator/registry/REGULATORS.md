@@ -1219,7 +1219,7 @@ does not do. `since` is the package version that first shipped the record.
 
 ## Pre-merge trial
 
-`reg.audit.pre-merge-trial.v1` · S3* · deterministic-gate · active · since 0.1.4
+`reg.audit.pre-merge-trial.v1` · S3* · deterministic-gate · active · unreleased
 
 **Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. Before anything lands, the loop merges the unit's branch in a temporary worktree detached at the base's HEAD, runs the workload's `run_tests` and `run_checks` on that merged tree, and appends the results to the audit log as evidence bound to the trial commit and to the unit that would land it. A tree that passes is landed by fast-forward to the very commit that was verified, so what the evidence is bound to is what the base carries. A tree that fails lands nothing: the base is exactly as it was, S2 records a `conflict` coordination signal saying what the merged tree failed, and the unit is blocked with the cause `conflict` — `repair` under the shipped recovery policy, with the failing checks as the hint. `unit finish` by hand runs the same trial with the project's own two checks. Replaces the post-merge check (reg.audit.post-merge-check.v1), which recorded a red base for S3 to decide about; here the base is never red.
 

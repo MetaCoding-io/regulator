@@ -155,7 +155,7 @@ export function renderRegistryMarkdown(records: readonly RegulatorRecord[]): str
     lines.push(`| \`${r.id}\` | ${r.name} | ${r.vsmFunction} | ${r.mechanism.level} | ${r.status} | ${r.ownership.reviewBy} |`);
   }
   for (const r of records) {
-    lines.push("", `## ${r.name}`, "", `\`${r.id}\` · ${r.vsmFunction} · ${r.mechanism.level} · ${r.status}${r.introducedIn ? ` · since ${r.introducedIn}` : ""}`, "");
+    lines.push("", `## ${r.name}`, "", `\`${r.id}\` · ${r.vsmFunction} · ${r.mechanism.level} · ${r.status}${r.introducedIn ? r.introducedIn === "unreleased" ? " · unreleased" : ` · since ${r.introducedIn}` : ""}`, "");
     lines.push(`**Purpose.** ${r.purpose.trim()}`, "");
     lines.push(`**Absorbs.** \`${r.absorbs.failureClass}\` — ${r.absorbs.description.trim()}`, "");
     lines.push(`**Mechanism.** \`${r.mechanism.implementation}\` at ${r.mechanism.enforcementPoints.map(formatEnforcementPoint).join(", ") || "(none)"}`, "");

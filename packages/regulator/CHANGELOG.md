@@ -8,6 +8,7 @@ CLI or the definition's file formats; a patch version does not.
 ## [Unreleased]
 
 ### Changed
+- A registry record added between releases says `introducedIn: "unreleased"` (#92). The schema admits the word beside semver, `REGULATORS.md` renders it as "unreleased", the release commit rewrites it to the version being tagged (CONTRIBUTING.md § Releasing), and the release workflow refuses to publish while any record still says so. `pre-merge-trial` is the first: it said `0.1.4` before any release existed.
 - The identity's context limit is the budget policy's, and the default is 12000 characters (#91). `renderIdentitySection` cut at 6000, a constant; the seed the definition ships renders to 7005, so the tail of `GLOSSARY.md` was not reaching units (found by #51). Rather than shorten the seed, the default is raised to 12000 (about 3000 tokens) and a policy may declare `identity.maxChars`; the identity extension, `regulator check`, `regulator doctor` and the warning all measure against the limit that applies. The shipped definition passes `check` with no warning.
 
 ### Added
