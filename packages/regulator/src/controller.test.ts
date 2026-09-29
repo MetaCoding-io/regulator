@@ -615,6 +615,72 @@ test("algedonic (lesson 13): a unit that asked a person and got no answer is rec
   assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["paused", "reported"]);
 });
 
+test("a wait ceiling (#52): with `waitCeilingMs` declared, a unit paused past it is routed under `timeout` and its lease released, the question stays open with its veto and its history says why; each routing past the ceiling is one more occurrence, so the shipped rules reach escalate on the third; unset, the unit waits", async (t) => {
+  const { ObligationLedger } = await import("@metacoding.io/regulator-core");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { driveUnit, routeUnit } = await import("./controller.js");
+  const { leaseStoreFor } = await import("./unit.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const recovery = await loadRecoveryPolicy();
+  const base = await withPolicy();
+  const interaction = { ...base.interaction, waitCeilingMs: 2 * 3_600_000 };
+  let clock = Date.parse("2026-09-22T12:00:00.000Z");
+  const now = () => clock;
+  const store = new ExecutionStore(repo, now);
+  const ledger = new ObligationLedger(repo, now);
+  const pauseOnConsent = async (request: { attempt: number }) => {
+    const o = await ledger.openObligation({ subject: "consent: force-push", unit: "u1", concern: "interaction", sources: ["ask:1"], severity: "blocking", consumer: "human", blocks: true, question: "May I force-push?", openedBy: "S1" });
+    await ledger.requestInteraction({ id: "r1", kind: "consent", subject: "force-push", question: "May I force-push?", action: "git push --force", severity: "blocking", unit: "u1", attempt: request.attempt, obligationId: o.id, evidence: [], raisedBy: "S1", raisedAt: new Date(now()).toISOString(), timeoutMs: 1000, channel: "none" }, "S1");
+    await ledger.answerInteraction({ requestId: "r1", outcome: "unavailable", by: "S1", channel: "none" });
+    await store.writeReport(reportFor(contract, { attempt: request.attempt, summary: "paused on consent" }));
+    return { sessionId: `s${request.attempt}` };
+  };
+  const driven = await driveUnit(gitExec, { ...base, interaction, repo, contract, workload, recovery, owner: "alice", now, dispatcher: pauseOnConsent });
+  assert.equal(driven.final.status === "blocked" && driven.final.reason, "paused");
+  const route = () => routeUnit(gitExec, { repo, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction, now });
+  const question = (await ledger.open("u1")).find((o) => o.concern === "interaction")!;
+
+  clock += 2 * 3_600_000 - 1;
+  assert.equal(await route(), undefined, "one millisecond short of the ceiling: waits");
+  assert.equal((await leaseStoreFor(repo, now).list()).length, 1, "the lease is held while it waits");
+
+  clock += 1;
+  const first = await route();
+  assert.deepEqual([first?.cause, first?.action, first?.occurrence], ["timeout", "retry", 1], "the shipped timeout rule: retry, retry, escalate");
+  assert.match(first?.evidence[0] ?? "", /^paused 120 min on consent: force-push \(obligation [0-9a-f]{8}\); the interaction policy's wait ceiling is 120 min$/);
+  assert.equal((await leaseStoreFor(repo, now).list()).length, 0, "the lease is released");
+  const after = (await ledger.get(question.id))!;
+  assert.equal(after.status, "acknowledged", "still open: nothing answered on anyone's behalf");
+  assert.deepEqual(after.acknowledgedBy, ["S3"]);
+  assert.match(JSON.stringify(after.history.at(-1)), /routed under timeout → retry \(occurrence 1\); lease released; the question stays open/);
+  const refused = await runUnit(gitExec, { ...base, interaction, repo, contract, workload, owner: "alice", now, dispatcher: async () => ({}) });
+  assert.equal(refused.status, "refused", "the retry cannot run: the question's veto holds until a person answers");
+
+  clock += 60_000;
+  assert.deepEqual([(await route())?.action, (await route())?.action], ["retry", "escalate"], "the third routing past the ceiling escalates");
+  assert.match((await store.getUnit("u1"))?.reason ?? "", /^escalated to S5: timeout/);
+  const algedonic = (await readSignals(repo)).filter((s) => s.kind === "algedonic-signal");
+  assert.equal(algedonic.length, 1);
+  assert.equal((await ledger.get(question.id))?.status, "acknowledged", "the question is still the person's to answer");
+
+  // The default is to wait: the shipped policy declares no ceiling.
+  assert.equal(base.interaction.waitCeilingMs, undefined);
+  const repo2 = await initRepo(t);
+  const store2 = new ExecutionStore(repo2, now);
+  const ledger2 = new ObligationLedger(repo2, now);
+  await driveUnit(gitExec, { ...base, repo: repo2, contract, workload, recovery, owner: "alice", now, dispatcher: async (request) => {
+    const o = await ledger2.openObligation({ subject: "consent: force-push", unit: "u1", concern: "interaction", sources: ["ask:1"], severity: "blocking", consumer: "human", blocks: true, question: "May I force-push?", openedBy: "S1" });
+    await ledger2.requestInteraction({ id: "r1", kind: "consent", subject: "force-push", question: "May I force-push?", action: "git push --force", severity: "blocking", unit: "u1", attempt: request.attempt, obligationId: o.id, evidence: [], raisedBy: "S1", raisedAt: new Date(now()).toISOString(), timeoutMs: 1000, channel: "none" }, "S1");
+    await ledger2.answerInteraction({ requestId: "r1", outcome: "unavailable", by: "S1", channel: "none" });
+    await store2.writeReport(reportFor(contract, { attempt: request.attempt, summary: "paused on consent" }));
+    return { sessionId: "s1" };
+  } });
+  clock += 365 * 86_400_000;
+  assert.equal(await routeUnit(gitExec, { repo: repo2, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction, now }), undefined, "a year later, still waiting: no ceiling was declared");
+});
+
 test("post-merge evidence (lesson 15): two units change disjoint files and break each other; each closes on fresh evidence at its own HEAD, the merged base fails its checks, and the failure is an obligation on the instance itself that holds every dispatch until S3 dispositions it", async (t) => {
   const { AuditLog, ObligationLedger } = await import("@metacoding.io/regulator-core");
   const repo = await initRepo(t);

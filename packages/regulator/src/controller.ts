@@ -46,12 +46,12 @@ import {
 } from "@metacoding.io/regulator-core";
 import type {
   AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
-  TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition,
+  TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
 } from "@metacoding.io/regulator-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
-import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, resumeUnit, startUnit } from "./unit.js";
+import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
@@ -449,12 +449,26 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
   await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
-  // A unit paused on a question is not a failure to route: it waits for a person, and the recovery policy has nothing to say until one answers.
-  if ((await ledger.open(options.unitId)).some((o) => o.concern === "interaction" && o.blocks)) return undefined;
+  // A unit paused on a question is not a failure to route: it waits for a person, and the recovery policy has nothing to say until one
+  // answers — unless the interaction policy declares a wait ceiling and the oldest open question has passed it (#52). Then the wait is a
+  // `timeout` for the recovery policy, the lease is released so the worktree is not held by a unit going nowhere, and the question stays
+  // open with the veto it carries: nothing here answers on anyone's behalf. Each routing past the ceiling is one more occurrence.
+  const questions = (await ledger.open(options.unitId)).filter((o) => o.concern === "interaction" && o.blocks);
+  let pastCeiling: { cause: FailureCause; evidence: string[] } | undefined;
+  if (questions.length) {
+    const ceiling = options.interaction.waitCeilingMs;
+    const waitedMs = now() - Math.min(...questions.map((q) => Date.parse(q.openedAt)));
+    if (ceiling === undefined || waitedMs < ceiling) return undefined;
+    pastCeiling = { cause: "timeout", evidence: [`paused ${Math.round(waitedMs / 60_000)} min on ${questions.map((q) => `${q.subject} (obligation ${q.id.slice(0, 8)})`).join("; ")}; the interaction policy's wait ceiling is ${Math.round(ceiling / 60_000)} min`] };
+  }
   const decision = await routeBlockedUnit(store, {
     policy: options.recovery, unitId: options.unitId, attemptCeiling: ceilingFor(options.policy, unit.unitType).attempts,
-    signals: await readSignals(options.repo), now,
+    signals: await readSignals(options.repo), now, ...(pastCeiling ? { cause: pastCeiling } : {}),
   });
+  if (decision && pastCeiling) {
+    const released = await leaseStoreFor(options.repo, now).release(options.unitId);
+    for (const q of questions) await ledger.acknowledge(q.id, "S3", `${pastCeiling.evidence[0]}: routed under timeout → ${decision.action} (occurrence ${decision.occurrence}); lease ${released ? "released" : "was not held"}; the question stays open`);
+  }
   if (!decision) return undefined;
   const cites: string[] = [];
   if (decision.action === "abort") {

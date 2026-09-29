@@ -77,7 +77,13 @@ The loop then:
   ceiling) and blocks the unit;
 - does **not** route it: a paused unit is not a failure, and the recovery policy has
   nothing to say until someone answers;
-- delivers the question to the outbox, and reminds after the policy's interval.
+- delivers the question to the outbox, and reminds after the policy's interval;
+- keeps waiting, by default. An interaction policy that declares `waitCeilingMs` changes
+  one thing: a unit paused past the ceiling is routed under the recovery policy's
+  `timeout` cause (retry, retry, escalate by the shipped rules, one occurrence per
+  routing past the ceiling) and its lease is released, so a unit going nowhere does not
+  hold the worktree. The question itself stays open, with its veto: a retry cannot run
+  until someone answers, and nothing answers on anyone's behalf.
 
 A person answers from the CLI:
 

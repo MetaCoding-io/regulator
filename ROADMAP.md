@@ -36,7 +36,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Pre-merge trial on a temporary merge commit, retiring the post-merge check | row 37 | [#48](https://github.com/MetaCoding-io/regulator/issues/48) |
 | Planner-quality graders over the result reports' diagnostics | row 40 | [#49](https://github.com/MetaCoding-io/regulator/issues/49) |
 | `inherited-tests`: per-assertion diff, a test-layout convention, a cached base run | row 41 | [#50](https://github.com/MetaCoding-io/regulator/issues/50) |
-| A wait ceiling for paused units, declared in the interaction policy | row 30 | [#52](https://github.com/MetaCoding-io/regulator/issues/52) |
 | Definition versions: a migration note per release and `regulator upgrade` for instances | row 39 | [#53](https://github.com/MetaCoding-io/regulator/issues/53) |
 | Behaviour checks beyond `Function.length`: a probe a contract can carry | row 35 | [#54](https://github.com/MetaCoding-io/regulator/issues/54) |
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |

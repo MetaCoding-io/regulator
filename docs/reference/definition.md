@@ -115,6 +115,7 @@ Severities, lowest first: `info`, `advisory`, `blocking`, `critical`.
 | `timeoutsMs` | per interaction kind (`recap`, `choice`, `clarification`, `consent`, `uat`); a timeout is recorded and the unit pauses |
 | `attention.blockingPerAttempt` | blocking interrupts an attempt may spend before `ask_human` refuses; attention is the scarcest budget |
 | `reminderAfterMs` | an obligation owed to a person and still open this long after its last delivery is delivered again (minimum one minute) |
+| `waitCeilingMs` | optional. A unit paused on a question nobody has answered for this long is routed under the recovery policy's `timeout` cause and its lease released; the question stays open and keeps its veto. Unset (the shipped default), the unit waits |
 | `people[]` | `name`, `resolveUpTo` (the highest severity this person may disposition), `acceptRisk`, `actAsS5` |
 
 Only `recap` continues without an answer; that is a protocol constant, not a policy

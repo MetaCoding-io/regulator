@@ -107,6 +107,11 @@ export const InteractionPolicySchema = Type.Object({
   attention: Type.Object({ blockingPerAttempt: Type.Integer({ minimum: 0 }) }, { additionalProperties: false }),
   /** An obligation owed to a person and still open this long after its last delivery is delivered again. */
   reminderAfterMs: Type.Integer({ minimum: 60_000 }),
+  /**
+   * A unit paused on a question nobody has answered for this long is routed under the recovery policy's `timeout`
+   * cause and its lease released; the question stays open and keeps the veto. Unset, the honest default: wait.
+   */
+  waitCeilingMs: Type.Optional(Type.Integer({ minimum: 60_000 })),
   /** Who may disposition what. A name not listed may disposition nothing. */
   people: Type.Array(PersonSchema),
 }, { additionalProperties: false });
