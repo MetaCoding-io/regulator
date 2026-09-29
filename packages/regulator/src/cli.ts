@@ -53,8 +53,9 @@
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
  * Every `--by` that dispositions something is checked against the interaction policy's people: a name not listed may
- * disposition nothing, and what a listed person may do (severity, accepted-risk, S5) is declared there. `init`,
- * `unit accept` and `eval` record `--by` as provenance without the check. The name itself is asserted, not authenticated.
+ * disposition nothing, and what a listed person may do (severity, accepted-risk, S5) is declared there; `unit accept` is
+ * checked at blocking. `init` and `eval` record `--by` as provenance without the check. The name itself is asserted, not
+ * authenticated.
  * `regulator check` and `regulator docs` (the definition check and the generated registry documents) are implemented in
  * `registry-cli.ts` and reached through this entry point.
  */
@@ -326,8 +327,9 @@ ${rationale}`]]) {
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
   } else if (command === "unit" && sub === "accept" && rest[0] && rest[1]) {
-    const by = flag("by");
-    if (!by) usage();
+    // An acceptance is a disposition: it satisfies a criterion no check can observe, and the closeout gate counts it. The
+    // criterion has no severity of its own, so the check is at blocking, the conservative choice (#77). --reject too.
+    const by = await authorized(flag("by"), { severity: "blocking" });
     const store = new ExecutionStore(process.cwd());
     const unit = await store.getUnit(rest[0]);
     if (!unit) throw new Error(`no unit "${rest[0]}"`);
