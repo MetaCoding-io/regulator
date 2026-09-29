@@ -15,7 +15,7 @@
  * Units
  *   regulator unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>]   the autoloop: run, route, and run again while the policy says so
  *   regulator unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet]   run one unit through the S3 loop with a live host session
- *   regulator unit start <id> [--type <unitType>] [--workload <name>] [--ttl <min>]   lease + worktree + branch by hand (run in the base checkout)
+ *   regulator unit start <id> [--type <unitType>] [--workload <name>] [--ttl <min>] [--host <package>]   lease + worktree + branch by hand (run in the base checkout); prints the host's session command
  *   regulator unit finish <id>                 reintegrate a unit started by hand, or surface the conflict
  *   regulator unit status                      leases and their liveness
  *   regulator unit show <id>                   the unit record, attempts, decisions, report and obligations
@@ -90,7 +90,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -223,7 +223,15 @@ ${rationale}`]]) {
     const started = await startUnit(realExec, ttlMs ? { repo: process.cwd(), unitId, owner, ttlMs } : { repo: process.cwd(), unitId, owner });
     console.log(`unit ${unitId}: branch ${started.worktree.branch} from ${started.base}, worktree ${started.worktree.path}`);
     console.log(`lease held by ${started.lease.owner} until ${new Date(started.lease.expiresAt).toISOString()}`);
-    console.log(`next: cd ${started.worktree.path} && pi -e ${path.join(labRoot, "dist/tools.js")} -e ${path.join(labRoot, "dist/coordination.js")} --unit ${unitId}`);
+    // The session's extensions are the host's files, not the control plane's: ask the host where they are (--host and
+    // REGULATOR_HOST are honoured as in `unit dispatch`). The start itself needs no host; without one it still holds.
+    const resolvedHost = await loadHost(flag("host")).catch((error: Error) => error);
+    if (resolvedHost instanceof Error) {
+      console.log(`next: cd ${started.worktree.path}; running a session there needs a host — ${resolvedHost.message}`);
+    } else {
+      const { host } = resolvedHost;
+      console.log(`next: cd ${started.worktree.path} && pi -e ${host.extensionPath("tools")} -e ${host.extensionPath("coordination")} --unit ${unitId}`);
+    }
   } else if (command === "unit" && sub === "finish" && rest[0]) {
     const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0] });
     if (finished.result.merged) {

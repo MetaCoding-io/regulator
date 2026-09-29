@@ -47,7 +47,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
 | Enforcement points as a typed field, refused by `regulator check` when unknown; the first slice of the generated figures | — | [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
 | `regulator unit accept` goes through the disposition-authority check its card claims | — | [#77](https://github.com/MetaCoding-io/regulator/issues/77) |
-| `regulator unit start` prints `pi -e` paths the host gives, not paths under the control plane that do not exist | — | [#79](https://github.com/MetaCoding-io/regulator/issues/79) |
 
 0.2 is done when the live report is committed, every row above is struck or moved to
 "not planned" with a reason, and `regulator review --due` is clean at the first review

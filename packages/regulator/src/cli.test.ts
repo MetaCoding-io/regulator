@@ -300,3 +300,40 @@ test("the contract-less path (lesson 05) honours the workload's requiresContract
   assert.equal(started.code, 0, started.stderr);
   assert.match(started.stdout, /unit u1: branch/);
 });
+
+/** The `-e <path>` arguments of the `next:` line `unit start` prints. */
+function printedExtensionPaths(stdout: string): string[] {
+  const next = stdout.split("\n").find((line) => line.startsWith("next:"));
+  assert.ok(next, `no next: line in ${JSON.stringify(stdout)}`);
+  return [...next.matchAll(/ -e (\S+)/g)].map((m) => m[1]!);
+}
+
+test("`unit start` prints the host's session command (#79): every `pi -e` path exists, for the default host and for one named with --host; with no host resolvable the lease and worktree are still made and the line says a host is needed", async (t) => {
+  const { existsSync } = await import("node:fs");
+  const repo = await initRepo(t);
+
+  const byDefault = await regulator(repo, "unit", "start", "u1");
+  assert.equal(byDefault.code, 0, byDefault.stderr);
+  const defaultPaths = printedExtensionPaths(byDefault.stdout);
+  assert.deepEqual(defaultPaths.map((p) => path.basename(p)), ["tools.js", "coordination.js"]);
+  for (const p of defaultPaths) assert.ok(existsSync(p), `${p} does not exist`);
+  assert.ok(!defaultPaths.some((p) => p.startsWith(LAB_ROOT)), "the paths are the host's, not the control plane's");
+
+  const hostDir = path.resolve(LAB_ROOT, "../regulator-pi");
+  const named = await regulator(repo, "unit", "start", "u2", "--host", hostDir);
+  assert.equal(named.code, 0, named.stderr);
+  const namedPaths = printedExtensionPaths(named.stdout);
+  for (const p of namedPaths) {
+    assert.ok(existsSync(p), `${p} does not exist`);
+    assert.ok(p.startsWith(hostDir), `${p} is not under the named host`);
+  }
+
+  const none = await regulator(repo, "unit", "start", "u3", "--host", path.join(repo, "no-such-host"));
+  assert.equal(none.code, 0, none.stderr);
+  assert.match(none.stdout, /unit u3: branch unit\/u3 from main, worktree .*\/\.regulator\/worktrees\/u3\n/);
+  assert.match(none.stdout, /next: cd .*\/u3; running a session there needs a host — no host installed:/);
+  assert.doesNotMatch(none.stdout, / -e /, "no command that cannot work");
+  assert.ok(existsSync(path.join(repo, ".regulator/worktrees/u3")), "the worktree was made");
+  const status = await regulator(repo, "unit", "status");
+  assert.match(status.stdout, /u3/, "the lease is held");
+});

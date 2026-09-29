@@ -7,6 +7,9 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+### Fixed
+- `regulator unit start` printed a `pi -e` command naming `dist/tools.js` and `dist/coordination.js` under the control plane, where the session extensions have not lived since the host seam split; copied from an install, the command failed. The line now asks the host for its extension paths (`host.extensionPath`), honouring `--host` and `REGULATOR_HOST` as `unit dispatch` does. With no host resolvable the start still takes the lease and makes the worktree, and says a session there needs a host instead of printing a command that cannot work (#79).
+
 ## [0.1.3] — 2026-09-29
 
 The second live drift run (issue #46, on 0.1.2) closed ten of twelve units and found

@@ -58,7 +58,10 @@ function packageManifest(name: string, from: string): string | undefined {
 
 /** Where a host package lives: `--host` or REGULATOR_HOST first, then the operator's project, then beside the control plane. */
 export function resolveHostPackage(name: string = process.env.REGULATOR_HOST ?? DEFAULT_HOST, cwd: string = process.cwd()): string | undefined {
-  if (name.startsWith("/") || name.startsWith(".")) return path.resolve(cwd, name, "package.json");
+  if (name.startsWith("/") || name.startsWith(".")) {
+    const explicit = path.resolve(cwd, name, "package.json");
+    return existsSync(explicit) ? explicit : undefined;
+  }
   return packageManifest(name, path.join(cwd, "noop.js")) ?? packageManifest(name, import.meta.url);
 }
 
