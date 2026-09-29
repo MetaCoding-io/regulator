@@ -136,7 +136,8 @@ answer.
 Only `recap` continues without an answer. That rule is a protocol constant, so no policy
 can make silence into consent. Every `--by` on the CLI is checked against `people[]`,
 and a name that is not listed may disposition nothing. The check matches the name as it
-was asserted; authenticating that the person is who they claim is the deployment's job.
+was asserted; authenticating that the person is who they claim is the deployment's
+responsibility.
 [Asking a person](/concepts/asking-a-person) explains the kinds, the pause and the
 attention budget.
 
