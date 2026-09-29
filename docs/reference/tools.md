@@ -22,10 +22,12 @@ not name is never offered to the model at all, so there is nothing for a gate to
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
 | [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | `implement`, `intelligence`, `bookkeeper` | a `policy-proposal` |
 
-::: tip `report_result` needs no grant
-A contracted unit must be able to report, so when the contract loads the contract
-extension puts `report_result` on the active tool surface, whatever the profile lists.
-A profile does not need to name it. A session with no contract never sees it.
+::: tip `report_result` is granted twice
+A contracted unit must be able to report, so the profile a contracted unit type runs
+under must grant `report_result`, and `regulator check` refuses a workload whose profile
+leaves it out. When the contract loads, the contract extension also puts the tool on the
+active tool surface as a backstop, whatever the profile lists. A session with no contract
+never sees it.
 :::
 
 ## `read_conventions`

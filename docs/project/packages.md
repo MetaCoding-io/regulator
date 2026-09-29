@@ -104,7 +104,7 @@ this seam is tracked as [#58](https://github.com/MetaCoding-io/regulator/issues/
 
 ## Versions and releases
 
-All six packages are released together at one version (`0.1.1` today). A release is cut
+All six packages are released together at one version (`0.1.4` today). A release is cut
 from a `v*` tag, and only after `pnpm check` passes on both supported Node versions. The
 [changelog](/project/changelog) is the packages' own. The course,
 [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), pins the

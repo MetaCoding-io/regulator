@@ -48,7 +48,10 @@ Writing a record into the control plane's own stores does not count as a write t
 domain. `report_result`, `report_intelligence`, `propose_policy_change` and `remember`
 all write there, so a read-only profile can grant them and still report. A profile that
 a contracted unit type runs under must grant `report_result`, since without it no unit
-of that type could close.
+of that type could close, and `regulator check` refuses a workload whose contracted unit
+type runs under a profile that leaves it out. The grant belongs in the declaration; at
+run time the contract extension also adds the tool to the session's surface as a
+backstop, so a session that loads a contract can always report.
 
 | Field | Type | Meaning |
 | --- | --- | --- |
