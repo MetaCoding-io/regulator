@@ -91,19 +91,22 @@ test("the harness validates its graders against four scripted learner-style unit
   assert.ok(lift("treatment", "signatureDrift").delta < 0 && lift("treatment", "invariantViolations").delta > 0, "and wins on what it measures: drift on main is lower, violations are recorded instead of merged");
   assert.equal(lift("treatment", "closed").separated, true, "six tasks all closed against six all blocked: the intervals are points. n counts runs, and the six tasks of one repetition are not six independent trials — which is why the suite declares repetitions and the interpretation must say what n was");
 
-  // Sloppy: every boundary holds and the drift is in prose and vocabulary. Under control it all lands; under treatment
-  // glossary-lint (lesson 15) refuses every unit — on the commit message alone, three attempts each — so nothing lands, drift or work.
+  // Sloppy: every boundary holds and the drift is in prose and vocabulary. Under control it all lands. Under treatment the
+  // workload declares glossary-lint's commit-message half advisory (#47): the four units whose only drift is the word in the
+  // commit message close on their first attempt and the word lands on main as an advisory finding; the two whose comments
+  // drift are refused three times each by the comment half, so their README rule and comments never land.
   const sloppy = reports.get("sloppy")!;
   const sc = byTask(sloppy.runs, "control"), st = byTask(sloppy.runs, "treatment");
   assert.deepEqual(Object.values(sc).map((r) => r.outcome), Array(6).fill("closed"));
   assert.equal(sc["d5-memory"]!.metrics.memoryRules, 1);
   assert.ok(sc["d6-cleanup"]!.metrics.vocabularyDrift! >= 6, `task/job/ticket in comments and commit messages: ${sc["d6-cleanup"]!.graders.find((g) => g.grader === "vocabularyDrift")?.observation}`);
-  assert.deepEqual(Object.values(st).map((r) => [r.outcome, r.metrics.refusals]), Array(6).fill(["blocked", 3]), "treatment: refused three times per unit for a word in the commit message");
-  assert.match(st["d1-fix"]!.graders.find((g) => g.grader === "refusals")!.observation, /glossary-lint/);
-  assert.equal(st["d6-cleanup"]!.metrics.vocabularyDrift, 0, "nothing drifted on main, because nothing landed");
-  assert.equal(st["d6-cleanup"]!.metrics.memoryRules, 0);
+  assert.deepEqual(Object.entries(st).map(([task, r]) => [task, r.outcome, r.metrics.refusals]), [["d1-fix", "closed", 0], ["d2-options", "closed", 0], ["d3-vendor", "closed", 0], ["d4-config", "closed", 0], ["d5-memory", "blocked", 3], ["d6-cleanup", "blocked", 3]], "treatment: a word in the commit message alone no longer refuses; a word in a comment still does, three times");
+  assert.match(st["d5-memory"]!.graders.find((g) => g.grader === "refusals")!.observation, /glossary-lint — the glossary's words drifted on the branch: comment "\/\/ job: make sure TZ is set for this task's tests"/);
+  assert.doesNotMatch(st["d5-memory"]!.graders.find((g) => g.grader === "refusals")!.observation, /drifted on the branch: [^.]*commit "/, "the commit message is not what refused it");
+  assert.equal(st["d6-cleanup"]!.metrics.vocabularyDrift, 4, "the four commit-message words landed on main, advisory; the comments did not");
+  assert.equal(st["d6-cleanup"]!.metrics.memoryRules, 0, "d5 never closed, so the README rule never landed");
   const vocab = sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "vocabularyDrift")!;
-  assert.ok(vocab.delta < 0 && sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "closed")!.delta < 0, "the gated arm wins on the drift it now measures and loses on everything else: the over-regulation row");
+  assert.ok(vocab.delta < 0 && sloppy.lifts.find((l) => l.arm === "treatment" && l.metric === "closed")!.delta < 0, "the gated arm still wins on drift and loses on closes, by less: the over-regulation row, attenuated");
 
   // Self-certifier: the known defect stays and the two tests that expose it are deleted. Under control its own green suite
   // closes every unit and the weakened suite lands on main; under treatment inherited-tests refuses the first unit on the

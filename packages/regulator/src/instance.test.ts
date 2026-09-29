@@ -107,13 +107,14 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
     delegatedResults: [], unresolvedOutcomes: [], emergentDecisions: [], deviations: [], residualUncertainty: [],
   });
   // Attempt 1 writes a comment that calls the unit a task; the glossary's words are the identity's, seeded by init. The router
-  // says repair, and attempt 2 makes the same change in the glossary's words.
+  // says repair, and attempt 2 makes the same change in the glossary's words — and says "task" in its commit message, which the
+  // software workload made advisory (#47): recorded, not refused.
   const hints: Array<string | undefined> = [];
   const { final: outcome, decisions } = await driveUnit(gitExec, { ...base, contract, dispatcher: async (r) => {
     hints.push(r.hint);
     await writeFile(path.join(r.worktree, "lib", "greet.js"), `// ${r.attempt === 1 ? "task" : "unit g1"}: shout\nexport function greet(name) { return \`HI ${"$"}{name}\`; }\n`);
     await writeFile(path.join(r.worktree, "test", "greet.test.js"), 'import test from "node:test"; import assert from "node:assert/strict"; import { greet } from "../lib/greet.js"; test("greet", () => assert.equal(greet("x"), "HI x"));\n');
-    await gitExec("git", ["commit", "-qam", `g1: shout (attempt ${r.attempt})`], { cwd: r.worktree });
+    await gitExec("git", ["commit", "-qam", r.attempt === 1 ? "g1: shout (attempt 1)" : "g1: shout, task done (attempt 2)"], { cwd: r.worktree });
     await store.writeReport(report(r.attempt));
     return {};
   } });
@@ -126,4 +127,11 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
   assert.deepEqual(evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict, r.revision === (outcome.status === "closed" ? outcome.sha : "")]), [["post-merge:run_checks:syntax:lib/greet.js", "pass", true], ["post-merge:run_tests", "pass", true]]);
   assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
   assert.equal((await new ObligationLedger(repo).open()).filter((o) => o.blocks).length, 0);
+  const lint = evidence.find((r) => r.attempt === 2 && r.check === "glossary-lint")!;
+  assert.equal(lint.verdict, "pass", "the commit-message word is advisory under this workload");
+  assert.match(lint.observation, /; 1 hit\(s\) in commit messages, which this workload made advisory: commit "g1: shout, task done \(attempt 2\)": task \(say unit\)$/);
+  const { readSignals } = await import("@metacoding.io/regulator-core");
+  const advisories = (await readSignals(repo)).filter((s) => s.kind === "audit-finding" && s.severity === "advisory");
+  assert.deepEqual(advisories.map((s) => [s.unit, s.subject]), [["g1", "unit g1: glossary-lint saw drift the workload made advisory"]]);
+  assert.match((advisories[0] as { observation: string }).observation, /^1 hit\(s\) in commit messages, which this workload made advisory/);
 });

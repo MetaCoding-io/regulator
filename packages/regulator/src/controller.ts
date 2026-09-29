@@ -44,6 +44,7 @@ import {
   dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem,
 } from "@metacoding.io/regulator-core";
+import { checkNames, checkOptions } from "@metacoding.io/regulator-protocol";
 import type {
   AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
   TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
@@ -334,12 +335,25 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
     const protectedPaths = [...new Set([IDENTITY_RELATIVE_DIR, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
     const identity = await readIdentity(path.join(worktree, IDENTITY_RELATIVE_DIR));
     const results = await runHostChecks(exec, {
-      cwd: worktree, checks: unitType.checks, fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
+      cwd: worktree, checks: checkNames(unitType.checks), checkOptions: checkOptions(unitType.checks), fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
       base: await currentBranch(exec, options.repo), protectedPaths, conventions, expectations: contract.expectedEvidence,
       forbidden: identity.forbidden, writablePaths: manifest?.writablePaths ?? [...conventions.sourceDirs.map((d) => `${d}/`), "test/"],
     });
     records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
     for (const record of records) await log.appendEvidence(record);
+    // A check that passed at its declared severity and still saw something (#47): a finding at advisory, beside the evidence,
+    // so the drift is on the record and routed as trace; nothing is refused for it, because the workload said so.
+    for (const result of results) {
+      if (!result.advisory) continue;
+      const finding: AuditFinding = {
+        id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3",
+        severity: "advisory", subject: `unit ${unitId}: ${result.check} saw drift the workload made advisory`, unit: unitId,
+        observation: result.advisory,
+        evidence: [{ class: result.class, ref: result.check, observation: result.observation.split("\n")[0] ?? "", sourceRevision: revision }],
+        suggestedAction: "nothing to repair: the workload declared this half advisory; the glossary's words are the ones to say next time",
+      };
+      await appendSignal(options.repo, finding);
+    }
   }
   const held = await log.forUnit(unitId);
   let verdict = technicalVerdict({ contract, report, records: held.evidence, acceptances: held.acceptances, unitId, attempt: options.attempt, revision, now });

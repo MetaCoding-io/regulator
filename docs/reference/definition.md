@@ -19,7 +19,7 @@ runs under. The loop is generic; this file is where a workload's behaviour lives
 | `unitTypes[].name` | string | the `unitType` a contract may name |
 | `unitTypes[].description` | string | shown to the session |
 | `unitTypes[].profile` | string | the capability profile the unit runs under; must exist |
-| `unitTypes[].checks` | [host check names](/reference/host-checks) | run by the host at the unit's revision to reach the technical verdict |
+| `unitTypes[].checks` | [host check names](/reference/host-checks), each a name or `{ "name", "options" }` | run by the host at the unit's revision to reach the technical verdict. Only `glossary-lint` takes an option, `commitMessages: "blocking" \| "advisory"`; an option a check does not take fails the definition check |
 | `unitTypes[].requiresContract` | boolean | `false` only for a type that may run without a contract, which must then run under a read-only profile |
 
 The shipped `software-development` workload declares `plan`, `research`, `implement`,
@@ -171,7 +171,7 @@ or live through the host.
 | --- | --- |
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
-| `arms[]` | `name`, `description`, `extensions[]` the dispatcher loads for a live run, `checks[]` the implement unit type runs under this arm, `identity` (whether the identity is seeded), and for an ablation arm the record it `ablates` and the `switch` (`none`, or `check:`, `extension:`, `loop:`, `policy:`, `tool:` and a target) |
+| `arms[]` | `name`, `description`, `extensions[]` the dispatcher loads for a live run, `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), `identity` (whether the identity is seeded), and for an ablation arm the record it `ablates` and the `switch` (`none`, or `check:`, `extension:`, `loop:`, `policy:`, `tool:` and a target) |
 | `repetitions`, `metrics[]`, `baseline` | how many runs per arm, the metrics the report summarizes (pre-registered, so the interpretation is a person's), and the arm the others are compared against |
 
 The harness can throw `check` and `extension` switches without a code change; a `loop`,

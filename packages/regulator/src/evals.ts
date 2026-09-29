@@ -14,7 +14,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { lifts, loadRegistry, summarizeArms } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
+import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition, checkNames } from "@metacoding.io/regulator-protocol";
 import { driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
@@ -77,10 +77,11 @@ const PRODUCES: Readonly<Record<string, readonly string[]>> = { run_tests: ["tes
  * criteria stay: the closeout gate checks cited files under every arm.
  */
 export function contractForArm(contract: WorkContract, arm: EvalArm): WorkContract {
-  const classes = new Set(arm.checks.flatMap((c) => PRODUCES[c] ?? []));
+  const names = checkNames(arm.checks);
+  const classes = new Set(names.flatMap((c) => PRODUCES[c] ?? []));
   return {
     ...contract,
-    expectedEvidence: contract.expectedEvidence.filter((e) => e.class === "file" || (e.check ? arm.checks.includes(e.check.kind) : classes.has(e.class) || !["test", "command", "runtime"].includes(e.class))),
+    expectedEvidence: contract.expectedEvidence.filter((e) => e.class === "file" || (e.check ? names.includes(e.check.kind) : classes.has(e.class) || !["test", "command", "runtime"].includes(e.class))),
   };
 }
 

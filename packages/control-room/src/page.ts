@@ -107,6 +107,8 @@ const PAGE = String.raw`<!doctype html>
   const FUNCTIONS = ["S5", "S4", "S3", "S3*", "S2", "S1"];
   const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const chip = (v) => '<span class="chip ' + esc(String(v).replace(/[^a-z0-9-]/gi, "-")) + '">' + esc(v) + "</span>";
+  // A check as the workload names it: the name, with its options when it carries any (#47).
+  const checkLabel = (c) => typeof c === "string" ? c : c.name + " (" + Object.keys(c.options).map((k) => k + ": " + c.options[k]).join(", ") + ")";
   const budgetCell = (b) => {
     if (!b) return "—";
     const pct = Math.min(999, Math.round((b.consumed.tokens / b.ceiling.tokens) * 100));
@@ -181,7 +183,7 @@ const PAGE = String.raw`<!doctype html>
     if (!d.workloads.length) html += "<p class='empty'>no workload declared</p>";
     for (const w of d.workloads) {
       html += "<p><b>" + esc(w.name) + "</b> v" + w.version + " — " + esc(w.description) + "</p><table><tr><th>unit type</th><th>profile</th><th>checks</th><th>contract</th></tr>";
-      for (const u of w.unitTypes) html += "<tr><td class='mono'>" + esc(u.name) + "</td><td class='mono'>" + esc(u.profile) + "</td><td class='mono'>" + esc(u.checks.join(", ") || "—") + "</td><td>" + (u.requiresContract ? "required" : "optional") + "</td></tr>";
+      for (const u of w.unitTypes) html += "<tr><td class='mono'>" + esc(u.name) + "</td><td class='mono'>" + esc(u.profile) + "</td><td class='mono'>" + esc(u.checks.map(checkLabel).join(", ") || "—") + "</td><td>" + (u.requiresContract ? "required" : "optional") + "</td></tr>";
       html += "</table>";
     }
     html += "<h3>Profiles — positive grants over declared effects</h3>";
@@ -233,7 +235,7 @@ const PAGE = String.raw`<!doctype html>
     for (const s of d.evals || []) {
       html += "<p><b>" + esc(s.name) + "</b> v" + s.version + " — " + esc(s.description) + "</p><p class='banner'>" + s.tasks.length + " task(s) in order · " + s.repetitions + " repetition(s) · baseline " + esc(s.baseline) + " · pre-registered: " + s.metrics.map(esc).join(", ") + "</p>";
       html += "<table><tr><th>arm</th><th>checks</th><th>extensions</th><th>ablates</th></tr>";
-      for (const a of s.arms) html += "<tr><td class='mono'>" + esc(a.name) + "</td><td class='mono'>" + a.checks.map(esc).join(", ") + "</td><td>" + a.extensions.length + "</td><td class='mono'>" + (a.ablates ? esc(a.ablates) + " <span class='banner'>(" + esc(a.switch || "") + ")</span>" : "—") + "</td></tr>";
+      for (const a of s.arms) html += "<tr><td class='mono'>" + esc(a.name) + "</td><td class='mono'>" + a.checks.map((c) => esc(checkLabel(c))).join(", ") + "</td><td>" + a.extensions.length + "</td><td class='mono'>" + (a.ablates ? esc(a.ablates) + " <span class='banner'>(" + esc(a.switch || "") + ")</span>" : "—") + "</td></tr>";
       html += "</table>";
     }
     if (!(d.reports || []).length) html += "<p class='empty'>no committed report under evals/reports/: the arms above have not been run, or the run was not kept</p>";

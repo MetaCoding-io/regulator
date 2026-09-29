@@ -138,7 +138,7 @@ Enforced at `loop:runHostChecks` (glossary-lint: git diff of added comment lines
 Not covered:
 
 - A word list with a plural: `tasks` is caught, `tasking` and a synonym are not. Prose in the writable prefixes that is not a comment (a README under src/) is read line by line like a comment when a line carries a comment marker, and otherwise not at all.
-- It is blocking wherever the workload declares it: one word in a commit message costs an attempt. The drift suite's sloppy report shows the cost; making the commit-message half advisory is a workload's declaration to make, and none makes it yet (docs/DEBT.md row 36).
+- The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
 ## Identity promotion (the release path) (`reg.authority.identity-promotion.v1`)

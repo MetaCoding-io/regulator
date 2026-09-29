@@ -13,13 +13,35 @@ const NonEmpty = Type.String({ minLength: 1 });
 /** The host-run checks a unit type may name (lesson 09; `identity-untouched` since lesson 12; `export-signature` since lesson 14; `glossary-lint` since lesson 15). */
 export const HOST_CHECK_NAMES = ["run_tests", "run_checks", "identity-untouched", "export-signature", "glossary-lint", "inherited-tests"] as const;
 
+/**
+ * What a check may be told, per check. `glossary-lint` reads two sources — added comment lines and commit messages — and a
+ * workload may declare the commit-message half advisory: a refused word there is recorded as evidence and an advisory
+ * finding, not a failed check (#47). Every other check takes no option; the definition check refuses one it is given.
+ */
+export const CheckOptionsSchema = Type.Object({
+  commitMessages: Type.Optional(Type.Union([Type.Literal("blocking"), Type.Literal("advisory")])),
+}, { additionalProperties: false });
+export type CheckOptions = Static<typeof CheckOptionsSchema>;
+/** Which checks take which options; a check not listed takes none. */
+export const CHECK_OPTIONS: Readonly<Record<string, readonly (keyof CheckOptions)[]>> = { "glossary-lint": ["commitMessages"] };
+
+/** A check a unit type names: the name alone, or the name with the options the workload declares for it. */
+export const CheckEntrySchema = Type.Union([NonEmpty, Type.Object({ name: NonEmpty, options: CheckOptionsSchema }, { additionalProperties: false })]);
+export type CheckEntry = Static<typeof CheckEntrySchema>;
+export function checkName(entry: CheckEntry): string { return typeof entry === "string" ? entry : entry.name; }
+export function checkNames(entries: readonly CheckEntry[]): string[] { return entries.map(checkName); }
+/** The options declared per check name, for the checks that carry any. */
+export function checkOptions(entries: readonly CheckEntry[]): Record<string, CheckOptions> {
+  return Object.fromEntries(entries.flatMap((e) => (typeof e === "string" ? [] : [[e.name, e.options] as const])));
+}
+
 export const UnitTypeSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: NonEmpty,
   /** The capability profile a unit of this type is dispatched under (lesson 04). */
   profile: NonEmpty,
-  /** Names of harness-run checks that verify a unit of this type (consumed from lesson 09). */
-  checks: Type.Array(NonEmpty),
+  /** The harness-run checks that verify a unit of this type (consumed from lesson 09): a name, or a name with options. */
+  checks: Type.Array(CheckEntrySchema),
   /** Whether a unit of this type may be dispatched without a work contract. */
   /** Whether the unit runs only under a work contract. A type declared contract-less must run under a read-only profile (checked by the definition check); the CLI refuses to start it without one otherwise. */
   requiresContract: Type.Boolean(),

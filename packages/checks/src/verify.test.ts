@@ -228,6 +228,24 @@ test("glossary-lint (lesson 15): the words the glossary refuses are read off the
   await git(cwd, "commit", "--quiet", "-am", "unit u1: vendor note");
   r = await run("main");
   assert.doesNotMatch(r.observation, /vendored task runner/, "only the writable prefixes are read");
+
+  // Attenuated (#47): the workload makes the commit-message half advisory. The comment hit still fails; without it, a commit
+  // message's word is a pass that carries what it saw, for the loop to record as a finding at advisory.
+  const attenuated = async () => (await runHostChecks(realExec, { cwd, checks: ["glossary-lint"], forbidden, writablePaths: ["src/", "test/"], base: "main", checkOptions: { "glossary-lint": { commitMessages: "advisory" } } }))[0]!;
+  r = await attenuated();
+  assert.equal(r.verdict, "fail", "the comment half blocks whatever the commit half is");
+  assert.match(r.observation, /comment "\/\/ this task's value \(ticket #4\)"/);
+  assert.doesNotMatch(r.observation, /drifted on the branch: [^.]*commit "/, "the commit message is not among what refused it");
+  assert.match(r.observation, /Also, advisory: 2 hit\(s\) in commit messages$/, "task and ticket, both in one commit message");
+  assert.equal(r.advisory, undefined, "no advisory beside a refusal: the refusal carries it");
+  await writeFile(path.join(cwd, "src", "a.js"), "export const task = 1; // the value of a\nexport const a = task;\n");
+  await git(cwd, "commit", "--quiet", "-am", "unit u1: the comment says unit now");
+  r = await attenuated();
+  assert.equal(r.verdict, "pass", `a word in a commit message alone passes the attenuated check: ${r.observation}`);
+  assert.match(r.observation, /^no refused word in added comments under src\/, test\/ since main; 2 hit\(s\) in commit messages, which this workload made advisory: commit "finish the Tasks for this ticket": task \(say unit\); commit "finish the Tasks for this ticket": ticket \(say obligation\)$/);
+  assert.match(r.advisory ?? "", /^2 hit\(s\) in commit messages, which this workload made advisory/);
+  const strict = (await runHostChecks(realExec, { cwd, checks: ["glossary-lint"], forbidden, writablePaths: ["src/", "test/"], base: "main" }))[0]!;
+  assert.equal(strict.verdict, "fail", "undeclared, both halves block");
 });
 
 test("inherited-tests: the base's suite judges the unit's tree — a regression is a test that passed at the base and fails now, a shrink is an inherited file deleted or short of test or assertion lines; a known failure at the base is neither; the contract's exemption lifts both for the files it names; adding tests is fine; no base is inconclusive", async (t) => {

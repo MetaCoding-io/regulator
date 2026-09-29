@@ -347,7 +347,7 @@ export {
   type Consequence, type DelegatedDecision, type EvidenceExpectation, type ExpectationCheck, type FixedDecision, type ResultReport, type ResultReportInput,
   type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
 } from "./contracts.js";
-export { HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, isWorkloadDefinition, type UnitType, type WorkloadDefinition } from "./workload.js";
+export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isWorkloadDefinition, type CheckEntry, type CheckOptions, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema,
   isAttemptRecord, isLease, isUnitRecord,

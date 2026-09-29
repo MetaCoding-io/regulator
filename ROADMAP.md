@@ -32,7 +32,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Item | Pays | Issue |
 | --- | --- | --- |
 | A live eval report over the drift scenario, with an interpretation; the model router's failover observed end to end | rows 33, 15 | [#46](https://github.com/MetaCoding-io/regulator/issues/46) |
-| Attenuated glossary lint: comments blocking, commit messages advisory, declared per workload | row 36 | [#47](https://github.com/MetaCoding-io/regulator/issues/47) |
 | Pre-merge trial on a temporary merge commit, retiring the post-merge check | row 37 | [#48](https://github.com/MetaCoding-io/regulator/issues/48) |
 | Planner-quality graders over the result reports' diagnostics | row 40 | [#49](https://github.com/MetaCoding-io/regulator/issues/49) |
 | `inherited-tests`: per-assertion diff, a test-layout convention, a cached base run | row 41 | [#50](https://github.com/MetaCoding-io/regulator/issues/50) |
