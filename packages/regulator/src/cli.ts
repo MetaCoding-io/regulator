@@ -152,8 +152,11 @@ try {
     const report = await doctor(realExec, { ...(manifestHere || sub === "--instance" || rest.includes("--instance") ? { repo: process.cwd() } : {}), ...(flag("today") ? { today: flag("today")! } : {}), ...(flag("definition") ? { definitionRoot: path.resolve(flag("definition")!) } : {}) });
     if (rest.includes("--json") || sub === "--json") console.log(JSON.stringify(report, null, 2));
     else {
-      for (const c of report.checks) console.log(`${c.ok ? "ok      " : "PROBLEM "} ${c.name.padEnd(17)} ${c.detail}`);
-      console.log(`${report.problems} problem(s)`);
+      for (const c of report.checks) {
+        console.log(`${c.ok ? "ok      " : "PROBLEM "} ${c.name.padEnd(17)} ${c.detail}`);
+        if (c.warning) console.log(`warning  ${"".padEnd(17)} ${c.warning}`);
+      }
+      console.log(`${report.problems} problem(s)${report.warnings ? `, ${report.warnings} warning(s)` : ""}`);
     }
     process.exit(report.problems ? 1 : 0);
   } else if (command === "watch") {

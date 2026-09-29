@@ -107,7 +107,15 @@ export async function readIdentity(dir: string): Promise<IdentitySet> {
  * reinterpret it, because it never lived in the transcript.
  */
 export function renderIdentitySection(identity: IdentitySet, options: { maxChars?: number } = {}): string {
-  const max = options.maxChars ?? 6000;
+  const max = options.maxChars ?? IDENTITY_CONTEXT_MAX_CHARS;
+  const rendered = renderWhole(identity);
+  return rendered.length <= max ? rendered : `${rendered.slice(0, max)}\n[identity truncated at ${max} characters; the files are authoritative]`;
+}
+
+/** The characters of identity a unit's prompt carries before the rendering is cut. */
+export const IDENTITY_CONTEXT_MAX_CHARS = 6000;
+
+function renderWhole(identity: IdentitySet): string {
   const parts: string[] = ["This instance's identity (S5). It is committed, write-protected, and rebuilt from the files each run; you may propose a change to it (propose_policy_change) and never make one."];
   const order: IdentityFile[] = ["IDENTITY.md", "INVARIANTS.md", "BOUNDARIES.md", "GLOSSARY.md"];
   for (const name of order) {
@@ -115,8 +123,37 @@ export function renderIdentitySection(identity: IdentitySet, options: { maxChars
     if (text === undefined) continue;
     parts.push(`--- ${name} ---`, text.trim());
   }
-  const rendered = parts.join("\n\n");
-  return rendered.length <= max ? rendered : `${rendered.slice(0, max)}\n[identity truncated at ${max} characters; the files are authoritative]`;
+  return parts.join("\n\n");
+}
+
+export interface IdentityContextBudget {
+  /** What the whole set renders to. */
+  chars: number;
+  /** What a unit's prompt carries. */
+  max: number;
+  truncated: boolean;
+  /** The files whose text is cut, in whole or in part, in rendering order. */
+  cut: IdentityFile[];
+  /** What `check`, `doctor` and the session say when the set is truncated. */
+  warning?: string;
+}
+
+/**
+ * The rendered identity against its context budget: a set longer than the budget is partly advice the model never sees,
+ * and this is what makes the cut visible (`regulator check`, `regulator doctor`, and the session at run time).
+ */
+export function identityContextBudget(identity: IdentitySet, maxChars: number = IDENTITY_CONTEXT_MAX_CHARS): IdentityContextBudget {
+  const whole = renderWhole(identity);
+  const chars = whole.length;
+  if (chars <= maxChars) return { chars, max: maxChars, truncated: false, cut: [] };
+  const cut: IdentityFile[] = [];
+  for (const name of ["IDENTITY.md", "INVARIANTS.md", "BOUNDARIES.md", "GLOSSARY.md"] as const) {
+    const text = identity.files[name];
+    if (text === undefined) continue;
+    const start = whole.indexOf(`--- ${name} ---`);
+    if (start + `--- ${name} ---`.length + 2 + text.trim().length > maxChars) cut.push(name);
+  }
+  return { chars, max: maxChars, truncated: true, cut, warning: `the identity set renders to ${chars} characters and a unit's prompt carries ${maxChars}: ${chars - maxChars} character(s) of ${cut.join(", ")} are advice the model never sees. Shorten the set; the files are authoritative either way.` };
 }
 
 /** Authority references a fixed decision may cite, and how each is resolved. */

@@ -57,6 +57,34 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.match(await readFile(path.join(repo, "regulator/identity/INVARIANTS.md"), "utf8"), /INV-001/);
 });
 
+test("doctor says when the instance's identity set is over its context budget (#51): the identity check passes with a warning that names the size, the limit and the files cut, `--json` carries it, and nothing is a problem", async (t) => {
+  const repo = await unfamiliarRepo(t);
+  await initInstance(gitExec, { repo, writablePaths: ["lib/", "test/"], by: "alice", now: () => clock });
+  const commit = async (message: string) => { for (const args of [["add", "-A"], ["commit", "--quiet", "-m", message]]) await gitExec("git", args, { cwd: repo }); };
+  // A short glossary first: the seed shipped in 0.1.3 is itself over the budget (found by #51), and this test is about the check, not the seed.
+  await writeFile(path.join(repo, "regulator/identity/GLOSSARY.md"), "# Identity — glossary\n\n- **Unit** — one dispatched piece of work under a contract.\n");
+  await commit("a short glossary");
+  let report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
+  const identity = () => report.checks.find((c) => c.name === "identity")!;
+  /** Warnings other than the definition check's own, which the shipped seed raises today. */
+  const instanceWarnings = () => report.checks.filter((c) => c.warning && c.name !== "definition").length;
+  assert.equal(identity().ok, true);
+  assert.match(identity().detail, /^regulator\/identity\/ present: 4 invariant\(s\), renders to \d{4} of 6000 characters$/);
+  assert.equal(identity().warning, undefined);
+  assert.equal(instanceWarnings(), 0);
+
+  const boundaries = path.join(repo, "regulator/identity/BOUNDARIES.md");
+  await writeFile(boundaries, `${await readFile(boundaries, "utf8")}\n${"- A boundary, restated at length so the set is longer than a prompt carries.\n".repeat(120)}`);
+  await commit("a longer identity");
+  report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
+  assert.equal(identity().ok, true, "a long set is valid");
+  assert.match(identity().warning ?? "", /^the identity set renders to \d+ characters and a unit's prompt carries 6000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\. Shorten the set; the files are authoritative either way\.$/);
+  assert.equal(instanceWarnings(), 1);
+  assert.equal(report.warnings, report.checks.filter((c) => c.warning).length, "the report counts them");
+  assert.equal(report.problems, 0, "a warning refuses nothing");
+  assert.match(JSON.stringify(report), /"warning":"the identity set renders to/);
+});
+
 test("one unit end to end in the unfamiliar repository: the unit writes under lib/, the discovered npm test script and the declared prefixes verify it, glossary-lint reads the identity's refused words, and the merged base is checked after reintegration", async (t) => {
   const repo = await unfamiliarRepo(t);
   await initInstance(gitExec, { repo, writablePaths: ["lib/", "test/"], by: "alice", now: () => clock });

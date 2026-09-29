@@ -237,7 +237,7 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.match(r.stdout, /^ok {6} node/m);
   assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 43 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
   assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
-  assert.match(r.stdout, /\n0 problem\(s\)\n$/);
+  assert.match(r.stdout, /\n0 problem\(s\)(, \d+ warning\(s\))?\n$/, "a warning (the seed over its context budget, #51) is not a problem");
   r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");
   assert.equal(r.code, 1);
   const report = JSON.parse(r.stdout) as { checks: Array<{ name: string; ok: boolean; detail: string }>; problems: number };

@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { checkAuthorityRefs, parseInvariants, readIdentity, renderIdentitySection } from "./identity.js";
+import { checkAuthorityRefs, parseInvariants, readIdentity, renderIdentitySection, identityContextBudget } from "./identity.js";
 import { MemoryStore, renderMemorySection } from "./memory.js";
 
 const INVARIANTS = `# Identity — invariants
@@ -40,6 +40,17 @@ test("identity: invariants are parsed from their headings with their statements;
   assert.match(section, /^This instance's identity \(S5\)\. It is committed, write-protected, and rebuilt from the files each run/);
   assert.match(section, /--- IDENTITY\.md ---[\s\S]*--- INVARIANTS\.md ---[\s\S]*INV-001[\s\S]*--- BOUNDARIES\.md ---[\s\S]*--- GLOSSARY\.md ---/);
   assert.match(renderIdentitySection(whole, { maxChars: 200 }), /\[identity truncated at 200 characters; the files are authoritative\]$/);
+
+  // The cut is measured, not only made (#51): within the budget nothing is said; over it, the size, the limit and the files cut.
+  const within = identityContextBudget(whole);
+  assert.deepEqual([within.truncated, within.cut, within.warning, within.max], [false, [], undefined, 6000]);
+  assert.equal(within.chars, section.length);
+  const over = identityContextBudget(whole, 200);
+  assert.equal(over.truncated, true);
+  assert.deepEqual(over.cut, ["IDENTITY.md", "INVARIANTS.md", "BOUNDARIES.md", "GLOSSARY.md"], "the preamble alone is most of 200 characters; every file is cut");
+  assert.equal(over.warning, `the identity set renders to ${section.length} characters and a unit's prompt carries 200: ${section.length - 200} character(s) of IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md are advice the model never sees. Shorten the set; the files are authoritative either way.`);
+  const glossaryOnly = identityContextBudget(whole, section.length - 3);
+  assert.deepEqual(glossaryOnly.cut, ["GLOSSARY.md"], "a cut of three characters names the last file only");
 });
 
 test("authority references resolve or fail: an invariant the identity declares, a regulator the registry declares, a person, an obligation the instance holds; free text fixes nothing", () => {

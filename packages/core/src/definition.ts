@@ -12,7 +12,7 @@ import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted,
   type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
-import { readIdentity, type IdentitySet } from "./identity.js";
+import { identityContextBudget, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { isReadOnlyProfile } from "./profiles.js";
 
@@ -34,6 +34,8 @@ export interface CheckedDefinition {
   evals: EvalSuite[];
   reports: EvalReport[];
   problems: DefinitionProblem[];
+  /** What is true and worth knowing, and refuses nothing: the identity set over its context budget. */
+  warnings: DefinitionProblem[];
 }
 
 async function jsonFiles(dir: string): Promise<string[]> {
@@ -45,7 +47,7 @@ async function jsonFiles(dir: string): Promise<string[]> {
 }
 
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [], warnings: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
@@ -121,6 +123,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   if (!out.routing.length) problem("policies/", "no routing policy declared");
   if (!out.interaction.length) problem("policies/", "no interaction policy declared: nothing says how long to wait for a person or who may answer");
   for (const p of out.identity.problems) problem("identity/", p);
+  // A long set is valid and partly unseen (#51): a warning, not a problem, since the check refuses nothing over it.
+  const budget = identityContextBudget(out.identity);
+  if (budget.warning) out.warnings.push({ file: "identity/", message: budget.warning });
 
   // Evals (lesson 14): a suite is part of the declaration — its tasks must exist, its baseline must be an arm, its checks must be
   // ones the host runs, and an ablation arm must say which switch it throws. A committed report must validate, or it is a rumour.
