@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/cli.ts",
-    "enforcementPoints": ["identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "identity promote", "note": "authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition"}
+    ]
   },
   "channels": { "consumes": ["the instance's regulator/identity/<file>", "the definition's identity/ seed", "the interaction policy's people"], "emits": ["a commit in the definition's repository"] },
   "scope": { "subjects": ["identity"], "resources": ["<definition>/identity/"] },

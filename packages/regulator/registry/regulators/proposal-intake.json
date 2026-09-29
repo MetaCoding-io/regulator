@@ -12,7 +12,7 @@
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
-      "propose_policy_change (tool execute)"
+      {"where": "tool", "point": "propose_policy_change", "note": "execute"}
     ]
   },
   "channels": {

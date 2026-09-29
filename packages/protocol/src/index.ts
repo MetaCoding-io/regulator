@@ -339,7 +339,7 @@ export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord,
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
 export { CapabilityProfileSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ReasoningLevel } from "./profiles.js";
 export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
-export { MechanismLevelSchema, RegulatorRecordSchema, isRegulatorRecord, type MechanismLevel, type RegulatorRecord } from "./registry.js";
+export { ENFORCEMENT_POINTS, EnforcementPointSchema, MechanismLevelSchema, RegulatorRecordSchema, enforcementPointName, isRegulatorRecord, unknownEnforcementPoint, type EnforcementPoint, type EnforcementWhere, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
   ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, ExpectationCheckSchema, FixedDecisionSchema,
   ResultReportInputSchema, ResultReportSchema, UnresolvedDecisionSchema, UnresolvedHandlingSchema, UnresolvedOutcomeSchema,

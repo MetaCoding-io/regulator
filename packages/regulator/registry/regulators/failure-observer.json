@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/recovery.ts",
-    "enforcementPoints": ["tool_execution_end (isError)", "agent_end (stopReason error)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_execution_end", "note": "isError"},
+      {"where": "host", "point": "agent_end", "note": "stopReason error"}
+    ]
   },
   "channels": { "consumes": ["tool_execution_end", "agent_end"], "emits": ["failure observation (execution store)"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["observations"] },

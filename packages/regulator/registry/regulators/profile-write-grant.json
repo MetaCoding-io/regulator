@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/profiles.ts",
-    "enforcementPoints": ["session_start", "tool_call"]
+    "enforcementPoints": [
+      {"where": "host", "point": "session_start"},
+      {"where": "host", "point": "tool_call"}
+    ]
   },
   "authority": {
     "may": ["set the active tool set when a profile is applied", "block a write or edit outside the profile's writable paths"],

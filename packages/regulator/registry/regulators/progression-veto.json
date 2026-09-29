@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["runUnit (before the lease is taken)", "closeUnit (before the re-audit)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runUnit", "note": "before the lease is taken"},
+      {"where": "loop", "point": "closeUnit", "note": "before the re-audit"}
+    ]
   },
   "channels": { "consumes": ["open obligations naming the unit (regulatory log)", "routing policy (blocksAtOrAbove)"], "emits": ["contract problem: obligations (refusal)"] },
   "scope": { "subjects": ["unit"], "resources": [".regulator/signals.ndjson"] },

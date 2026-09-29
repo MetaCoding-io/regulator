@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/intelligence.ts",
-    "enforcementPoints": ["report_intelligence (tool execute)"]
+    "enforcementPoints": [
+      {"where": "tool", "point": "report_intelligence", "note": "execute"}
+    ]
   },
   "channels": { "consumes": ["tool call (report_intelligence)", "lease (unit provenance)", "worktree HEAD (revision provenance)"], "emits": ["intelligence-signal → S3 (regulatory log)", "regulator:intelligence (session entry)"] },
   "scope": { "subjects": ["intelligence", "unit"], "resources": [".regulator/signals.ndjson"] },

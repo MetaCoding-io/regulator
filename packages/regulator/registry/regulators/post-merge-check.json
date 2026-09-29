@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)", "progressionVeto (an open blocking obligation with no unit holds every dispatch)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "verifyBase", "note": "after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding"},
+      {"where": "loop", "point": "runUnit", "note": "progressionVeto: an open blocking obligation with no unit holds every dispatch"}
+    ]
   },
   "channels": { "consumes": ["the base at the merge commit", "the workload's check list"], "emits": ["evidence (post-merge:<check>)", "audit-finding with no unit → obligation on the instance"] },
   "scope": { "subjects": ["evidence", "execution"], "resources": ["the base checkout"] },

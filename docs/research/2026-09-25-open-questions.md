@@ -85,6 +85,18 @@ rightly carry no gate).
   room never changes.
 - Writes are a separate question: §5.
 
+**Landed (2026-09-29).** The typed field ([#76](https://github.com/MetaCoding-io/regulator/issues/76)):
+`{ where: "host" | "tool" | "loop" | "cli" | "check", point, note? }`, the closed lists in
+`packages/protocol/src/registry.ts` (`ENFORCEMENT_POINTS`), all forty-three records
+migrated by hand from the survey (the function names — `bindEvidence`, `deliverPending`,
+`piDispatcher`, `MemoryStore.record` — went into the point's note; `dispatcher` joined the
+host list as the one point that is not an event, since the model router and the trust
+rule bite where the host opens the session, not in it), the refusal by name, and tests
+holding each list against the code (the host's subscribed events and registered tools,
+the loop's functions, the usage line's subcommands, core's exports). The tally the figure
+needs is now a group-by: `host:tool_call` carries eight records, `loop:runUnit` seven,
+`loop:auditUnit` six. Next: the generator.
+
 ## 2. A person should be able to create S4 intelligence
 
 **Today.** Intelligence enters the instance one way: a `research` unit under the
@@ -286,7 +298,7 @@ Items with no design yet. Each gets a section above when it has one.
 | Evidence-gated policy promotion; workload graders over a corpus | same, §4.6 | the adaptive loop's gate |
 | Where the identity lives when the domain is not a repository | same, §6 | decides whether an instance is "a repository plus a domain" |
 | The `regulator status` read model as JSON for other renderers | §1 above | the control room is the only consumer; a generated diagram needs the same projection |
-| Enforcement points as a typed field | §1 above | a small protocol change with a definition-check rule; scheduled as [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
+| ~~Enforcement points as a typed field~~ | §1 above | Done ([#76](https://github.com/MetaCoding-io/regulator/issues/76)): `ENFORCEMENT_POINTS` in `protocol` — `host` (the events the Pi host subscribes to, plus `dispatcher`), `tool`, `loop`, `cli`, `check` — each list held by a test against the code; `regulator check` refuses an unknown place or point by name |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
 | Predictions as intelligence signals that resolve; an instrument record kind in the registry with levels, graded on calibration | §4 above | |

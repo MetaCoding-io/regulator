@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/worktree.ts",
-    "enforcementPoints": ["regulator unit finish"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "finishUnit"},
+      {"where": "cli", "point": "unit finish"}
+    ]
   },
   "channels": { "consumes": ["unit branch", "base branch"], "emits": ["coordination-signal (conflict) → S3"] },
   "scope": { "subjects": ["unit"], "resources": ["base branch", "worktree"] },

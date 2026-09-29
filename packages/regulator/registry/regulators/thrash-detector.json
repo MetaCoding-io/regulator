@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/coordination.ts",
-    "enforcementPoints": ["tool_execution_end"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_execution_end"}
+    ]
   },
   "channels": { "consumes": ["tool_execution_end (write, edit)"], "emits": ["coordination-signal (oscillation) → S3"] },
   "scope": { "subjects": ["unit"], "resources": ["file"] },

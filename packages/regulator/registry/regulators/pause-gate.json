@@ -11,7 +11,12 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/algedonic.ts",
-    "enforcementPoints": ["tool_call (paused → block unless read-only effect or report_result)", "agent_before_settle (regulator:paused entry, continue: false)", "runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)", "routeUnit (no decision while paused)", "progression veto (re-dispatch refused until dispositioned)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_call", "note": "paused → block unless read-only effect or report_result"},
+      {"where": "host", "point": "agent_before_settle", "note": "regulator:paused entry, continue: false"},
+      {"where": "loop", "point": "runUnit", "note": "open blocking interaction obligation → attempt outcome paused, status blocked; the progression veto refuses a re-dispatch until it is dispositioned"},
+      {"where": "loop", "point": "routeUnit", "note": "no decision while paused"}
+    ]
   },
   "channels": { "consumes": ["the session's own unanswered question", "obligation ledger (open blocking interaction on the unit)"], "emits": ["tool_call block", "regulator:paused (session entry)", "attempt record (paused)", "unit status blocked: paused"] },
   "scope": { "subjects": ["execution", "interaction"], "resources": ["the session's tools", ".regulator/units/"] },

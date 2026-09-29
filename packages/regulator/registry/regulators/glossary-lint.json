@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
-    "enforcementPoints": ["runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)", "parseForbiddenTerms (the glossary section)", "auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runHostChecks", "note": "glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch; parseForbiddenTerms reads the glossary section"},
+      {"where": "loop", "point": "auditUnit", "note": "forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions"}
+    ]
   },
   "channels": { "consumes": ["regulator/identity/GLOSSARY.md", "the unit's branch"], "emits": ["evidence record (class command)"] },
   "scope": { "subjects": ["evidence", "identity"], "resources": ["the unit's worktree"] },

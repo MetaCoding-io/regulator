@@ -12,8 +12,7 @@
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/identity.ts",
     "enforcementPoints": [
-      "remember (tool execute)",
-      "MemoryStore.record (expiry bounds)"
+      {"where": "tool", "point": "remember", "note": "execute; MemoryStore.record bounds the expiry"}
     ]
   },
   "channels": {

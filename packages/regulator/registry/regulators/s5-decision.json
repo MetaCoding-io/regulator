@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/cli.ts",
-    "enforcementPoints": ["identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)", "identity reject (ledger.resolve rejected)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "identity accept", "note": "authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted"},
+      {"where": "cli", "point": "identity reject", "note": "ledger.resolve rejected"}
+    ]
   },
   "channels": { "consumes": ["obligation (policy-proposal, owed to S5)", "a proposed file"], "emits": ["commit on the base branch", "obligation-resolved (accepted | rejected)"] },
   "scope": { "subjects": ["identity", "obligation"], "resources": ["regulator/identity/", "base branch"] },

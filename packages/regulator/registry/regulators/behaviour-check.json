@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
-    "enforcementPoints": ["runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)", "bindEvidence (criterion binding)", "technicalVerdict (host evidence before acceptance for runtime criteria)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runHostChecks", "note": "export-signature: the probe run at HEAD, one result per carrying expectation"},
+      {"where": "loop", "point": "auditUnit", "note": "bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria"}
+    ]
   },
   "channels": { "consumes": ["contract expectations that carry a check", "the worktree at HEAD"], "emits": ["evidence record (class runtime, bound to the criterion)"] },
   "scope": { "subjects": ["evidence"], "resources": ["the unit's worktree"] },

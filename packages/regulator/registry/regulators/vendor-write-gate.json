@@ -12,7 +12,7 @@
     "level": "deterministic-gate",
     "implementation": "lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)",
     "enforcementPoints": [
-      "tool_call"
+      {"where": "host", "point": "tool_call"}
     ]
   },
   "authority": {

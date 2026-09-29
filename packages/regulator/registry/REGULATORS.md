@@ -56,7 +56,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `owed-but-unseen` — The read model shows twelve obligations owed to a person; the person did not know, because nothing told them, and the units waited on nobody.
 
-**Mechanism.** `src/deliver.ts` at `deliverPending (undelivered → outbox, journaled, ledger.deliver)`, `remindDue (remindable → outbox, reminder)`, `routeAndDeliver in the loop`, `signals route / remind (CLI)`
+**Mechanism.** `src/deliver.ts` at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder), `cli:signals route` (deliverPending after routing), `cli:remind` (remindDue)
 
 **Channels.** consumes `obligation ledger (open, owed to a person, deliveries)`, `interaction policy (reminderAfterMs)` · emits `outbox line (deliver:<obligation>:<n>)`, `effect journal entry`, `obligation-delivered (channel outbox, reminder)`
 
@@ -96,7 +96,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `evidence-by-class` — The contract fixed slugify's signature; the unit added a second parameter with a default; every test still passed; the verdict was pass, because test-class evidence satisfied a test-class criterion and nothing looked at the export.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (export-signature: the probe run at HEAD, one result per carrying expectation)`, `bindEvidence (criterion binding)`, `technicalVerdict (host evidence before acceptance for runtime criteria)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (export-signature: the probe run at HEAD, one result per carrying expectation), `loop:auditUnit` (bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria)
 
 **Channels.** consumes `contract expectations that carry a check`, `the worktree at HEAD` · emits `evidence record (class runtime, bound to the criterion)`
 
@@ -135,7 +135,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
-**Mechanism.** `../regulator-pi/src/budget.ts` at `session_start (ledger written, or resumed on an attempt already metered)`, `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `host:session_start` (ledger written, or resumed on an attempt already metered), `host:turn_end` (ctx.abort), `host:tool_call`, `loop:runUnit` (close: budget-exhausted attempt)
 
 **Channels.** consumes `policy (budgets)`, `message_end usage`, `model_select` · emits `budget ledger (execution store)`
 
@@ -177,7 +177,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_result (redact)`, `message_end (record)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `host:tool_result` (redact), `host:message_end` (record)
 
 **Channels.** consumes `tool_result`, `message_end`, `.regulator/canaries` · emits `audit-finding → S3 (secret-exposure, critical)`
 
@@ -215,7 +215,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `self-certified-completion` — The unit says the tests pass. Nothing ran them, or they ran three commits ago, or they ran and failed and the report says otherwise; the loop closes on the sentence.
 
-**Mechanism.** `src/controller.ts` at `auditUnit (after the report check, before reintegration)`, `closeUnit (re-audit without an attempt)`
+**Mechanism.** `src/controller.ts` at `loop:auditUnit` (after the report check, before reintegration), `loop:closeUnit` (re-audit without an attempt)
 
 **Channels.** consumes `result report`, `workload unit-type checks`, `worktree at HEAD`, `human acceptance (audit log)` · emits `evidence record (audit log)`, `technical verdict (audit log)`, `audit-finding → S3 (closeout refused)`
 
@@ -258,7 +258,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `uninformed-unit` — The gates refuse a bad report, but a unit that never saw the allocation produces one by accident and burns an attempt learning the contract from refusals.
 
-**Mechanism.** `../regulator-pi/src/contract.ts` at `before_agent_start`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `host:before_agent_start`
 
 **Channels.** consumes `work contract (S3)` · emits nothing
 
@@ -291,7 +291,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `compaction-amnesia` — After a threshold compaction the unit no longer knows which decisions were fixed, which were unresolved, or what it already proved; it re-does settled work or quietly violates a constraint the summary dropped.
 
-**Mechanism.** `../regulator-pi/src/budget.ts` at `session_before_compact`, `session_compact`, `session_compact_failed`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `host:session_before_compact`, `host:session_compact`, `host:session_compact_failed`
 
 **Channels.** consumes `work contract`, `budget ledger`, `compaction preparation (messages, file ops)` · emits `compaction entry`
 
@@ -331,7 +331,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
 
-**Mechanism.** `src/registry-cli.ts` at `regulator check (checkDefinition, under pnpm check)`, `checkDefinition (a unit type declared contract-less must run under a profile that is read-only by declared effect)`, `checkDefinition (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)`
+**Mechanism.** `src/registry-cli.ts` at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)
 
 **Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
 
@@ -370,7 +370,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `disposition-by-anyone` — A critical algedonic obligation is resolved as accepted-risk by `--by intern`, honestly recorded and wrong: the record said who, and nothing said whether they could.
 
-**Mechanism.** `src/cli.ts` at `authorized() before every write that takes --by (checkDispositionAuthority)`, `answer (options check, dispositionForAnswer)`
+**Mechanism.** `src/cli.ts` at `cli:answer` (authorized() before every write that takes --by (checkDispositionAuthority); the options check and dispositionForAnswer), `cli:obligation ack`, `cli:obligation resolve`, `cli:obligation escalate`, `cli:memory retract`, `cli:unit accept` (at blocking: a criterion has no severity of its own), `cli:identity accept` (as S5), `cli:identity reject` (as S5), `cli:identity promote` (as S5)
 
 **Channels.** consumes `interaction policy (people)`, `the obligation's severity and concern` · emits `refusal (nothing written)`, `interaction-answered (channel cli)`, `obligation-resolved / acknowledged / escalated by a named, authorized person`
 
@@ -409,7 +409,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `works-on-my-laptop` — The definition was upgraded, a card's review date passed, the base had a stray file and an obligation nobody delivered was holding every unit — four things four people knew, none of them written where the next run would read them.
 
-**Mechanism.** `src/instance.ts` at `doctor (every check, ok or not, with its detail)`, `regulator doctor (exit code)`
+**Mechanism.** `src/instance.ts` at `cli:doctor` (every check, ok or not, with its detail; the exit code)
 
 **Channels.** consumes `the runtime`, `the definition`, `the instance's manifest, base and ledger` · emits `doctor report (JSON or text)`
 
@@ -447,7 +447,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `duplicated-effect` — The notification was sent, the process died before it wrote that down, the retry sends it again; or the sandbox vanished mid-unit and nobody knows whether the external operation happened.
 
-**Mechanism.** `../regulator-pi/src/recovery.ts` at `notify_owner (execute: begin/commit)`, `session_start (reconcile)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `tool:notify_owner` (execute: begin/commit), `host:session_start` (reconcile)
 
 **Channels.** consumes `tool call (notify_owner)`, `outbox (the world)` · emits `effect journal (.regulator/effects.ndjson)`
 
@@ -487,7 +487,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `regulation-without-evidence` — Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves.
 
-**Mechanism.** `src/evals.ts` at `runSuite (one instance per arm × repetition, the tasks through driveUnit)`, `contractForArm / workloadForArm (an arm changes only what the definition declares)`, `graders.ts (outcome and trajectory graders, no judge model)`, `checkDefinition (suites and committed reports validate; ablation arms name their switch)`
+**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch)
 
 **Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
 
@@ -529,7 +529,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `claimed-evidence` — The report cites run_tests; run_tests never ran, or ran before the last edit, or ran and failed. Without a preflight the lie costs a full closeout audit to catch.
 
-**Mechanism.** `../regulator-pi/src/evidence.ts` at `tool_result (run_tests, run_checks: provenance)`, `tool_call (report_result: block)`
+**Mechanism.** `../regulator-pi/src/evidence.ts` at `host:tool_result` (run_tests, run_checks: provenance), `host:tool_call` (report_result: block)
 
 **Channels.** consumes `tool_result`, `tool_call (report_result)` · emits `evidence-provenance entry (session)`
 
@@ -568,7 +568,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `opaque-failure` — The transcript knows the tests could not load a module; the orchestrator only knows the unit did not report. Retrying is the wrong action and nothing in the record says so.
 
-**Mechanism.** `../regulator-pi/src/recovery.ts` at `tool_execution_end (isError)`, `agent_end (stopReason error)`
+**Mechanism.** `../regulator-pi/src/recovery.ts` at `host:tool_execution_end` (isError), `host:agent_end` (stopReason error)
 
 **Channels.** consumes `tool_execution_end`, `agent_end` · emits `failure observation (execution store)`
 
@@ -606,7 +606,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `vocabulary-drift` — Six units later the comments say task, the commit log says ticket, and a new reader cannot tell a unit from an obligation — the glossary was in every prompt and enforced by nothing.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch)`, `parseForbiddenTerms (the glossary section)`, `auditUnit (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (glossary-lint: git diff of added comment lines under the writable prefixes, git log of the branch; parseForbiddenTerms reads the glossary section), `loop:auditUnit` (forbidden terms from the worktree's identity; writable prefixes from the manifest or the conventions)
 
 **Channels.** consumes `regulator/identity/GLOSSARY.md`, `the unit's branch` · emits `evidence record (class command)`
 
@@ -645,7 +645,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `identity-in-context` — The rules the system runs by exist as a paragraph in a context window that gets compacted, forked and re-read by a different model; six months later the same harness is a different system and nobody changed a file.
 
-**Mechanism.** `../regulator-pi/src/identity.ts` at `before_agent_start (sections regulator_identity, regulator_memory)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `host:before_agent_start` (sections regulator_identity, regulator_memory; one advisory operational-signal per session when the rendering is truncated)
 
 **Channels.** consumes `regulator/identity/* (worktree)`, `memory store (current entries)` · emits `system-prompt sections`
 
@@ -684,7 +684,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `decision-stays-in-one-instance` — INV-005 was proposed, decided and committed in one instance; the next fixture started from the seed without it, and the decision had to be made again — or was forgotten.
 
-**Mechanism.** `src/cli.ts` at `identity promote (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)`
+**Mechanism.** `src/cli.ts` at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)
 
 **Channels.** consumes `the instance's regulator/identity/<file>`, `the definition's identity/ seed`, `the interaction policy's people` · emits `a commit in the definition's repository`
 
@@ -724,7 +724,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `committed-around-the-gate` — A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (identity-untouched)`, `auditUnit (before reintegration)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration)
 
 **Channels.** consumes `worktree branch vs base`, `protected prefixes (identity + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
 
@@ -762,7 +762,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `identity-mutation` — The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `tool_call (write, edit: prepareWritePath)`, `tool_call (bash: snapshot)`, `tool_result (bash: restore and report)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `host:tool_call` (write, edit: prepareWritePath), `host:tool_call` (bash: snapshot), `host:tool_result` (bash: restore and report)
 
 **Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
 
@@ -804,7 +804,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `self-weakened-verification` — The unit cannot make the failing test pass, so it makes the test stop failing: an assertion rewritten to the current output, a case deleted, a file removed. Its report cites run_tests passing, which is true of the suite it left behind, and the closeout that trusts that run closes a defect as fixed.
 
-**Mechanism.** `../checks/src/verify.ts` at `runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)`, `auditUnit (the base branch from the repository; exemptions from the contract's expectations)`
+**Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts), `loop:auditUnit` (the base branch from the repository; exemptions from the contract's expectations)
 
 **Channels.** consumes `the base ref and its test/ tree`, `the unit's committed tree`, `expectations carrying an inherited-tests check (exemptions)` · emits `evidence record (class test; bound to the carrying criterion when the contract has one, else to every test criterion)`
 
@@ -846,7 +846,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
-**Mechanism.** `src/instance.ts` at `initInstance (refusals; identity seed; manifest written and validated; commit)`, `readManifest (schema-validated)`, `profiles session_start (declared writable prefixes replace the profile's, never widen a read-only one)`, `auditUnit (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)`
+**Mechanism.** `src/instance.ts` at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)
 
 **Channels.** consumes `a git repository`, `the definition (registry, identity seed, package pin)`, `a person's declaration` · emits `.regulator/instance.json`, `a commit on the base branch (identity, .gitignore)`, `.regulator/canaries`
 
@@ -887,7 +887,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `intelligence-as-authority` — A research finding is written straight into the plan, the code or the policy: the advisory that was true last month rewrites working code this month, and nobody can say who decided.
 
-**Mechanism.** `../regulator-pi/src/intelligence.ts` at `report_intelligence (tool execute)`
+**Mechanism.** `../regulator-pi/src/intelligence.ts` at `tool:report_intelligence` (execute)
 
 **Channels.** consumes `tool call (report_intelligence)`, `lease (unit provenance)`, `worktree HEAD (revision provenance)` · emits `intelligence-signal → S3 (regulatory log)`, `regulator:intelligence (session entry)`
 
@@ -928,7 +928,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `silence-as-consent` — A unit asks whether it may force-push, nobody is there, and it proceeds because the prompt said to 'use judgment' — or it asks five times per attempt until the person stops reading. The question and the non-answer were never a record anyone could act on.
 
-**Mechanism.** `../regulator-pi/src/algedonic.ts` at `ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)`, `ctx.ui.confirm / select / input with the policy's timeout`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `tool:ask_human` (execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout)
 
 **Channels.** consumes `tool call (ask_human)`, `interaction policy (timeouts, attention)`, `lease (unit provenance)`, `ctx.hasUI / ctx.mode (channel)` · emits `obligation-opened (interaction, owed to a person)`, `interaction-requested / interaction-answered`, `obligation-resolved (answered in the session)`, `regulator:interaction (session entry)`
 
@@ -970,7 +970,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `memory-becomes-policy` — A note that tests need FOO=1 is written into AGENTS.md as a temporary reminder; a year later it is an undocumented rule nobody can date, source or retire.
 
-**Mechanism.** `../regulator-pi/src/identity.ts` at `remember (tool execute)`, `MemoryStore.record (expiry bounds)`
+**Mechanism.** `../regulator-pi/src/identity.ts` at `tool:remember` (execute; MemoryStore.record bounds the expiry)
 
 **Channels.** consumes `tool call (remember)`, `lease (unit provenance)`, `worktree HEAD (revision)` · emits `memory-recorded / memory-retracted (.regulator/memory.ndjson)`, `regulator:memory (session entry)`
 
@@ -1010,7 +1010,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `single-model-dependence` — A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why.
 
-**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `piDispatcher (model choice, failover)`, `attemptEnd (halt vs provider failure, from the ledger)`, `model_select (ledger)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `host:dispatcher` (piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger), `host:model_select` (ledger)
 
 **Channels.** consumes `policy (models)`, `model availability (ModelRuntime)`, `budget ledger (exhausted)` · emits `budget ledger models[]`
 
@@ -1050,7 +1050,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `signal-into-a-log` — A recovery decision, a proposal, an escalation or a finding is recorded and then nothing: nobody is named as owing a response, nothing reminds anyone, and the unit either waits forever or is quietly moved on.
 
-**Mechanism.** `src/controller.ts` at `runUnit (after the session, after the audit, after the report's signals)`, `closeUnit (after the audit)`, `routeUnit (before and after the recovery decision)`, `regulator signals route`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (after the session, after the audit, after the report's signals), `loop:closeUnit` (after the audit), `loop:routeUnit` (before and after the recovery decision), `cli:signals route`
 
 **Channels.** consumes `every message kind (regulatory log)`, `recovery decision`, `routing policy` · emits `obligation-opened / -acknowledged / -resolved / -escalated / -superseded (regulatory log)`, `message-noted (regulatory log)`
 
@@ -1094,7 +1094,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `owed-and-nobody-running` — Lesson 13 delivered to the outbox at the loop's steps and on demand; an instance where nothing ran for a week reminded nobody, and an obligation owed to a person sat in a file nobody opened.
 
-**Mechanism.** `src/deliver.ts` at `watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)`, `regulator watch (once, or the loop)`
+**Mechanism.** `src/deliver.ts` at `cli:watch` (watchOutbox tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded; --once, or the loop)
 
 **Channels.** consumes `the obligation ledger`, `the outbox`, `.regulator/outbox.cursor` · emits `a channel command invocation per line`, `obligation-delivered (via delivery and reminders)`
 
@@ -1133,7 +1133,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `waiting-in-name-only` — The tool told the model the question had no answer, and the model, with the tools still live, did the thing anyway — or the orchestrator, seeing an attempt with no close, retried the unit and it asked again, and again.
 
-**Mechanism.** `../regulator-pi/src/algedonic.ts` at `tool_call (paused → block unless read-only effect or report_result)`, `agent_before_settle (regulator:paused entry, continue: false)`, `runUnit (open blocking interaction obligation → attempt outcome paused, status blocked)`, `routeUnit (no decision while paused)`, `progression veto (re-dispatch refused until dispositioned)`
+**Mechanism.** `../regulator-pi/src/algedonic.ts` at `host:tool_call` (paused → block unless read-only effect or report_result), `host:agent_before_settle` (regulator:paused entry, continue: false), `loop:runUnit` (open blocking interaction obligation → attempt outcome paused, status blocked; the progression veto refuses a re-dispatch until it is dispositioned), `loop:routeUnit` (no decision while paused)
 
 **Channels.** consumes `the session's own unanswered question`, `obligation ledger (open blocking interaction on the unit)` · emits `tool_call block`, `regulator:paused (session entry)`, `attempt record (paused)`, `unit status blocked: paused`
 
@@ -1174,7 +1174,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `green-branches-red-base` — Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand.
 
-**Mechanism.** `src/controller.ts` at `verifyBase after finishUnit (host checks on the base at the merge commit; evidence; the unit-less finding)`, `progressionVeto (an open blocking obligation with no unit holds every dispatch)`
+**Mechanism.** `src/controller.ts` at `loop:verifyBase` (after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch)
 
 **Channels.** consumes `the base at the merge commit`, `the workload's check list` · emits `evidence (post-merge:<check>)`, `audit-finding with no unit → obligation on the instance`
 
@@ -1214,7 +1214,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `ungranted-capability-use` — Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise.
 
-**Mechanism.** `../regulator-pi/src/profiles.ts` at `session_start`, `tool_call`
+**Mechanism.** `../regulator-pi/src/profiles.ts` at `host:session_start`, `host:tool_call`
 
 **May.**
 - set the active tool set when a profile is applied
@@ -1247,7 +1247,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `last-signal-wins` — An advisory arrives against a commitment and whichever came last decides: the unit is dispatched anyway because nothing stood in the loop's path, or the advisory rewrites working code because a prompt said it should.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before the lease is taken)`, `closeUnit (before the re-audit)`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (before the lease is taken), `loop:closeUnit` (before the re-audit)
 
 **Channels.** consumes `open obligations naming the unit (regulatory log)`, `routing policy (blocksAtOrAbove)` · emits `contract problem: obligations (refusal)`
 
@@ -1288,7 +1288,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `trust-boundary-crossing` — The target repository ships .pi/extensions/helpful.ts, which registers a tool that widens the surface or rewrites results; the harness loads it because the directory looked like a project.
 
-**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)`, `project_trust (authority.ts, CLI sessions)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `host:dispatcher` (definitionResourceLoader: extensionsOverride, no project skills/prompts/themes), `host:project_trust` (authority.ts, CLI sessions)
 
 **Channels.** consumes `resource loader (discovered extensions)`, `project_trust` · emits `refused extension list (dispatcher echo)`
 
@@ -1328,7 +1328,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `proposal-as-policy` — A unit that cannot edit the invariant argues its case in the transcript and then edits the invariant; or a harness that lets a 'proposal' tool apply the change it proposes.
 
-**Mechanism.** `../regulator-pi/src/authority.ts` at `propose_policy_change (tool execute)`
+**Mechanism.** `../regulator-pi/src/authority.ts` at `tool:propose_policy_change` (execute)
 
 **Channels.** consumes `tool call (propose_policy_change)` · emits `policy-proposal → S5 (regulatory log)`
 
@@ -1366,7 +1366,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `naive-retry` — A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why.
 
-**Mechanism.** `src/controller.ts` at `routeUnit (after a blocked outcome)`, `driveUnit (the autoloop)`
+**Mechanism.** `src/controller.ts` at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the autoloop)
 
 **Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
 
@@ -1410,7 +1410,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `control-system-that-only-grows` — A workaround for one model's habit, still costing latency and attention on every run three model versions later, because nothing ever asked whether the habit persisted and nobody owned the question.
 
-**Mechanism.** `../core/src/registry.ts` at `checkRegistry (active record without ablation or retirement is a problem)`, `reviewDue`, `regulator review --due (CLI)`, `the lifecycle view (read model, control room)`
+**Mechanism.** `../core/src/registry.ts` at `check:checkRegistry` (an active record without ablation or retirement is a problem; so is an overdue review date), `cli:review` (--due: reviewDue), `cli:status` (the lifecycle view of the read model, rendered by the control room)
 
 **Channels.** consumes `registry records`, `eval suites and committed reports` · emits `registry problems`, `the lifecycle view`
 
@@ -1451,7 +1451,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `hidden-coupling` — Work done in isolation looks finished until it meets the base; a merge that auto-resolves, or that lands on a dirty checkout, hides the coupling instead of surfacing it.
 
-**Mechanism.** `src/worktree.ts` at `regulator unit finish`
+**Mechanism.** `src/worktree.ts` at `loop:finishUnit`, `cli:unit finish`
 
 **Channels.** consumes `unit branch`, `base branch` · emits `coordination-signal (conflict) → S3`
 
@@ -1489,7 +1489,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `silent-closure` — A unit declares itself done; the decisions it made under uncertainty, the ones it quietly settled, and the constraints it bent are visible only to whoever reads the whole transcript.
 
-**Mechanism.** `../regulator-pi/src/contract.ts` at `report_result (tool execute)`, `runUnit (close)`, `session_start (a loaded contract puts report_result on the active tool surface, whatever the profile lists)`
+**Mechanism.** `../regulator-pi/src/contract.ts` at `tool:report_result` (execute), `loop:runUnit` (close), `host:session_start` (a loaded contract puts report_result on the active tool surface, whatever the profile lists)
 
 **Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
 
@@ -1528,7 +1528,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `proposal-with-no-decider` — A proposal is recorded and owed to S5, and then a person edits the identity file by hand with no link to what was asked, or never does, and the obligation sits open with no way to close it honestly.
 
-**Mechanism.** `src/cli.ts` at `identity accept (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted)`, `identity reject (ledger.resolve rejected)`
+**Mechanism.** `src/cli.ts` at `cli:identity accept` (authorizeWrite s5-authority, readIdentity, git commit, ledger.resolve accepted), `cli:identity reject` (ledger.resolve rejected)
 
 **Channels.** consumes `obligation (policy-proposal, owed to S5)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
 
@@ -1569,7 +1569,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `evidence-nobody-can-join` — Six NDJSON logs and a SQLite store, each honest on its own, and no way to ask which regulator fired on which attempt of which unit without reading them all by hand — or a way that shipped the API key in the tool output.
 
-**Mechanism.** `../core/src/spans.ts` at `projectSpans (schema-validated SpanRecord per record; redact on every string attribute)`, `reportSpans (one span per eval run)`, `regulator spans (CLI)`
+**Mechanism.** `../core/src/spans.ts` at `cli:spans` (projectSpans: a schema-validated SpanRecord per record; redact on every string attribute), `cli:eval` (reportSpans: one span per eval run)
 
 **Channels.** consumes `.regulator/units/`, `audit.ndjson`, `signals.ndjson`, `effects.ndjson`, `memory.ndjson`, `.regulator/canaries` · emits `span records (NDJSON)`
 
@@ -1611,7 +1611,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `oscillation` — Fix A breaks B, fix B breaks A; each individual edit is locally reasonable and nothing in the loop notices the pattern.
 
-**Mechanism.** `../regulator-pi/src/coordination.ts` at `tool_execution_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `host:tool_execution_end`
 
 **Channels.** consumes `tool_execution_end (write, edit)` · emits `coordination-signal (oscillation) → S3`
 
@@ -1647,7 +1647,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `write-collision` — Two sessions writing one checkout corrupt each other's work; a session that died mid-unit blocks the resource until someone notices.
 
-**Mechanism.** `../regulator-pi/src/coordination.ts` at `session_start`, `tool_call`, `turn_end`
+**Mechanism.** `../regulator-pi/src/coordination.ts` at `host:session_start`, `host:tool_call`, `host:turn_end`
 
 **Channels.** consumes `lease (.regulator/leases)` · emits nothing
 
@@ -1684,7 +1684,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `protected-path-mutation` — The smallest diff for a request is often inside a vendored file; a rule stated only in prose holds inconsistently under pressure.
 
-**Mechanism.** `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)` at `tool_call`
+**Mechanism.** `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)` at `host:tool_call`
 
 **May.**
 - block a write or edit whose normalized path is under vendor/
@@ -1716,7 +1716,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `implicit-delegation` — A task description hands S1 every decision the planner did not think of; the unit settles them by omission and the choices disappear into the diff.
 
-**Mechanism.** `src/controller.ts` at `runUnit (before createUnit)`, `session_start (contract)`, `unit start --type (the contract-less path refuses a unit type whose workload declares requiresContract)`
+**Mechanism.** `src/controller.ts` at `loop:runUnit` (before createUnit), `host:session_start` (contract), `cli:unit start` (--type: the contract-less path refuses a unit type whose workload declares requiresContract)
 
 **Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
 

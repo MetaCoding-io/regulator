@@ -326,7 +326,7 @@ const PAGE = String.raw`<!doctype html>
         "<p>" + esc(r.vsmFunction) + " " + chip(r.mechanism.level) + " " + chip(r.status) + (r.introducedIn ? " " + chip("since " + r.introducedIn) : "") + "</p><dl>" +
         "<dt>purpose</dt><dd>" + esc(r.purpose) + "</dd>" +
         "<dt>absorbs</dt><dd><b>" + esc(r.absorbs.failureClass) + "</b> — " + esc(r.absorbs.description) + "</dd>" +
-        "<dt>mechanism</dt><dd><span class='mono'>" + esc(r.mechanism.implementation) + "</span><br>enforcement points: " + esc(r.mechanism.enforcementPoints.join(", ") || "—") + "</dd>" +
+        "<dt>mechanism</dt><dd><span class='mono'>" + esc(r.mechanism.implementation) + "</span><br>enforcement points: " + esc(r.mechanism.enforcementPoints.map((p) => p.where + ":" + p.point + (p.note ? " (" + p.note + ")" : "")).join(", ") || "—") + "</dd>" +
         "<dt>may</dt><dd>" + list(a.may, esc) + "</dd><dt>may not</dt><dd>" + list(a.mayNot, esc) + "</dd>" +
         "<dt>channels</dt><dd>consumes: " + esc(((r.channels || {}).consumes || []).join("; ") || "—") + "<br>emits: " + esc(((r.channels || {}).emits || []).join("; ") || "—") + "</dd>" +
         "<dt>scope</dt><dd>subjects: " + esc(((r.scope || {}).subjects || []).join(", ") || "—") + "<br>resources: " + esc(((r.scope || {}).resources || []).join(", ") || "—") + "</dd>" +

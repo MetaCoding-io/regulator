@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "typed-tool",
     "implementation": "../regulator-pi/src/algedonic.ts",
-    "enforcementPoints": ["ask_human (tool execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve)", "ctx.ui.confirm / select / input with the policy's timeout"]
+    "enforcementPoints": [
+      {"where": "tool", "point": "ask_human", "note": "execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout"}
+    ]
   },
   "channels": { "consumes": ["tool call (ask_human)", "interaction policy (timeouts, attention)", "lease (unit provenance)", "ctx.hasUI / ctx.mode (channel)"], "emits": ["obligation-opened (interaction, owed to a person)", "interaction-requested / interaction-answered", "obligation-resolved (answered in the session)", "regulator:interaction (session entry)"] },
   "scope": { "subjects": ["interaction", "obligation"], "resources": [".regulator/signals.ndjson", "the session's dialogs"] },

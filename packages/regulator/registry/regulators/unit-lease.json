@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/coordination.ts",
-    "enforcementPoints": ["session_start", "tool_call", "turn_end"]
+    "enforcementPoints": [
+      {"where": "host", "point": "session_start"},
+      {"where": "host", "point": "tool_call"},
+      {"where": "host", "point": "turn_end"}
+    ]
   },
   "channels": { "consumes": ["lease (.regulator/leases)"], "emits": [] },
   "scope": { "subjects": ["unit", "session"], "resources": ["worktree"] },

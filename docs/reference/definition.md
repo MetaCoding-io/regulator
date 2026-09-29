@@ -193,7 +193,7 @@ not pass the check; a record whose `reviewBy` has passed fails it.
 | `vsmFunction` | `S1`…`S5`, `S3*` |
 | `purpose`, `absorbs.failureClass`, `absorbs.description` | what it is for and the failure it absorbs |
 | `mechanism.level` | `type`, `deterministic-gate`, `typed-tool`, `model-judgment`, `prompt` |
-| `mechanism.implementation`, `mechanism.enforcementPoints[]` | the file, and where in it the gate applies |
+| `mechanism.implementation`, `mechanism.enforcementPoints[]` | the file, and where the gate bites: `{ where, point, note? }` with `where` one of `host` (a session event the Pi host subscribes to, or `dispatcher`), `tool` (a registered tool's execute), `loop` (a step of the S3 loop or the unit lifecycle), `cli` (a `regulator` subcommand) or `check` (`checkRegistry`, `checkDefinition`), and `point` from that place's closed list in `packages/protocol/src/registry.ts` (`ENFORCEMENT_POINTS`); a point not on a list fails the check |
 | `authority.may[]`, `authority.mayNot[]` | |
 | `evidence.tests[]` | test files that must exist |
 | `channels`, `scope`, `cost` | what it consumes and emits, what it applies to, what it costs |

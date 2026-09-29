@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/recovery.ts",
-    "enforcementPoints": ["notify_owner (execute: begin/commit)", "session_start (reconcile)"]
+    "enforcementPoints": [
+      {"where": "tool", "point": "notify_owner", "note": "execute: begin/commit"},
+      {"where": "host", "point": "session_start", "note": "reconcile"}
+    ]
   },
   "channels": { "consumes": ["tool call (notify_owner)", "outbox (the world)"], "emits": ["effect journal (.regulator/effects.ndjson)"] },
   "scope": { "subjects": ["unit", "effect"], "resources": ["outbox"] },

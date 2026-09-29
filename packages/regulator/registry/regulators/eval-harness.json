@@ -12,10 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "src/evals.ts",
     "enforcementPoints": [
-      "runSuite (one instance per arm × repetition, the tasks through driveUnit)",
-      "contractForArm / workloadForArm (an arm changes only what the definition declares)",
-      "graders.ts (outcome and trajectory graders, no judge model)",
-      "checkDefinition (suites and committed reports validate; ablation arms name their switch)"
+      {"where": "cli", "point": "eval", "note": "runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model"},
+      {"where": "check", "point": "checkDefinition", "note": "suites and committed reports validate; ablation arms name their switch"}
     ]
   },
   "channels": {

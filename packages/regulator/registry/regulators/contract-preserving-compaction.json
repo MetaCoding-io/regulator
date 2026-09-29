@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "model-judgment",
     "implementation": "../regulator-pi/src/budget.ts",
-    "enforcementPoints": ["session_before_compact", "session_compact", "session_compact_failed"]
+    "enforcementPoints": [
+      {"where": "host", "point": "session_before_compact"},
+      {"where": "host", "point": "session_compact"},
+      {"where": "host", "point": "session_compact_failed"}
+    ]
   },
   "channels": { "consumes": ["work contract", "budget ledger", "compaction preparation (messages, file ops)"], "emits": ["compaction entry"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["context window"] },

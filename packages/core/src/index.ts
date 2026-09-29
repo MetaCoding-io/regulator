@@ -7,7 +7,7 @@ export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatory
 export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
 export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "./profiles.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
-export { checkRegistry, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type CheckRegistryOptions, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
+export { checkRegistry, formatEnforcementPoint, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type CheckRegistryOptions, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";

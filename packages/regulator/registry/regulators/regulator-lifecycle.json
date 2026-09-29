@@ -12,10 +12,9 @@
     "level": "deterministic-gate",
     "implementation": "../core/src/registry.ts",
     "enforcementPoints": [
-      "checkRegistry (active record without ablation or retirement is a problem)",
-      "reviewDue",
-      "regulator review --due (CLI)",
-      "the lifecycle view (read model, control room)"
+      {"where": "check", "point": "checkRegistry", "note": "an active record without ablation or retirement is a problem; so is an overdue review date"},
+      {"where": "cli", "point": "review", "note": "--due: reviewDue"},
+      {"where": "cli", "point": "status", "note": "the lifecycle view of the read model, rendered by the control room"}
     ]
   },
   "channels": {

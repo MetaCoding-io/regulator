@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "prompt",
     "implementation": "../regulator-pi/src/contract.ts",
-    "enforcementPoints": ["before_agent_start"]
+    "enforcementPoints": [
+      {"where": "host", "point": "before_agent_start"}
+    ]
   },
   "channels": { "consumes": ["work contract (S3)"], "emits": [] },
   "scope": { "subjects": ["unit"], "resources": ["system prompt"] },

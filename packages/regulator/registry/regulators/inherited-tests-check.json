@@ -12,8 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
     "enforcementPoints": [
-      "runHostChecks (inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts)",
-      "auditUnit (the base branch from the repository; exemptions from the contract's expectations)"
+      {"where": "loop", "point": "runHostChecks", "note": "inherited-tests: git merge-base, then git ls-tree and git show at the branch point, two staged test runs, per-file line counts"},
+      {"where": "loop", "point": "auditUnit", "note": "the base branch from the repository; exemptions from the contract's expectations"}
     ]
   },
   "channels": {

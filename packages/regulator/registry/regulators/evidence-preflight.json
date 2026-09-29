@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/evidence.ts",
-    "enforcementPoints": ["tool_result (run_tests, run_checks: provenance)", "tool_call (report_result: block)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "tool_result", "note": "run_tests, run_checks: provenance"},
+      {"where": "host", "point": "tool_call", "note": "report_result: block"}
+    ]
   },
   "channels": { "consumes": ["tool_result", "tool_call (report_result)"], "emits": ["evidence-provenance entry (session)"] },
   "scope": { "subjects": ["report", "tool run"], "resources": ["session"] },

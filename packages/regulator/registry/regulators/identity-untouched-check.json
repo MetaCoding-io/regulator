@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "../checks/src/verify.ts",
-    "enforcementPoints": ["runHostChecks (identity-untouched)", "auditUnit (before reintegration)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runHostChecks", "note": "identity-untouched"},
+      {"where": "loop", "point": "auditUnit", "note": "before reintegration"}
+    ]
   },
   "channels": { "consumes": ["worktree branch vs base", "protected prefixes (identity + conventions)"], "emits": ["evidence record (audit log)", "audit-finding → S3 on fail (via the closeout gate)"] },
   "scope": { "subjects": ["unit", "revision"], "resources": ["regulator/identity/", "vendor/", "worktree"] },

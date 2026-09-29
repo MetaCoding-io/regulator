@@ -11,7 +11,11 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/deliver.ts",
-    "enforcementPoints": ["deliverPending (undelivered → outbox, journaled, ledger.deliver)", "remindDue (remindable → outbox, reminder)", "routeAndDeliver in the loop", "signals route / remind (CLI)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "routeAndDeliver", "note": "deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder"},
+      {"where": "cli", "point": "signals route", "note": "deliverPending after routing"},
+      {"where": "cli", "point": "remind", "note": "remindDue"}
+    ]
   },
   "channels": { "consumes": ["obligation ledger (open, owed to a person, deliveries)", "interaction policy (reminderAfterMs)"], "emits": ["outbox line (deliver:<obligation>:<n>)", "effect journal entry", "obligation-delivered (channel outbox, reminder)"] },
   "scope": { "subjects": ["obligation"], "resources": [".regulator/outbox", ".regulator/effects.ndjson", ".regulator/signals.ndjson"] },

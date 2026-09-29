@@ -12,9 +12,9 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
-      "tool_call (write, edit: prepareWritePath)",
-      "tool_call (bash: snapshot)",
-      "tool_result (bash: restore and report)"
+      {"where": "host", "point": "tool_call", "note": "write, edit: prepareWritePath"},
+      {"where": "host", "point": "tool_call", "note": "bash: snapshot"},
+      {"where": "host", "point": "tool_result", "note": "bash: restore and report"}
     ]
   },
   "channels": {

@@ -89,7 +89,7 @@ test("the profile section is advice and says the refusal comes from the harness"
 const record = {
   id: "reg.control.example.v1", name: "Example", status: "active", vsmFunction: "S3",
   purpose: "x", absorbs: { failureClass: "f", description: "d" },
-  mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: ["tool_call"] },
+  mechanism: { level: "deterministic-gate", implementation: "src/gate.ts", enforcementPoints: [{ where: "host", point: "tool_call" }] },
   evidence: { tests: ["src/gate.test.ts"] },
   limitations: ["lexical only"],
   ownership: { owner: "o", introduced: "2026-09-21", reviewBy: "2026-12-01" },
@@ -118,7 +118,7 @@ test("checkRegistry accepts a record that shows what it claims and renders it", 
   assert.deepEqual(reviewDue(records, "2026-12-11").map((d) => d.overdueDays), [10], "overdue");
   const boundary = renderBoundaryMarkdown(records);
   assert.match(boundary, /^# Enforcement boundary\n/);
-  assert.match(boundary, /## Example \(`reg\.control\.example\.v1`\)\n\nEnforced at `tool_call` in `src\/gate\.ts`; S3, deterministic-gate\.\n\nNot covered:\n\n- lexical only/);
+  assert.match(boundary, /## Example \(`reg\.control\.example\.v1`\)\n\nEnforced at `host:tool_call` in `src\/gate\.ts`; S3, deterministic-gate\.\n\nNot covered:\n\n- lexical only/);
 });
 
 test("checkRegistry verifies implementation and test paths only in a source checkout, and says which it did", async (t) => {

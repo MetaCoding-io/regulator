@@ -11,7 +11,12 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["runUnit (after the session, after the audit, after the report's signals)", "closeUnit (after the audit)", "routeUnit (before and after the recovery decision)", "regulator signals route"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "runUnit", "note": "after the session, after the audit, after the report's signals"},
+      {"where": "loop", "point": "closeUnit", "note": "after the audit"},
+      {"where": "loop", "point": "routeUnit", "note": "before and after the recovery decision"},
+      {"where": "cli", "point": "signals route"}
+    ]
   },
   "channels": { "consumes": ["every message kind (regulatory log)", "recovery decision", "routing policy"], "emits": ["obligation-opened / -acknowledged / -resolved / -escalated / -superseded (regulatory log)", "message-noted (regulatory log)"] },
   "scope": { "subjects": ["message", "obligation", "unit"], "resources": [".regulator/signals.ndjson"] },

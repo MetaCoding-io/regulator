@@ -11,7 +11,10 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
-    "enforcementPoints": ["auditUnit (after the report check, before reintegration)", "closeUnit (re-audit without an attempt)"]
+    "enforcementPoints": [
+      {"where": "loop", "point": "auditUnit", "note": "after the report check, before reintegration"},
+      {"where": "loop", "point": "closeUnit", "note": "re-audit without an attempt"}
+    ]
   },
   "channels": { "consumes": ["result report", "workload unit-type checks", "worktree at HEAD", "human acceptance (audit log)"], "emits": ["evidence record (audit log)", "technical verdict (audit log)", "audit-finding → S3 (closeout refused)"] },
   "scope": { "subjects": ["unit", "attempt", "criterion"], "resources": ["worktree", "audit log"] },

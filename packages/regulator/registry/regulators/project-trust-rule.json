@@ -12,8 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
-      "definitionResourceLoader (extensionsOverride, no project skills/prompts/themes)",
-      "project_trust (authority.ts, CLI sessions)"
+      {"where": "host", "point": "dispatcher", "note": "definitionResourceLoader: extensionsOverride, no project skills/prompts/themes"},
+      {"where": "host", "point": "project_trust", "note": "authority.ts, CLI sessions"}
     ]
   },
   "channels": {

@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "deterministic-gate",
     "implementation": "src/deliver.ts",
-    "enforcementPoints": ["watchOutbox (tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded)", "regulator watch (once, or the loop)"]
+    "enforcementPoints": [
+      {"where": "cli", "point": "watch", "note": "watchOutbox tick: deliverPending, remindDue, forward from the cursor; the cursor advances only when every forward succeeded; --once, or the loop"}
+    ]
   },
   "channels": { "consumes": ["the obligation ledger", "the outbox", ".regulator/outbox.cursor"], "emits": ["a channel command invocation per line", "obligation-delivered (via delivery and reminders)"] },
   "scope": { "subjects": ["obligation"], "resources": [".regulator/outbox", ".regulator/outbox.cursor"] },

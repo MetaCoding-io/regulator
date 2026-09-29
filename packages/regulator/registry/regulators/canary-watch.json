@@ -12,8 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/authority.ts",
     "enforcementPoints": [
-      "tool_result (redact)",
-      "message_end (record)"
+      {"where": "host", "point": "tool_result", "note": "redact"},
+      {"where": "host", "point": "message_end", "note": "record"}
     ]
   },
   "channels": {

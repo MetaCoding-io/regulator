@@ -11,7 +11,9 @@
   "mechanism": {
     "level": "prompt",
     "implementation": "../regulator-pi/src/identity.ts",
-    "enforcementPoints": ["before_agent_start (sections regulator_identity, regulator_memory)"]
+    "enforcementPoints": [
+      {"where": "host", "point": "before_agent_start", "note": "sections regulator_identity, regulator_memory; one advisory operational-signal per session when the rendering is truncated"}
+    ]
   },
   "channels": { "consumes": ["regulator/identity/* (worktree)", "memory store (current entries)"], "emits": ["system-prompt sections"] },
   "scope": { "subjects": ["identity", "memory"], "resources": ["regulator/identity/", ".regulator/memory.ndjson"] },

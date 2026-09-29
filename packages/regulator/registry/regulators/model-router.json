@@ -12,9 +12,8 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
-      "piDispatcher (model choice, failover)",
-      "attemptEnd (halt vs provider failure, from the ledger)",
-      "model_select (ledger)"
+      {"where": "host", "point": "dispatcher", "note": "piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger"},
+      {"where": "host", "point": "model_select", "note": "ledger"}
     ]
   },
   "channels": {
