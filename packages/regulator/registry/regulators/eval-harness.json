@@ -66,7 +66,7 @@
     "Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

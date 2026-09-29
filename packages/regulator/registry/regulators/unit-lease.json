@@ -29,7 +29,7 @@
     "The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.",
     "Leases are files on one machine; nothing coordinates across hosts."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:lease", "note": "Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm."},
   "retirement": {"condition": "Never while two sessions can target one worktree."},
   "introducedIn": "0.1.0"

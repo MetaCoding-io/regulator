@@ -92,7 +92,7 @@ does not do. `since` is the package version that first shipped the record.
 - Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:deliver-pending` — Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only.
 
@@ -131,7 +131,7 @@ does not do. `since` is the package version that first shipped the record.
 - The probe imports the module: import-time side effects run in the host's process tree, at HEAD, once per closeout. A module that cannot be imported is inconclusive, never a pass.
 - A criterion that carries no check is still bound by class, as before. Content binding is opt-in per expectation, and the drift contracts are the only ones that opt in so far.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `check:export-signature` — The drift suite's no-behaviour-check arm drops the check from every unit type and the signature criterion from the contract: the signature is a fixed decision in prose only.
 
@@ -173,7 +173,7 @@ does not do. `since` is the package version that first shipped the record.
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:budget` — The harness drops the budget extension from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries.
 
@@ -211,7 +211,7 @@ does not do. `since` is the package version that first shipped the record.
 - A canary that reaches the model in a form the scan does not match (split across blocks, base64, described rather than quoted) is not redacted.
 - By the time message_end records a leak the text has left the process: the finding is evidence of exposure, not prevention. Network egress is not watched at all; the lesson names it as the boundary a container provides.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:authority` — Shares the authority extension with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it.
 
@@ -254,7 +254,7 @@ does not do. `since` is the package version that first shipped the record.
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature).
 
@@ -287,7 +287,7 @@ does not do. `since` is the package version that first shipped the record.
 - Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:contract` — Shares the contract extension with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all.
 
@@ -327,7 +327,7 @@ does not do. `since` is the package version that first shipped the record.
 - The block is what compaction carries; the contract section in the system prompt is regenerated every turn regardless. This regulator preserves progress, not the contract text.
 - Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:budget` — Shares the budget extension with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried.
 
@@ -366,7 +366,7 @@ does not do. `since` is the package version that first shipped the record.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
 - The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A check on the definition, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against.
 
@@ -405,7 +405,7 @@ does not do. `since` is the package version that first shipped the record.
 - The grants are three booleans and a severity; an obligation-specific grant (bob may answer questions on units he owns) is not expressible, and the policy is one file for the instance.
 - The session path (`ask_human` with a dialog) attributes the answer to the session's user and does not run this check: a person at the keyboard of a unit's session is treated as able to answer that unit's question. The CLI path checks; the dialog path trusts the terminal.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `policy:interaction.people` — A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything.
 
@@ -443,7 +443,7 @@ does not do. `since` is the package version that first shipped the record.
 - Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
 - Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A check a person or CI runs; it takes part in no unit's run.
 
@@ -483,7 +483,7 @@ does not do. `since` is the package version that first shipped the record.
 - Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration, and nothing here can journal what it cannot name.
 - The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:recovery` — Shares the recovery extension with the failure observer; delivery (algedonic-delivery) uses the same journal from the loop and is not ablated with the extension.
 
@@ -525,7 +525,7 @@ does not do. `since` is the package version that first shipped the record.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
 - Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — The harness is the ablation mechanism; an arm without it is no evidence at all.
 
@@ -564,7 +564,7 @@ does not do. `since` is the package version that first shipped the record.
 - Only test and command claims are preflighted; file, runtime, semantic and model claims pass through to the closeout gate.
 - A run_tests call with a filter that passes counts as a passing run: the preflight sees the verdict, not the coverage.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:evidence` — A live arm without the evidence extension reports evidence the session never produced; the closeout gate still catches the claim at the revision, later and at more cost.
 
@@ -602,7 +602,7 @@ does not do. `since` is the package version that first shipped the record.
 - Only errors the tool layer reports as errors are observed: a test that fails is not an error, and a bash command that exits non-zero without the tool flagging it is invisible.
 - The observer records; it never rewrites the result the model sees (tool_result), so the model and the router may disagree about what happened.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:recovery` — Shares the recovery extension with the effect journal. Without it the router classifies from the orchestrator's records alone and environment causes are routed as check failures.
 
@@ -641,7 +641,7 @@ does not do. `since` is the package version that first shipped the record.
 - The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `check:glossary-lint` — Drop the check from the unit types' lists; the drift suite's `no-glossary-lint` arm is the treatment without it.
 
@@ -680,7 +680,7 @@ does not do. `since` is the package version that first shipped the record.
 - The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.
 - Rendering is truncated at the budget policy's `identity.maxChars` (12000 characters unless the policy says otherwise); a set longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the files cut, the session's status line says so, and one advisory operational-signal per session records it on the unit — and refuses nothing: shortening the set is a person's decision.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:identity` — Shares the identity extension with the memory tool. The drift suite's control arm is the arm without it (and without the checks); the course's lesson 12 drill 1 is the measurement.
 
@@ -720,7 +720,7 @@ does not do. `since` is the package version that first shipped the record.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
 - Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A CLI command a person runs; the arm without it is a person copying a file by hand, which was docs/DEBT.md row 24.
 
@@ -758,7 +758,7 @@ does not do. `since` is the package version that first shipped the record.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
 - It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `check:identity-untouched` — The drift suite's no-identity-check arm: the check is dropped from every unit type's list; the write gate and the bash watch still run in a live session.
 
@@ -800,7 +800,7 @@ does not do. `since` is the package version that first shipped the record.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
 - Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:authority` — Shares the authority extension with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt.
 
@@ -842,7 +842,7 @@ does not do. `since` is the package version that first shipped the record.
 - Only test/ is inherited: a project whose tests live elsewhere (a src/**/*.test.js layout) inherits nothing and the check passes vacuously, with an observation saying so.
 - Regressions are matched by test name; two tests with the same name are one, and a renamed test that fails looks like a new failure of a test the base never had.
 
-**Ownership.** jquacinella · introduced 2026-09-24 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-24 · review by 2026-12-01
 
 **Ablation.** `check:inherited-tests` — Drop the check from the unit types' lists; the drift suite's no-inherited-tests arm is the treatment without it, and the self-certifier's committed report shows the unit closing green under that arm.
 
@@ -883,7 +883,7 @@ does not do. `since` is the package version that first shipped the record.
 - The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is what an instance had before `init` declared one.
 
@@ -924,7 +924,7 @@ does not do. `since` is the package version that first shipped the record.
 - Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:intelligence` — A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on.
 
@@ -966,7 +966,7 @@ does not do. `since` is the package version that first shipped the record.
 - Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).
 - A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:algedonic` — Shares the algedonic extension with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows.
 
@@ -1006,7 +1006,7 @@ does not do. `since` is the package version that first shipped the record.
 - A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.
 - Retraction is by a person the interaction policy names, checked before the write (disposition-authority); the name is asserted, not authenticated.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:identity` — Shares the identity extension with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead.
 
@@ -1046,7 +1046,7 @@ does not do. `since` is the package version that first shipped the record.
 - Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.
 - Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `policy:models.fallback` — An empty fallback list is the ablation; the harness does not throw policy switches, and failover needs a live dispatcher.
 
@@ -1090,7 +1090,7 @@ does not do. `since` is the package version that first shipped the record.
 - Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors: a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
 - Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority`; the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:route-messages` — Routing is a step of the loop; not ablatable by the harness. An arm without it leaves every message unrouted and nothing holds a unit.
 
@@ -1129,7 +1129,7 @@ does not do. `since` is the package version that first shipped the record.
 - The channel command gets a line and an exit code; a channel that accepts the line and loses it downstream is forwarded once and never again. Delivery to a person is still not confirmation that a person read it.
 - One watcher per instance and one cursor: two watchers on one outbox forward every line twice.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — An operating process; an instance without it is the instance of every lesson before 15, and the read model still shows what is owed.
 
@@ -1170,7 +1170,7 @@ does not do. `since` is the package version that first shipped the record.
 - The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
 - A paused unit holds its lease and its worktree while it waits, and by default nothing expires the wait: a question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays. The interaction policy may declare `waitCeilingMs`; past it the loop routes the unit under the recovery policy's `timeout` cause and releases the lease, but the question stays open with its veto — nothing answers on anyone's behalf, and the worktree is kept for the attempt that follows the answer.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:algedonic` — Shares the algedonic extension with the ask_human tool; the loop's paused attempt is not ablatable. The pause in the session is what stops a model acting on silence.
 
@@ -1210,7 +1210,7 @@ does not do. `since` is the package version that first shipped the record.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:post-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures.
 
@@ -1251,7 +1251,7 @@ does not do. `since` is the package version that first shipped the record.
 - A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
 - An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
 
-**Ownership.** jquacinella · introduced 2026-09-29 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-29 · review by 2026-12-01
 
 **Ablation.** `loop:pre-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base; without the trial a semantic conflict would land and show as later units' check failures.
 
@@ -1284,7 +1284,7 @@ does not do. `since` is the package version that first shipped the record.
 - Read-only means declared read-only effects (effects.ts); a tool with an undeclared effect is refused from read-only profiles, not audited.
 - Lexical path check only, as for the vendor write gate.
 
-**Ownership.** jquacinella · introduced 2026-09-21 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-21 · review by 2026-12-01
 
 **Ablation.** `extension:profiles` — A live arm without the profiles extension lets a unit write anywhere its tools reach; the closeout checks catch protected prefixes only, and the boundary grader counts the rest.
 
@@ -1325,7 +1325,7 @@ does not do. `since` is the package version that first shipped the record.
 - Blocking is a function of severity and the policy's line; the obligation's consumer is not consulted. An S5 proposal at blocking severity on a unit would hold the unit, which may or may not be wanted — the routing policy decides by setting the line.
 - The veto names the unit id. Intelligence that affects a unit not yet contracted holds it once it exists; intelligence that affects a file, a dependency or a workload has no unit to hold and is an obligation for S3 to read.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:progression-veto` — The veto is the loop's check on open obligations at dispatch and close; not ablatable by the harness.
 
@@ -1365,7 +1365,7 @@ does not do. `since` is the package version that first shipped the record.
 - The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.
 - The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:definition-loader` — The dispatcher's loader would have to load the project's extensions, skills and context files; not ablatable without a code change. The injection fixture is the suite.
 
@@ -1403,7 +1403,7 @@ does not do. `since` is the package version that first shipped the record.
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:authority` — Shares the authority extension with the write gate and the canary watch. Without the tool a unit that wants a rule changed has only the identity gate's refusal.
 
@@ -1447,7 +1447,7 @@ does not do. `since` is the package version that first shipped the record.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
 - Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `policy:recovery.rules` — A policy whose every rule is escalate is the ablation: every blocked unit goes to a person. The harness does not throw policy switches.
 
@@ -1488,7 +1488,7 @@ does not do. `since` is the package version that first shipped the record.
 - Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite.
 - Implementation and cited-test paths are verified only in a source checkout (a `src/` beside the registry). An installed package ships `dist/` and no sibling packages' sources, so there `checkRegistry` carries the paths as provenance and `doctor` says it did not verify them; the release's `pnpm check` is where they were verified.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A check on the registry; there is no run it participates in.
 
@@ -1526,7 +1526,7 @@ does not do. `since` is the package version that first shipped the record.
 - Merge commits only; no rebase, squash or fast-forward policy.
 - The merge itself verifies nothing: the branch was verified at closeout, and the base at the merge commit is verified afterwards by the post-merge check (reg.audit.post-merge-check.v1), so the base is red while S3 decides a failure there.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — The merge is the loop's close step; an arm without it never lands work. Conflict handling is exercised by the coordination drills, not ablated.
 
@@ -1565,7 +1565,7 @@ does not do. `since` is the package version that first shipped the record.
 - Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes; which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
 - report_result joins the tool surface when the contract loads at session_start; a profile switched by hand mid-session (/profile) resets the surface to the profile's list and drops it until the session restarts. The dispatcher never switches profiles.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:contract` — Shares the contract extension with the contract section; without it a unit has no report_result tool and every attempt ends no-report.
 
@@ -1606,7 +1606,7 @@ does not do. `since` is the package version that first shipped the record.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to packages/regulator/identity/ by hand.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand.
 
@@ -1648,7 +1648,7 @@ does not do. `since` is the package version that first shipped the record.
 - The reporting tools' SQLite store (`.regulator/events.db`) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.
 - Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A read model over the stores; switching it off changes no run.
 
@@ -1684,7 +1684,7 @@ does not do. `since` is the package version that first shipped the record.
 - Memory is per session: a unit resumed in a new session starts counting from zero.
 - The threshold is the policy's `coordination.oscillationThreshold` (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:coordination` — Shares the coordination extension with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later.
 
@@ -1721,7 +1721,7 @@ does not do. `since` is the package version that first shipped the record.
 - The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:lease` — Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm.
 
@@ -1753,7 +1753,7 @@ does not do. `since` is the package version that first shipped the record.
 - Lexical path check only: no symlink, hard-link or TOCTOU protection. The identity write gate supersedes it with the filesystem walk when both are loaded; this gate stays as the course's lesson 02 baseline.
 - Covers the write and edit tools; bash and custom tools bypass it. The identity write gate adds the bash snapshot-and-restore for protected paths.
 
-**Ownership.** jquacinella · introduced 2026-09-21 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-21 · review by 2026-12-01
 
 **Ablation.** `extension:cp1-trace` — The course's first gate; superseded in a live session by the identity write gate's preflight, which the same arm carries. The closeout check catches vendor/ at the revision without either.
 
@@ -1790,7 +1790,7 @@ does not do. `since` is the package version that first shipped the record.
 - Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
-**Ownership.** jquacinella · introduced 2026-09-22 · review by 2026-12-01
+**Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `loop:check-contract` — The contract check runs before anything is claimed; not ablatable by the harness. An unsound contract with no gate is dispatched as written.
 

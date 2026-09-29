@@ -55,7 +55,7 @@
     "Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

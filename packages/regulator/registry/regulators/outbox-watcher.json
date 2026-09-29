@@ -28,7 +28,7 @@
     "The channel command gets a line and an exit code; a channel that accepts the line and loses it downstream is forwarded once and never again. Delivery to a person is still not confirmation that a person read it.",
     "One watcher per instance and one cursor: two watchers on one outbox forward every line twice."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "An operating process; an instance without it is the instance of every lesson before 15, and the read model still shows what is owed." },
   "retirement": { "condition": "Retire when delivery is a hook on the ledger's append (an event-driven channel) rather than a poll over the outbox." },
   "introducedIn": "0.1.0"

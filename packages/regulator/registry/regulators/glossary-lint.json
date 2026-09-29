@@ -29,7 +29,7 @@
     "The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.",
     "The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "check:glossary-lint", "note": "Drop the check from the unit types' lists; the drift suite's `no-glossary-lint` arm is the treatment without it." },
   "retirement": { "condition": "The vocabulary graders stay at zero across three model versions and the drift suite with the check off: the rendered glossary alone holds the words." },
   "introducedIn": "0.1.0"

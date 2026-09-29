@@ -30,7 +30,7 @@
     "The reporting tools' SQLite store (`.regulator/events.db`) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.",
     "Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A read model over the stores; switching it off changes no run." },
   "retirement": { "condition": "Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate." },
   "introducedIn": "0.1.0"

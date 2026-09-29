@@ -30,7 +30,7 @@
     "Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration, and nothing here can journal what it cannot name.",
     "The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:recovery", "note": "Shares the recovery extension with the failure observer; delivery (algedonic-delivery) uses the same journal from the loop and is not ablated with the extension."},
   "retirement": {"condition": "No side-effecting tool is invoked twice for one intention across the recovery drills and three model versions with the journal off — which is to say never, because a restart is not a model behaviour."},
   "introducedIn": "0.1.0"

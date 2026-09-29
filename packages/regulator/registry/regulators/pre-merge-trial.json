@@ -76,7 +76,7 @@
     "An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-29",
     "reviewBy": "2026-12-01"
   },

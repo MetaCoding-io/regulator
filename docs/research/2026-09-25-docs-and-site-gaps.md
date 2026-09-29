@@ -114,10 +114,11 @@ wrong claim is worse than none.
    flows instance → definition by a person) is not stated.
 7. ~~**Budgets and routes:** the five ceilings and `primary` + `fallback[]` are never
    listed.~~ (landed 2026-09-28 in `product.html#orchestrator`, with the post-merge check
-   and the effect journal, linking `concepts/recovery` and `concepts/coordination`) **Evals:** pre-registered metrics, outcome versus trajectory graders and the
+   and the effect journal, linking `concepts/recovery` and `concepts/coordination`) ~~**Evals:** pre-registered metrics, outcome versus trajectory graders and the
    interpretation rule are only gestured at. **S4 versus memory:** expiry and affected
    units are absent. **Registry card anatomy:** mechanism level, `review --due`,
-   retirement by a person. One short section each, linking the concept pages.
+   retirement by a person.~~ (landed 2026-09-29: `product.html#evidence`,
+   `#intelligence`, `#registry`, each linking its concept or reference page)
 
 ## 4. Stale or wrong claims, condensed
 
@@ -232,14 +233,15 @@ where); what stands:
 2. ~~The four wrong facts in §1.~~ (707f4d7; `unit accept` by #77.)
 3. ~~Docs gaps 1–5.~~
 4. ~~Website gaps 1–2, and the checkpoint-label and package-fact corrections.~~
-5. ~~The rest of §2 and §3 as separate small pull requests, one page each.~~ Left: §3
-   item 7's three short website sections (evals; S4 versus memory; registry card
-   anatomy), each linking its concept page.
+5. ~~The rest of §2 and §3 as separate small pull requests, one page each.~~ §3 item 7's
+   three short website sections (evals; S4 versus memory; registry card anatomy) landed
+   on `product.html` on 2026-09-29, each linking its concept page. Nothing in this note is
+   open.
 6. ~~The course-vocabulary sweep last, since the cards are its source.~~ Done
    ([#93](https://github.com/MetaCoding-io/regulator/issues/93)): the cards name the
    extension, the regulator, the debt row or the release instead of a lesson or a
    checkpoint, and cite the course only where the course is the source (a drill, the
-   retired lesson 02 gate); `ownership.owner` is `jquacinella` on every record; the
+   retired lesson 02 gate); `ownership.owner` is `regulator-maintainers` on every record; the
    GLOSSARY's "where it lives" column drops the module numbers and § 5 says its column
    is the course's; PATHOLOGIES' "Reproduced by" column says the same.
 
