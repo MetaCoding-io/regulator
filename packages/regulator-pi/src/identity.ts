@@ -26,10 +26,12 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ReportedEvidenceSchema } from "@metacoding.io/regulator-protocol";
-import { ExecutionStore, MemoryStore, appendSignal, identityContextBudget, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import { ExecutionStore, MemoryStore, appendSignal, identityContextBudget, identityMaxChars, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import { readFile } from "node:fs/promises";
+import { isPolicyDefinition } from "@metacoding.io/regulator-protocol";
 import { randomUUID } from "node:crypto";
 import type { Exec } from "@metacoding.io/regulator";
-import { IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding.io/regulator";
+import { IDENTITY_RELATIVE_DIR, POLICY_PATH, leaseStoreFor } from "@metacoding.io/regulator";
 import { baseRoot, headRevision } from "@metacoding.io/regulator";
 
 export const IDENTITY_SECTION_TAG = "regulator_identity";
@@ -65,6 +67,8 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     let memory: MemoryStore | undefined;
     /** Whether this session has already said its identity is truncated: once per session, not per turn. */
     let truncationSignalled = false;
+    /** The budget policy's `identity.maxChars`, or the default (#91): read with the policy the budget extension reads. */
+    let maxChars = identityMaxChars();
 
     pi.on("session_start", async (_event, ctx) => {
       unitId = "";
@@ -72,6 +76,13 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
       identity = undefined;
       memory = undefined;
       truncationSignalled = false;
+      maxChars = identityMaxChars();
+      try {
+        const policyFlag = pi.getFlag("policy");
+        const policyPath = (typeof policyFlag === "string" && policyFlag) || process.env.REGULATOR_POLICY || POLICY_PATH;
+        const value: unknown = JSON.parse(await readFile(policyPath, "utf8"));
+        if (isPolicyDefinition(value)) maxChars = identityMaxChars(value);
+      } catch { /* no policy readable here: the default limit applies, and the budget extension says so about the policy */ }
       try {
         base = await baseRoot(exec, ctx.cwd);
       } catch {
@@ -90,7 +101,7 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
       }
       const current = memory ? (await memory.current(unitType)).length : 0;
       const problems = identity.problems.length ? `; ${identity.problems.length} problem(s)` : "";
-      const budget = identityContextBudget(identity);
+      const budget = identityContextBudget(identity, maxChars);
       const truncated = budget.truncated ? `; truncated at ${budget.max} of ${budget.chars} characters` : "";
       ctx.ui.setStatus("identity", identity.invariants.length ? `identity: ${identity.invariants.map((i) => i.id).join(", ")}${problems}${truncated}; memory: ${current} current` : `identity: none found under ${IDENTITY_RELATIVE_DIR}${problems}`);
       if (identity.problems.length) ctx.ui.notify(`regulator: identity problems — ${identity.problems.join("; ")}`, "warning");
@@ -100,10 +111,10 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     // (checkpoint 9) and the closeout check (this lesson); what keeps memory honest is the expiry the tool enforces.
     pi.on("before_agent_start", async (event, ctx) => {
       if (identity && (identity.invariants.length || Object.keys(identity.files).length)) {
-        event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] = renderIdentitySection(identity);
+        event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] = renderIdentitySection(identity, { maxChars });
         // The cut is recorded where the unit's other signals go (#51): the unit ran with part of its identity unseen.
         // Advisory, from the unit, to S3 — the routing policy notes it as trace; a person reads it in the unit's record.
-        const budget = identityContextBudget(identity);
+        const budget = identityContextBudget(identity, maxChars);
         if (budget.warning && !truncationSignalled) {
           truncationSignalled = true;
           await appendSignal(base || ctx.cwd, {

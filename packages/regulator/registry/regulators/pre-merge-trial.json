@@ -76,7 +76,7 @@
     "An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-29",
     "reviewBy": "2026-12-01"
   },
@@ -87,5 +87,5 @@
   "retirement": {
     "condition": "Never while two units can share a base: the trial is what makes a clean merge mean something."
   },
-  "introducedIn": "0.1.4"
+  "introducedIn": "unreleased"
 }

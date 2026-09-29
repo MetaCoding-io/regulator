@@ -59,11 +59,11 @@
     "By the time message_end records a leak the text has left the process: the finding is evidence of exposure, not prevention. Network egress is not watched at all; the lesson names it as the boundary a container provides."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
-  "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it."},
+  "ablation": {"switch": "extension:authority", "note": "Shares the authority extension with the write gate and proposal intake; a live arm without it loses all three. The injection fixture is the suite that exercises it."},
   "retirement": {"condition": "No canary reaches a tool result or the model's text in the injection fixture across three model versions with the watch off."},
   "introducedIn": "0.1.0"
 }

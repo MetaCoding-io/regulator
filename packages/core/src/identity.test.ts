@@ -43,12 +43,12 @@ test("identity: invariants are parsed from their headings with their statements;
 
   // The cut is measured, not only made (#51): within the budget nothing is said; over it, the size, the limit and the files cut.
   const within = identityContextBudget(whole);
-  assert.deepEqual([within.truncated, within.cut, within.warning, within.max], [false, [], undefined, 6000]);
+  assert.deepEqual([within.truncated, within.cut, within.warning, within.max], [false, [], undefined, 12000]);
   assert.equal(within.chars, section.length);
   const over = identityContextBudget(whole, 200);
   assert.equal(over.truncated, true);
   assert.deepEqual(over.cut, ["IDENTITY.md", "INVARIANTS.md", "BOUNDARIES.md", "GLOSSARY.md"], "the preamble alone is most of 200 characters; every file is cut");
-  assert.equal(over.warning, `the identity set renders to ${section.length} characters and a unit's prompt carries 200: ${section.length - 200} character(s) of IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md are advice the model never sees. Shorten the set; the files are authoritative either way.`);
+  assert.equal(over.warning, `the identity set renders to ${section.length} characters and a unit's prompt carries 200: ${section.length - 200} character(s) of IDENTITY.md, INVARIANTS.md, BOUNDARIES.md, GLOSSARY.md are advice the model never sees. Shorten the set, or raise \`identity.maxChars\` in the budget policy; the files are authoritative either way.`);
   const glossaryOnly = identityContextBudget(whole, section.length - 3);
   assert.deepEqual(glossaryOnly.cut, ["GLOSSARY.md"], "a cut of three characters names the last file only");
 });

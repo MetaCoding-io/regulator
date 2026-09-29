@@ -33,6 +33,12 @@ jobs:
         run: |
           version=$(node -p "require('./packages/regulator/package.json').version")
           test "v$version" = "${GITHUB_REF_NAME}" || { echo "tag ${GITHUB_REF_NAME} does not match version $version"; exit 1; }
+      - name: Every registry record carries the version it shipped in
+        # A record added between releases says "unreleased" (#92); the release commit rewrites it to the version being
+        # tagged. Publishing with one left would put the word on npm, so this refuses instead and names the record.
+        run: |
+          left=$(grep -l '"introducedIn": "unreleased"' packages/regulator/registry/regulators/*.json || true)
+          test -z "$left" || { echo "these records still say introducedIn: unreleased; set them to $version in the release commit:"; echo "$left"; exit 1; }
       - run: pnpm -r publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

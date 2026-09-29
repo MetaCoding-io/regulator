@@ -57,17 +57,17 @@
   },
   "limitations": [
     "A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.",
-    "A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`, lesson 15), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.",
-    "Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated."
+    "A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.",
+    "Retraction is by a person the interaction policy names, checked before the write (disposition-authority); the name is asserted, not authenticated."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
   "ablation": {
     "switch": "extension:identity",
-    "note": "Shares checkpoint 11 with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead."
+    "note": "Shares the identity extension with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead."
   },
   "retirement": {
     "condition": "The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact."

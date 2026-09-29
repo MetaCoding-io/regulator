@@ -112,8 +112,17 @@ export function renderIdentitySection(identity: IdentitySet, options: { maxChars
   return rendered.length <= max ? rendered : `${rendered.slice(0, max)}\n[identity truncated at ${max} characters; the files are authoritative]`;
 }
 
-/** The characters of identity a unit's prompt carries before the rendering is cut. */
-export const IDENTITY_CONTEXT_MAX_CHARS = 6000;
+/**
+ * The characters of identity a unit's prompt carries before the rendering is cut, when the budget policy declares no
+ * `identity.maxChars` (#91). About 3000 tokens: room for the shipped seed twice over, and a small fraction of any current
+ * context window.
+ */
+export const IDENTITY_CONTEXT_MAX_CHARS = 12000;
+
+/** The limit that applies under a budget policy: its `identity.maxChars`, or the default. */
+export function identityMaxChars(policy?: { identity?: { maxChars?: number } } | undefined): number {
+  return policy?.identity?.maxChars ?? IDENTITY_CONTEXT_MAX_CHARS;
+}
 
 function renderWhole(identity: IdentitySet): string {
   const parts: string[] = ["This instance's identity (S5). It is committed, write-protected, and rebuilt from the files each run; you may propose a change to it (propose_policy_change) and never make one."];
@@ -153,7 +162,7 @@ export function identityContextBudget(identity: IdentitySet, maxChars: number = 
     const start = whole.indexOf(`--- ${name} ---`);
     if (start + `--- ${name} ---`.length + 2 + text.trim().length > maxChars) cut.push(name);
   }
-  return { chars, max: maxChars, truncated: true, cut, warning: `the identity set renders to ${chars} characters and a unit's prompt carries ${maxChars}: ${chars - maxChars} character(s) of ${cut.join(", ")} are advice the model never sees. Shorten the set; the files are authoritative either way.` };
+  return { chars, max: maxChars, truncated: true, cut, warning: `the identity set renders to ${chars} characters and a unit's prompt carries ${maxChars}: ${chars - maxChars} character(s) of ${cut.join(", ")} are advice the model never sees. Shorten the set, or raise \`identity.maxChars\` in the budget policy; the files are authoritative either way.` };
 }
 
 /** Authority references a fixed decision may cite, and how each is resolved. */

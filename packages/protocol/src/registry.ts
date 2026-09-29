@@ -119,8 +119,12 @@ export const RegulatorRecordSchema = Type.Object(
     ablation: Type.Optional(Type.Object({ switch: AblationSwitchSchema, note: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
     /** Lesson 14: when this regulator may be retired — typically no significant regression in ablation across N model versions and M suites. */
     retirement: Type.Optional(Type.Object({ condition: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
-    /** The package version that first shipped the record (semver); a new record carries the version it lands in. */
-    introducedIn: Type.Optional(Type.String({ pattern: "^\\d+\\.\\d+\\.\\d+$" })),
+    /**
+     * The package version that first shipped the record (semver). A record added between releases says `unreleased`
+     * until the release commit rewrites it to the version being tagged; the release workflow refuses to publish while
+     * any record still says so (#92), so nothing on npm ever carries the word.
+     */
+    introducedIn: Type.Optional(Type.String({ pattern: "^(\\d+\\.\\d+\\.\\d+|unreleased)$" })),
   },
   { additionalProperties: false },
 );

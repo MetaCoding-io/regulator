@@ -121,12 +121,13 @@ ones that matter most:
 - **The rendered identity is the worktree's copy.** A unit's shell can change it before
   the next run reads it; the closeout diff turns that into a failing check, not a
   changed rule.
-- **Rendering is capped at 6000 characters.** Past that, part of the identity is advice
-  the model never sees. The cut is reported, never refused: `regulator check` and
-  `regulator doctor` warn with the size, the limit and the files cut, the session's
-  status line says so, and one advisory `operational-signal` per session records on the
-  unit that it ran with part of its identity unseen. The limit is a constant in the
-  code, not a policy field.
+- **Rendering is capped.** The budget policy's `identity.maxChars` says where (12000
+  characters unless it says otherwise, about 3000 tokens). Past that, part of the
+  identity is advice the model never sees. The cut is reported, never refused:
+  `regulator check` and `regulator doctor` warn with the size, the limit and the files
+  cut, the session's status line says so, and one advisory `operational-signal` per
+  session records on the unit that it ran with part of its identity unseen. A deployment
+  with a longer identity raises the limit in its policy rather than shortening the set.
 - **The person deciding supplies the file.** `identity accept` writes the file the
   person points to; nothing derives it from the proposal's requested change or diffs it
   against the request.

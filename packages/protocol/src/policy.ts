@@ -47,6 +47,14 @@ export const PolicyDefinitionSchema = Type.Object({
     default: ModelRouteSchema,
     byUnitType: Type.Optional(Type.Record(Type.String(), ModelRouteSchema)),
   }, { additionalProperties: false }),
+  /**
+   * S5's room in the prompt: the characters of rendered identity a unit's prompt carries before the rendering is cut
+   * (#91). Unset, the default (`IDENTITY_CONTEXT_MAX_CHARS` in core, 12000); a deployment with a longer identity raises it
+   * here, and `check`, `doctor` and the session measure against the limit that applies.
+   */
+  identity: Type.Optional(Type.Object({
+    maxChars: Type.Integer({ minimum: 1000 }),
+  }, { additionalProperties: false })),
   /** S2's declared numbers (lesson 12): what counts as oscillation. */
   coordination: Type.Optional(Type.Object({
     /** Edits to one file within one unit before the thrash detector signals. */

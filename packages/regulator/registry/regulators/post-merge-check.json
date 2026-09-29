@@ -29,7 +29,7 @@
     "Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.",
     "The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "loop:post-merge", "note": "A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures." },
   "retirement": { "condition": "Retired in 0.1.4: the pre-merge trial replaced it (docs/DEBT.md row 37). The record stays as history, the way vendor-write-gate does." },
   "introducedIn": "0.1.0"

@@ -48,7 +48,10 @@ eval, not a test.
    failure absorbed, the mechanism level, where it is enforced, the tests that evidence
    it, at least one limitation, an owner and a review date, the eval arm that switches
    it off, and the condition under which it may be retired. `regulator check` refuses a
-   card without a limitation. Regenerate the rendered documents:
+   card without a limitation. `introducedIn` says `unreleased` on a new card: the
+   release commit rewrites it to the version being tagged, and the release workflow
+   refuses to publish while any card still says so (see Releasing). Regenerate the
+   rendered documents:
 
    ```sh
    pnpm --filter @metacoding.io/regulator registry:docs
@@ -92,6 +95,21 @@ eval, not a test.
   verification commands with their result.
 - CI runs `pnpm check` on both Node versions and builds the docs site; all three must be
   green.
+
+## Releasing
+
+A release is one commit and one tag, and the workflow (`.github/workflows/release.yml`)
+publishes every package when the tag is pushed. The commit:
+
+1. bumps every workspace package to the version (the tag must equal `v<version>`);
+2. turns the changelog's `[Unreleased]` heading into `[<version>] — <date>` and opens a
+   new empty `[Unreleased]`;
+3. rewrites `"introducedIn": "unreleased"` to the version on every registry record added
+   since the last release, and regenerates the rendered documents;
+4. passes `pnpm check`.
+
+The workflow re-checks 1 and 3 and refuses the publish otherwise, so the recovery from a
+partial publish is a re-run at the same tag, never a new version.
 
 ## Reporting
 

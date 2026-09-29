@@ -28,7 +28,7 @@
     "Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.",
     "Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A check a person or CI runs; it takes part in no unit's run." },
   "retirement": { "condition": "Never as a mechanism; individual checks retire when what they check is checked earlier (a Pi pin enforced by the package manager retires the pin check)." },
   "introducedIn": "0.1.0"

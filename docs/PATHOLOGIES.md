@@ -22,7 +22,7 @@ absorbs is a row for `docs/DEBT.md`.
 
 ## 1. Structural pathologies — a function is missing or misplaced
 
-| Pathology (after Pérez Ríos) | In an instance it looks like | Absorbed by | Reproduced by | Not absorbed |
+| Pathology (after Pérez Ríos) | In an instance it looks like | Absorbed by | Reproduced by (course module) | Not absorbed |
 | --- | --- | --- | --- | --- |
 | **No S3\*** — audit collapsed into operations; the executor certifies its own work | Units close on their reports; `regulator unit evidence` shows no host records, or records older than the revision | `closeout-gate`, `evidence-preflight`, `result-report-gate` (M09); INV-003 | the drift suite's **control arm** (`run_tests` is the only check; the report is believed for the rest) | — |
 | **S3\* that reads what S1 wrote** — the auditor runs the suite the unit edited | `run_tests` passes on a branch that deleted the failing tests; the defect is closed as fixed | `inherited-tests-check` (M09, added after M15): the suite at the branch point judges the unit's tree, and a shrunk inherited file fails | the **self-certifier** behaviour; the `no-inherited-tests` arm shows it closing green | an expectation rewritten to the current output inside an exempt file (`inherited-tests-check` limitation 1) |
@@ -33,7 +33,7 @@ absorbs is a row for `docs/DEBT.md`.
 
 ## 2. Functional pathologies — a function exists but does its neighbour's job, or none
 
-| Pathology | In an instance it looks like | Absorbed by | Reproduced by | Not absorbed |
+| Pathology | In an instance it looks like | Absorbed by | Reproduced by (course module) | Not absorbed |
 | --- | --- | --- | --- | --- |
 | **S3 overload / micromanagement** — every local decision becomes S3's | Attention spent on questions the contract should have delegated; `regulator obligations` full of clarifications | `work-contract-gate` (fixed / delegated / unresolved, M06); the attention budget in `interaction-contract` (M13) | `contracts/underscore-unresolved.json` (an unresolved decision the unit must surface, not settle) | the metrics that would show it — undelegated decisions discovered, replans attributable to the contract — are DEBT row 40 |
 | **S3–S4 disconnection** — intelligence never reaches operations | A research unit's finding sits in the log; the next unit repeats the mistake | `intelligence-intake` → obligation that holds the units it names until dispositioned; `progression-veto` (M11) | `research-vendored-helper` followed by a unit it names | an advisory nobody ever dispositions holds its units forever (a wait ceiling is DEBT row 30's sibling) |
@@ -45,7 +45,7 @@ absorbs is a row for `docs/DEBT.md`.
 
 ## 3. Information and channel pathologies — the channel exists but carries the wrong variety
 
-| Pathology | In an instance it looks like | Absorbed by | Reproduced by | Not absorbed |
+| Pathology | In an instance it looks like | Absorbed by | Reproduced by (course module) | Not absorbed |
 | --- | --- | --- | --- | --- |
 | **Channel without transduction** — a signal is not an audit, an audit is not a policy | A finding is filed as a proposal; an uncertainty is treated as a decision | typed channels with authority per kind (`reporting` tools, `obligation-router`, routing floors) (M02, M10, M11) | `packages/regulator-pi` smuggled-authority tests | — |
 | **Compaction discards the constraint** | After context eviction the unit forgets a fixed decision | `contract-preserving-compaction` (M07) | `budget.test.ts` compaction case | a model summary can still be wrong; only the deterministic block is guaranteed (permanent limit) |

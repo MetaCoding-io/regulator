@@ -12,7 +12,7 @@ Enforced at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, jour
 
 Not covered:
 
-- The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names (lesson 15), and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.
+- The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names, and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.
 - Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
 
@@ -57,7 +57,7 @@ Not covered:
 - Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.
 - The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
-- The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations, lesson 11); neither is merged with the SQLite regulatory event store the reporting tools write.
+- The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
@@ -97,7 +97,7 @@ Not covered:
 
 - Reconciliation needs an observable world: notify_owner's outbox is keyed so it can be read back. An effect with no observable trace can only be recorded as absent, which is a guess.
 - The idempotency key is the unit, the tool and the arguments; the same message sent on purpose twice is refused. Vary the message.
-- Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration (lesson 03), and nothing here can journal what it cannot name.
+- Only notify_owner is journaled. bash is not: a shell command's side effects are unknown by declaration, and nothing here can journal what it cannot name.
 - The journal is per base checkout, on one machine; two harnesses on two machines cannot see each other's intentions.
 
 ## Eval harness and graders (`reg.assurance.eval-harness.v1`)
@@ -221,8 +221,8 @@ Enforced at `tool:remember` (execute; MemoryStore.record bounds the expiry) in `
 Not covered:
 
 - A fact is text: nothing checks that it is true, current or about the environment rather than a preference. Expiry bounds how long a wrong fact lives; review is a person's.
-- A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`, lesson 15), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.
-- Retraction is by a person the interaction policy names, checked before the write (lesson 13); the name is asserted, not authenticated.
+- A fact is scoped to unit types only by the writer's claim (`remember`'s `scope`), and an unscoped fact is rendered to every unit of the instance; a large store still crowds the prompt before the 90-day limit retires anything.
+- Retraction is by a person the interaction policy names, checked before the write (disposition-authority); the name is asserted, not authenticated.
 
 ## Model router (`reg.control.model-router.v1`)
 
@@ -240,10 +240,10 @@ Enforced at `loop:runUnit` (after the session, after the audit, after the report
 
 Not covered:
 
-- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file. A message with no unit opens an obligation that holds nothing, with one exception (lesson 15): an audit finding with no unit — the base failing its checks after a merge — holds every dispatch until S3 dispositions it.
-- A consumer is a name in the policy (S3, S5, human). What is owed to a person is delivered to the outbox and reminded by `algedonic-delivery` (lesson 13); what is owed to S3 or S5 is exposed by the read model and the control room and delivered to nobody, because S3 is the loop and S5 is a person reading the definition's proposals — a queue for S5 decisions is not built.
-- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors (lesson 12): a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
-- Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority` (lesson 13); the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
+- Routing runs at the loop's steps and on `regulator signals route`; a message recorded by a session run by hand waits in the log until one of them. Nothing watches the file. A message with no unit opens an obligation that holds nothing, with one exception: an audit finding with no unit holds every dispatch until S3 dispositions it.
+- A consumer is a name in the policy (S3, S5, human). What is owed to a person is delivered to the outbox and reminded by `algedonic-delivery`; what is owed to S3 or S5 is exposed by the read model and the control room and delivered to nobody, because S3 is the loop and S5 is a person reading the definition's proposals — a queue for S5 decisions is not built.
+- Effective severity is the message's own except for uncertainty, whose reported impact is mapped through the policy, and for the routing policy's floors: a message whose subject or observation names an invariant or the identity path is raised to the floor's severity. A floor is a pattern; a message that concerns an invariant without naming it is not raised.
+- Every disposition on the CLI is checked against the interaction policy's people by `disposition-authority`; the name itself is asserted, not authenticated, and the check does not run for a dialog answer inside a session.
 
 ## Outbox watcher (`reg.algedonic.outbox-watcher.v1`)
 
@@ -251,7 +251,7 @@ Enforced at `cli:watch` (watchOutbox tick: deliverPending, remindDue, forward fr
 
 Not covered:
 
-- A process, not a service: nothing restarts it, and an instance whose watcher is not running is lesson 13's instance again. Supervising it is the deployment's (a systemd unit, a CI schedule).
+- A process, not a service: nothing restarts it, and an instance whose watcher is not running is that instance again. Supervising it is the deployment's (a systemd unit, a CI schedule).
 - The channel command gets a line and an exit code; a channel that accepts the line and loses it downstream is forwarded once and never again. Delivery to a person is still not confirmation that a person read it.
 - One watcher per instance and one cursor: two watchers on one outbox forward every line twice.
 
@@ -313,7 +313,7 @@ Enforced at `host:dispatcher` (definitionResourceLoader: extensionsOverride, no 
 Not covered:
 
 - Trust is an input-loading guard. It keeps a project's own extensions, skills, prompt templates and themes out of the harness; it does nothing about instructions in the project's files, comments, test output or documentation — those are the injection drill, and the answer to them is that authority lives in gates the content cannot reach.
-- Since lesson 12 the loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.
+- The loader takes no context files from the worktree (noContextFiles) and the session runs on the definition's settings.json held in memory, so neither AGENTS.md nor .pi/settings.json in a target repository reaches a unit's session. What the model reads with its tools is still the project's to write: the trust rule closes loading, not reading.
 - The filter is by resolved path against the definition's list; an operator's user/global extensions are refused too, which is the intended reading of 'declared, not assembled' but surprises anyone who expected their own extensions to ride along.
 - The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves.
 
@@ -323,7 +323,7 @@ Enforced at `tool:propose_policy_change` (execute) in `../regulator-pi/src/autho
 
 Not covered:
 
-- A proposal is routed into an obligation owed to S5 (lesson 11) and decided by a person through `regulator identity accept|reject` (lesson 12), which is the only writer of an identity file; the proposal's requestedChange is text a person turns into a file by hand. What is owed to S5 is not delivered to the outbox (lesson 13 delivers what is owed to a person): a person reads the read model for it.
+- A proposal is routed into an obligation owed to S5 and decided by a person through `regulator identity accept|reject`, which is the only writer of an identity file; the proposal's requestedChange is text a person turns into a file by hand. What is owed to S5 is not delivered to the outbox (algedonic-delivery delivers what is owed to a person): a person reads the read model for it.
 - The proposal's source is S1 by construction; a proposal from S3 or S4 (a router that wants a policy change) has no tool yet.
 - Evidence on a proposal is empty: the tool does not let the model attach evidence refs, because a claim about evidence is not evidence.
 
@@ -334,9 +334,9 @@ Enforced at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the au
 Not covered:
 
 - Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
-- Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names (lesson 11); nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people (lesson 13) but not authenticated.
+- Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names; nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people but not authenticated.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
-- Escalation is an algedonic signal in the regulatory log and an obligation owed to a person (lesson 11), delivered to the outbox and reminded under the interaction policy (lesson 13). The outbox is a file: no channel beyond it exists in the lab.
+- Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab.
 
 ## Regulator lifecycle (`reg.identity.regulator-lifecycle.v1`)
 
@@ -365,9 +365,9 @@ Enforced at `tool:report_result` (execute), `loop:runUnit` (close), `host:sessio
 
 Not covered:
 
-- Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification (lesson 09) is what makes evidence independent of the report.
+- Evidence is checked by class, not by content: a report can cite a test run it did not make. Host-run verification is what makes evidence independent of the report.
 - A unit can describe an unresolved decision as 'preserved' while its diff settles it; the gate reads the report, never the diff, by design — catching that is audit's job.
-- Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes (lesson 11); which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
+- Every emergent decision, deviation and residual uncertainty in the report becomes a signal the routing policy routes; which of them opens an obligation is the policy's line, so a low-consequence decision is noted as trace, not read by anyone.
 - report_result joins the tool surface when the contract loads at session_start; a profile switched by hand mid-session (/profile) resets the surface to the profile's list and drops it until the session restarts. The dispatcher never switches profiles.
 
 ## S5 decision path (`reg.authority.s5-decision.v1`)
@@ -376,7 +376,7 @@ Enforced at `cli:identity accept` (authorizeWrite s5-authority, readIdentity, gi
 
 Not covered:
 
-- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write (lesson 13); the name on `--by` is asserted, not authenticated.
+- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to packages/regulator/identity/ by hand.
 
@@ -388,7 +388,7 @@ Not covered:
 
 - Token usage is what the budget ledger holds — a total per attempt — so `gen_ai.usage.input_tokens` / `output_tokens` are not populated; the projection carries `vsm.usage.tokens` instead and says so by omission.
 - Redaction is a value list and a pattern list: a credential with a shape neither knows passes through. The canaries file is the instance's own declaration, and a secret the instance never declared is not a canary.
-- The reporting tools' SQLite store (`.regulator/events.db` since lesson 15) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.
+- The reporting tools' SQLite store (`.regulator/events.db`) is projected as events on the unit its provenance names; an event with no unit in its provenance is not projected anywhere, and the store is opened read-only on every projection.
 - Spans are a projection, not an export: nothing ships them to a collector. `regulator spans --json` writes NDJSON a collector can ingest; the wiring is the deployment's.
 
 ## Thrash detector (`reg.coordination.thrash-detector.v1`)
@@ -399,7 +399,7 @@ Not covered:
 
 - Counts write and edit tool calls only; edits made through bash are invisible to it.
 - Memory is per session: a unit resumed in a new session starts counting from zero.
-- The threshold is the policy's `coordination.oscillationThreshold` since lesson 12 (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
+- The threshold is the policy's `coordination.oscillationThreshold` (4 when a policy declares none); it is one number for every file and unit type, not a budget that varies by kind of work.
 
 ## Unit lease gate (`reg.coordination.unit-lease.v1`)
 
@@ -408,7 +408,7 @@ Enforced at `host:session_start`, `host:tool_call`, `host:turn_end` in `../regul
 Not covered:
 
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
-- The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — checkpoint 9's write gate refuses absolute paths, but bash is not path-gated.
+- The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
 
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
@@ -417,8 +417,8 @@ Enforced at `host:tool_call` in `lab/src/cp1-trace.ts (in the Viable Agents cour
 
 Not covered:
 
-- Lexical path check only: no symlink, hard-link or TOCTOU protection. Checkpoint 9's identity write gate (lesson 10) supersedes it with the filesystem walk when both are loaded; this gate stays as the lesson 02 baseline.
-- Covers the write and edit tools; bash and custom tools bypass it. Checkpoint 9 adds the bash snapshot-and-restore for protected paths.
+- Lexical path check only: no symlink, hard-link or TOCTOU protection. The identity write gate supersedes it with the filesystem walk when both are loaded; this gate stays as the course's lesson 02 baseline.
+- Covers the write and edit tools; bash and custom tools bypass it. The identity write gate adds the bash snapshot-and-restore for protected paths.
 
 ## Work contract gate (`reg.control.work-contract-gate.v1`)
 
@@ -427,7 +427,7 @@ Enforced at `loop:runUnit` (before createUnit), `host:session_start` (contract),
 Not covered:
 
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
-- Authority references on fixed decisions resolve since lesson 12 — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
+- Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 ## Advice and judgment
@@ -436,4 +436,4 @@ These regulators do not enforce; they inform. A rule that only they carry is not
 
 - Contract advice section (`reg.control.contract-advice.v1`, prompt): Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - Contract-preserving compaction (`reg.control.contract-preserving-compaction.v1`, model-judgment): The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
-- Identity context (`reg.identity.identity-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.
+- Identity context (`reg.identity.identity-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (identity-write-gate) and the identity-untouched check, and the drift suite measures the gap.

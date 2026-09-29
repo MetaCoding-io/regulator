@@ -21,10 +21,11 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
   await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
   await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
   await write(dir, "workload/sd.json", { name: "sd", version: 1, description: "d", unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: ["run_tests", "lint", { name: "run_tests", options: { commitMessages: "advisory" } }], requiresContract: true }, { name: "plan", description: "d", profile: "nope", checks: [], requiresContract: false }, { name: "sketch", description: "d", profile: "research", checks: [], requiresContract: false }, { name: "build", description: "d", profile: "builder", checks: [], requiresContract: true }] });
-  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
+  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", identity: { maxChars: 1000 }, budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
   await write(dir, "policies/routing.json", { name: "routing", version: 1, description: "d", rules: [], impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking", floors: [{ pattern: "(", severity: "blocking", reason: "r" }] });
   await write(dir, "policies/odd.json", { name: "odd" });
-  for (const name of ["IDENTITY.md", "GLOSSARY.md", "BOUNDARIES.md"]) await write(dir, `identity/${name}`, "# x\n\ntext\n");
+  for (const name of ["IDENTITY.md", "GLOSSARY.md"]) await write(dir, `identity/${name}`, "# x\n\ntext\n");
+  await write(dir, "identity/BOUNDARIES.md", `# x\n\n${"- a boundary, at length\n".repeat(60)}`);
   await write(dir, "identity/INVARIANTS.md", "## INV-001 — One\n\nstatement\n");
 
   const checked = await checkDefinition(dir);
@@ -43,6 +44,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "policies/: no recovery policy declared",
     "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
   ]);
+  assert.deepEqual(checked.warnings.map((w) => `${w.file}: ${w.message.slice(0, 60)}`), ["identity/: the identity set renders to 1761 characters and a unit's pro"], "the policy's identity.maxChars (1000) is the limit the check measures against (#91)");
   assert.deepEqual(checked.identity.invariants.map((i) => i.id), ["INV-001"]);
   assert.equal(checked.profiles.length, 3, "a profile with a naming problem is still loaded; the problem is reported");
 });

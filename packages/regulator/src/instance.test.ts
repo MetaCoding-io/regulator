@@ -61,15 +61,12 @@ test("doctor says when the instance's identity set is over its context budget (#
   const repo = await unfamiliarRepo(t);
   await initInstance(gitExec, { repo, writablePaths: ["lib/", "test/"], by: "alice", now: () => clock });
   const commit = async (message: string) => { for (const args of [["add", "-A"], ["commit", "--quiet", "-m", message]]) await gitExec("git", args, { cwd: repo }); };
-  // A short glossary first: the seed shipped in 0.1.3 is itself over the budget (found by #51), and this test is about the check, not the seed.
-  await writeFile(path.join(repo, "regulator/identity/GLOSSARY.md"), "# Identity — glossary\n\n- **Unit** — one dispatched piece of work under a contract.\n");
-  await commit("a short glossary");
   let report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
   const identity = () => report.checks.find((c) => c.name === "identity")!;
-  /** Warnings other than the definition check's own, which the shipped seed raises today. */
+  /** Warnings other than the definition check's own. */
   const instanceWarnings = () => report.checks.filter((c) => c.warning && c.name !== "definition").length;
   assert.equal(identity().ok, true);
-  assert.match(identity().detail, /^regulator\/identity\/ present: 4 invariant\(s\), renders to \d{4} of 6000 characters$/);
+  assert.match(identity().detail, /^regulator\/identity\/ present: 4 invariant\(s\), renders to \d{4} of 12000 characters$/);
   assert.equal(identity().warning, undefined);
   assert.equal(instanceWarnings(), 0);
 
@@ -78,7 +75,7 @@ test("doctor says when the instance's identity set is over its context budget (#
   await commit("a longer identity");
   report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
   assert.equal(identity().ok, true, "a long set is valid");
-  assert.match(identity().warning ?? "", /^the identity set renders to \d+ characters and a unit's prompt carries 6000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\. Shorten the set; the files are authoritative either way\.$/);
+  assert.match(identity().warning ?? "", /^the identity set renders to \d+ characters and a unit's prompt carries 12000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\. Shorten the set, or raise `identity\.maxChars` in the budget policy; the files are authoritative either way\.$/);
   assert.equal(instanceWarnings(), 1);
   assert.equal(report.warnings, report.checks.filter((c) => c.warning).length, "the report counts them");
   assert.equal(report.problems, 0, "a warning refuses nothing");
