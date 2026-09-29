@@ -11,7 +11,7 @@ import path from "node:path";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
 } from "@metacoding.io/regulator-protocol";
-import { identityContextBudget, readIdentity, type IdentitySet } from "./identity.js";
+import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { isReadOnlyProfile } from "./profiles.js";
 
@@ -131,8 +131,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   if (!out.routing.length) problem("policies/", "no routing policy declared");
   if (!out.interaction.length) problem("policies/", "no interaction policy declared: nothing says how long to wait for a person or who may answer");
   for (const p of out.identity.problems) problem("identity/", p);
-  // A long set is valid and partly unseen (#51): a warning, not a problem, since the check refuses nothing over it.
-  const budget = identityContextBudget(out.identity);
+  // A long set is valid and partly unseen (#51): a warning, not a problem, since the check refuses nothing over it. The limit is
+  // the budget policy's (#91): the one named "default", as the software workload's units run under; a deployment raises it there.
+  const budget = identityContextBudget(out.identity, identityMaxChars(out.policies.find((p) => p.name === "default") ?? out.policies[0]));
   if (budget.warning) out.warnings.push({ file: "identity/", message: budget.warning });
 
   // Evals (lesson 14): a suite is part of the declaration — its tasks must exist, its baseline must be an arm, its checks must be

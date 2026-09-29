@@ -69,6 +69,7 @@ and which models a unit type may use.
 | `models.default` | route | `primary` and `fallback[]` in order; nothing outside the route is ever used |
 | `models.byUnitType.<type>` | route | |
 | `coordination.oscillationThreshold` | integer | reversals of the same file within one unit before the thrash detector raises `oscillation` |
+| `identity.maxChars` | integer, optional | the characters of rendered identity a unit's prompt carries before the rendering is cut; 12000 unless set. `check`, `doctor` and the session measure against it and warn past it; nothing is refused |
 
 A ceiling has `tokens`, `cost` (optional), `wallClockMs`, `turns` and `attempts`. The
 budget meter counts as the session runs and ends the attempt at the first ceiling

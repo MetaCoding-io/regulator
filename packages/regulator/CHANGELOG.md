@@ -7,6 +7,9 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+### Changed
+- The identity's context limit is the budget policy's, and the default is 12000 characters (#91). `renderIdentitySection` cut at 6000, a constant; the seed the definition ships renders to 7005, so the tail of `GLOSSARY.md` was not reaching units (found by #51). Rather than shorten the seed, the default is raised to 12000 (about 3000 tokens) and a policy may declare `identity.maxChars`; the identity extension, `regulator check`, `regulator doctor` and the warning all measure against the limit that applies. The shipped definition passes `check` with no warning.
+
 ### Added
 - The identity's context budget is measured, and the cut is reported (#51, DEBT row 25). `renderIdentitySection` truncates at 6000 characters; nothing said when it did. `identityContextBudget` (core) now measures the whole rendering against the limit and names the files cut; `regulator check` and `regulator doctor` warn with the size, the limit and the files — a warning, not a problem, since a long set is valid — and `doctor --json` carries it on the `identity` check (`warning`) with a `warnings` count on the report; the session's status line says `truncated at 6000 of N characters`, and the identity extension records one advisory `operational-signal` per session on the unit, with the files cut as evidence, so the unit's record shows it ran with part of its identity unseen. Found on the way: the seed the definition ships renders to 7005 characters, so the tail of GLOSSARY.md has not been reaching units; `regulator check` now says so, and what to do about it (shorten the seed, or make the limit a policy field) is a decision recorded in the open-questions backlog rather than taken here, since the live runs (#46) are measuring the prompt as it is.
 

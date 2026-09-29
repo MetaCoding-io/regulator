@@ -662,7 +662,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Scope.** subjects identity, memory · resources regulator/identity/, .regulator/memory.ndjson
 
-**Cost.** The identity's length in every prompt, capped at 6000 characters; Pi diffs sections, so an unchanged identity is a cache hit.
+**Cost.** The identity's length in every prompt, capped at the budget policy's `identity.maxChars` (12000 characters by default, about 3000 tokens); Pi diffs sections, so an unchanged identity is a cache hit.
 
 **May.**
 - render identity and memory as prompt sections
@@ -678,7 +678,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.
 - The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.
-- Rendering is truncated at 6000 characters, a constant and not a policy field; a set longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the files cut, the session's status line says so, and one advisory operational-signal per session records it on the unit — and refuses nothing: shortening the set is a person's decision.
+- Rendering is truncated at the budget policy's `identity.maxChars` (12000 characters unless the policy says otherwise); a set longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the files cut, the session's status line says so, and one advisory operational-signal per session records it on the unit — and refuses nothing: shortening the set is a person's decision.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 

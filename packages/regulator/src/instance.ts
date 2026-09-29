@@ -23,7 +23,7 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, identityContextBudget, loadRegistry, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, identityContextBudget, identityMaxChars, loadRegistry, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
 import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR, canariesFromEnv } from "./unit.js";
@@ -205,7 +205,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     if (identityOk) {
       // The instance's set, as a unit would see it: over the context budget it is partly unseen, and doctor says so (#51).
       const identity = await readIdentity(path.join(repo, IDENTITY_RELATIVE_DIR));
-      const budget = identityContextBudget(identity);
+      const budget = identityContextBudget(identity, identityMaxChars(definition.policies.find((p) => p.name === "default") ?? definition.policies[0]));
       check("identity", identity.problems.length === 0, `${IDENTITY_RELATIVE_DIR} present: ${identity.invariants.length} invariant(s), renders to ${budget.chars} of ${budget.max} characters${identity.problems.length ? `; problems: ${identity.problems.join("; ")}` : ""}`, budget.warning);
     } else {
       check("identity", false, `${IDENTITY_RELATIVE_DIR} missing: run \`regulator init\``);

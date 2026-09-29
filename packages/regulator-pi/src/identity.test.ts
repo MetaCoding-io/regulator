@@ -21,8 +21,8 @@ test("identity is rendered into the system prompt from the files each run, never
 
   const { ctx, statuses } = ctxFor(started.worktree.path);
   await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
-  // The seed shipped in 0.1.3 renders to more than 6000 characters (found by #51), so the status may say it is truncated.
-  assert.match(statuses.identity ?? "", /^identity: INV-001, INV-002, INV-003, INV-004(; truncated at 6000 of \d+ characters)?; memory: 0 current$/);
+  // The seed fits the default limit since #91; a policy may lower it, so the status may say it is truncated.
+  assert.match(statuses.identity ?? "", /^identity: INV-001, INV-002, INV-003, INV-004(; truncated at 12000 of \d+ characters)?; memory: 0 current$/);
 
   const sections = async () => {
     const event = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
@@ -86,18 +86,36 @@ test("an identity set over its context budget is rendered truncated and the cut 
   createIdentityExtension({ now: () => clock })(pi);
   const { ctx, statuses, notices } = ctxFor(started.worktree.path);
   await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
-  assert.match(statuses.identity ?? "", /^identity: INV-001, INV-002, INV-003, INV-004; truncated at 6000 of \d{4,} characters; memory: 0 current$/);
+  assert.match(statuses.identity ?? "", /^identity: INV-001, INV-002, INV-003, INV-004; truncated at 12000 of \d{4,} characters; memory: 0 current$/);
 
   const event = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
   await handlers.get("before_agent_start")!(event, ctx);
   await handlers.get("before_agent_start")!(event, ctx);
-  assert.match(event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] ?? "", /\n\[identity truncated at 6000 characters; the files are authoritative\]$/);
+  assert.match(event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] ?? "", /\n\[identity truncated at 12000 characters; the files are authoritative\]$/);
   assert.equal(notices.length, 1, "said once per session, not per turn");
-  assert.match(notices[0]?.message ?? "", /^regulator: the identity set renders to \d+ characters and a unit's prompt carries 6000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\./);
+  assert.match(notices[0]?.message ?? "", /^regulator: the identity set renders to \d+ characters and a unit's prompt carries 12000: \d+ character\(s\) of BOUNDARIES\.md, GLOSSARY\.md are advice the model never sees\./);
   const signals = (await readFile(path.join(repo, ".regulator/signals.ndjson"), "utf8")).trim().split("\n").map((l) => JSON.parse(l) as Record<string, unknown>);
   assert.equal(signals.length, 1, "recorded in the base's log, once");
-  assert.deepEqual([signals[0]!.kind, signals[0]!.source, signals[0]!.destination, signals[0]!.severity, signals[0]!.unit, signals[0]!.subject, signals[0]!.timestamp], ["operational-signal", "S1", "S3", "advisory", "u1", "identity truncated at 6000 characters", "2026-09-22T12:00:00.000Z"]);
+  assert.deepEqual([signals[0]!.kind, signals[0]!.source, signals[0]!.destination, signals[0]!.severity, signals[0]!.unit, signals[0]!.subject, signals[0]!.timestamp], ["operational-signal", "S1", "S3", "advisory", "u1", "identity truncated at 12000 characters", "2026-09-22T12:00:00.000Z"]);
   assert.deepEqual(signals[0]!.evidence, [{ class: "file", ref: "regulator/identity/BOUNDARIES.md" }, { class: "file", ref: "regulator/identity/GLOSSARY.md" }]);
+
+  // The limit is the budget policy's (#91): a policy that raises it renders the same set whole, and nothing is signalled.
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { POLICY_PATH } = await import("@metacoding.io/regulator");
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-policy-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const raised = { ...JSON.parse(await readFile(POLICY_PATH, "utf8")) as Record<string, unknown>, identity: { maxChars: 40000 } };
+  await writeFile(path.join(dir, "policy.json"), JSON.stringify(raised));
+  const before = process.env.REGULATOR_POLICY;
+  process.env.REGULATOR_POLICY = path.join(dir, "policy.json");
+  t.after(() => { if (before === undefined) delete process.env.REGULATOR_POLICY; else process.env.REGULATOR_POLICY = before; });
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  assert.match(statuses.identity ?? "", /^identity: INV-001, INV-002, INV-003, INV-004; memory: 0 current$/, "whole under the raised limit");
+  const whole = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
+  await handlers.get("before_agent_start")!(whole, ctx);
+  assert.doesNotMatch(whole.systemPromptOptions.sections[IDENTITY_SECTION_TAG] ?? "", /identity truncated/);
+  assert.equal(notices.length, 1, "nothing more was said");
 });
 
 test("memory scope (lesson 15): a fact recorded for research units is rendered to a research unit and not to an implement unit; the tool records the scope with the fact", async (t) => {
