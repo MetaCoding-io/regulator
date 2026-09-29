@@ -13,11 +13,11 @@
   },
   "coordination": { "oscillationThreshold": 4 },
   "models": {
-    "default": { "primary": "anthropic/claude-sonnet-4-5", "fallback": ["openai/gpt-5", "google/gemini-2.5-flash"] },
+    "default": { "primary": "anthropic/claude-sonnet-4-5", "fallback": ["openai/gpt-5", "google/gemini-3.8-flash"] },
     "byUnitType": {
       "plan": { "primary": "anthropic/claude-sonnet-4-5", "fallback": ["openai/gpt-5"] },
-      "research": { "primary": "anthropic/claude-haiku-4-5", "fallback": ["openai/gpt-5-mini", "google/gemini-2.5-flash"] },
-      "close": { "primary": "anthropic/claude-haiku-4-5", "fallback": ["openai/gpt-5-mini", "google/gemini-2.5-flash"] }
+      "research": { "primary": "anthropic/claude-haiku-4-5", "fallback": ["openai/gpt-5-mini", "google/gemini-3.8-flash"] },
+      "close": { "primary": "anthropic/claude-haiku-4-5", "fallback": ["openai/gpt-5-mini", "google/gemini-3.8-flash"] }
     }
   }
 }

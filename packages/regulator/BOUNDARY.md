@@ -28,13 +28,14 @@ Not covered:
 
 ## Budget guard (`reg.control.budget-guard.v1`)
 
-Enforced at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `../regulator-pi/src/budget.ts`; S3, deterministic-gate.
+Enforced at `session_start (ledger written, or resumed on an attempt already metered)`, `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)` in `../regulator-pi/src/budget.ts`; S3, deterministic-gate.
 
 Not covered:
 
 - Ceilings are checked at turn end and tool call, so the turn that crosses one completes; a single very large response is not cut off mid-stream.
-- Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.
-- The wall-clock ceiling is measured from session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
+- Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero. Tokens sum every message's total, so a long context is paid again on every turn: the default 400,000-token ceiling is about thirty turns of a large context, which the live drift run's memory unit reached on both arms.
+- The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
+- A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
 
 ## Canary watch (`reg.audit.canary-watch.v1`)
@@ -225,13 +226,13 @@ Not covered:
 
 ## Model router (`reg.control.model-router.v1`)
 
-Enforced at `piDispatcher (model choice, failover)`, `model_select (ledger)` in `../regulator-pi/src/dispatcher.ts`; S3, deterministic-gate.
+Enforced at `piDispatcher (model choice, failover)`, `attemptEnd (halt vs provider failure, from the ledger)`, `model_select (ledger)` in `../regulator-pi/src/dispatcher.ts`; S3, deterministic-gate.
 
 Not covered:
 
-- Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.
-- Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.
-- The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover.
+- Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.
+- Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.
+- Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
 
 ## Obligation router (`reg.control.obligation-router.v1`)
 

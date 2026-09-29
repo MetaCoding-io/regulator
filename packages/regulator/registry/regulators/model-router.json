@@ -3,7 +3,7 @@
   "name": "Model router",
   "status": "active",
   "vsmFunction": "S3",
-  "purpose": "Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session. Nothing outside the route is ever tried, and every model an attempt ran on is in its ledger.",
+  "purpose": "Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session on the same attempt. Nothing outside the route is ever tried, every model an attempt ran on is in its one ledger, and a halt by the budget guard is not a failure to fail over from.",
   "absorbs": {
     "failureClass": "single-model-dependence",
     "description": "A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why."
@@ -13,13 +13,15 @@
     "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
       "piDispatcher (model choice, failover)",
+      "attemptEnd (halt vs provider failure, from the ledger)",
       "model_select (ledger)"
     ]
   },
   "channels": {
     "consumes": [
       "policy (models)",
-      "model availability (ModelRuntime)"
+      "model availability (ModelRuntime)",
+      "budget ledger (exhausted)"
     ],
     "emits": [
       "budget ledger models[]"
@@ -45,7 +47,8 @@
     "mayNot": [
       "use a model the route does not name",
       "upgrade or downgrade on judgement of task difficulty",
-      "change the route"
+      "change the route",
+      "fail over an attempt the budget guard halted"
     ]
   },
   "evidence": {
@@ -55,9 +58,9 @@
     ]
   },
   "limitations": [
-    "Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.",
-    "Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.",
-    "The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover."
+    "Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.",
+    "Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.",
+    "Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route."
   ],
   "ownership": {
     "owner": "course-lab",

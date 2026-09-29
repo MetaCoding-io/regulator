@@ -38,6 +38,12 @@ export interface BudgetMeterOptions {
   ceiling: BudgetCeiling;
   now?: () => number;
   model?: string;
+  /**
+   * The attempt's ledger so far, when a session opens on an attempt another session already metered (a fallback
+   * after a provider failure). Consumption, models, compactions and an exhausted marker carry over: the attempt
+   * is one attempt whichever session runs it, and a halted attempt stays halted.
+   */
+  resume?: BudgetLedger;
 }
 
 /** Counts consumption per attempt and reports the first ceiling crossed. Pi-free. */
@@ -50,16 +56,19 @@ export class BudgetMeter {
     this.#now = options.now ?? Date.now;
     const at = new Date(this.#now()).toISOString();
     const { attempts: _attempts, ...ceiling } = options.ceiling;
-    this.#ledger = {
-      unitId: options.unitId,
-      attempt: options.attempt,
-      ceiling,
-      consumed: { tokens: 0, cost: 0, wallClockMs: 0, turns: 0 },
-      startedAt: at,
-      updatedAt: at,
-      models: options.model ? [options.model] : [],
-      compactions: [],
-    };
+    const prior = options.resume && options.resume.unitId === options.unitId && options.resume.attempt === options.attempt ? structuredClone(options.resume) : undefined;
+    this.#ledger = prior
+      ? { ...prior, ceiling, updatedAt: at, models: options.model && prior.models.at(-1) !== options.model ? [...prior.models, options.model] : prior.models }
+      : {
+          unitId: options.unitId,
+          attempt: options.attempt,
+          ceiling,
+          consumed: { tokens: 0, cost: 0, wallClockMs: 0, turns: 0 },
+          startedAt: at,
+          updatedAt: at,
+          models: options.model ? [options.model] : [],
+          compactions: [],
+        };
   }
 
   get ledger(): BudgetLedger {

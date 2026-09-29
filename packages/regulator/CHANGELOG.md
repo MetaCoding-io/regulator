@@ -7,6 +7,17 @@ CLI or the definition's file formats; a patch version does not.
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-09-29
+
+The second live drift run (issue #46, on 0.1.2) closed ten of twelve units and found
+what happens after the budget guard halts one.
+
+### Fixed
+- A halt by the budget guard was failed over as a provider failure. The guard aborts the session when a ceiling is crossed and Pi records the abort as an errored assistant message; the dispatcher read the message alone, opened a fresh session on each declared fallback, and reported "every model in the route failed" when the last one did. Each fallback session also started a new ledger for the same attempt, so the primary's spend and the exhausted marker were overwritten and the loop classed the unit as a dispatch error (recovery cause `environment`) instead of `budget-exhausted`, which the recovery policy routes differently. The dispatcher now reads the attempt's ledger before deciding (`attemptEnd`): a halt is returned to the loop as the attempt's end and is never failed over; only an errored message without a halt is a provider failure. A session that opens on an attempt another session already metered resumes that ledger (`BudgetMeter` `resume`), so the attempt has one ledger whichever sessions ran it, the primary's spend counts against the same ceiling, and a halt stays a halt.
+- The default policy's last fallback for every route, `google/gemini-2.5-flash`, is retired by Google for new keys and answered every call with a 404; the routes now fall back to `google/gemini-3.8-flash`, which the pinned Pi registry knows. Nothing checks a route against the provider before dispatch; the `model-router` card says so.
+- `regulator unit show … | head` crashed the CLI with `EPIPE` once the reader closed the pipe; the CLI now exits cleanly.
+
+
 ## [0.1.2] — 2026-09-28
 
 The first live drift run (issue #46) found the live dispatch path had never been
@@ -40,7 +51,8 @@ the former `@metacoding/vsm-pi-cli`.
 - The definition beside the code: forty-three registry records (forty-two active; the lexical vendor write gate of lesson 02 retired, superseded by the authority extension and the manifest's protected prefixes) with `REGULATORS.md` and `BOUNDARY.md` generated from them, the identity seed, five profiles, five policies, two workloads (software development, personal finance), the drift eval suite with four committed reports, and the contracts the lessons run.
 - Host checks at closeout: `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature`, `glossary-lint`.
 
-[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/MetaCoding-io/regulator/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/MetaCoding-io/regulator/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/MetaCoding-io/regulator/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/MetaCoding-io/regulator/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/MetaCoding-io/regulator/releases/tag/v0.1.0
