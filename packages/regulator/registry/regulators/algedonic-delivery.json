@@ -26,11 +26,11 @@
   },
   "evidence": { "tests": ["src/controller.test.ts", "src/cli.test.ts", "../core/src/interaction.test.ts"] },
   "limitations": [
-    "The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names (lesson 15), and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.",
+    "The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names, and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.",
     "Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.",
     "One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:deliver-pending", "note": "Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only."},
   "retirement": {"condition": "Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before."},
   "introducedIn": "0.1.0"

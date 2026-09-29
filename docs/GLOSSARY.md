@@ -10,26 +10,26 @@ learners to build themselves.
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
 | **Variety** | The number of distinguishable states a thing can be in. A repository, a model, a test suite and a human each generate variety the harness must cope with. | — |
-| **Requisite variety (Ashby)** | Only variety can absorb variety. A harness with less regulatory variety than the situation it faces will fail somewhere it cannot see. | The reason a good model plus a good prompt is not enough (M01). |
-| **Attenuation** | Reducing incoming variety before it reaches the regulator: retrieval, tool narrowing, truncation, context shaping. | Tool result truncation, skills loaded on demand, compaction (M03, M04, M07). |
-| **Amplification** | Increasing regulatory variety going out: checks, gates, retries, escalation. | `tool_call` gates, host-run verification, recovery routing (M08–M10). |
+| **Requisite variety (Ashby)** | Only variety can absorb variety. A harness with less regulatory variety than the situation it faces will fail somewhere it cannot see. | The reason a good model plus a good prompt is not enough. |
+| **Attenuation** | Reducing incoming variety before it reaches the regulator: retrieval, tool narrowing, truncation, context shaping. | Tool result truncation, skills loaded on demand, compaction. |
+| **Amplification** | Increasing regulatory variety going out: checks, gates, retries, escalation. | `tool_call` gates, host-run verification, recovery routing. |
 | **Regulator** | The component that keeps a system inside acceptable bounds. The harness is the regulator standing between model and environment. | The course's reference build is named for it. |
-| **Feedback delay** | Time between a wrong assumption and the signal that reveals it. The dominant quality variable in agentic work. | Vertical-slice decomposition, early integration checkpoints (M06). |
-| **Homeostat** | Two subsystems that pull against each other and are balanced by a higher function. In VSM, S3 (inside/now) and S4 (outside/then), balanced by S5. | Intelligence veto vs sprint commitment (M11). |
-| **Recursion** | Every viable system contains and is contained by viable systems with the same structure. A subagent is a recursive S1; the harness itself is a viable system. | Subagent driver (M11); harness-as-viable-system (M15). |
-| **Algedonic signal** | An exceptional alert that bypasses the normal reporting hierarchy — pain or pleasure, in Beer's term. | regulator `algedonic` channel, severity `[blocking, critical]`; escalation path (M13). [Asking a person](concepts/asking-a-person.md). |
+| **Feedback delay** | Time between a wrong assumption and the signal that reveals it. The dominant quality variable in agentic work. | Vertical-slice decomposition, early integration checkpoints. |
+| **Homeostat** | Two subsystems that pull against each other and are balanced by a higher function. In VSM, S3 (inside/now) and S4 (outside/then), balanced by S5. | Intelligence veto vs sprint commitment. |
+| **Recursion** | Every viable system contains and is contained by viable systems with the same structure. A subagent is a recursive S1; the harness itself is a viable system. | Subagent driver; harness-as-viable-system. |
+| **Algedonic signal** | An exceptional alert that bypasses the normal reporting hierarchy — pain or pleasure, in Beer's term. | regulator `algedonic` channel, severity `[blocking, critical]`; escalation path. [Asking a person](concepts/asking-a-person.md). |
 
 ## 2. VSM functions
 
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
-| **S1 — Operations** | The units that do the work and touch the environment. Specialized by capability profile, not persona. | GSD `execute-task`; regulator S1 capability profiles (M03, M04). |
-| **S2 — Coordination** | Damping between operations: isolation, leases, sequencing, anti-oscillation, reintegration. Mechanism, not a coordinator persona. | GSD worktrees and leases; regulator S2 gap analysis (M05). [Coordination](concepts/coordination.md). |
-| **S3 — Control** | Operational control: planning, dispatch, budgets, recovery, authoritative work state. | GSD lifecycle kernel, auto orchestration; regulator work contracts (M06–M08). |
-| **S3\* — Audit** | Independent verification that does not depend on the executor's self-report. | GSD verification evidence and technical verdict; regulator audit finding and deterministic gates (M09, M10). |
-| **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel (M11). [Intelligence and memory](concepts/intelligence-and-memory.md). |
-| **S5 — Identity / Policy** | What the system is: purpose, invariants, domain model, policy. Durable and version-controlled, never trapped in a context window. Not an agent. | an instance's `regulator/identity/` (`IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md`), seeded from the definition; this repository's own is `vsm/` (M12). [Protecting identity](concepts/identity.md). |
-| **Separation of duty** | The function that did the work cannot be the function that certifies it. | regulator independence domains in the functional projection (M04, M09). |
+| **S1 — Operations** | The units that do the work and touch the environment. Specialized by capability profile, not persona. | GSD `execute-task`; regulator S1 capability profiles. |
+| **S2 — Coordination** | Damping between operations: isolation, leases, sequencing, anti-oscillation, reintegration. Mechanism, not a coordinator persona. | GSD worktrees and leases; regulator S2 gap analysis. [Coordination](concepts/coordination.md). |
+| **S3 — Control** | Operational control: planning, dispatch, budgets, recovery, authoritative work state. | GSD lifecycle kernel, auto orchestration; regulator work contracts. |
+| **S3\* — Audit** | Independent verification that does not depend on the executor's self-report. | GSD verification evidence and technical verdict; regulator audit finding and deterministic gates. |
+| **S4 — Intelligence** | Environment- and future-facing observation. Produces advice, not policy. | GSD research milestones; regulator `intelligence` channel. [Intelligence and memory](concepts/intelligence-and-memory.md). |
+| **S5 — Identity / Policy** | What the system is: purpose, invariants, domain model, policy. Durable and version-controlled, never trapped in a context window. Not an agent. | an instance's `regulator/identity/` (`IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md`), seeded from the definition; this repository's own is `vsm/`. [Protecting identity](concepts/identity.md). |
+| **Separation of duty** | The function that did the work cannot be the function that certifies it. | regulator independence domains in the functional projection. |
 
 ## 3. Channels and authority
 
@@ -37,52 +37,52 @@ learners to build themselves.
 | --- | --- | --- |
 | **Channel** | A typed message path with a stated authority and destination. A signal is not an audit; an audit is not a policy decision. | the message kinds in `packages/protocol` and the routing policy; the [control plane](concepts/control-plane.md#typed-channels) lists them. |
 | **Authority** | What a mechanism permits, not what a role label claims. | `authorizeWrite(path, "operational")` in regulator's extension. |
-| **Positive grant** | What a unit *may* do: its capability profile. | `pi.setActiveTools`, `--tools` allowlist (M04). |
-| **Negative invariant** | What *nothing* may do: a protected path, a forbidden mutation. | `tool_call` blocking handlers, protected S5 paths (M10). |
+| **Positive grant** | What a unit *may* do: its capability profile. | `pi.setActiveTools`, `--tools` allowlist. |
+| **Negative invariant** | What *nothing* may do: a protected path, a forbidden mutation. | `tool_call` blocking handlers, protected S5 paths. |
 | **Proposal** | A request to change identity or policy. Proposing confers no mutation authority. | `propose_policy_change`; INV-002 in the identity seed. [Protecting identity](concepts/identity.md). |
 | **Constraint** | S5's downward definition of the permitted operational space. | `constraint` channel; context files as advice, gates as enforcement. |
 | **Signal** | Ordinary upward operational feedback, including residual uncertainty. | regulator uncertainty signal tool. |
-| **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `packages/core/src/obligations.ts` and `packages/regulator/policies/routing.json` (M08, M11); design record archived as `docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md`. |
+| **Obligation** | A consequential signal that must remain visible until the metasystem has absorbed it: expose → acknowledge → resolve/escalate/supersede. | `packages/core/src/obligations.ts` and `packages/regulator/policies/routing.json`; design record archived as `docs/archive/2026-09/REGULATORY-STATE-AND-ROUTING.md`. |
 | **Enforcement boundary** | The documented list of what a gate does *not* cover: shell, custom tools, other engines, TOCTOU. | `packages/regulator-pi/README.md`; registry `limitations`, from which `BOUNDARY.md` is generated. |
-| **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts` (M03); read-only profiles are defined by effect (M04). [Coordination](concepts/coordination.md). |
+| **Effect contract** | What happens in the world when a tool runs — filesystem, execution, network, side effects — declared alongside its schema. A narrow schema says nothing about a narrow effect. | `packages/protocol/src/effects.ts`, `packages/core/src/effects.ts`; read-only profiles are defined by effect. [Coordination](concepts/coordination.md). |
 | **Registry** | One typed, CI-checked record per regulator: purpose, failure absorbed, mechanism level, implementation, evidence, limitations, owner, review date, retirement condition. Documentation with a mechanism behind it. | `packages/regulator/registry/`; `regulator check`; the specification is archived as [CONTROL-REGISTRY.md](archive/2026-09/CONTROL-REGISTRY.md). |
-| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms (M14). [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
-| **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs (M10). |
-| **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill (M10). |
+| **Ablation / retirement** | Running the evals with one regulator switched off; retiring it when the failure it absorbed no longer occurs. A control system that only grows is not viable either. | Registry `ablation.switch` and `retirement.condition` on every active record; the drift suite's ablation arms. [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
+| **Trust boundary** | Which sources may supply *control* (extensions, skills, packages) versus only *data* (repo files, tool results). | Pi `project_trust`, `ctx.isProjectTrusted()`, production-only package installs. |
+| **Injection** | Content meant as data absorbed as control. Attenuation failing at the trust boundary. | Injection drill. |
 
 ## 4. Control vocabulary
 
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
-| **Mechanism hierarchy** | Type → deterministic gate → typed tool → model judgment → prompt. An ordering by reliability under adversarial pressure. | regulator prime directive; M02. |
-| **Gate** | A deterministic check that can block. | `tool_call` preflight; closeout gate (M09). |
-| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`; `packages/regulator/profiles/*.json`, one per kind of work, named by the workload's unit types (M04). GSD phases are the comparison: routing keys, not grants. [Coordination](concepts/coordination.md). |
+| **Mechanism hierarchy** | Type → deterministic gate → typed tool → model judgment → prompt. An ordering by reliability under adversarial pressure. | regulator prime directive. |
+| **Gate** | A deterministic check that can block. | `tool_call` preflight; closeout gate. |
+| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`; `packages/regulator/profiles/*.json`, one per kind of work, named by the workload's unit types. GSD phases are the comparison: routing keys, not grants. [Coordination](concepts/coordination.md). |
 | **Unit** | The smallest dispatched, executable workflow step: one contract, one worktree, one or more attempts. | The orchestrator's unit record (`packages/protocol/src/execution.ts`); a workload's unit types (`plan`, `implement`, …). GSD units (`plan-slice`, `execute-task`) are the comparison. |
-| **Phase** | A coarse routing bucket for model and reasoning selection. Not a unit. | GSD `research`, `planning`, `execution`, `validation`, `uat`… (M04, M07). |
-| **Work contract** | What S3 authorizes a unit to decide: FIXED / DELEGATED / UNRESOLVED. | `WorkContract` in `packages/protocol/src/contracts.ts` (M06); design record archived as `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md`. [Work contracts and reports](concepts/contracts.md). |
-| **Result report** | The unit's closing record: delegated choices made, evidence, deviations, emergent decisions, residual uncertainty. | `ResultReport` in `packages/protocol/src/contracts.ts`, written by `report_result` (M06). [Work contracts and reports](concepts/contracts.md). |
-| **Residual uncertainty** | Where the unit's model of the system became uncertain. Regulatory information, not a confidence score. | `docs/ARCHITECTURE.md`; uncertainty signal (M06). |
-| **Vertical slice** | The thinnest end-to-end path that produces an observable outcome and closes a feedback loop early. | A planning principle (`docs/ARCHITECTURE.md`); the slice-level contract designed for M06 was never built — a unit's `contribution` is the only trace of it. |
-| **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard (M07). [Recovery, budgets and model routes](concepts/recovery.md). |
-| **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization (M07). [Recovery, budgets and model routes](concepts/recovery.md). |
-| **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result (M08). |
-| **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router (M08). [Recovery, budgets and model routes](concepts/recovery.md). |
-| **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector (M05, M08). [Coordination](concepts/coordination.md). |
-| **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation (M05). [Coordination](concepts/coordination.md). |
-| **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back (M05). [Coordination](concepts/coordination.md). |
-| **Evidence** | An observation tied to a criterion, an attempt, a source revision and an environment, produced by the host, with freshness. | GSD Verification Evidence (M09). |
-| **Technical verdict** | Pass / fail / inconclusive derived mechanically from required evidence. | GSD (M09). |
-| **Human acceptance** | A person's disposition of a subjective check, separate from the technical verdict. | GSD Subjective UAT (M09, M13). |
-| **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts` (M13). [Asking a person](concepts/asking-a-person.md). |
-| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts` (M13). [Asking a person](concepts/asking-a-person.md). |
-| **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap` (M13). |
-| **Identity** | What the system is. Committed, reviewed, S5. | `regulator/identity/` in an instance; `vsm/` for this repository (M12). [Protecting identity](concepts/identity.md). |
-| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool (M12). [Intelligence and memory](concepts/intelligence-and-memory.md). |
-| **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.regulator/*.ndjson`, projected as OpenTelemetry GenAI spans by `regulator spans` (M09, M14). |
-| **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | regulator drift fixture (M12, M14). |
-| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | `packages/regulator/evals/drift.json`: arms change only what the definition declares (M14). [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
-| **Outcome grader / trajectory grader** | An outcome grader reads the resulting environment and never the transcript; a trajectory grader reads the records of how it got there. Both are needed. | `packages/regulator/src/graders.ts` (M14). |
-| **Behaviour-bound check** | A criterion observed by content: an evidence expectation carries a check the host runs, and the record binds to that criterion alone. | `export-signature` (M14). |
+| **Phase** | A coarse routing bucket for model and reasoning selection. Not a unit. | GSD `research`, `planning`, `execution`, `validation`, `uat`…. |
+| **Work contract** | What S3 authorizes a unit to decide: FIXED / DELEGATED / UNRESOLVED. | `WorkContract` in `packages/protocol/src/contracts.ts`; design record archived as `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md`. [Work contracts and reports](concepts/contracts.md). |
+| **Result report** | The unit's closing record: delegated choices made, evidence, deviations, emergent decisions, residual uncertainty. | `ResultReport` in `packages/protocol/src/contracts.ts`, written by `report_result`. [Work contracts and reports](concepts/contracts.md). |
+| **Residual uncertainty** | Where the unit's model of the system became uncertain. Regulatory information, not a confidence score. | `docs/ARCHITECTURE.md`; uncertainty signal. |
+| **Vertical slice** | The thinnest end-to-end path that produces an observable outcome and closes a feedback loop early. | A planning principle (`docs/ARCHITECTURE.md`); the slice-level contract the course designed in lesson 06 was never built — a unit's `contribution` is the only trace of it. |
+| **Budget** | A ceiling on tokens, time, attempts or money, enforced by the harness, with a defined behaviour at the limit. | Budget guard. [Recovery, budgets and model routes](concepts/recovery.md). |
+| **Compaction** | Context eviction with a policy for what must survive. | `session_before_compact`, custom summarization. [Recovery, budgets and model routes](concepts/recovery.md). |
+| **Attempt** | One immutable claimed execution of a unit against an observed revision. Succeeded / failed / interrupted. Does not by itself complete or cancel the work. | GSD Attempt Result. |
+| **Recovery action** | Exactly one response to a failure: retry, repair, remediate, replan, clarify, pause, escalate, abort — chosen under a named policy version. | GSD Recovery Action; recovery router. [Recovery, budgets and model routes](concepts/recovery.md). |
+| **Oscillation** | Fix A breaks B, fix B breaks A. Detected by S2, decided by S3. | Thrash detector. [Coordination](concepts/coordination.md). |
+| **Lease** | A claim on a resource with an owner, a scope and an expiry — and a liveness story. | GSD milestone leases and dead-worker reclamation. [Coordination](concepts/coordination.md). |
+| **Reintegration** | Bringing isolated work back; where hidden coupling surfaces. | Worktree merge-back. [Coordination](concepts/coordination.md). |
+| **Evidence** | An observation tied to a criterion, an attempt, a source revision and an environment, produced by the host, with freshness. | GSD Verification Evidence. |
+| **Technical verdict** | Pass / fail / inconclusive derived mechanically from required evidence. | GSD. |
+| **Human acceptance** | A person's disposition of a subjective check, separate from the technical verdict. | GSD Subjective UAT. |
+| **Interaction kind** | The contract for a human interaction: recap, choice, clarification, consent, uat. Determines whether an answer is required and whether work pauses; in the lab the rule is a protocol constant (`CONTINUES_WITHOUT_ANSWER`) no policy can relax. | GSD; `packages/protocol/src/interaction.ts`. [Asking a person](concepts/asking-a-person.md). |
+| **Consent** | Explicit authorization for an irreversible, public, paid, destructive or account-level action. Silence, cancellation and timeout are never consent; in the lab an unanswered consent pauses the unit by gate. | GSD; `packages/regulator-pi/src/algedonic.ts`. [Asking a person](concepts/asking-a-person.md). |
+| **Nonblocking recap** | Decisions and assumptions offered for correction while reversible work continues. The default interaction; attention management. In the lab, the one kind that continues without an answer, and the one that does not count against the attention budget. | GSD; `ask_human` kind `recap`. |
+| **Identity** | What the system is. Committed, reviewed, S5. | `regulator/identity/` in an instance; `vsm/` for this repository. [Protecting identity](concepts/identity.md). |
+| **Operational memory** | What the system has learned about its environment. Durable, S3, agent-writable with provenance and expiry. Not identity. | `.regulator/memory.ndjson` and the `remember` tool. [Intelligence and memory](concepts/intelligence-and-memory.md). |
+| **Runtime evidence** | What happened this run. Append-only, replayable, never a competing source of truth. | `.regulator/*.ndjson`, projected as OpenTelemetry GenAI spans by `regulator spans`. |
+| **Drift** | Architectural conformance decaying over many units. The longitudinal variable the control plane exists to slow. | regulator drift fixture. |
+| **Control arm / treatment arm** | Matched runs with regulation off and on. Regulation owes evidence. | `packages/regulator/evals/drift.json`: arms change only what the definition declares. [Evidence about the regulators](concepts/evidence-about-the-regulators.md). |
+| **Outcome grader / trajectory grader** | An outcome grader reads the resulting environment and never the transcript; a trajectory grader reads the records of how it got there. Both are needed. | `packages/regulator/src/graders.ts`. |
+| **Behaviour-bound check** | A criterion observed by content: an evidence expectation carries a check the host runs, and the record binds to that criterion alone. | `export-signature`. |
 
 ## 5. Diagnostic table — from observed failure to mechanism
 
@@ -91,7 +91,7 @@ reach for the mechanism. Reaching for the mechanism first is how harnesses accum
 gates nobody can explain. For the ways the *whole arrangement* fails — a function
 missing, absorbed by its neighbour, or disconnected — see [PATHOLOGIES.md](PATHOLOGIES.md).
 
-| You observed… | Variety diagnosis | Reach for | Module |
+| You observed… | Variety diagnosis | Reach for | Course module |
 | --- | --- | --- | --- |
 | Confident, wrong completion on a real repo | Regulatory variety below environmental variety; feedback delay too long | Host-run checks, thin vertical slices | M01, M06, M09 |
 | A rule in `AGENTS.md` is ignored under pressure | Enforcement at level 5 for a level-2 problem | `tool_call` gate or tool restriction | M02, M10 |

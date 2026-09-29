@@ -24,12 +24,12 @@
   },
   "evidence": { "tests": ["../regulator-pi/src/identity.test.ts", "../core/src/identity.test.ts", "src/instance.test.ts"] },
   "limitations": [
-    "Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (checkpoint 9) and the identity-untouched check (this lesson), and the drill measures the gap.",
+    "Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (identity-write-gate) and the identity-untouched check, and the drift suite measures the gap.",
     "The identity rendered is the worktree's copy, which a unit's shell can change before the run reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not a changed rule.",
     "Rendering is truncated at the budget policy's `identity.maxChars` (12000 characters unless the policy says otherwise); a set longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the files cut, the session's status line says so, and one advisory operational-signal per session records it on the unit — and refuses nothing: shortening the set is a person's decision."
   ],
-  "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
-  "ablation": {"switch": "extension:identity", "note": "Shares checkpoint 11 with the memory tool. The drift suite's control arm is the arm without it (and without the checks); lesson 12's drill 1 is the measurement."},
+  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "extension:identity", "note": "Shares the identity extension with the memory tool. The drift suite's control arm is the arm without it (and without the checks); the course's lesson 12 drill 1 is the measurement."},
   "retirement": {"condition": "Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone."},
   "introducedIn": "0.1.0"
 }

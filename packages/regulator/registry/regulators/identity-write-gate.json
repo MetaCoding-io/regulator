@@ -69,11 +69,11 @@
     "Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },
-  "ablation": {"switch": "extension:authority", "note": "Shares checkpoint 9 with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
+  "ablation": {"switch": "extension:authority", "note": "Shares the authority extension with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt."},
   "retirement": {"condition": "No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable."},
   "introducedIn": "0.1.0"
 }

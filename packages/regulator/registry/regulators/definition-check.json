@@ -62,7 +62,7 @@
     "The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

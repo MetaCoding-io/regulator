@@ -65,7 +65,7 @@
     "Implementation and cited-test paths are verified only in a source checkout (a `src/` beside the registry). An installed package ships `dist/` and no sibling packages' sources, so there `checkRegistry` carries the paths as provenance and `doctor` says it did not verify them; the release's `pnpm check` is where they were verified."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

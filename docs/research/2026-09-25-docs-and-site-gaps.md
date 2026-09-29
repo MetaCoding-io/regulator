@@ -235,9 +235,13 @@ where); what stands:
 5. ~~The rest of §2 and §3 as separate small pull requests, one page each.~~ Left: §3
    item 7's three short website sections (evals; S4 versus memory; registry card
    anatomy), each linking its concept page.
-6. The course-vocabulary sweep last, since the cards are its source. #56 landed (the
-   cards say "since 0.1.0"); the sweep over "lesson 08", owner `course-lab` and the
-   GLOSSARY's "where it lives" column is what remains of it.
+6. ~~The course-vocabulary sweep last, since the cards are its source.~~ Done
+   ([#93](https://github.com/MetaCoding-io/regulator/issues/93)): the cards name the
+   extension, the regulator, the debt row or the release instead of a lesson or a
+   checkpoint, and cite the course only where the course is the source (a drill, the
+   retired lesson 02 gate); `ownership.owner` is `jquacinella` on every record; the
+   GLOSSARY's "where it lives" column drops the module numbers and § 5 says its column
+   is the course's; PATHOLOGIES' "Reproduced by" column says the same.
 
 ## 8. Concept pages still missing (review of 2026-09-28)
 

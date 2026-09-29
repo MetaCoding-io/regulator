@@ -3,7 +3,7 @@
   "name": "Eval harness and graders",
   "status": "active",
   "vsmFunction": "S3*",
-  "purpose": "Evidence about the regulators: lesson 09 one recursion level up. A suite declares the fixture, the tasks in order, the arms (which checkpoint extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose) and trajectory graders (the records: refusals, retries, escalations, invariant violations), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.",
+  "purpose": "Evidence about the regulators: host-run verification one recursion level up. A suite declares the fixture, the tasks in order, the arms (which host extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose) and trajectory graders (the records: refusals, retries, escalations, invariant violations), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.",
   "absorbs": {
     "failureClass": "regulation-without-evidence",
     "description": "Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves."
@@ -66,7 +66,7 @@
     "Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

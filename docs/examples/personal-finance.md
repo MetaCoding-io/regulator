@@ -67,7 +67,7 @@ and `edit` are path-gated, and without `bash` the grant is complete at the tool
 boundary (the software profile grants `bash` and accepts that the closeout diff is what
 catches the rest). And `lib/` and `test/` — the ledger's own checks — are under no
 profile's writable prefixes, so a unit cannot weaken the check that will judge it. The
-`inherited-tests` check (lesson 09) guards the same thing for a workload that must let
+`inherited-tests` check guards the same thing for a workload that must let
 units write tests: the base's suite judges the unit's tree, and a shrunk inherited test
 file is refused. Here it passes by construction, and is declared anyway.
 
@@ -134,7 +134,7 @@ are the same. Section 2 shows what the identity fork looks like.
 
 Once: before a payment file exists. Not for the unknown merchant — that is an open item
 on the close, owed to a person as an obligation, delivered to the outbox, reminded; it
-does not stop anything. The distinction is the whole of lesson 13: a question that waits
+does not stop anything. The distinction is the whole of the algedonic path: a question that waits
 (consent) and a question that does not (an open item) are different kinds, and the kind
 is a typed field, not a tone of voice.
 
@@ -388,7 +388,7 @@ Said plainly, in the registry's spirit:
 - No S4. The statement arrives by hand. A watcher that raises an obligation when a new
   file lands under `statements/` is a short extension of `regulator watch`.
 - The unknown merchant is carried, not resolved. Resolving it is a `clarification`
-  question to a person (lesson 13) that this close does not ask; the open item is owed
+  question to a person that this close does not ask; the open item is owed
   instead.
 
 ## 6. The recipe, for your domain
@@ -406,4 +406,4 @@ Said plainly, in the registry's spirit:
 7. `regulator init` with the declared prefixes; `regulator doctor`; drive the first unit;
    read the evidence, not the summary.
 8. Script the close (a `bookkeeper` and a `careless`) so it runs under CI, then run it
-   live and compare — that is lesson 14's eval harness pointed at your domain.
+   live and compare — that is the eval harness pointed at your domain.

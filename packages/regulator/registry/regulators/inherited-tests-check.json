@@ -66,7 +66,7 @@
     "Regressions are matched by test name; two tests with the same name are one, and a renamed test that fails looks like a new failure of a test the base never had."
   ],
   "ownership": {
-    "owner": "course-lab",
+    "owner": "jquacinella",
     "introduced": "2026-09-24",
     "reviewBy": "2026-12-01"
   },
