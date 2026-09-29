@@ -1,19 +1,22 @@
 # Typed reporting and the VSM event store
 
-regulator registers three reporting tools alongside its native write/edit gate.
-Model inputs contain observations and requests. A trusted host supplies grants,
-source/destination/channel, UUID, UTC timestamp, session/unit provenance, and
-source revision. Every successful call commits one event to the separate
-`.regulator/events.db` (beside the instance's other records since lesson 15; the
-GSD-era `.gsd/vsm-runtime/vsm.db` path is gone) before returning a `persisted` receipt.
+regulator registers three reporting tools alongside its native write/edit gate. The
+division of responsibility between model and host is fixed. Model inputs contain
+observations and requests. A trusted host supplies everything that carries authority or
+provenance: the grants, the source, destination and channel, the UUID, the UTC timestamp,
+the session and unit provenance, and the source revision. Every successful call commits
+one event to the separate `.regulator/events.db` before it returns a `persisted` receipt.
+That database has lived beside the instance's other records since lesson 15; the GSD-era
+`.gsd/vsm-runtime/vsm.db` path is gone.
 
 ## Default authority and explicit host binding
 
-These three tools are the generic reporting extension, not part of a unit's session:
-the eleven extensions the Pi host declares do not include them, and a unit reports
-through `report_result` ([session tools](reference/tools.md)). The repository's root
-`pnpm pi` script registers all three but grants **no reporting capabilities**.
-An unmapped context fails closed. A trusted host can load an explicit wrapper
+These three tools make up the generic reporting extension, and they sit outside a unit's
+session: the eleven extensions the Pi host declares do not include them, and a unit
+reports through `report_result` instead ([session tools](reference/tools.md)). The
+repository's root `pnpm pi` script registers all three but grants no reporting
+capabilities, so under that script every reporting call is denied. An unmapped context
+fails closed. A trusted host that wants to grant something loads an explicit wrapper,
 using the same `pi -e /absolute/path/to/wrapper.js` mechanism:
 
 ```js
@@ -35,13 +38,13 @@ export default createRegulatorPiExtension({
 });
 ```
 
-Load this wrapper instead of also loading the default extension. The resolver
-runs on every tool invocation; a host can look up a grant using the session ID
-and revoke it without retaining a capability in model input. The host must
-establish the provenance of that lookup. Never derive grants from tool payloads,
+Load this wrapper in place of the default extension; do not load both. The resolver runs
+on every tool invocation, so a host can look up a grant by session ID on each call and
+revoke it later, and no capability ever has to be kept in model input. The host must
+establish the provenance of that lookup itself. Never derive grants from tool payloads,
 conversation text, or a model-selected role name.
 
-The closed host capability object supports only:
+The closed host capability object supports only these grants:
 
 | Grant | Resulting message authority |
 | --- | --- |
@@ -49,21 +52,21 @@ The closed host capability object supports only:
 | `reportOperationalSignal: true` | S1 sends an uncertainty `signal` to S3 |
 | `reportIndependentAudit: true` | An explicitly designated independent S3* context sends an `audit` to S3 |
 
-An empty capability object denies all reporting. No capability grants S5
-mutation permission. The authority ID and grant snapshot are stored with each
-event. A host that runs units (the course lab's orchestrator) supplies grants
-through this seam; the tools themselves add no routing.
+An empty capability object denies all reporting, and no capability grants permission to
+mutate S5. The authority ID and the grant snapshot are stored with each event, so the
+record shows under which grant it was made. A host that runs units (the course lab's
+orchestrator) supplies grants through this seam. The tools themselves add no routing.
 
 ## Payloads and internal messages
 
-The examples below are fixture reports, not actual findings about the repository.
-Complete accepted payloads and host grants live in
+The examples below are fixture reports; they make no actual finding about the repository.
+Complete accepted payloads, with the host grants that accept them, live in
 [`fixtures/reporting/examples.json`](../fixtures/reporting/examples.json).
-Every model-facing object is closed, including each evidence ref. The only
-model-facing evidence fields are `class`, `ref`, and optional `observation`.
-Evidence may be an empty array except for blocking/critical audit findings.
-The requested policy change is text, avoiding arbitrary nested objects at the
-provider schema boundary.
+Every model-facing object is closed, including each evidence ref, so an unknown field is
+a validation failure rather than an extra. The only model-facing evidence fields are
+`class`, `ref`, and an optional `observation`. Evidence may be an empty array, except for
+audit findings at blocking or critical severity. The requested policy change is plain
+text, which keeps arbitrary nested objects away from the provider schema boundary.
 
 ### Policy proposal
 
@@ -78,10 +81,11 @@ provider schema boundary.
 ```
 
 Under `proposePolicyAs: "S1"`, the host creates `kind: "policy-proposal"`,
-`source: "S1"`, `channel: "proposal"`, and `destination: "S5"`, with a UUID,
-timestamp, content, and provenance. The existing protocol field `severity`
-preserves **reported** severity; it is not an effective regulatory severity.
-No policy file is written and no approval is implied.
+`source: "S1"`, `channel: "proposal"`, and `destination: "S5"`, and adds the UUID,
+timestamp, content, and provenance. The existing protocol field `severity` holds the
+severity the reporter claimed; an effective regulatory severity would be a separate
+judgment, and this tool does not make it. No policy file is written and no approval is
+implied.
 
 ### Independent audit finding
 
@@ -95,12 +99,12 @@ No policy file is written and no approval is implied.
 }
 ```
 
-An ordinary S1 or unmapped context is denied. With the explicit independent
-audit grant, the host creates `kind: "audit-finding"`, `source: "S3*"`,
-`channel: "audit"`, and `destination: "S3"`. Empty evidence at blocking/critical
-reported severity is rejected before opening the event store. The grant
-establishes the reporting context; it does not independently verify the model's
-claims. Evidence refs are recorded, not executed or certified by this tool.
+An ordinary S1 or unmapped context is denied. With the explicit independent audit grant,
+the host creates `kind: "audit-finding"`, `source: "S3*"`, `channel: "audit"`, and
+`destination: "S3"`. Empty evidence at blocking or critical reported severity is rejected
+before the event store is opened. The grant establishes the reporting context and nothing
+more: it does not verify the model's claims. This tool records evidence refs; it neither
+executes nor certifies them.
 
 ### Uncertainty signal
 
@@ -118,32 +122,34 @@ claims. Evidence refs are recorded, not executed or certified by this tool.
 ```
 
 The operational grant produces `kind: "uncertainty-signal"`, `source: "S1"`,
-`channel: "signal"`, and `destination: "S3"`. Even `impact: "critical"` does not
-make this an algedonic signal. There is no numeric confidence or effective
-severity field. Follow-up remains a recommendation; no authoritative consumer,
-resolution boundary, escalation, or retry/pause decision is made.
+`channel: "signal"`, and `destination: "S3"`. Even `impact: "critical"` does not make
+this an algedonic signal; it stays on the `signal` channel. There is no numeric confidence
+field and no effective severity field. The follow-up remains a recommendation. The tool
+names no authoritative consumer, sets no resolution boundary, and makes no escalation or
+retry/pause decision.
 
-Adding `source`, `destination`, `channel`, `functions`, `capabilities`,
-`authority`, `requiredConsumers`, `effectiveSeverity`, `sourceRevision`, or
-similar unknown fields fails schema validation, including inside evidence.
-The execute handler revalidates input even if the host's initial validation
-was bypassed. Constructed internal events also validate against runtime schemas
-and the corresponding host grant before insertion.
+Adding `source`, `destination`, `channel`, `functions`, `capabilities`, `authority`,
+`requiredConsumers`, `effectiveSeverity`, `sourceRevision`, or a similar unknown field
+fails schema validation, including inside evidence. The execute handler revalidates its
+input even when the host's initial validation was bypassed. The internal event the host
+constructs is validated again, against the runtime schemas and against the corresponding
+host grant, before it is inserted.
 
 ## SQLite events and receipts
 
-Core uses Node's built-in `node:sqlite` (available in the supported Node runtime),
-with WAL, `synchronous=FULL`, a 5-second busy timeout, and explicit transactions.
-Node may print an experimental SQLite warning; no native third-party database
-package is required. See [Node's SQLite API](https://nodejs.org/api/sqlite.html).
+Core uses Node's built-in `node:sqlite`, which is available in the supported Node runtime,
+with WAL, `synchronous=FULL`, a 5-second busy timeout, and explicit transactions. Node may
+print an experimental SQLite warning. No native third-party database package is required.
+See [Node's SQLite API](https://nodejs.org/api/sqlite.html).
 
-`regulatory_events` has an increasing `sequence` primary key, unique `event_id`,
-timestamp/kind/channel/source/destination/subject columns, and canonical
-`event_json`. That JSON preserves the complete validated internal message
-(including evidence), the host authority snapshot, provenance, and tool name/call
-ID. Object keys are sorted when storing JSON. `PRAGMA user_version=1` identifies
-the schema. Update/delete triggers enforce append-only use through SQL; the API
-exposes only append, deterministic replay, and close.
+The `regulatory_events` table has an increasing `sequence` primary key, a unique
+`event_id`, columns for timestamp, kind, channel, source, destination and subject, and a
+canonical `event_json`. That JSON preserves the complete validated internal message,
+including its evidence, together with the host authority snapshot, the provenance, and the
+tool name and call ID. Object keys are sorted when the JSON is stored, so the same event
+always serializes the same way. `PRAGMA user_version=1` identifies the schema. Update and
+delete triggers enforce append-only use at the SQL level, and the API exposes only append,
+deterministic replay, and close.
 
 A stored event has this shape (content abbreviated):
 
@@ -163,12 +169,12 @@ A stored event has this shape (content abbreviated):
 }
 ```
 
-Optional host unit/source revision are stored in provenance; unit also appears
-on the message, and source revision is attached to evidence refs. If the host
-does not supply a revision, the adapter attempts `git rev-parse HEAD` in the
-project root. An unavailable revision is omitted, never invented.
+The optional host unit and source revision are stored in provenance. The unit also appears
+on the message, and the source revision is attached to each evidence ref. If the host does
+not supply a revision, the adapter attempts `git rev-parse HEAD` in the project root. A
+revision that cannot be found is omitted; the adapter never invents one.
 
-Only after `COMMIT` does the tool return this receipt in both text and details:
+Only after `COMMIT` does the tool return this receipt, in both text and details:
 
 ```json
 {
@@ -178,26 +184,28 @@ Only after `COMMIT` does the tool return this receipt in both text and details:
 }
 ```
 
-`RegulatoryEventStore.readAll()` returns `{sequence, event, receipt}` rows in
-ascending sequence order after reopening. Ordering does not depend on timestamps.
-Receipts keep the same event ID and sequence during replay. Separate successful
-tool invocations create separate events; a tool call ID is provenance, not an
-idempotency key. The store rejects duplicate event IDs. An open/insert/commit
-failure throws and cannot return a success receipt. Transactions roll back on
-failure; no JSONL or other competing history is maintained.
+`RegulatoryEventStore.readAll()` returns `{sequence, event, receipt}` rows in ascending
+sequence order after the store is reopened. That ordering comes from the sequence column
+and does not depend on timestamps. Receipts keep the same event ID and sequence during
+replay. Separate successful tool invocations create separate events, because a tool call
+ID is provenance and the store does not use it as an idempotency key. The store does
+reject duplicate event IDs. A failure to open, insert or commit throws, and a call that
+throws cannot return a success receipt. Transactions roll back on failure, and no JSONL or
+other competing history is maintained.
 
-The path is fixed relative to the trusted project root. Runtime directory,
-database, and SQLite sidecar symlink/hard-link aliases are rejected before open.
-The directory must remain host-controlled during operations; preflight path
-checks and SQLite triggers are not a sandbox against malicious concurrent
-filesystem writers or a process that can change the database schema. This store
-does not expand the native write/edit gate into complete filesystem enforcement.
+The path is fixed relative to the trusted project root. Symlink and hard-link aliases of
+the runtime directory, the database, and the SQLite sidecar files are rejected before the
+database is opened. The directory must remain host-controlled while the store operates.
+The preflight path checks and the SQLite triggers are not a sandbox: they do not defend
+against a malicious concurrent filesystem writer or a process that can change the database
+schema. This store does not expand the native write/edit gate into complete filesystem
+enforcement.
 
-The store never changes S5 artifacts. Routing, obligations, and retry/pause control
-are not implemented here: the control plane's router and obligation ledger
-fold the instance's regulatory log (`.regulator/signals.ndjson`), not this store. The
-span projection (lesson 14) reads both into one set of spans, so the two histories are
-correlated rather than merged (`docs/DEBT.md` rows 1 and 31, paid).
+The store never changes S5 artifacts. Routing, obligations, and retry/pause control are
+not implemented here. The control plane's router and obligation ledger fold the
+instance's regulatory log, `.regulator/signals.ndjson`, and they do not read this store.
+The span projection (lesson 14) reads both into one set of spans, so the two histories are
+correlated without being merged (`docs/DEBT.md` rows 1 and 31, paid).
 
 ## Reproduce the evidence without a model
 
@@ -212,11 +220,18 @@ pnpm check
 pnpm smoke:reporting
 ```
 
-The smoke command uses the real supported Pi SDK, explicit test-only grants,
-and a temporary project. It prints each accepted model payload, host-derived
-message in its reopened SQLite event, and matching receipt. It asserts ordinary
-context audit denial and `source: "S5"` payload rejection before recording the
-three events. The temporary database is removed afterward. No live model or
-credentials are used. The same smoke function runs in CI.
+The smoke command uses the real supported Pi SDK, explicit test-only grants, and a
+temporary project. For each of the three tools it prints the accepted model payload, the
+host-derived message as read back from its reopened SQLite event, and the matching
+receipt. Before it records those three events it asserts that an ordinary context is
+denied an audit and that a payload carrying `source: "S5"` is rejected. The temporary
+database is removed afterward. No live model or credentials are used, and the same smoke
+function runs in CI.
 
-The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project root for `.regulator/events.db`. It defaults to `ctx.cwd` for generic Pi. Git revision discovery continues to use execution `ctx.cwd` (or the explicit host `sourceRevision`), independently of the runtime root. Hosts running isolated units should bind the same canonical runtime root across contexts. Model payloads cannot select this root. Directory creation tolerates concurrent creators and retains post-create symlink checks.
+The trusted `HostReportingContext.runtimeRoot` optionally selects the canonical project
+root that `.regulator/events.db` lives under. For generic Pi it defaults to `ctx.cwd`. Git
+revision discovery still uses the execution `ctx.cwd` (or the explicit host
+`sourceRevision`), independently of the runtime root. Hosts that run isolated units should
+bind the same canonical runtime root across contexts, so that every unit's events land in
+the one store. Model payloads cannot select this root. Directory creation tolerates
+concurrent creators and keeps the post-create symlink checks.
