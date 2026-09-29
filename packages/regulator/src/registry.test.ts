@@ -27,6 +27,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.audit.identity-untouched-check.v1",
     "reg.audit.inherited-tests-check.v1",
     "reg.audit.post-merge-check.v1",
+    "reg.audit.pre-merge-trial.v1",
     "reg.authority.disposition-authority.v1",
     "reg.authority.identity-promotion.v1",
     "reg.authority.identity-write-gate.v1",

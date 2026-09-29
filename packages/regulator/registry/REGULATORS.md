@@ -42,7 +42,8 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.control.obligation-router.v1` | Obligation router | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.outbox-watcher.v1` | Outbox watcher | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.pause-gate.v1` | Pause gate | S3 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | retired | 2026-12-01 |
+| `reg.audit.pre-merge-trial.v1` | Pre-merge trial | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.progression-veto.v1` | Progression veto | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
@@ -1178,13 +1179,13 @@ does not do. `since` is the package version that first shipped the record.
 
 ## Post-merge check
 
-`reg.audit.post-merge-check.v1` · S3* · deterministic-gate · active · since 0.1.0
+`reg.audit.post-merge-check.v1` · S3* · deterministic-gate · retired · since 0.1.0
 
-**Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.
+**Purpose.** Retired in 0.1.4 — replaced by the pre-merge trial (reg.audit.pre-merge-trial.v1): the same checks run on a temporary merge commit before anything lands, and a failure refuses the reintegration instead of recording a red base for S3 to decide about. The instance-level obligation this check opened (an audit finding with no unit, holding every dispatch) is no longer produced by the loop; the router and the veto still honour one if something else raises it. Originally: The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.
 
 **Absorbs.** `green-branches-red-base` — Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand.
 
-**Mechanism.** `src/controller.ts` at `loop:verifyBase` (after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch)
+**Mechanism.** `src/controller.ts` at `loop:finishUnit` (verifyBase ran after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding (retired: the step is gone, the trial runs inside finishUnit)), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch)
 
 **Channels.** consumes `the base at the merge commit`, `the workload's check list` · emits `evidence (post-merge:<check>)`, `audit-finding with no unit → obligation on the instance`
 
@@ -1205,7 +1206,7 @@ does not do. `since` is the package version that first shipped the record.
 **Evidence.** `src/controller.test.ts`, `src/instance.test.ts`
 
 **Limitations.**
-- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
@@ -1213,7 +1214,48 @@ does not do. `since` is the package version that first shipped the record.
 
 **Ablation.** `loop:post-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures.
 
-**Retirement condition.** Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it.
+**Retirement condition.** Retired in 0.1.4: the pre-merge trial replaced it (docs/DEBT.md row 37). The record stays as history, the way vendor-write-gate does.
+
+
+## Pre-merge trial
+
+`reg.audit.pre-merge-trial.v1` · S3* · deterministic-gate · active · since 0.1.4
+
+**Purpose.** The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. Before anything lands, the loop merges the unit's branch in a temporary worktree detached at the base's HEAD, runs the workload's `run_tests` and `run_checks` on that merged tree, and appends the results to the audit log as evidence bound to the trial commit and to the unit that would land it. A tree that passes is landed by fast-forward to the very commit that was verified, so what the evidence is bound to is what the base carries. A tree that fails lands nothing: the base is exactly as it was, S2 records a `conflict` coordination signal saying what the merged tree failed, and the unit is blocked with the cause `conflict` — `repair` under the shipped recovery policy, with the failing checks as the hint. `unit finish` by hand runs the same trial with the project's own two checks. Replaces the post-merge check (reg.audit.post-merge-check.v1), which recorded a red base for S3 to decide about; here the base is never red.
+
+**Absorbs.** `semantic-conflict` — Two units pass every check on their own branches, merge without a conflict, and the base fails its suite: a coupling neither could see from its worktree, and the post-merge form of this check found it only after the base carried it.
+
+**Mechanism.** `src/worktree.ts` at `loop:finishUnit` (reintegrate with a trial: the temporary worktree under .regulator/trials/, the merge there, the trial, then merge --ff-only to the trial commit; trialMerge in controller.ts runs the workload's checks and binds the evidence), `cli:unit finish` (the same trial with run_tests and run_checks as the conventions discover them)
+
+**Channels.** consumes `the unit's branch and the base at HEAD`, `the workload's run_tests and run_checks (the unit type's; the project's own from the CLI)` · emits `evidence (pre-merge:*) bound to the trial commit`, `coordination-signal (conflict, blocking) when the merged tree fails`
+
+**Scope.** subjects unit, base · resources .regulator/trials/, .regulator/audit.ndjson, .regulator/signals.ndjson
+
+**Cost.** A second worktree per close (`git worktree add --detach`, removed before the close returns) and the project's test command once more, on the merged tree, before it lands. Measured on the drift fixture with the scripted reference unit, treatment arm, three repetitions: see `measured`. (measured: no measurable difference against the post-merge check it replaced: 862 ms → 836 ms per closed unit (mean of 18 closes each, scripted reference unit, treatment arm, three repetitions, 2026-09-29, one machine). The checks ran once more either way; what the trial adds is a worktree add and remove and a fast-forward, tens of milliseconds, inside the noise.)
+
+**May.**
+- refuse a reintegration whose merged tree fails the workload's checks, and say what failed
+- land exactly the commit that was verified, by fast-forward
+- refuse to land when the base moved between the trial and the landing
+
+**May not.**
+- resolve a conflict or repair a failing tree
+- revert anything: it lands or it does not
+- run the branch-relative checks (identity-untouched, export-signature, glossary-lint, inherited-tests) on a merged tree, where they have no meaning
+
+**Evidence.** `src/worktree.test.ts`, `src/controller.test.ts`, `src/instance.test.ts`, `src/finance.test.ts`
+
+**Limitations.**
+- Only `run_tests` and `run_checks` run on the merged tree; a coupling those two do not exercise lands. A workload cannot yet name a trial-only check.
+- The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.
+- A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
+- An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
+
+**Ownership.** course-lab · introduced 2026-09-29 · review by 2026-12-01
+
+**Ablation.** `loop:pre-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base; without the trial a semantic conflict would land and show as later units' check failures.
+
+**Retirement condition.** Never while two units can share a base: the trial is what makes a clean merge mean something.
 
 
 ## Profile write grant

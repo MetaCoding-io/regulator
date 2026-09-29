@@ -267,13 +267,24 @@ Not covered:
 
 ## Post-merge check (`reg.audit.post-merge-check.v1`)
 
-Enforced at `loop:verifyBase` (after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch) in `src/controller.ts`; S3*, deterministic-gate.
+Enforced at `loop:finishUnit` (verifyBase ran after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding (retired: the step is gone, the trial runs inside finishUnit)), `loop:runUnit` (progressionVeto: an open blocking obligation with no unit holds every dispatch) in `src/controller.ts`; S3*, deterministic-gate.
 
 Not covered:
 
-- It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.
+- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
+
+## Pre-merge trial (`reg.audit.pre-merge-trial.v1`)
+
+Enforced at `loop:finishUnit` (reintegrate with a trial: the temporary worktree under .regulator/trials/, the merge there, the trial, then merge --ff-only to the trial commit; trialMerge in controller.ts runs the workload's checks and binds the evidence), `cli:unit finish` (the same trial with run_tests and run_checks as the conventions discover them) in `src/worktree.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- Only `run_tests` and `run_checks` run on the merged tree; a coupling those two do not exercise lands. A workload cannot yet name a trial-only check.
+- The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.
+- A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
+- An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 

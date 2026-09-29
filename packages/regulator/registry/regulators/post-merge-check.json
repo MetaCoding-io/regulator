@@ -1,9 +1,9 @@
 {
   "id": "reg.audit.post-merge-check.v1",
   "name": "Post-merge check",
-  "status": "active",
+  "status": "retired",
   "vsmFunction": "S3*",
-  "purpose": "The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.",
+  "purpose": "Retired in 0.1.4 — replaced by the pre-merge trial (reg.audit.pre-merge-trial.v1): the same checks run on a temporary merge commit before anything lands, and a failure refuses the reintegration instead of recording a red base for S3 to decide about. The instance-level obligation this check opened (an audit finding with no unit, holding every dispatch) is no longer produced by the loop; the router and the veto still honour one if something else raises it. Originally: The closeout gate verifies a unit's branch at its HEAD; the base after the merge is a different tree, and two units that change disjoint files can break each other without a conflict. After every reintegration the loop runs the workload's `run_tests` and `run_checks` on the base at the merge commit, appends the results to the audit log as evidence bound to that revision and to the unit that landed it, and — on a failure — records an audit finding with no unit: the router turns it into an obligation on the instance itself, owed to S3 and blocking, and the progression veto holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision, and the record says who made it.",
   "absorbs": {
     "failureClass": "green-branches-red-base",
     "description": "Unit A renamed an export and fixed its test; unit B, branched earlier, added a test against the old name. Both passed at their own HEAD, the merge had no conflict, and main was red until somebody noticed by hand."
@@ -12,7 +12,7 @@
     "level": "deterministic-gate",
     "implementation": "src/controller.ts",
     "enforcementPoints": [
-      {"where": "loop", "point": "verifyBase", "note": "after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding"},
+      {"where": "loop", "point": "finishUnit", "note": "verifyBase ran after finishUnit: host checks on the base at the merge commit; evidence; the unit-less finding (retired: the step is gone, the trial runs inside finishUnit)"},
       {"where": "loop", "point": "runUnit", "note": "progressionVeto: an open blocking obligation with no unit holds every dispatch"}
     ]
   },
@@ -25,12 +25,12 @@
   },
   "evidence": { "tests": ["src/controller.test.ts", "src/instance.test.ts"] },
   "limitations": [
-    "It runs after the merge, not before: the base is red for the time it takes S3 to decide. A pre-merge trial on a temporary merge commit would refuse instead, at the cost of a second worktree per close; not built.",
+    "It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.",
     "Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.",
     "The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too."
   ],
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "loop:post-merge", "note": "A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures." },
-  "retirement": { "condition": "Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it." },
+  "retirement": { "condition": "Retired in 0.1.4: the pre-merge trial replaced it (docs/DEBT.md row 37). The record stays as history, the way vendor-write-gate does." },
   "introducedIn": "0.1.0"
 }

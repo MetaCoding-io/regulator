@@ -67,7 +67,7 @@ absorbs is a row for `docs/DEBT.md`.
 | Information withholding | a finding not reported | `report_intelligence` and the result report's `residualUncertainty` are typed and recorded; nothing forces their use | — (a unit that finds and does not tell is not reproduced) |
 | Ignored other agent's input | intelligence not consumed | `intelligence-intake` obligation and veto | `research-vendored-helper` |
 | Reasoning–action mismatch | the report claims what the tree does not show | `closeout-gate`, `inherited-tests-check`: the report's claims satisfy nothing | the **self-certifier** |
-| Premature termination | closed before verification | `closeout-gate` runs before reintegration; `post-merge-check` after | every closeout test |
+| Premature termination | closed before verification | `closeout-gate` runs before reintegration; `pre-merge-trial` before the merge lands | every closeout test |
 | No or incomplete verification | tests not run, or run by the unit only | `closeout-gate` (host-run), `inherited-tests-check` (host-owned suite) | the control arm; the self-certifier |
 | Incorrect verification | the wrong thing verified | evidence bound to the criterion, `export-signature` by content (M09, M14) | `verify.test.ts` |
 

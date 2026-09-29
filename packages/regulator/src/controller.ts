@@ -112,8 +112,8 @@ async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dis
 
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
-  | { status: "closed"; report: ResultReport; sha: string; signals: number; postMerge?: PostMergeOutcome }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
+  | { status: "closed"; report: ResultReport; sha: string; signals: number; preMerge?: PreMergeOutcome }
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch" | "base-moved"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
@@ -249,35 +249,44 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
   const signals = await emitReportSignals(options.repo, contract, report, now);
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
 
-  const finished = await finishUnit(exec, { repo: options.repo, unitId: contract.unitId, now });
+  // The pre-merge trial (#48): the unit was verified at its own HEAD; the base after the merge is a different tree, and two
+  // units that change disjoint files can break each other. The merge is tried first, the workload's checks run on the trial
+  // commit, and only a tree that passed lands. A failing trial is a conflict for S3 — the shipped policy says repair — and the
+  // base is exactly as it was.
+  let preMerge: PreMergeOutcome | undefined;
+  const finished = await finishUnit(exec, {
+    repo: options.repo, unitId: contract.unitId, now,
+    trial: async (trial) => { preMerge = await trialMerge(exec, { cwd: trial.cwd, sha: trial.sha, repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, now }); return { ok: preMerge.verdict !== "fail", reasons: preMerge.reasons }; },
+  });
   if (!finished.result.merged) {
-    await store.setStatus(contract.unitId, "blocked", `reintegration: ${finished.result.reason}`);
-    return { status: "blocked", reason: finished.result.reason, ...(finished.signal ? { detail: finished.signal.observation } : {}) };
+    const reason = finished.result.reason === "trial-failed" ? "conflict" : finished.result.reason;
+    const detail = finished.signal?.observation ?? (finished.result.reason === "base-moved" ? `the base moved from ${finished.result.from.slice(0, 7)} to ${finished.result.to.slice(0, 7)} during the trial; nothing landed` : undefined);
+    await store.setStatus(contract.unitId, "blocked", `reintegration: ${reason}${detail ? ` — ${detail}` : ""}`);
+    return { status: "blocked", reason, ...(detail ? { detail } : {}) };
   }
   await store.setStatus(contract.unitId, "closed");
-  // Post-merge evidence (lesson 15): the unit was verified at its own HEAD; the base after the merge is a different tree.
-  const postMerge = await verifyBase(exec, { repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, sha: finished.result.sha, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
-  return { status: "closed", report, sha: finished.result.sha, signals, ...(postMerge ? { postMerge } : {}) };
+  return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
 }
 
-export interface PostMergeOutcome {
+export interface PreMergeOutcome {
   verdict: "pass" | "fail" | "inconclusive";
+  /** The trial commit: what the evidence is bound to, and — when it landed — what the base carries. */
   sha: string;
   reasons: string[];
 }
 
 /**
- * Run the workload's checks on the base at the merge commit. Two units can change disjoint files and break each other;
- * the closeout gate cannot see that, because it verifies a branch at its HEAD. A failure here is not the unit's — the
- * unit closed on fresh evidence — it is the instance's: an audit finding with no unit, which the router turns into an
- * obligation owed to S3 that holds every dispatch until S3 dispositions it. Nothing is reverted: a revert is a decision.
+ * The workload's `run_tests` and `run_checks` on the merged tree, in the trial worktree, before anything lands. The results
+ * are evidence bound to the trial commit and to the unit that would land it, whatever the verdict: a refused merge is on the
+ * record too. The branch-relative checks (identity-untouched, export-signature, glossary-lint, inherited-tests) have no
+ * meaning on a merged tree and are not run.
  */
-async function verifyBase(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; sha: string; now: () => number }): Promise<PostMergeOutcome | undefined> {
-  const checks = options.unitType.checks.filter((c) => c === "run_tests" || c === "run_checks");
-  if (!checks.length) return undefined;
-  const conventions = await discoverConventions(options.repo);
-  const results = (await runHostChecks(exec, { cwd: options.repo, checks, conventions })).map((r) => ({ ...r, check: `post-merge:${r.check}` }));
+async function trialMerge(exec: Exec, options: { cwd: string; sha: string; repo: string; contract: WorkContract; unitType: UnitType; attempt: number; now: () => number }): Promise<PreMergeOutcome> {
+  const checks = checkNames(options.unitType.checks).filter((c) => c === "run_tests" || c === "run_checks");
+  if (!checks.length) return { verdict: "pass", sha: options.sha, reasons: [] };
+  const conventions = await discoverConventions(options.cwd);
+  const results = (await runHostChecks(exec, { cwd: options.cwd, checks, conventions })).map((r) => ({ ...r, check: `pre-merge:${r.check}` }));
   const records = bindEvidence(results, { unitId: options.contract.unitId, attempt: options.attempt, contract: { id: options.contract.id, version: options.contract.version }, expectations: [], revision: options.sha, now: options.now });
   const log = new AuditLog(options.repo);
   for (const record of records) await log.appendEvidence(record);
@@ -285,16 +294,6 @@ async function verifyBase(exec: Exec, options: { repo: string; contract: WorkCon
   const inconclusive = results.filter((r) => r.verdict === "inconclusive");
   const verdict = failing.length ? "fail" : inconclusive.length === results.length ? "inconclusive" : "pass";
   const reasons = [...failing, ...inconclusive].map((r) => `${r.check}: ${r.observation.split("\n").slice(0, 3).join("; ")}`);
-  if (verdict === "fail") {
-    const finding: AuditFinding = {
-      id: randomUUID(), timestamp: new Date(options.now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking",
-      subject: `base ${options.sha.slice(0, 7)} fails its checks after reintegrating ${options.contract.unitId}`, invariant: "INV-003",
-      observation: `${failing.map((r) => `${r.check} — ${r.observation.split("\n").slice(0, 3).join("; ")}`).join("; ")}. The unit passed at its own HEAD; the merged base does not. Nothing was reverted.`,
-      evidence: records.map((r) => ({ class: r.class, ref: r.check, observation: r.observation.split("\n")[0] ?? "", sourceRevision: options.sha })),
-      suggestedAction: "decide on the base: revert the merge, or dispatch a repair unit against it; every dispatch is held until this is dispositioned",
-    };
-    await appendSignal(options.repo, finding);
-  }
   return { verdict, sha: options.sha, reasons };
 }
 

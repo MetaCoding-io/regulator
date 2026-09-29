@@ -63,7 +63,7 @@ import { hostname, userInfo } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
-import { summarizeVerdict } from "@metacoding.io/regulator-checks";
+import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
 import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
@@ -237,11 +237,23 @@ ${rationale}`]]) {
       console.log(`next: cd ${started.worktree.path} && pi -e ${host.extensionPath("tools")} -e ${host.extensionPath("coordination")} --unit ${unitId}`);
     }
   } else if (command === "unit" && sub === "finish" && rest[0]) {
-    const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0] });
+    // A unit finished by hand has no contract to name its checks; the trial runs the project's own (#48): run_tests and run_checks,
+    // as the conventions discover them on the merged tree. Nothing lands unless they pass.
+    const finished = await finishUnit(realExec, { repo: process.cwd(), unitId: rest[0], trial: async (trial) => {
+      const results = await runHostChecks(realExec, { cwd: trial.cwd, checks: ["run_tests", "run_checks"], conventions: await discoverConventions(trial.cwd) });
+      const failing = results.filter((r) => r.verdict === "fail");
+      return { ok: failing.length === 0, reasons: failing.map((r) => `pre-merge:${r.check}: ${r.observation.split("\n").slice(0, 3).join("; ")}`) };
+    } });
     if (finished.result.merged) {
-      console.log(`unit ${rest[0]}: reintegrated as ${finished.result.sha}; worktree and branch removed; lease ${finished.released ? "released" : "was not held"}`);
+      console.log(`unit ${rest[0]}: reintegrated as ${finished.result.sha} (the merged tree passed run_tests and run_checks first); worktree and branch removed; lease ${finished.released ? "released" : "was not held"}`);
     } else if (finished.result.reason === "conflict") {
       console.error(`unit ${rest[0]}: conflict in ${finished.result.conflicts.join(", ")} — merge aborted, nothing resolved, coordination signal recorded in .regulator/signals.ndjson`);
+      process.exit(1);
+    } else if (finished.result.reason === "trial-failed") {
+      console.error(`unit ${rest[0]}: not reintegrated — the merged tree fails its checks at ${finished.result.sha.slice(0, 7)}: ${finished.result.reasons.join("; ")}. The base is as it was; coordination signal recorded in .regulator/signals.ndjson`);
+      process.exit(1);
+    } else if (finished.result.reason === "base-moved") {
+      console.error(`unit ${rest[0]}: not reintegrated — the base moved from ${finished.result.from.slice(0, 7)} to ${finished.result.to.slice(0, 7)} during the trial; run \`unit finish\` again`);
       process.exit(1);
     } else {
       console.error(`unit ${rest[0]}: not reintegrated (${finished.result.reason}${"current" in finished.result ? `: on ${finished.result.current}` : ""})`);

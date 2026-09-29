@@ -77,7 +77,7 @@ seam. Of the active regulators:
 
 - **In the control plane** (22): the contract gate, the closeout gate and every host
   check, the obligation router and the progression veto, the recovery router,
-  reintegration and the post-merge check, the S5 decision path and identity promotion,
+  reintegration and the pre-merge trial, the S5 decision path and identity promotion,
   delivery and the outbox watcher, disposition authority, the definition check, the
   eval harness, the span projection, and the instance manifest. These run the same under
   any host, and under none.

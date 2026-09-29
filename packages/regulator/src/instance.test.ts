@@ -50,7 +50,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 43);
+  assert.equal(result.manifest.definition.registry, 44);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
@@ -121,11 +121,11 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
   assert.deepEqual(decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"]]);
   assert.match(hints[1] ?? "", /glossary-lint — the glossary's words drifted on the branch: comment "\/\/ task: shout": task \(say unit\)/);
   assert.equal(outcome.status, "closed", JSON.stringify(outcome));
-  assert.deepEqual(outcome.status === "closed" ? outcome.postMerge : undefined, { verdict: "pass", sha: outcome.status === "closed" ? outcome.sha : "", reasons: [] }, "the merged base was checked with the discovered npm test script");
+  assert.deepEqual(outcome.status === "closed" ? outcome.preMerge : undefined, { verdict: "pass", sha: (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), reasons: [] }, "the merged tree was checked with the discovered npm test script before it landed, and what landed is the trial commit");
   assert.match(await readFile(path.join(repo, "lib", "greet.js"), "utf8"), /HI/);
   const evidence = (await new (await import("@metacoding.io/regulator-core")).AuditLog(repo).forUnit("g1")).evidence;
-  assert.deepEqual(evidence.filter((r) => r.check.startsWith("post-merge:")).map((r) => [r.check, r.verdict, r.revision === (outcome.status === "closed" ? outcome.sha : "")]), [["post-merge:run_checks:syntax:lib/greet.js", "pass", true], ["post-merge:run_tests", "pass", true]]);
-  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
+  assert.deepEqual(evidence.filter((r) => r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict, r.revision.startsWith(outcome.status === "closed" ? outcome.sha : "-")]), [["pre-merge:run_checks:syntax:lib/greet.js", "pass", true], ["pre-merge:run_tests", "pass", true]]);
+  assert.deepEqual((await evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("pre-merge:")).map((r) => r.check)), ["run_checks:syntax:lib/greet.js", "run_tests", "inherited-tests", "identity-untouched", "export-signature", "glossary-lint"], "the workload's checks, under the project's own conventions");
   assert.equal((await new ObligationLedger(repo).open()).filter((o) => o.blocks).length, 0);
   const lint = evidence.find((r) => r.attempt === 2 && r.check === "glossary-lint")!;
   assert.equal(lint.verdict, "pass", "the commit-message word is advisory under this workload");

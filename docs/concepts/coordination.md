@@ -52,12 +52,17 @@ When a unit passes closeout, the loop merges its branch into the base:
   contract fixes, and check again.
 
 A clean merge proves only that no two units changed the same lines. Two units that change
-different files can still break each other. So after every merge the loop runs
-`run_tests` and `run_checks` again, on the base at the merge commit: the **post-merge
-check**. A failure is recorded as evidence and as an audit finding with no unit. The
-router turns it into a blocking [obligation](/concepts/obligations) on the instance
-itself, owed to S3, and the veto then holds every dispatch until S3 dispositions it.
-Nothing is reverted by itself: a revert is a decision, and the record says who made it.
+different files can still break each other. So the merge is tried before it lands: the
+**pre-merge trial**. The loop merges the branch in a temporary worktree detached at the
+base's HEAD, runs `run_tests` and `run_checks` on that merged tree, and records the
+results as evidence bound to the trial commit. A tree that passes is landed by
+fast-forward to the very commit that was verified, so what the base carries is what was
+checked. A tree that fails lands nothing: the base is exactly as it was, S2 records a
+`conflict` coordination signal saying what the merged tree failed, and the unit is
+blocked with the cause `conflict` — `repair` under the shipped policy, with the failing
+checks as the next attempt's hint. Until 0.1.3 the same checks ran *after* the merge and a
+failure held every dispatch through an obligation on the instance itself while the base
+stayed red; that record, `post-merge-check`, is retired as history.
 
 ## The thrash detector
 
@@ -125,7 +130,7 @@ grant it.
 | worktree and branch | dispatch | the unit's changes, in isolation | — |
 | lease and lease gate | dispatch; every tool call; every turn | `.regulator/leases/<unit>.json` | a refusal the session sees |
 | reintegration | close | a merge commit on the base | a `conflict` coordination signal |
-| post-merge check | after every merge | evidence at the merge commit | an audit finding with no unit |
+| pre-merge trial | before every merge lands | evidence at the trial commit | a `conflict` coordination signal when the merged tree fails |
 | thrash detector | after every write and edit | a count per file | an `oscillation` coordination signal |
 | effect journal | around irreversible effects; session start | `.regulator/effects.ndjson` | — |
 | profile grant | session start; every tool call | — | a refusal the session sees |
@@ -143,9 +148,9 @@ In short:
 - **The shell is not path-gated.** The lease gate covers `bash`, but only the session's
   own worktree is leased. The write grant covers `write` and `edit`, and `bash` can still
   write elsewhere by absolute path.
-- **Conflicts are line-level; the post-merge check is after the fact.** The base is red
-  while S3 decides. A pre-merge trial on a temporary merge commit would refuse instead;
-  it is not built.
+- **Conflicts are line-level, and the trial runs two checks.** The pre-merge trial runs
+  `run_tests` and `run_checks` on the merged tree; a coupling those do not exercise lands.
+  A base that moves between the trial and the landing is refused, not re-trialed.
 - **The thrash detector sees only `write` and `edit`.** Edits made through `bash` are
   invisible to it, and its count restarts with each session.
 - **Only named effects are journaled.** `bash` is not: its side effects are unknown by

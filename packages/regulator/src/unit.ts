@@ -16,7 +16,7 @@ import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
 import {
   baseRoot, createUnitWorktree, currentBranch, reintegrate, removeUnitWorktree, unitBranch,
-  type ReintegrationResult, type UnitWorktree,
+  type ReintegrationResult, type Trial, type UnitWorktree,
 } from "./worktree.js";
 
 export { LEASES_RELATIVE_DIR, SIGNALS_RELATIVE_PATH, appendSignal } from "@metacoding.io/regulator-core";
@@ -90,6 +90,8 @@ export interface FinishUnitOptions {
   repo: string;
   unitId: string;
   now?: () => number;
+  /** The pre-merge trial (#48): run on the merged tree before anything lands; a failure refuses the reintegration. */
+  trial?: Trial;
 }
 
 export interface FinishedUnit {
@@ -108,13 +110,15 @@ export async function finishUnit(exec: Exec, options: FinishUnitOptions): Promis
   const store = leaseStoreFor(repo, options.now);
   const branch = unitBranch(options.unitId);
   const base = await currentBranch(exec, repo);
-  const result = await reintegrate(exec, repo, branch, base);
+  const result = await reintegrate(exec, repo, branch, base, options.trial ? { trial: options.trial } : {});
   if (result.merged) {
     const worktree: UnitWorktree = { unitId: options.unitId, branch, path: path.join(repo, WORKTREES_RELATIVE_DIR, options.unitId) };
     await removeUnitWorktree(exec, repo, worktree, { deleteBranch: true });
     return { result, released: await store.release(options.unitId) };
   }
-  if (result.reason !== "conflict") return { result, released: false };
+  if (result.reason !== "conflict" && result.reason !== "trial-failed") return { result, released: false };
+  // A textual conflict and a failing trial are the same thing to S3 — two units' work does not combine — and S2 says so
+  // the same way; the observation says which, and for the trial, what the merged tree failed.
   const signal: CoordinationSignal = {
     id: randomUUID(),
     timestamp: new Date((options.now ?? Date.now)()).toISOString(),
@@ -126,8 +130,10 @@ export async function finishUnit(exec: Exec, options: FinishUnitOptions): Promis
     subject: branch,
     unit: options.unitId,
     coordination: "conflict",
-    observation: `Reintegrating ${branch} into ${base} conflicts in ${result.conflicts.join(", ")}; the merge was aborted and nothing was resolved.`,
-    evidence: result.conflicts.map((ref) => ({ class: "file" as const, ref })),
+    observation: result.reason === "conflict"
+      ? `Reintegrating ${branch} into ${base} conflicts in ${result.conflicts.join(", ")}; the merge was aborted and nothing was resolved.`
+      : `Reintegrating ${branch} into ${base} merges cleanly and the merged tree fails its checks at ${result.sha.slice(0, 7)}: ${result.reasons.join("; ")}. Nothing landed; the base is as it was.`,
+    evidence: result.reason === "conflict" ? result.conflicts.map((ref) => ({ class: "file" as const, ref })) : result.reasons.map((r) => ({ class: "command" as const, ref: r.split(":").slice(0, 2).join(":"), observation: r, sourceRevision: result.sha })),
     resource: base,
   };
   await appendSignal(repo, signal);

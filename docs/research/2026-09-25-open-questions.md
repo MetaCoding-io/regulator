@@ -93,7 +93,7 @@ migrated by hand from the survey (the function names — `bindEvidence`, `delive
 host list as the one point that is not an event, since the model router and the trust
 rule bite where the host opens the session, not in it), the refusal by name, and tests
 holding each list against the code (the host's subscribed events and registered tools,
-the loop's functions, the usage line's subcommands, core's exports). The tally the figure
+the loop's functions, the usage line's subcommands, core's exports; `verifyBase` left the list with #48). The tally the figure
 needs is now a group-by: `host:tool_call` carries eight records, `loop:runUnit` seven,
 `loop:auditUnit` six. Next: the generator.
 

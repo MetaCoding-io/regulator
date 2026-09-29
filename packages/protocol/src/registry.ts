@@ -32,7 +32,7 @@ export const ENFORCEMENT_POINTS = {
   /** A tool the host's extensions register for a unit session: the gate is the tool's execute. */
   tool: ["report_result", "report_intelligence", "ask_human", "notify_owner", "remember", "propose_policy_change", "read_conventions", "run_tests", "run_checks"],
   /** The orchestrator: the S3 loop's steps and the unit lifecycle around them (`packages/regulator/src/controller.ts`, `unit.ts`; `runHostChecks` in `packages/checks`). */
-  loop: ["runUnit", "auditUnit", "runHostChecks", "routeUnit", "closeUnit", "driveUnit", "verifyBase", "routeAndDeliver", "startUnit", "finishUnit"],
+  loop: ["runUnit", "auditUnit", "runHostChecks", "routeUnit", "closeUnit", "driveUnit", "routeAndDeliver", "startUnit", "finishUnit"],
   /** A `regulator` subcommand, as the usage line spells it. */
   cli: [
     "status", "fixture", "unit start", "unit finish", "unit status", "contract check", "unit dispatch", "unit drive", "unit route", "unit show", "unit close",

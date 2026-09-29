@@ -78,7 +78,7 @@ not a hope.
     <text x="408" y="168" text-anchor="start">dispositioned: run again</text>
   </g>
 </svg>
-<figcaption>The S3 loop. The host, not the session, decides whether a unit passed; a failure the policy cannot absorb by itself becomes an obligation that holds the unit until someone dispositions it. After a close reintegrates the branch, the base is checked again at the merge commit, and a failure there holds every unit until S3 decides.</figcaption>
+<figcaption>The S3 loop. The host, not the session, decides whether a unit passed; a failure the policy cannot absorb by itself becomes an obligation that holds the unit until someone dispositions it. Before a close lands, the merged tree is checked in a trial worktree, and a tree that fails lands nothing: the unit repairs, and the base is never red.</figcaption>
 </figure>
 
 Three things about the loop are deliberate:
@@ -104,8 +104,8 @@ Messages between functions carry control semantics, and the type says which:
 | --- | --- | --- | --- | --- |
 | `operational-signal` | S1 | something about the work: a blocker, a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; the identity extension, once per session, when the rendered identity is truncated | S3 |
 | `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claim to a severity | the loop, from a result report's `residualUncertainty` | S3 |
-| `coordination-signal` | S2 | a lease expired, a conflict, oscillation | the thrash detector in the session; reintegration on a conflict | S3 |
-| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout; the post-merge check | S3 |
+| `coordination-signal` | S2 | a lease expired, a conflict, oscillation | the thrash detector in the session; reintegration on a conflict, textual or found by the pre-merge trial | S3 |
+| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout | S3 |
 | `intelligence-signal` | S4 | the environment changed, or will | `report_intelligence` in a research unit | S3 |
 | `policy-proposal` | any | a request to change identity or policy; never a mutation | `propose_policy_change` | S5 |
 | `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate`; see [asking a person](/concepts/asking-a-person) | a person |

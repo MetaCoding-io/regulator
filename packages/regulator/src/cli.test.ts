@@ -200,7 +200,7 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 43 regulators\n/);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 44 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -228,14 +228,14 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.doesNotMatch(r.stdout, /manifest/);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(43 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(44 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
   r = await regulator(dir, "init");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /is already an instance/);
   r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /^ok {6} node/m);
-  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 43 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 44 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
   assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
   assert.match(r.stdout, /\n0 problem\(s\)(, \d+ warning\(s\))?\n$/, "a warning (the seed over its context budget, #51) is not a problem");
   r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");

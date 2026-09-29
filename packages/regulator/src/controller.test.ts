@@ -343,7 +343,7 @@ test("evidence, not claims: a report that says the tests pass does not close the
   assert.deepEqual(audit.evidence.filter((r) => r.attempt === 1).map((r) => [r.check, r.verdict]), [["run_checks:syntax:src/index.js", "pass"], ["run_tests", "fail"], ["inherited-tests", "fail"], ["identity-untouched", "pass"], ["export-signature", "inconclusive"], ["glossary-lint", "pass"]], "in the order the workload names the checks; the inherited suite fails too, because the unit broke a test it inherited; a signature check with no expectation carrying one is inconclusive, and binds to nothing");
   assert.equal(audit.evidence[0]?.producedBy, "S3*");
   assert.notEqual(audit.evidence[0]?.revision, audit.evidence.at(-1)?.revision, "each attempt's evidence binds to its own revision");
-  assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("post-merge:")).map((r) => r.id), "the passing verdict considered only the fresh records (the post-merge records come after it)");
+  assert.deepEqual(audit.verdicts[1]?.evidence, audit.evidence.filter((r) => r.attempt === 2 && !r.check.startsWith("pre-merge:")).map((r) => r.id), "the passing verdict considered only the fresh records (the pre-merge records come after it)");
   const findings = (await readSignals(repo)).filter((s) => s.kind === "audit-finding");
   assert.equal(findings.length, 1);
   assert.equal(findings[0]?.source, "S3*");
@@ -681,15 +681,19 @@ test("a wait ceiling (#52): with `waitCeilingMs` declared, a unit paused past it
   assert.equal(await routeUnit(gitExec, { repo: repo2, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction, now }), undefined, "a year later, still waiting: no ceiling was declared");
 });
 
-test("post-merge evidence (lesson 15): two units change disjoint files and break each other; each closes on fresh evidence at its own HEAD, the merged base fails its checks, and the failure is an obligation on the instance itself that holds every dispatch until S3 dispositions it", async (t) => {
-  const { AuditLog, ObligationLedger } = await import("@metacoding.io/regulator-core");
+test("the pre-merge trial (#48): two units change disjoint files and break each other; each passes at its own HEAD, the merge is clean, and the trial on the merged tree refuses the second before it lands — the base stays green, the failure is the unit's conflict to repair, and the landed commit is the one that was verified", async (t) => {
+  const { AuditLog, ObligationLedger, readSignals } = await import("@metacoding.io/regulator-core");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { routeUnit } = await import("./controller.js");
   const repo = await initRepo(t);
   const workload = await loadWorkload();
   const base = { ...(await withPolicy()), repo, workload, owner: "alice" };
+  const recovery = await loadRecoveryPolicy();
   const baseContract = await loadContract(contractFile);
   const contractFor = (unitId: string): WorkContract => ({ ...baseContract, id: `tc-${unitId}`, unitId, fixed: [], delegated: [], unresolved: [] });
   const reportFor2 = (c: WorkContract, attempt: number) => reportFor(c, { attempt });
-  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const head = async () => (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const before = await head();
 
   // A renames the export and updates the only test — a behaviour change on purpose, so its contract exempts that file from
   // the inherited suite; without the exemption inherited-tests would refuse A for the very rewrite it was asked to make.
@@ -701,36 +705,55 @@ test("post-merge evidence (lesson 15): two units change disjoint files and break
     await s.writeReport(reportFor2(aContract, r.attempt));
   }, repo) });
   assert.equal(a.status, "closed", JSON.stringify(a));
-  assert.deepEqual(a.status === "closed" ? a.postMerge : undefined, { verdict: "pass", sha: a.status === "closed" ? a.sha : "", reasons: [] });
+  const afterA = await head();
+  assert.equal(a.status === "closed" ? a.preMerge?.verdict : undefined, "pass");
+  assert.equal(a.status === "closed" ? a.preMerge?.sha : undefined, afterA, "what landed is the trial commit that was verified, not a second merge");
+  assert.equal(a.status === "closed" ? a.sha : undefined, afterA.slice(0, 7));
+  assert.deepEqual((await new AuditLog(repo).forUnit("a")).evidence.filter((r) => r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict, r.revision === afterA]), [["pre-merge:run_checks:syntax:src/index.js", "pass", true], ["pre-merge:run_tests", "pass", true]]);
 
-  // B branched before A merged (its branch is reset to the earlier base) and adds a test against the old name: disjoint files, clean merge, broken base.
-  const b = await runUnit(gitExec, { ...base, contract: contractFor("b"), dispatcher: unitThat(async (r, s) => {
-    await gitExec("git", ["reset", "-q", "--hard", before], { cwd: r.worktree });
-    await writeFile(path.join(r.worktree, "test", "b.test.js"), 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { answer } from "../src/index.js";\ntest("b", () => { assert.equal(answer, 42); });\n');
-    await gitExec("git", ["add", "-A"], { cwd: r.worktree });
-    await gitExec("git", ["commit", "-qm", "b: another test against the old name"], { cwd: r.worktree });
+  // B branched before A merged (its branch is reset to the earlier base) and adds a test against the old name: disjoint files, clean merge, broken tree.
+  const bDispatcher = unitThat(async (r, s) => {
+    if (r.attempt === 1) {
+      await gitExec("git", ["reset", "-q", "--hard", before], { cwd: r.worktree });
+      await writeFile(path.join(r.worktree, "test", "b.test.js"), 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { answer } from "../src/index.js";\ntest("b", () => { assert.equal(answer, 42); });\n');
+      await gitExec("git", ["add", "-A"], { cwd: r.worktree });
+      await gitExec("git", ["commit", "-qm", "b: another test against the old name"], { cwd: r.worktree });
+    } else {
+      // The repair the router asked for: merge the base in and write the test against the name the base has.
+      await gitExec("git", ["merge", "-q", "--no-edit", "main"], { cwd: r.worktree });
+      await writeFile(path.join(r.worktree, "test", "b.test.js"), 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { theAnswer } from "../src/index.js";\ntest("b", () => { assert.equal(theAnswer, 42); });\n');
+      await gitExec("git", ["commit", "-qam", "b: against the new name"], { cwd: r.worktree });
+    }
     await s.writeReport(reportFor2(contractFor("b"), r.attempt));
-  }, repo) });
-  assert.equal(b.status, "closed", "B passed every check at its own HEAD, and the merge had no file conflict");
-  assert.equal(b.status === "closed" && b.postMerge?.verdict, "fail");
-  assert.match(b.status === "closed" ? b.postMerge?.reasons.join("\n") ?? "" : "", /^post-merge:run_tests: 1 passed, 1 failed/m);
-  const evidence = (await new AuditLog(repo).forUnit("b")).evidence.filter((r) => r.check.startsWith("post-merge:"));
-  assert.deepEqual(evidence.map((r) => [r.check, r.verdict, r.revision === (b.status === "closed" ? b.sha : "")]), [["post-merge:run_checks:syntax:src/index.js", "pass", true], ["post-merge:run_tests", "fail", true]], "evidence at the merge commit, bound to the unit that landed it");
+  }, repo);
+  const b = await runUnit(gitExec, { ...base, contract: contractFor("b"), dispatcher: bDispatcher });
+  assert.equal(b.status, "blocked", "B passed every check at its own HEAD and the merge had no file conflict; the merged tree fails, so nothing landed");
+  assert.equal(b.status === "blocked" && b.reason, "conflict", "a failing trial is a conflict for the recovery policy");
+  assert.match(b.status === "blocked" ? b.detail ?? "" : "", /^Reintegrating unit\/b into main merges cleanly and the merged tree fails its checks at [0-9a-f]{7}: pre-merge:run_tests: 1 passed, 1 failed/);
+  assert.equal(await head(), afterA, "the base is exactly as A left it: green");
+  assert.equal((await gitExec("git", ["worktree", "list"], { cwd: repo })).stdout.includes("trials"), false, "the trial worktree is gone");
+  const trial = (await new AuditLog(repo).forUnit("b")).evidence.filter((r) => r.check.startsWith("pre-merge:"));
+  assert.deepEqual(trial.map((r) => [r.check, r.verdict, r.revision !== afterA && /^[0-9a-f]{40}$/.test(r.revision)]), [["pre-merge:run_checks:syntax:src/index.js", "pass", true], ["pre-merge:run_tests", "fail", true]], "evidence at the trial commit, which the base does not carry");
+  const conflicts = (await readSignals(repo)).filter((s) => s.kind === "coordination-signal" && s.unit === "b");
+  assert.deepEqual(conflicts.map((s) => [s.kind === "coordination-signal" && s.coordination, "severity" in s ? s.severity : undefined]), [["conflict", "blocking"]]);
   const ledger = new ObligationLedger(repo);
-  const held = (await ledger.open()).filter((o) => o.unit === undefined);
-  assert.deepEqual(held.map((o) => [o.concern, o.consumer, o.severity, o.blocks, o.subject.replace(/[0-9a-f]{7}/, "<sha>")]), [["audit-finding", "S3", "blocking", true, "base <sha> fails its checks after reintegrating b"]]);
-  assert.equal((await ledger.open("b")).length, 0, "the unit itself owes nothing: it closed on fresh evidence");
+  assert.deepEqual((await ledger.open()).filter((o) => o.unit === undefined), [], "nothing is owed by the instance itself: the base never carried the failure");
 
-  // Nothing dispatches on a broken base.
-  const refused = await runUnit(gitExec, { ...base, contract: contractFor("c"), dispatcher: async () => { throw new Error("must not dispatch"); } });
-  assert.equal(refused.status, "refused");
-  assert.match(refused.status === "refused" ? refused.problems[0]?.message ?? "" : "", /is open on the instance itself \(no unit: the base failed its checks after a merge\): base [0-9a-f]{7} fails its checks after reintegrating b; it must be dispositioned before dispatch/);
-  await ledger.resolve(held[0]!.id, { by: "S3", disposition: "rework", rationale: "dispatch c to repair the base" });
+  // Routed as a conflict: repair, with the hint the next attempt needs; the base stays open for other units meanwhile.
+  const decision = await routeUnit(gitExec, { repo, unitId: "b", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction });
+  assert.deepEqual([decision?.cause, decision?.action], ["conflict", "repair"]);
+  assert.match(decision?.hint ?? "", /merged tree fails its checks[^]*Merge the base branch into the unit branch/);
   const c = await runUnit(gitExec, { ...base, contract: contractFor("c"), dispatcher: unitThat(async (r, s) => {
-    await writeFile(path.join(r.worktree, "test", "b.test.js"), 'import test from "node:test";\nimport assert from "node:assert/strict";\nimport { theAnswer } from "../src/index.js";\ntest("b", () => { assert.equal(theAnswer, 42); });\n');
-    await gitExec("git", ["commit", "-qam", "c: repair b's test"], { cwd: r.worktree });
+    await writeFile(path.join(r.worktree, "src", "other.js"), "export const other = 1;\n");
+    await gitExec("git", ["add", "-A"], { cwd: r.worktree });
+    await gitExec("git", ["commit", "-qm", "c: unrelated"], { cwd: r.worktree });
     await s.writeReport(reportFor2(contractFor("c"), r.attempt));
   }, repo) });
-  assert.equal(c.status, "closed", JSON.stringify(c));
-  assert.equal(c.status === "closed" && c.postMerge?.verdict, "pass", "the base is whole again");
+  assert.equal(c.status, "closed", `other units dispatch and land while B repairs: ${JSON.stringify(c)}`);
+
+  // B's repair lands: the trial passes on the tree that includes A and C.
+  const repaired = await runUnit(gitExec, { ...base, contract: contractFor("b"), dispatcher: bDispatcher, ...(decision?.hint ? { hint: decision.hint } : {}) });
+  assert.equal(repaired.status, "closed", JSON.stringify(repaired));
+  assert.equal(repaired.status === "closed" ? repaired.preMerge?.verdict : undefined, "pass");
+  assert.equal(repaired.status === "closed" ? repaired.preMerge?.sha : undefined, await head());
 });

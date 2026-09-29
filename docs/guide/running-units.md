@@ -33,11 +33,12 @@ contract ──► dispatch ──► verify ──► route ──► close
 5. **Close.** A passing verdict with every required expectation met reintegrates the
    branch into the base and retires the lease. A criterion no check can observe waits
    for `unit accept <id> <criterion> --by <who>`; `unit close <id>` re-audits a blocked
-   unit without a new attempt. After the merge the host runs `run_tests` and
-   `run_checks` once more on the base at the merge commit: the branch passed on its own
-   tree, and two units that change disjoint files can still break each other. A failure
-   there is an audit finding with no unit, an obligation owed to S3 that holds every
-   dispatch until it is dispositioned; nothing is reverted by itself.
+   unit without a new attempt. Before the merge lands, the host merges the branch in a
+   temporary worktree and runs `run_tests` and `run_checks` on the merged tree: the
+   branch passed on its own tree, and two units that change disjoint files can still
+   break each other. A tree that passes lands as the very commit that was verified; a
+   tree that fails lands nothing, and the unit is blocked with the cause `conflict`,
+   which the recovery policy answers with `repair`. The base is never red.
 
 ## The fixtures
 

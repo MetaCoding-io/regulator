@@ -321,8 +321,8 @@ What the test asserts is what you would look for in the control room:
 
 - **f1–f4 close** on evidence the host produced: `run_checks`, `run_tests` (the ledger's
   suite, discovered from `package.json`), `inherited-tests`, `identity-untouched`, `glossary-lint` — each
-  bound to the unit's committed revision; and after each merge `post-merge:run_tests`
-  on the base.
+  bound to the unit's committed revision; and before each merge lands, `pre-merge:run_tests`
+  on the merged tree.
 - **The unknown merchant** is still `uncategorized` in the merged ledger, and the report
   carries it under *Open items*; the categorize unit's report records it as *surfaced*,
   with residual uncertainty.
