@@ -102,7 +102,7 @@ Messages between functions carry control semantics, and the type says which:
 
 | Kind | From | Means | Emitted by | Routed to |
 | --- | --- | --- | --- | --- |
-| `operational-signal` | S1 | something about the work: a blocker, a deviation | the loop, from a result report's `emergentDecisions` and `deviations` | S3 |
+| `operational-signal` | S1 | something about the work: a blocker, a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; the identity extension, once per session, when the rendered identity is truncated | S3 |
 | `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claim to a severity | the loop, from a result report's `residualUncertainty` | S3 |
 | `coordination-signal` | S2 | a lease expired, a conflict, oscillation | the thrash detector in the session; reintegration on a conflict | S3 |
 | `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout; the post-merge check | S3 |
