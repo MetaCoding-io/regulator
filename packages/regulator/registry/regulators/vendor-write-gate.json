@@ -47,5 +47,5 @@
   "retirement": {
     "condition": "Already superseded: retire when checkpoint 9 is the minimum an arm loads, keeping the record as history."
   },
-  "introducedIn": "M02"
+  "introducedIn": "0.1.0"
 }

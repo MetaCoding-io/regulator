@@ -30,5 +30,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A read model over the stores; switching it off changes no run." },
   "retirement": { "condition": "Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate." },
-  "introducedIn": "M14"
+  "introducedIn": "0.1.0"
 }

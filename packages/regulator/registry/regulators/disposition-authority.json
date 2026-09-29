@@ -29,5 +29,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "policy:interaction.people", "note": "A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything."},
   "retirement": {"condition": "Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts."},
-  "introducedIn": "M13"
+  "introducedIn": "0.1.0"
 }

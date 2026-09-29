@@ -323,7 +323,7 @@ const PAGE = String.raw`<!doctype html>
       const life = ((view.definition && view.definition.lifecycle) || []).find((l) => l.id === r.id);
       el.innerHTML = "<section><h2>Regulator</h2><p><b>" + esc(r.name) + "</b><br><span class='mono'>" + esc(r.id) + "</span></p>" +
         (life ? "<p class='banner'>review by " + esc(life.reviewBy) + (life.overdueDays > 0 ? " (overdue " + life.overdueDays + "d)" : "") + " · ablation " + esc(life.ablation ? life.ablation.switch : "missing") + (life.ablation ? " — " + esc(life.ablation.note) : "") + " · retire when: " + esc(life.retirement || "unstated") + "</p>" : "") +
-        "<p>" + esc(r.vsmFunction) + " " + chip(r.mechanism.level) + " " + chip(r.status) + (r.introducedIn ? " " + chip(r.introducedIn) : "") + "</p><dl>" +
+        "<p>" + esc(r.vsmFunction) + " " + chip(r.mechanism.level) + " " + chip(r.status) + (r.introducedIn ? " " + chip("since " + r.introducedIn) : "") + "</p><dl>" +
         "<dt>purpose</dt><dd>" + esc(r.purpose) + "</dd>" +
         "<dt>absorbs</dt><dd><b>" + esc(r.absorbs.failureClass) + "</b> — " + esc(r.absorbs.description) + "</dd>" +
         "<dt>mechanism</dt><dd><span class='mono'>" + esc(r.mechanism.implementation) + "</span><br>enforcement points: " + esc(r.mechanism.enforcementPoints.join(", ") || "—") + "</dd>" +

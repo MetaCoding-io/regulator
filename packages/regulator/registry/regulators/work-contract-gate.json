@@ -67,5 +67,5 @@
   "retirement": {
     "condition": "Never: an unsound contract cannot be verified against. Individual checks retire when three model versions of S3 planning never produce the defect."
   },
-  "introducedIn": "M06"
+  "introducedIn": "0.1.0"
 }

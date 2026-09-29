@@ -42,7 +42,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Definition versions: a migration note per release and `regulator upgrade` for instances | row 39 | [#53](https://github.com/MetaCoding-io/regulator/issues/53) |
 | Behaviour checks beyond `Function.length`: a probe a contract can carry | row 35 | [#54](https://github.com/MetaCoding-io/regulator/issues/54) |
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
-| Registry records carry the release version they shipped in, not a checkpoint number | — | [#56](https://github.com/MetaCoding-io/regulator/issues/56) |
 | The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
 | Enforcement points as a typed field, refused by `regulator check` when unknown; the first slice of the generated figures | — | [#76](https://github.com/MetaCoding-io/regulator/issues/76) |
 

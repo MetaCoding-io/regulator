@@ -30,5 +30,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature)."},
   "retirement": {"condition": "Never: independent verification is INV-003. Individual checks retire under their own conditions."},
-  "introducedIn": "M09"
+  "introducedIn": "0.1.0"
 }

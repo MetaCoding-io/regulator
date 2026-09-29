@@ -79,5 +79,5 @@
   "retirement": {
     "condition": "Never: a control system that cannot measure itself only grows. Individual graders retire when the drift they measure has not appeared in a quarter of live runs."
   },
-  "introducedIn": "M14"
+  "introducedIn": "0.1.0"
 }

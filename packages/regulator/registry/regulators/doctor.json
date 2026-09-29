@@ -29,5 +29,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A check a person or CI runs; it takes part in no unit's run." },
   "retirement": { "condition": "Never as a mechanism; individual checks retire when what they check is checked earlier (a Pi pin enforced by the package manager retires the pin check)." },
-  "introducedIn": "M15"
+  "introducedIn": "0.1.0"
 }

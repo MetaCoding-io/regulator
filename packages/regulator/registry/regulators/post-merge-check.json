@@ -29,5 +29,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "loop:post-merge", "note": "A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base and would show a red base as later units' check failures." },
   "retirement": { "condition": "Retire when a pre-merge trial replaces it: the same checks on a temporary merge commit, refusing the reintegration instead of recording it." },
-  "introducedIn": "M15"
+  "introducedIn": "0.1.0"
 }

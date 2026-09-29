@@ -29,5 +29,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "An operating process; an instance without it is the instance of every lesson before 15, and the read model still shows what is owed." },
   "retirement": { "condition": "Retire when delivery is a hook on the ledger's append (an event-driven channel) rather than a poll over the outbox." },
-  "introducedIn": "M15"
+  "introducedIn": "0.1.0"
 }

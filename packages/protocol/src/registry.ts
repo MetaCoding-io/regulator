@@ -62,7 +62,8 @@ export const RegulatorRecordSchema = Type.Object(
     ablation: Type.Optional(Type.Object({ switch: AblationSwitchSchema, note: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
     /** Lesson 14: when this regulator may be retired — typically no significant regression in ablation across N model versions and M suites. */
     retirement: Type.Optional(Type.Object({ condition: Type.String({ minLength: 1 }) }, { additionalProperties: false })),
-    introducedIn: Type.Optional(Type.String({ pattern: "^M\\d{2}$" })),
+    /** The package version that first shipped the record (semver); a new record carries the version it lands in. */
+    introducedIn: Type.Optional(Type.String({ pattern: "^\\d+\\.\\d+\\.\\d+$" })),
   },
   { additionalProperties: false },
 );

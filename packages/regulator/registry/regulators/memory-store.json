@@ -73,5 +73,5 @@
   "retirement": {
     "condition": "The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact."
   },
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

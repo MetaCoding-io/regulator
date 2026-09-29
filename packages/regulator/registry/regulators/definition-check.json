@@ -73,5 +73,5 @@
   "retirement": {
     "condition": "Never: a declared control plane is checked as a whole or it is assembled."
   },
-  "introducedIn": "M12"
+  "introducedIn": "0.1.0"
 }

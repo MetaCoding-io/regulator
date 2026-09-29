@@ -29,5 +29,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is every instance before lesson 15." },
   "retirement": { "condition": "Never while the harness installs into repositories it did not create; the manifest is how it knows what it was told." },
-  "introducedIn": "M15"
+  "introducedIn": "0.1.0"
 }

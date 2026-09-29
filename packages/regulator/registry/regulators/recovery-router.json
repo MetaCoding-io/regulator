@@ -30,5 +30,5 @@
   "ownership": { "owner": "course-lab", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "policy:recovery.rules", "note": "A policy whose every rule is escalate is the ablation: every blocked unit goes to a person. The harness does not throw policy switches."},
   "retirement": {"condition": "Never as a mechanism; individual rules retire when a cause is not seen in a quarter of runs."},
-  "introducedIn": "M08"
+  "introducedIn": "0.1.0"
 }

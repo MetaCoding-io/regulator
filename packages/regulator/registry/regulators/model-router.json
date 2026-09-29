@@ -74,5 +74,5 @@
   "retirement": {
     "condition": "No primary-model failure in a quarter of live runs, or a provider-side retry that makes the fallback redundant."
   },
-  "introducedIn": "M07"
+  "introducedIn": "0.1.0"
 }
