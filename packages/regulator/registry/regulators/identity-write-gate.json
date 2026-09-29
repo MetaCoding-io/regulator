@@ -69,7 +69,7 @@
     "Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

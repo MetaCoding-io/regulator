@@ -31,7 +31,7 @@
     "The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.",
     "Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8)."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is what an instance had before `init` declared one." },
   "retirement": { "condition": "Never while the harness installs into repositories it did not create; the manifest is how it knows what it was told." },
   "introducedIn": "0.1.0"

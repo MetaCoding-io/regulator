@@ -31,7 +31,7 @@
     "The block is what compaction carries; the contract section in the system prompt is regenerated every turn regardless. This regulator preserves progress, not the contract text.",
     "Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:budget", "note": "Shares the budget extension with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried."},
   "retirement": {"condition": "No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction."},
   "introducedIn": "0.1.0"

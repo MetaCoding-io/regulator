@@ -33,7 +33,7 @@
     "A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.",
     "Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:budget", "note": "The harness drops the budget extension from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},
   "retirement": {"condition": "No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models."},
   "introducedIn": "0.1.0"

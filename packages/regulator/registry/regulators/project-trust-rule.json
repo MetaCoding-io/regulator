@@ -61,7 +61,7 @@
     "The project_trust answer covers the CLI path (`pnpm cp9`); a learner who launches pi by hand with trust remembered as yes has trusted the project themselves."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

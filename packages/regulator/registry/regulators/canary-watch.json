@@ -59,7 +59,7 @@
     "By the time message_end records a leak the text has left the process: the finding is evidence of exposure, not prevention. Network egress is not watched at all; the lesson names it as the boundary a container provides."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

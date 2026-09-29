@@ -56,7 +56,7 @@
     "The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it."
   ],
   "ownership": {
-    "owner": "jquacinella",
+    "owner": "regulator-maintainers",
     "introduced": "2026-09-22",
     "reviewBy": "2026-12-01"
   },

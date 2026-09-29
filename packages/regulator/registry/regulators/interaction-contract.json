@@ -28,7 +28,7 @@
     "Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).",
     "A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible."
   ],
-  "ownership": { "owner": "jquacinella", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:algedonic", "note": "Shares the algedonic extension with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows."},
   "retirement": {"condition": "Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads."},
   "introducedIn": "0.1.0"
