@@ -135,7 +135,7 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
-**Mechanism.** `../regulator-pi/src/budget.ts` at `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
+**Mechanism.** `../regulator-pi/src/budget.ts` at `session_start (ledger written, or resumed on an attempt already metered)`, `turn_end (ctx.abort)`, `tool_call`, `runUnit (close: budget-exhausted attempt)`
 
 **Channels.** consumes `policy (budgets)`, `message_end usage`, `model_select` · emits `budget ledger (execution store)`
 
@@ -157,8 +157,9 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 **Limitations.**
 - Ceilings are checked at turn end and tool call, so the turn that crosses one completes; a single very large response is not cut off mid-stream.
-- Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero.
-- The wall-clock ceiling is measured from session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
+- Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero. Tokens sum every message's total, so a long context is paid again on every turn: the default 400,000-token ceiling is about thirty turns of a large context, which the live drift run's memory unit reached on both arms.
+- The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
+- A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
@@ -1005,13 +1006,13 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 
 `reg.control.model-router.v1` · S3 · deterministic-gate · active · introduced in M07
 
-**Purpose.** Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session. Nothing outside the route is ever tried, and every model an attempt ran on is in its ledger.
+**Purpose.** Run each unit type on the model the policy routes it to, and on a provider failure move to the next declared fallback in a fresh session on the same attempt. Nothing outside the route is ever tried, every model an attempt ran on is in its one ledger, and a halt by the budget guard is not a failure to fail over from.
 
 **Absorbs.** `single-model-dependence` — A harness whose only model is rate-limited, deprecated or down has zero regulatory variety: every unit stops, and nothing records why.
 
-**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `piDispatcher (model choice, failover)`, `model_select (ledger)`
+**Mechanism.** `../regulator-pi/src/dispatcher.ts` at `piDispatcher (model choice, failover)`, `attemptEnd (halt vs provider failure, from the ledger)`, `model_select (ledger)`
 
-**Channels.** consumes `policy (models)`, `model availability (ModelRuntime)` · emits `budget ledger models[]`
+**Channels.** consumes `policy (models)`, `model availability (ModelRuntime)`, `budget ledger (exhausted)` · emits `budget ledger models[]`
 
 **Scope.** subjects unit type · resources model, provider
 
@@ -1025,13 +1026,14 @@ Generated from `registry/regulators/*.json` by `regulator docs`. Do not edit by 
 - use a model the route does not name
 - upgrade or downgrade on judgement of task difficulty
 - change the route
+- fail over an attempt the budget guard halted
 
 **Evidence.** `../core/src/policy.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
-- Failover starts a fresh session: the fallback model does not see what the primary did, only the contract, and the ledger of the first session records the wasted attempt cost.
-- Availability means an API key is configured, not that the provider is up; a provider that fails on the first call still costs one session.
-- The dispatcher itself is exercised only with a live model (the lesson's drill); the route resolution it relies on is what the tests cover.
+- Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.
+- Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.
+- Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
 
 **Ownership.** course-lab · introduced 2026-09-22 · review by 2026-12-01
 

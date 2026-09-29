@@ -57,6 +57,32 @@ test("budget meter: counts tokens, cost and turns; wall-clock from the injected 
   assert.equal(wall.check(), "wallClockMs");
 });
 
+test("budget meter: a session that opens on an attempt already metered resumes its ledger — consumption, models and a halt carry over; another attempt starts clean", () => {
+  let clock = 1_700_000_000_000;
+  const ceiling = { tokens: 1000, wallClockMs: 60_000, turns: 3, attempts: 2 };
+  const primary = new BudgetMeter({ unitId: "u1", attempt: 1, ceiling, now: () => clock, model: "anthropic/claude-sonnet-4-5" });
+  primary.recordUsage({ input: 600, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 600, cost: 0.2 });
+  primary.recordTurn();
+  clock += 5_000;
+  const fallback = new BudgetMeter({ unitId: "u1", attempt: 1, ceiling, now: () => clock, model: "openai/gpt-5", resume: primary.ledger });
+  assert.deepEqual(fallback.ledger.models, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], "the attempt ran on both, in order");
+  assert.equal(fallback.ledger.consumed.tokens, 600, "what the primary spent stays on the attempt");
+  assert.equal(fallback.ledger.consumed.turns, 1);
+  assert.equal(fallback.ledger.consumed.wallClockMs, 5_000, "the clock runs from the attempt's start, not the fallback's");
+  fallback.recordUsage({ input: 500, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 500, cost: 0.1 });
+  fallback.recordTurn();
+  assert.equal(fallback.check(), "tokens", "the ceiling is the attempt's: the fallback cannot spend it twice");
+
+  const halted = new BudgetMeter({ unitId: "u1", attempt: 1, ceiling, now: () => clock, model: "google/gemini-3.8-flash", resume: fallback.ledger });
+  assert.equal(halted.exhausted?.dimension, "tokens", "a halted attempt stays halted whichever session opens on it");
+  assert.equal(halted.check(), "tokens");
+
+  const next = new BudgetMeter({ unitId: "u1", attempt: 2, ceiling, now: () => clock, model: "anthropic/claude-sonnet-4-5", resume: fallback.ledger });
+  assert.equal(next.ledger.consumed.tokens, 0, "a different attempt's ledger is not resumed");
+  assert.equal(next.exhausted, undefined);
+  assert.deepEqual(next.ledger.models, ["anthropic/claude-sonnet-4-5"]);
+});
+
 test("preserved context carries the contract allocation, the evidence pointers and the touched files, and nothing of it depends on a model", () => {
   const contract: WorkContract = {
     kind: "task", id: "tc-1", version: 2, unitId: "u1", unitType: "implement",

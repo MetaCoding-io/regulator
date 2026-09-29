@@ -107,6 +107,53 @@ test("budget guard: turns and wall-clock are ceilings too; without a unit nothin
   assert.match(b.notices.at(-1)?.message ?? "", /nothing is metered/);
 });
 
+test("budget guard: a fallback session on the same attempt resumes the ledger — the primary's spend, its model and its halt are kept, not overwritten", async (t) => {
+  const repo = await initRepo(t);
+  const { contract } = await contracted(repo);
+  const started = await startUnit(gitExec, { repo, unitId: contract.unitId, owner: "alice" });
+  const policy = await tinyPolicy(repo, { tokens: 1000, turns: 5 });
+  let clock = 1_700_000_000_000;
+  const store = new ExecutionStore(repo);
+
+  const primary = mockPi();
+  primary.flags.set("policy", policy);
+  createBudgetExtension({ now: () => clock, summarize: async () => undefined })(primary.pi);
+  const a = ctxFor(started.worktree.path, { model: { provider: "anthropic", id: "claude-sonnet-4-5" } });
+  await primary.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, a.ctx);
+  primary.handlers.get("message_end")!(usage(700, 0.02), a.ctx);
+  clock += 2000;
+  await primary.handlers.get("turn_end")!(turnEnd, a.ctx);
+  assert.equal(a.state.aborts, 0);
+
+  // The provider fails; the router opens a fresh session on the fallback for the same attempt.
+  const fallback = mockPi();
+  fallback.flags.set("policy", policy);
+  createBudgetExtension({ now: () => clock, summarize: async () => undefined })(fallback.pi);
+  const b = ctxFor(started.worktree.path, { model: { provider: "openai", id: "gpt-5" } });
+  await fallback.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, b.ctx);
+  const resumed = (await store.getBudget(contract.unitId, 1)) as BudgetLedger;
+  assert.deepEqual(resumed.models, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], "the attempt's models, in order");
+  assert.equal(resumed.consumed.tokens, 700, "the primary's spend is still on the attempt");
+  assert.equal(resumed.consumed.turns, 1);
+  assert.match(b.statuses.budget ?? "", /700\/1000 tok/);
+  fallback.handlers.get("message_end")!(usage(400, 0.01), b.ctx);
+  await fallback.handlers.get("turn_end")!(turnEnd, b.ctx);
+  assert.equal(b.state.aborts, 1, "the ceiling is the attempt's, so the fallback crosses it with what the primary spent");
+  const halted = (await store.getBudget(contract.unitId, 1)) as BudgetLedger;
+  assert.equal(halted.exhausted?.dimension, "tokens");
+  assert.deepEqual(halted.consumed, { tokens: 1100, cost: 0.03, wallClockMs: 2000, turns: 2 });
+
+  // A third session on the halted attempt (the router must not open one; if something does, the halt holds).
+  const third = mockPi();
+  third.flags.set("policy", policy);
+  createBudgetExtension({ now: () => clock, summarize: async () => undefined })(third.pi);
+  const c = ctxFor(started.worktree.path, { model: { provider: "google", id: "gemini-3.8-flash" } });
+  await third.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, c.ctx);
+  const write = { type: "tool_call", toolName: "write", toolCallId: "w", input: { path: "src.txt", content: "" } };
+  assert.equal((third.handlers.get("tool_call")!(write, c.ctx) as { block: boolean }).block, true, "a halted attempt stays halted in a new session");
+  assert.equal(((await store.getBudget(contract.unitId, 1)) as BudgetLedger).exhausted?.dimension, "tokens", "the ledger is not reset");
+});
+
 test("contract-preserving compaction: the summary begins with the contract allocation, evidence pointers and touched files, whether or not a model summary is available", async (t) => {
   const repo = await initRepo(t);
   const { contract } = await contracted(repo);

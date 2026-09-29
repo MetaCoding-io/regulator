@@ -112,9 +112,14 @@ export function createBudgetExtension(options: BudgetExtensionOptions = {}): (pi
         const unit = await store.getUnit(unitId);
         contract = unit ? await store.getContract(unitId, unit.contract.version) : undefined;
         const unitType = contract?.unitType ?? unit?.unitType ?? "implement";
+        // A ledger already on this attempt means another session metered it first (a fallback after a provider
+        // failure): the attempt resumes its ledger, so what the primary consumed stays on the attempt and a halt stays a halt.
+        const attempt = (unit?.attempts ?? 0) + 1;
+        const prior = await store.getBudget(unitId, attempt);
         meter = new BudgetMeter({
-          unitId, attempt: (unit?.attempts ?? 0) + 1, ceiling: ceilingFor(policy, unitType), now,
+          unitId, attempt, ceiling: ceilingFor(policy, unitType), now,
           ...(ctx.model ? { model: `${ctx.model.provider}/${ctx.model.id}` } : {}),
+          ...(prior ? { resume: prior } : {}),
         });
         await store.writeBudget(meter.ledger);
         ctx.ui.setStatus("budget", `budget: ${summarizeLedger(meter.ledger)}`);

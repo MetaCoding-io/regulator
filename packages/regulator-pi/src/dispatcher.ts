@@ -27,8 +27,9 @@ import { fileURLToPath } from "node:url";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createAgentSession, DefaultResourceLoader, getAgentDir, ModelRuntime, SessionManager, SettingsManager, type AgentSession } from "@earendil-works/pi-coding-agent";
-import { chooseModels } from "@metacoding.io/regulator-core";
-import { LAB_ROOT, type Dispatcher, type Host, type HostDispatcherOptions } from "@metacoding.io/regulator";
+import type { BudgetLedger } from "@metacoding.io/regulator-protocol";
+import { ExecutionStore, chooseModels } from "@metacoding.io/regulator-core";
+import { LAB_ROOT, baseRoot, gitExec, type Dispatcher, type Host, type HostDispatcherOptions } from "@metacoding.io/regulator";
 
 const dist = fileURLToPath(new URL("./", import.meta.url));
 export const SETTINGS_PATH = path.join(LAB_ROOT, "settings.json");
@@ -144,8 +145,25 @@ export async function openUnitSession(options: OpenUnitSessionOptions): Promise<
   return { session, refused, extensionErrors };
 }
 
+/** How an attempt's session ended, read from the last assistant message and the attempt's ledger. */
+export type AttemptEnd = "completed" | "halted" | "provider-error";
+
+/**
+ * A session that ends on an error is not always a provider failure. The budget guard halts an attempt by aborting
+ * the session, and Pi records that abort as an errored assistant message; the ledger, not the message, says which
+ * it was. A halted attempt is *not* failed over: the ceiling was the policy's, and the fallback would spend a
+ * second session on an attempt the guard already closed (found by the first live drift run on 0.1.2, where every
+ * halt became "every model in the route failed" and the router's fallbacks overwrote the ledger).
+ */
+export function attemptEnd(last: { stopReason?: string } | undefined, ledger: BudgetLedger | undefined): AttemptEnd {
+  if (ledger?.exhausted) return "halted";
+  if (last?.stopReason === "error") return "provider-error";
+  return "completed";
+}
+
 export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
-  return async ({ worktree, unitId, contract, contractPath, profile, route, policyPath, hint }) => {
+  return async ({ worktree, unitId, contract, contractPath, profile, attempt, route, policyPath, hint }) => {
+    const store = new ExecutionStore(await baseRoot(gitExec, worktree));
     const modelRuntime = await ModelRuntime.create();
     const available = (await modelRuntime.getAvailable()).map((m) => `${m.provider}/${m.id}`);
     const candidates = chooseModels(route, available);
@@ -172,8 +190,13 @@ export function piDispatcher(options: PiDispatcherOptions = {}): Dispatcher {
         await session.prompt(hint ? `${contract.objective}\n\nFrom the orchestrator, about your previous attempt: ${hint}` : contract.objective);
         if (options.echo) process.stdout.write("\n");
         const last = [...session.messages].reverse().find((m) => m.role === "assistant");
-        if (last && last.role === "assistant" && last.stopReason === "error") {
-          lastError = last.errorMessage ?? "provider error";
+        const end = attemptEnd(last && last.role === "assistant" ? last : undefined, await store.getBudget(unitId, attempt));
+        if (end === "halted") {
+          if (options.echo) process.stdout.write(`[regulator] unit ${unitId}: the budget guard halted attempt ${attempt}; not failing over\n`);
+          return { sessionId: session.sessionId };
+        }
+        if (end === "provider-error") {
+          lastError = (last && last.role === "assistant" && last.errorMessage) || "provider error";
           if (options.echo) process.stdout.write(`[regulator] ${ref} failed: ${lastError}; trying the next declared fallback\n`);
           continue;
         }

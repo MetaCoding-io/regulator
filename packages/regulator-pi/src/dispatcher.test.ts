@@ -6,7 +6,7 @@ import { ExecutionStore, UNITS_RELATIVE_DIR } from "@metacoding.io/regulator-cor
 import { LAB_ROOT, POLICY_PATH, gitExec, initRepo, startUnit } from "@metacoding.io/regulator";
 import { loadContract } from "./contract.js";
 import { CONTRACT_ENTRY_TYPE } from "./contract.js";
-import { openUnitSession } from "./dispatcher.js";
+import { attemptEnd, openUnitSession } from "./dispatcher.js";
 
 // The first live drift run (0.1.1) found every unit ending as `no-report` with nothing metered: the dispatcher created
 // sessions but never bound them, and binding is what emits `session_start`. This drives the real dispatcher path — the
@@ -38,4 +38,18 @@ test("openUnitSession binds the definition's extensions: the contract, the profi
   } finally {
     session.dispose();
   }
+});
+
+// The first live run on 0.1.2 ended two units with "every model in the route failed": the budget guard had halted
+// the attempt at its token ceiling, Pi recorded the abort as an errored message, and the dispatcher failed over to
+// two fallbacks that overwrote the ledger. The ledger decides; the message alone does not.
+test("attemptEnd: a halt recorded in the ledger is not a provider failure; an errored message without one is; anything else completed", () => {
+  const ledger = { unitId: "u", attempt: 1, ceiling: { tokens: 10, wallClockMs: 10, turns: 10 }, consumed: { tokens: 10, cost: 0, wallClockMs: 1, turns: 1 }, startedAt: "t", updatedAt: "t", models: ["anthropic/claude-sonnet-4-5"], compactions: [] };
+  assert.equal(attemptEnd({ stopReason: "error" }, { ...ledger, exhausted: { dimension: "tokens", at: "t" } }), "halted", "the guard's abort surfaces as an errored message; the ledger says it was the ceiling");
+  assert.equal(attemptEnd({ stopReason: "aborted" }, { ...ledger, exhausted: { dimension: "turns", at: "t" } }), "halted");
+  assert.equal(attemptEnd({ stopReason: "error" }, ledger), "provider-error", "no ceiling crossed: the provider failed, fail over");
+  assert.equal(attemptEnd({ stopReason: "error" }, undefined), "provider-error", "no ledger at all (the guard never started): still a provider failure");
+  assert.equal(attemptEnd({ stopReason: "stop" }, ledger), "completed");
+  assert.equal(attemptEnd({ stopReason: "toolUse" }, ledger), "completed");
+  assert.equal(attemptEnd(undefined, ledger), "completed", "no assistant message: nothing to fail over from");
 });

@@ -115,6 +115,12 @@ async function findObligation(ledger: ObligationLedger, ref: string): Promise<Ob
   throw new Error(matches.length ? `"${ref}" matches ${matches.length} obligations; give more of the id` : `no obligation "${ref}"`);
 }
 
+// A closed pipe (`regulator unit show … | head`) is the reader's choice, not an error: stop writing, exit clean.
+process.stdout.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EPIPE") process.exit(0);
+  throw error;
+});
+
 try {
   if (command === "init") {
     const dir = sub && !sub.startsWith("--") ? path.resolve(sub) : process.cwd();
