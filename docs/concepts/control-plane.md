@@ -1,10 +1,11 @@
 # The control plane
 
-`regulator` treats an agent harness as a control problem, not a cast of
-characters. Stafford Beer's Viable System Model names five functions any organization
-needs to stay viable; here each is a *responsibility with an authority boundary*, held
-by a mechanism wherever a mechanism can hold it, and by a model's judgment only where it
-cannot. The [architecture](/ARCHITECTURE) is the long version; this page is the map.
+`regulator` treats an agent harness as a control problem. Stafford Beer's Viable System
+Model names five functions any organization needs in order to stay viable. Here each of
+those functions is a *responsibility with an authority boundary*. The boundary is held by
+a mechanism wherever a mechanism can hold it, and by a model's judgment only where no
+mechanism can. The [architecture](/ARCHITECTURE) is the long version of this design;
+this page is the map.
 
 ## The prime directive
 
@@ -18,21 +19,21 @@ Every rule is implemented at the strongest level that can carry it, in this orde
 4. a model's judgment;
 5. prompt and context engineering.
 
-A prompt may *also* say what a gate enforces, so the model is not surprised. It is never
-the only place a rule lives. Every regulator carries its level on its
-[registry record](/reference/regulators), so the level is a fact about the system and
-not a hope.
+A prompt may *also* say what a gate enforces, so that the model is not surprised when
+the gate refuses something. A prompt is never the only place a rule lives, though. Every
+regulator states its level on its [registry record](/reference/regulators), so the level
+a rule is enforced at is a recorded fact about the system.
 
 ## The five functions
 
 | Function | In `regulator` | Held by |
 | --- | --- | --- |
-| **S1 Operations** | A unit: one session under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects; the writable paths, the tool set and the budget are enforced by the host, not by the profile's advice. A [host](/concepts/hosts) runs the session. |
-| **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, the effect journal reconciled on restart. | Mechanisms. There is no coordinator persona. See [coordination](/concepts/coordination). |
-| **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator is the only execution authority. Regulators never schedule. See [work contracts](/concepts/contracts) and [recovery](/concepts/recovery). |
-| **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, the closeout gate over protected paths. | Independent evidence the host owns. A model's review is an additional layer. |
-| **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation; it never replans. See [intelligence and memory](/concepts/intelligence-and-memory). |
-| **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition, protected by the write gate and the `identity-untouched` check. | Files. A unit may propose; only a person with `actAsS5` in the interaction policy may accept, and the S5 decision path is the only writer. See [protecting identity](/concepts/identity). |
+| **S1 Operations** | A unit, which is one session running under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects. The host enforces the writable paths, the tool set and the budget, so none of them depends on the profile's advice being followed. A [host](/concepts/hosts) runs the session. |
+| **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, and the effect journal reconciled on restart. | A set of mechanisms. There is no coordinator persona: each mechanism detects and records, and S3 decides what to do about it. See [coordination](/concepts/coordination). |
+| **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator, which is the only execution authority. Regulators never schedule a unit. See [work contracts](/concepts/contracts) and [recovery](/concepts/recovery). |
+| **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, and the closeout gate over protected paths. | The host, which owns the evidence independently of the session that did the work. A model's review is an additional layer on top of that evidence. |
+| **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation for S3 to consider. It never replans the work itself. See [intelligence and memory](/concepts/intelligence-and-memory). |
+| **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition and protected by the write gate and the `identity-untouched` check. | Committed files. A unit may propose a change. Only a person with `actAsS5` in the interaction policy may accept one, and the S5 decision path is the only thing that writes an identity file. See [protecting identity](/concepts/identity). |
 
 ## The loop
 
@@ -81,53 +82,62 @@ not a hope.
 <figcaption>The S3 loop. The host, not the session, decides whether a unit passed; a failure the policy cannot absorb by itself becomes an obligation that holds the unit until someone dispositions it. Before a close lands, the merged tree is checked in a trial worktree, and a tree that fails lands nothing: the unit repairs, and the base is never red.</figcaption>
 </figure>
 
-Three things about the loop are deliberate:
+Three things about the loop are deliberate.
 
-- **The orchestrator owns execution state; regulators own regulatory state; neither
-  infers the other.** Units, attempts, leases and budgets live in the execution store.
-  Findings, obligations, evidence and escalations live in the append-only regulatory
-  log. The code lives in the repository. Nothing reads its own progress off the domain.
-- **Recovery is data.** The recovery policy maps a normalized cause and its occurrence
-  count to an action; the routing policy says who a unit waits on for each action it
-  cannot apply. Changing how the loop recovers is a policy change under review, not a
-  code change. See [recovery, budgets and model routes](/concepts/recovery).
-- **Progression can be vetoed.** An open obligation at or above the routing policy's
-  line, naming a unit, refuses that unit's dispatch and close until it is dispositioned.
-  The veto is deterministic; the disposition is a person's, checked against the
-  interaction policy.
+The first is who owns which state. The orchestrator owns execution state and the
+regulators own regulatory state, and neither side infers the other's. Units, attempts,
+leases and budgets live in the execution store. Findings, obligations, evidence and
+escalations live in the append-only regulatory log. The code lives in the repository,
+and nothing reads its own progress off it: how far along a unit is comes from the
+store, never from the shape of the diff.
+
+The second is that recovery is declared in policy files. The recovery policy maps a
+normalized cause and its occurrence count to an action, and the routing policy says who
+a unit waits on for each action the loop cannot apply by itself. Changing how the loop
+recovers is therefore a change to a policy file, reviewed like any other part of the
+definition, and the loop's code stays the same. See
+[recovery, budgets and model routes](/concepts/recovery).
+
+The third is that progression can be vetoed. An open obligation that names a unit and
+sits at or above the routing policy's line refuses that unit's dispatch and its close
+until someone dispositions it. The veto itself is deterministic. The disposition is a
+person's decision, checked against the interaction policy.
 
 ## Typed channels
 
-Messages between functions carry control semantics, and the type says which:
+Messages between functions carry control semantics, and the kind of a message says
+which semantics apply:
 
 | Kind | From | Means | Emitted by | Routed to |
 | --- | --- | --- | --- | --- |
-| `operational-signal` | S1 | something about the work: a blocker, a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; the identity extension, once per session, when the rendered identity is truncated | S3 |
-| `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claim to a severity | the loop, from a result report's `residualUncertainty` | S3 |
-| `coordination-signal` | S2 | a lease expired, a conflict, oscillation | the thrash detector in the session; reintegration on a conflict, textual or found by the pre-merge trial | S3 |
-| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch on a restored protected path; the closeout | S3 |
-| `intelligence-signal` | S4 | the environment changed, or will | `report_intelligence` in a research unit | S3 |
-| `policy-proposal` | any | a request to change identity or policy; never a mutation | `propose_policy_change` | S5 |
-| `algedonic-signal` | any | exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate`; see [asking a person](/concepts/asking-a-person) | a person |
-| `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | declared in the protocol and the routing policy; nothing emits one yet — a unit's constraints reach it as the contract's `constraintRefs` and the rendered identity | the unit |
+| `operational-signal` | S1 | something about the work, such as a blocker or a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; also the identity extension, once per session, when the rendered identity is truncated | S3 |
+| `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claimed impact to a severity | the loop, from a result report's `residualUncertainty` | S3 |
+| `coordination-signal` | S2 | a lease expired, a conflict happened, or a unit is oscillating | the thrash detector in the session, or reintegration on a conflict, whether textual or found by the pre-merge trial | S3 |
+| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch when it restores a protected path, or the closeout | S3 |
+| `intelligence-signal` | S4 | the environment changed, or is about to | `report_intelligence` in a research unit | S3 |
+| `policy-proposal` | any | a request to change identity or policy, which is never itself a mutation | `propose_policy_change` | S5 |
+| `algedonic-signal` | any | an exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate`; see [asking a person](/concepts/asking-a-person) | a person |
+| `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | declared in the protocol and the routing policy, though nothing emits one yet. A unit's constraints reach it as the contract's `constraintRefs` and as the rendered identity | the unit |
 
-A signal is not an audit; an audit is not a policy decision; a proposal does not mutate
-policy. The [routing policy](/reference/definition#routing-policy) declares, per kind,
-the severity at which a message opens an obligation and for whom; [obligations](/concepts/obligations)
-are what the router opens and a consumer closes.
+The kinds are kept distinct on purpose. A signal is not an audit, an audit is not a
+policy decision, and a proposal does not change policy by itself. The
+[routing policy](/reference/definition#routing-policy) declares, for each kind, the
+severity at which a message opens an obligation and who is owed it.
+[Obligations](/concepts/obligations) are what the router opens and a consumer closes.
 
 ## The regulators
 
-A *regulator* is one mechanism that absorbs one class of failure. Each has a registry
-record — purpose, failure absorbed, mechanism level, implementation, enforcement points,
-tests, limitations, owner, review date, the eval arm that switches it off, and the
-condition under which it may be retired. `regulator check` refuses a record without a
-stated limitation and fails when a review date passes. Whether a regulator earns its
-place is measured, not asserted: see [evidence about the
-regulators](/concepts/evidence-about-the-regulators). The
-[regulators page](/reference/regulators) is rendered from the records; the
-[enforcement boundary](/reference/boundary) lists, for every gate, the routes around it.
+A *regulator* is one mechanism that absorbs one class of failure. Each one has a
+registry record, which states its purpose, the failure it absorbs, its mechanism level,
+its implementation, its enforcement points, its tests, its limitations, its owner, its
+review date, the eval arm that switches it off, and the condition under which it may be
+retired. `regulator check` refuses a record that states no limitation and fails once a
+review date has passed. Whether a regulator earns its place is measured: see
+[evidence about the regulators](/concepts/evidence-about-the-regulators). The
+[regulators page](/reference/regulators) is rendered from the records, and the
+[enforcement boundary](/reference/boundary) lists, for every gate, the routes around
+it.
 
 The [glossary](/GLOSSARY) maps each cybernetic term to what it means in a harness and
-where it is mechanism; the [pathologies](/PATHOLOGIES) catalog the ways the whole
-arrangement fails and which regulator absorbs each.
+says where it is already mechanism. The [pathologies](/PATHOLOGIES) catalog the ways
+the whole arrangement fails and name the regulator that absorbs each one.
