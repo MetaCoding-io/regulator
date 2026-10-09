@@ -46,6 +46,7 @@ export default defineConfig({
       { text: "Reference", link: "/reference/cli" },
       { text: "Project", link: "/project/roadmap" },
       { text: "Course", link: "https://metacoding-io.github.io/regulator-website/index.html" },
+      { text: "MetaCoding", link: "https://metacoding.io" },
     ],
     sidebar: [
       {
@@ -114,7 +115,7 @@ export default defineConfig({
     search: { provider: "local" },
     footer: {
       message: "Released under the Apache-2.0 License.",
-      copyright: "Copyright © 2025–present MetaCoding",
+      copyright: 'Copyright © 2025–present <a href="https://metacoding.io">MetaCoding</a> · a MetaCoding project',
     },
     outline: { level: [2, 3] },
   },
