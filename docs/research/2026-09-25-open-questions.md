@@ -60,7 +60,7 @@ the definition already declares, or could:
 | Where the gates sit in a session | the same field on the host's lifecycle; *can refuse* vs *records only* from `mechanism.level` and `authority.may` | the same |
 | Six unit types, one workload | the workload definition (unit types, profiles, closeout checks) | none: already data |
 | The recovery lattice | `policies/recovery.json` | none: already data |
-| Six states (the unit lifecycle) | nothing yet — obligations have a transition table (`packages/core/src/obligations.ts`), units do not | a typed unit transition table in `protocol` that the loop enforces and the figure draws |
+| Six states (the unit lifecycle) | ~~nothing yet — obligations have a transition table (`packages/core/src/obligations.ts`), units do not~~ `UNIT_TRANSITIONS` in `protocol`, enforced by the execution store (2026-10-13) | ~~a typed unit transition table in `protocol` that the loop enforces and the figure draws~~ landed: `renderLifecycleFigure` draws it, and the control room's Lifecycle view steps a unit's trajectory over it |
 | Who writes where | roughly, `scope.resources` and `channels` | resources are free text (`.regulator/signals.ndjson` beside "the instance's .regulator/"); a closed list of stores |
 
 So the generator is one module over `DefinitionView` that emits SVG per figure, and the
@@ -96,6 +96,29 @@ holding each list against the code (the host's subscribed events and registered 
 the loop's functions, the usage line's subcommands, core's exports; `verifyBase` left the list with #48). The tally the figure
 needs is now a group-by: `host:tool_call` carries eight records, `loop:runUnit` seven,
 `loop:auditUnit` six. Next: the generator.
+
+**Landed (2026-10-13).** The unit lifecycle, as the instance overlay the last bullet of
+the proposal asked for, taken as its own slice because the figure it needs was the one
+with no data behind it. The prompt was a post by @ohdearlordylord (2026-10-12): replace
+the prose spec with the reducer, have the agent draw an interactive diagram from the
+real events and the actual reducer code, step through the events, and ask "why" at a
+decision. Here the reducer is the loop, and what was missing was its declaration:
+`UNIT_TRANSITIONS` in `packages/protocol/src/execution.ts` is the closed table (six
+statuses, twelve rows: from, to, the trigger, the loop step that takes it, whether the
+loop takes it on its own), and `ExecutionStore.setStatus` refuses a change that is not a
+row, so the table is enforced rather than described. The events are the records the
+instance already keeps; `unitTrajectory` (`packages/core/src/trajectory.ts`) folds them
+through the table in time order, each step carrying its why as the records state it and
+the registry record it is the work of, and says when the fold and the unit record
+disagree. The figure is `renderLifecycleFigure` (`packages/regulator/src/figures.ts`),
+drawn from the table with `data-` attributes for a page to place records on, and the
+control room's Lifecycle view steps through a unit's trajectory over it (`#unit=<i>/<id>@<step>`).
+The "why" is deterministic: the control room stays read-only (§5) and asks no model;
+*copy as a question for your agent* hands the step, its records and the reducer's
+location to whatever agent the maintainer uses. What the store does not keep — a status
+history — is DEBT row 42; the website's hand-drawn six states is still hand-drawn until
+`regulator docs --write` renders this figure and the website copies it, which is the
+thread's next step.
 
 ## 2. A person should be able to create S4 intelligence
 

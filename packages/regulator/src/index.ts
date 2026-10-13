@@ -23,3 +23,4 @@ export * from "./evals-scripted.js";
 export * from "./finance-scripted.js";
 export * from "./git-support.js";
 export * from "./host.js";
+export * from "./figures.js";

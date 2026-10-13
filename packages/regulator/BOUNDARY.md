@@ -411,6 +411,17 @@ Not covered:
 - The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
 
+## Unit lifecycle (`reg.control.unit-lifecycle.v1`)
+
+Enforced at `loop:runUnit` (ExecutionStore.setStatus: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts), `loop:closeUnit` (re-verified, re-audit-refused), `loop:routeUnit` (routed-waiting, abort), `loop:finishUnit` (reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)), `cli:status` (unitTrajectory (../core/src/trajectory.ts): the fold on every unit view, which the control room steps through) in `../core/src/execution-store.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- The gate is on the pair (from, to), not on the trigger: which row the loop took is read back from the records, not written down with the status. Three rows share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) and are told apart by the record beside them.
+- The store keeps only the current status, so the history is a reconstruction. Three moves leave no record of their own — reintegrated, reintegration refused, and a dispatch refused before any attempt — and the fold places them at the record that follows (the decision, or the unit record's last write). A status history in the store, one line per transition with its trigger, would make the fold a read; not yet (DEBT row 42).
+- The why is what the records say. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the fold does not read the transcript to improve on it.
+- A status written around the loop is caught only where the fold and the record disagree; a forged history that happens to be a path through the table is not.
+
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
 
 Enforced at `host:tool_call` in `lab/src/cp1-trace.ts (in the Viable Agents course repository; retired here)`; S5, deterministic-gate.

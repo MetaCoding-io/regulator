@@ -5,6 +5,7 @@
  */
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import type { ENFORCEMENT_POINTS } from "./registry.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
 
@@ -18,6 +19,63 @@ export const UnitStatusSchema = Type.Union([
   Type.Literal("aborted"),
 ]);
 export type UnitStatus = Static<typeof UnitStatusSchema>;
+
+/** The statuses a unit never leaves. */
+export const TERMINAL_UNIT_STATUSES: ReadonlySet<UnitStatus> = new Set<UnitStatus>(["closed", "aborted"]);
+
+/**
+ * What moves a unit from one status to the next, as the loop names it. A trigger is the loop's reason, not the
+ * attempt's outcome: `attempt-failed` covers every way an attempt ends short of closing, and the attempt record says which.
+ */
+export const UNIT_TRIGGERS = [
+  "dispatch", "dispatch-refused", "attempt-failed", "verified", "re-verified", "re-audit-refused",
+  "reintegrated", "reintegration-refused", "routed-waiting", "abort",
+] as const;
+export type UnitTrigger = (typeof UNIT_TRIGGERS)[number];
+
+/** A step of the loop that writes a unit's status: one of the loop's declared enforcement points. */
+export type UnitTransitionStep = Extract<(typeof ENFORCEMENT_POINTS)["loop"][number], "runUnit" | "closeUnit" | "routeUnit" | "finishUnit">;
+
+export interface UnitTransition {
+  from: UnitStatus;
+  to: UnitStatus;
+  on: UnitTrigger;
+  /** The loop step that takes it. */
+  by: UnitTransitionStep;
+  /** Taken by the loop on its own, or only after something outside it: a policy decision, a person's answer, a disposition. */
+  automatic: boolean;
+  description: string;
+}
+
+/**
+ * The unit lifecycle, as a closed table: every transition the S3 loop takes, and no other. The execution store
+ * refuses a status change that is not a row here, so a unit's status history is a path through this table and a
+ * figure drawn from it shows every path a unit can take. A new row is a change to the loop, made in the same change.
+ */
+export const UNIT_TRANSITIONS: readonly UnitTransition[] = [
+  { from: "contracted", to: "dispatched", on: "dispatch", by: "runUnit", automatic: true, description: "the contract passed the gate and the progression veto; the lease is held, the worktree is open, attempt 1 runs" },
+  { from: "contracted", to: "blocked", on: "dispatch-refused", by: "runUnit", automatic: true, description: "the lease is held by another owner, or the worktree could not be started; no attempt was spent" },
+  { from: "blocked", to: "dispatched", on: "dispatch", by: "runUnit", automatic: false, description: "a further attempt under the same contract version: the router said retry or repair, or a person answered what the unit waited on" },
+  { from: "blocked", to: "blocked", on: "dispatch-refused", by: "runUnit", automatic: false, description: "a further attempt could not start: the lease is held, or the worktree could not be resumed" },
+  { from: "dispatched", to: "blocked", on: "attempt-failed", by: "runUnit", automatic: true, description: "the attempt ended without closing: a dispatch error, a question nobody answered, a budget ceiling, no report, a report that does not honour the contract, or closeout refused by the host's checks" },
+  { from: "dispatched", to: "reported", on: "verified", by: "runUnit", automatic: true, description: "the report honours the contract and the technical verdict is pass at the committed revision" },
+  { from: "blocked", to: "reported", on: "re-verified", by: "closeUnit", automatic: false, description: "a re-audit without a new attempt passed: a person accepted a criterion no check observes, or the missing evidence could be produced" },
+  { from: "blocked", to: "blocked", on: "re-audit-refused", by: "closeUnit", automatic: false, description: "a re-audit without a new attempt was refused again" },
+  { from: "reported", to: "closed", on: "reintegrated", by: "finishUnit", automatic: true, description: "the pre-merge trial passed and the branch landed on the base; the lease and the worktree are gone" },
+  { from: "reported", to: "blocked", on: "reintegration-refused", by: "finishUnit", automatic: true, description: "the trial merge failed its checks or conflicted, the base was dirty or moved, or the checkout was on the wrong branch; nothing landed" },
+  { from: "blocked", to: "blocked", on: "routed-waiting", by: "routeUnit", automatic: true, description: "the recovery policy named an action the loop cannot apply (remediate, replan, clarify, pause) or was exhausted (escalate): an obligation is opened for the consumer the routing policy names, and the unit waits on it" },
+  { from: "blocked", to: "aborted", on: "abort", by: "routeUnit", automatic: true, description: "the recovery policy said abort: the lease is released and the worktree removed; the history stays" },
+];
+
+/** The rows from one status to another: several when the loop has more than one reason to take the same edge. */
+export function unitTransitions(from: UnitStatus, to: UnitStatus): UnitTransition[] {
+  return UNIT_TRANSITIONS.filter((t) => t.from === from && t.to === to);
+}
+
+/** The row a trigger names from a status, if the table has one. */
+export function unitTransition(from: UnitStatus, on: UnitTrigger): UnitTransition | undefined {
+  return UNIT_TRANSITIONS.find((t) => t.from === from && t.on === on);
+}
 
 export const UnitRecordSchema = Type.Object({
   unitId: Type.String({ pattern: "^[a-zA-Z0-9._-]+$" }),

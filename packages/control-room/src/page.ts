@@ -1,18 +1,29 @@
 /**
  * The page. One HTML document with its styles and script inline, so the
- * server ships nothing but this string. It renders three things from
+ * server ships nothing but this string. It renders four things from
  * `/api/status`, and nothing it renders is derived from the repository:
  *
  *   Definition   the registry as a topology (S5 → S1 columns, one card per
  *                regulator, declared channels on each card), the workloads,
  *                the profiles, the policies and the identity set (lesson 12)
+ *   Lifecycle    the unit state machine the loop enforces, drawn from
+ *                `UNIT_TRANSITIONS` by the product's figure generator, with the
+ *                instance's units placed on it; select a unit and step through
+ *                its trajectory — each step highlights the transition it took
+ *                and says why, from the records (the fold in core, never the
+ *                transcript)
  *   Instances    units, leases, obligations (what is owed, to whom, and what it
  *                holds) and unrouted signals per instance
  *   Inspector    the whole record for a regulator or a unit — the record, not
  *                a summary of it
+ *
+ * The figure and the legend are rendered once, at startup, from the table;
+ * the page only places records on them.
  */
+import { lifecycleEdges, renderLifecycleFigure } from "@metacoding.io/regulator";
+
 export function renderPage(): string {
-  return PAGE;
+  return PAGE.replace("__LIFECYCLE_FIGURE__", () => renderLifecycleFigure()).replace("__LIFECYCLE_EDGES__", () => JSON.stringify(lifecycleEdges()));
 }
 
 const PAGE = String.raw`<!doctype html>
@@ -56,7 +67,10 @@ const PAGE = String.raw`<!doctype html>
   th { color: var(--muted); font-weight: 500; font-size: 12px; }
   tr.row { cursor: pointer; }
   code, .mono { font-family: var(--mono); font-size: 12px; }
-  .chip { display: inline-block; padding: 0 7px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #fff; }
+  .chip { display: inline-block; padding: 0 7px; border-radius: 4px; font-size: 11px; font-weight: 600; color: #fff; background: var(--idle); }
+  .chip.attempt-started, .chip.decision { background: var(--info); }
+  .chip.attempt-ended, .chip.re-audit { background: var(--warn); }
+  .chip.reintegration { background: var(--ok); }
   .chip.closed, .chip.live, .chip.active { background: var(--ok); }
   .chip.blocked, .chip.expired, .chip.blocking, .chip.critical { background: var(--bad); }
   .chip.dispatched, .chip.info { background: var(--info); }
@@ -86,6 +100,40 @@ const PAGE = String.raw`<!doctype html>
   .decision .k { font-family: var(--mono); font-size: 11px; color: var(--muted); }
   button { font: inherit; background: var(--chip); color: var(--ink); border: 1px solid var(--line); border-radius: 4px; padding: 2px 8px; cursor: pointer; }
   .banner { font-size: 12px; color: var(--muted); }
+  .figure { max-width: 900px; }
+  svg.lifecycle { width: 100%; height: auto; display: block; color: var(--muted); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  svg.lifecycle .state rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.4; transition: stroke .15s, fill .15s; }
+  svg.lifecycle .state text { fill: var(--ink); }
+  svg.lifecycle .state .kind { font-size: 9px; letter-spacing: .06em; fill: var(--muted); }
+  svg.lifecycle .state .title { font-size: 15px; font-weight: 600; }
+  svg.lifecycle .state .note { font-size: 10.5px; fill: var(--muted); }
+  svg.lifecycle .state .count { font-size: 10.5px; font-family: var(--mono); fill: var(--muted); }
+  svg.lifecycle .state.occupied rect { stroke: var(--ink); }
+  svg.lifecycle .state.here rect { stroke: var(--accent); stroke-width: 2.8; fill: color-mix(in srgb, var(--accent) 12%, var(--bg)); }
+  svg.lifecycle .state.here .count { fill: var(--ink); }
+  svg.lifecycle .edge .active-path { stroke: var(--warn); opacity: 0; }
+  svg.lifecycle .edge.active .active-path { opacity: 1; animation: lc-march 1.1s linear infinite; }
+  @keyframes lc-march { to { stroke-dashoffset: -22; } }
+  svg.lifecycle .badge circle { fill: var(--panel); stroke: var(--line); stroke-width: 1.2; }
+  svg.lifecycle .badge text { font-size: 10px; font-family: var(--mono); fill: var(--muted); }
+  svg.lifecycle .edge.taken .badge circle { stroke: var(--ink); }
+  svg.lifecycle .edge.taken .badge text { fill: var(--ink); }
+  svg.lifecycle .edge.active .badge circle { fill: var(--warn); stroke: var(--warn); }
+  svg.lifecycle .edge.active .badge text { fill: #fff; }
+  .stepper { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 8px; }
+  .stepper .pos { font-family: var(--mono); font-size: 12px; min-width: 9ch; }
+  .stepper input[type=range] { flex: 1 1 160px; min-width: 120px; accent-color: var(--warn); }
+  .why { border-left: 3px solid var(--warn); padding: 8px 12px; background: var(--bg); border-radius: 0 6px 6px 0; }
+  .why h4 { margin: 0 0 4px; font-size: 13px; }
+  .why ul { margin: 6px 0; padding-left: 18px; }
+  .why li { margin: 2px 0; }
+  .why .cites { font-family: var(--mono); font-size: 11px; color: var(--muted); margin: 4px 0; }
+  .why .reg { cursor: pointer; text-decoration: underline dotted; }
+  .legend td.n { font-family: var(--mono); color: var(--muted); white-space: nowrap; }
+  details summary { cursor: pointer; font-size: 13px; margin: 10px 0 4px; }
+  tr.step { cursor: pointer; }
+  tr.step.current td { background: color-mix(in srgb, var(--warn) 16%, transparent); }
+  .ok { color: var(--ok); font-size: 12px; }
 </style>
 </head>
 <body>
@@ -98,6 +146,13 @@ const PAGE = String.raw`<!doctype html>
 <main>
   <div>
     <section id="definition"><h2>Definition</h2><p class="empty">loading…</p></section>
+    <section id="lifecycle">
+      <h2>Lifecycle — the unit state machine the loop enforces, with the instance's units on it</h2>
+      <p class="banner" id="lifecycle-meta">loading…</p>
+      <div class="figure">__LIFECYCLE_FIGURE__</div>
+      <div id="stepper"><p class="empty">Select a unit to step through its path.</p></div>
+      <details><summary>The transitions, as <code>UNIT_TRANSITIONS</code> declares them — solid edges the loop takes on its own, dashed ones wait on something outside it</summary><table class="legend" id="legend"></table></details>
+    </section>
     <section id="instances"><h2>Instances</h2><p class="empty">loading…</p></section>
   </div>
   <aside id="inspector"><section><h2>Inspector</h2><p class="empty">Select a regulator or a unit. The inspector shows the record, not a summary of it.</p></section></aside>
@@ -137,16 +192,22 @@ const PAGE = String.raw`<!doctype html>
     (o.disposition ? "<br><span class='banner'>" + esc(o.disposition) + " by " + esc(o.closedBy) + " — " + esc(o.rationale) + "</span>" : o.successor ? "<br><span class='banner'>" + esc(o.status) + " by " + esc(o.closedBy) + " → " + esc(o.successor.slice(0, 8)) + " — " + esc(o.rationale) + "</span>" : "") +
     (o.acknowledgedBy && o.acknowledgedBy.length ? "<br><span class='banner'>acknowledged by " + esc(o.acknowledgedBy.join(", ")) + "</span>" : "") +
     (o.deliveries && o.deliveries.length ? "<br><span class='banner'>delivered ×" + o.deliveries.length + " (" + esc(o.deliveries[o.deliveries.length - 1].channel) + " " + esc(o.deliveries[o.deliveries.length - 1].at) + ")</span>" : "");
+  const LIFECYCLE_EDGES = __LIFECYCLE_EDGES__;
   let view = null, selected = fromHash(), timer = null, paused = false;
   function fromHash() {
     const h = location.hash.slice(1);
     let m = /^reg=(.+)$/.exec(h); if (m) return { kind: "regulator", id: decodeURIComponent(m[1]) };
-    m = /^unit=(\d+)\/(.+)$/.exec(h); if (m) return { kind: "unit", instance: Number(m[1]), id: decodeURIComponent(m[2]) };
+    // #unit=<instance>/<id>@<step> deep-links a step of the trajectory; without @ the view follows the latest step.
+    m = /^unit=(\d+)\/([^@]+)(?:@(\d+))?$/.exec(h); if (m) return { kind: "unit", instance: Number(m[1]), id: decodeURIComponent(m[2]), step: m[3] ? Number(m[3]) : undefined };
     return null;
+  }
+  function writeHash() {
+    const next = selected;
+    history.replaceState(null, "", next ? "#" + (next.kind === "regulator" ? "reg=" + encodeURIComponent(next.id) : "unit=" + next.instance + "/" + encodeURIComponent(next.id) + (next.step === undefined ? "" : "@" + next.step)) : location.pathname);
   }
   function select(next) {
     selected = next;
-    history.replaceState(null, "", next ? "#" + (next.kind === "regulator" ? "reg=" + encodeURIComponent(next.id) : "unit=" + next.instance + "/" + encodeURIComponent(next.id)) : location.pathname);
+    writeHash();
     render();
   }
 
@@ -154,9 +215,128 @@ const PAGE = String.raw`<!doctype html>
     if (!view) return;
     document.getElementById("meta").textContent = "as of " + view.generatedAt + (paused ? " · paused" : " · refreshing every 5s");
     renderDefinition(view.definition);
+    renderLifecycle();
     renderInstances(view.instances);
     renderInspector();
   }
+
+  // ---- Lifecycle: the figure is static (drawn from the table at startup); records are placed on it here.
+  function selectedUnit() {
+    if (!selected || selected.kind !== "unit") return null;
+    const inst = view.instances[selected.instance];
+    const u = inst && inst.units.find((x) => x.unit.unitId === selected.id);
+    return u ? { inst, u } : null;
+  }
+  function currentStep(traj) {
+    const n = traj.steps.length;
+    if (!n) return 0;
+    return selected.step === undefined ? n : Math.max(1, Math.min(n, selected.step));
+  }
+  function stepTo(k) {
+    const sel = selectedUnit();
+    if (!sel) return;
+    const n = sel.u.trajectory.steps.length;
+    const cur = currentStep(sel.u.trajectory);
+    const target = k === "prev" ? cur - 1 : k === "next" ? cur + 1 : k === "last" ? n : Number(k);
+    const clamped = Math.max(1, Math.min(n, target));
+    // On the last step the view follows the unit as new records arrive; anywhere else it holds.
+    selected.step = clamped === n ? undefined : clamped;
+    writeHash();
+    renderLifecycle();
+    renderInspector();
+  }
+  function renderLifecycle() {
+    const sec = document.getElementById("lifecycle");
+    const svg = sec.querySelector("svg.lifecycle");
+    const meta = document.getElementById("lifecycle-meta");
+    const sel = selectedUnit();
+    const inst = sel ? sel.inst : view.instances[0];
+    const counts = {};
+    for (const x of (inst ? inst.units : [])) counts[x.unit.status] = (counts[x.unit.status] || 0) + 1;
+    const traj = sel ? sel.u.trajectory : null;
+    const cur = traj ? currentStep(traj) : 0;
+    const step = traj && cur ? traj.steps[cur - 1] : null;
+    const visits = {}, taken = new Set();
+    if (traj) for (const s of traj.steps.slice(0, cur)) {
+      if (s.transition || s.event === "contracted") visits[s.to] = (visits[s.to] || 0) + 1;
+      if (s.transition) taken.add(s.from + "->" + s.to);
+    }
+    svg.querySelectorAll(".state").forEach((g) => {
+      const st = g.dataset.state;
+      g.classList.toggle("here", !!step && step.to === st);
+      g.classList.toggle("occupied", !!counts[st]);
+      g.querySelector('[data-count="units:' + st + '"]').textContent = inst ? (counts[st] || 0) + (counts[st] === 1 ? " unit here" : " units here") : "";
+      g.querySelector('[data-count="visits:' + st + '"]').textContent = traj ? (visits[st] ? sel.u.unit.unitId + " ×" + visits[st] : "") : "";
+    });
+    svg.querySelectorAll(".edge").forEach((e) => {
+      const key = e.dataset.from + "->" + e.dataset.to;
+      e.classList.toggle("active", !!step && !!step.transition && key === step.from + "->" + step.to);
+      e.classList.toggle("taken", taken.has(key));
+    });
+    meta.innerHTML = (inst ? "instance <span class='mono'>" + esc(inst.dir) + "</span> · " + inst.units.length + " unit(s) placed by status" : "no instance: the table alone") +
+      (sel ? " · stepping <span class='mono'>" + esc(sel.u.unit.unitId) + "</span>: " + traj.steps.length + " step(s), each with its why from the records" : " · select a unit to step through its path (← → keys, or click a replay row in the inspector)");
+    renderStepper(sel, traj, cur, step);
+    renderLegend(step);
+  }
+  const regLink = (id) => id ? "<span class='reg mono' data-reg='" + esc(id) + "' title='open the record in the inspector'>" + esc(id) + "</span>" : "<span class='banner'>the loop itself</span>";
+  function renderStepper(sel, traj, cur, step) {
+    const el = document.getElementById("stepper");
+    if (!sel) { el.innerHTML = "<p class='empty'>Select a unit to step through its path: each step highlights the transition it took on the figure and says why, as the records state it.</p>"; return; }
+    const n = traj.steps.length;
+    let html = "<div class='stepper'>" +
+      "<button type='button' data-step='1' title='first (Home)'>⏮</button><button type='button' data-step='prev' title='previous (←)'>◀</button>" +
+      "<span class='pos'>step " + cur + " / " + n + "</span>" +
+      "<input type='range' id='step-range' min='1' max='" + Math.max(1, n) + "' value='" + cur + "' aria-label='step'>" +
+      "<button type='button' data-step='next' title='next (→)'>▶</button><button type='button' data-step='last' title='latest (End)'>⏭</button>" +
+      (selected.step === undefined ? "<span class='banner'>following the latest step</span>" : "<span class='banner'>held at " + cur + "</span>") + "</div>";
+    if (traj.problem) html += "<p class='problem'>" + esc(traj.problem) + "</p>";
+    if (!step) { el.innerHTML = html + "<p class='empty'>no records yet</p>"; return; }
+    const edge = step.transition ? LIFECYCLE_EDGES.find((e) => e.transition.from === step.from && e.transition.on === step.transition) : null;
+    html += "<div class='why'><h4>#" + step.index + " · " + esc(step.title) + " " + chip(step.event) + (step.attempt ? " <span class='banner'>attempt " + step.attempt + "</span>" : "") + "</h4>" +
+      "<p class='banner'><span class='mono'>" + esc(step.at) + "</span> · " + chip(step.from) + (step.transition ? " → " + chip(step.to) + " · transition " + (edge ? "#" + edge.number + " " : "") + "<span class='mono'>" + esc(step.transition) + "</span> by <span class='mono'>loop:" + esc(step.by) + "</span>" : " · stays " + chip(step.to)) + " · regulator: " + regLink(step.regulator) + "</p>" +
+      (edge ? "<p class='banner'>" + esc(edge.transition.description) + "</p>" : "") +
+      "<b>Why, as the records say</b><ul>" + step.why.map((w) => "<li>" + esc(w) + "</li>").join("") + "</ul>" +
+      "<p class='cites'>records: " + (step.cites.length ? step.cites.map(esc).join(", ") : "none") + "</p>" +
+      "<button type='button' id='copy-why'>copy as a question for your agent</button> <span class='ok' id='copied'></span></div>";
+    el.innerHTML = html;
+    el.querySelectorAll("[data-step]").forEach((b) => b.addEventListener("click", () => stepTo(b.dataset.step)));
+    el.querySelector("#step-range").addEventListener("input", (e) => stepTo(e.target.value));
+    el.querySelectorAll("[data-reg]").forEach((r) => r.addEventListener("click", () => select({ kind: "regulator", id: r.dataset.reg })));
+    el.querySelector("#copy-why").addEventListener("click", () => copyWhy(sel, step, edge, n));
+  }
+  function renderLegend(step) {
+    const el = document.getElementById("legend");
+    el.innerHTML = "<tr><th>#</th><th>from</th><th>to</th><th>trigger</th><th>by</th><th>taken</th><th>what the loop does</th></tr>" + LIFECYCLE_EDGES.map((e) => {
+      const t = e.transition;
+      const here = step && step.transition === t.on && step.from === t.from;
+      return "<tr class='" + (here ? "step current" : "") + "'><td class='n'>" + e.number + "</td><td>" + chip(t.from) + "</td><td>" + chip(t.to) + "</td><td class='mono'>" + esc(t.on) + "</td><td class='mono'>loop:" + esc(t.by) + "</td><td>" + (t.automatic ? "by the loop" : "after a decision outside it") + "</td><td>" + esc(t.description) + "</td></tr>";
+    }).join("");
+  }
+  // The page asks nothing; the question is yours to take to an agent, with the records that answer it.
+  function copyWhy(sel, step, edge, n) {
+    const by = step.by ? " by " + step.by + " in packages/regulator/src/" + (step.by === "finishUnit" ? "unit.ts" : "controller.ts") : "";
+    const text = "Why did unit " + sel.u.unit.unitId + " take step " + step.index + " of " + n + ": " + step.title + " (" + step.from + (step.transition ? " → " + step.to + ", transition " + step.transition + by : ", status unchanged") + ") at " + step.at + "?\n\n" +
+      "What the records say:\n" + step.why.map((w) => "- " + w).join("\n") + "\n" +
+      "Records cited: " + (step.cites.join(", ") || "none") + "\n" +
+      "Regulator: " + (step.regulator || "the loop itself") + "\n" +
+      (edge ? "The table says: " + edge.transition.description + "\n" : "") +
+      "\nThe reducer is unitTrajectory in packages/core/src/trajectory.ts, over UNIT_TRANSITIONS in packages/protocol/src/execution.ts; the loop is packages/regulator/src/controller.ts. Instance: " + sel.inst.dir + ", unit record .regulator/units/" + sel.u.unit.unitId + "/.\n";
+    const done = () => { const c = document.getElementById("copied"); c.textContent = "copied"; setTimeout(() => { c.textContent = ""; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done, () => fallbackCopy(text, done));
+    else fallbackCopy(text, done);
+  }
+  function fallbackCopy(text, done) {
+    const ta = document.createElement("textarea"); ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } finally { ta.remove(); }
+  }
+  document.addEventListener("keydown", (e) => {
+    if (!selected || selected.kind !== "unit" || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || "")) return;
+    if (e.key === "ArrowLeft") { stepTo("prev"); e.preventDefault(); }
+    else if (e.key === "ArrowRight") { stepTo("next"); e.preventDefault(); }
+    else if (e.key === "Home") { stepTo(1); e.preventDefault(); }
+    else if (e.key === "End") { stepTo("last"); e.preventDefault(); }
+  });
 
   function renderDefinition(d) {
     const el = document.getElementById("definition");
@@ -349,8 +529,11 @@ const PAGE = String.raw`<!doctype html>
       "<dl><dt>attempts</dt><dd>" + list(u.attemptRecords, (a) => "#" + a.attempt + " " + esc(a.outcome) + " · " + esc(a.startedAt) + " → " + esc(a.endedAt) + (a.sessionId ? " · session <span class='mono'>" + esc(a.sessionId) + "</span>" : "") + (a.detail ? "<br><span class='problem'>" + esc(a.detail) + "</span>" : "")) + "</dd>" +
       "<dt>recovery decisions</dt><dd>" + list(u.decisions || [], (d) => "after attempt " + d.attempt + ": <span class='mono'>" + esc(d.cause) + "</span> (occurrence " + d.occurrence + ") → " + chip(d.action) + " under <span class='mono'>" + esc(d.policy.name) + " v" + d.policy.version + "</span><br><span class='banner'>" + esc(d.rationale) + "</span>" + (d.question ? "<br><b>question:</b> " + esc(d.question) : "") + (d.hint ? "<br><span class='banner'>hint: " + esc(d.hint) + "</span>" : "")) + "</dd></dl></section>";
     html += "<section><h2>Obligations</h2><p class='banner'>what is owed on this unit; an open one at or above the policy's line holds the unit</p>" + list(u.obligations || [], obligationLine) + "</section>";
-    html += "<section><h2>Replay — the unit's records in time order</h2><p class='banner'>contract → attempts → tool executions → evidence → verdicts → decisions → obligations → deliveries; from the span projection, never the transcript</p>" +
-      ((u.timeline || []).length ? "<table><tr><th>at</th><th>what</th><th>status</th><th>regulator</th><th>detail</th></tr>" + u.timeline.map((e) => "<tr><td class='mono'>" + esc(e.at.slice(11, 19)) + "</td><td>" + (e.kind === "span" ? "<b>" + esc(e.name) + "</b>" : esc(e.name)) + (e.attempt ? " <span class='banner'>a" + e.attempt + "</span>" : "") + "</td><td>" + (e.status ? chip(e.status) : "—") + "</td><td class='mono'>" + esc(e.regulator || "") + "</td><td>" + esc(e.detail) + "</td></tr>").join("") + "</table>" : "<span class='empty'>no records yet</span>") + "</section>";
+    const traj = u.trajectory || { steps: [] };
+    const cur = traj.steps.length ? currentStep(traj) : 0;
+    const curAt = cur ? traj.steps[cur - 1].at : null;
+    html += "<section><h2>Replay — the unit's records in time order</h2><p class='banner'>contract → attempts → tool executions → evidence → verdicts → decisions → obligations → deliveries; from the span projection, never the transcript. Click a row to step the lifecycle to it.</p>" +
+      ((u.timeline || []).length ? "<table><tr><th>at</th><th>what</th><th>status</th><th>regulator</th><th>detail</th></tr>" + u.timeline.map((e) => "<tr class='step" + (curAt !== null && e.at === curAt ? " current" : "") + "' data-at='" + esc(e.at) + "'><td class='mono'>" + esc(e.at.slice(11, 19)) + "</td><td>" + (e.kind === "span" ? "<b>" + esc(e.name) + "</b>" : esc(e.name)) + (e.attempt ? " <span class='banner'>a" + e.attempt + "</span>" : "") + "</td><td>" + (e.status ? chip(e.status) : "—") + "</td><td class='mono'>" + esc(e.regulator || "") + "</td><td>" + esc(e.detail) + "</td></tr>").join("") + "</table>" : "<span class='empty'>no records yet</span>") + "</section>";
     const audit = u.audit || { evidence: [], verdicts: [], acceptances: [] };
     html += "<section><h2>Audit (S3*)</h2><p class='banner'>host-run evidence bound to a revision; the report's claims satisfy nothing</p><dl>" +
       "<dt>verdicts</dt><dd>" + list(audit.verdicts, (v) => "attempt " + v.attempt + ": " + verdictCell({ verdicts: [v] }) + " · " + v.evidence.length + " record(s) considered · " + esc(v.at) + (v.reasons.length ? "<br><span class='problem'>" + v.reasons.map(esc).join("<br>") + "</span>" : "")) + "</dd>" +
@@ -379,7 +562,16 @@ const PAGE = String.raw`<!doctype html>
         "<dt>residual uncertainty</dt><dd>" + list(rep.residualUncertainty, (d) => "<b>" + esc(d.subject) + "</b>: " + esc(d.reason) + " · consequence if wrong: " + esc(d.consequenceIfWrong)) + "</dd></dl>";
     }
     html += "</section>";
+    const keepScroll = el.scrollTop;
     el.innerHTML = html;
+    el.scrollTop = keepScroll;
+    el.querySelectorAll("tr.step[data-at]").forEach((row) => row.addEventListener("click", () => {
+      // The latest step at or before the record's time; the first step when nothing precedes it.
+      const steps = traj.steps;
+      let k = 1;
+      for (let i = 0; i < steps.length; i++) if (steps[i].at <= row.dataset.at) k = i + 1;
+      stepTo(k);
+    }));
   }
 
   async function refresh() {
