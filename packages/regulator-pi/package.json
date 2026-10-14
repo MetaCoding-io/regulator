@@ -11,7 +11,7 @@
     "agent-harness",
     "regulator"
   ],
-  "homepage": "https://metacoding-io.github.io/regulator-website/product.html",
+  "homepage": "https://regulator.metacoding.io/product.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MetaCoding-io/regulator.git",

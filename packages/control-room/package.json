@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "private": false,
   "description": "The maintainer's read-only control room: one page over the `regulator status` read model — definition topology, running instances, and what each unit is doing.",
-  "homepage": "https://metacoding-io.github.io/regulator-website/product.html",
+  "homepage": "https://regulator.metacoding.io/product.html",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MetaCoding-io/regulator.git",
