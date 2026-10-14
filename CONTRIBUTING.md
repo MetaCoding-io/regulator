@@ -24,7 +24,7 @@ asked to move it down the hierarchy.
 - [`AGENTS.md`](AGENTS.md) is the project's own operating rules — the architectural
   boundaries, the repository conventions, what to confirm before finishing. It is
   written for coding agents and applies to people.
-- The documentation site (https://metacoding-io.github.io/regulator/) explains the
+- The documentation site (https://docs.regulator.metacoding.io/) explains the
   control plane, the definition files and the CLI.
 
 ## Setting up

@@ -22,7 +22,7 @@ const OFF_SITE = ["archive", "research"];
 export default defineConfig({
   title: "regulator",
   description: "An agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
-  base: "/regulator/",
+  base: "/",
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
@@ -36,7 +36,7 @@ export default defineConfig({
     "generated/roadmap.md": "project/roadmap.md",
     "generated/contributing.md": "project/contributing.md",
   },
-  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/regulator/favicon.svg" }]],
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }]],
   themeConfig: {
     logo: "/favicon.svg",
     siteTitle: "regulator",
@@ -45,7 +45,7 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/control-plane" },
       { text: "Reference", link: "/reference/cli" },
       { text: "Project", link: "/project/roadmap" },
-      { text: "Course", link: "https://metacoding-io.github.io/regulator-website/index.html" },
+      { text: "Course", link: "https://regulator.metacoding.io/" },
       { text: "MetaCoding", link: "https://metacoding.io" },
     ],
     sidebar: [
