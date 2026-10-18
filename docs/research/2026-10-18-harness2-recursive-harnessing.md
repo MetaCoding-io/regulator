@@ -199,12 +199,21 @@ definition file.
    (model-judgment, the weakest), the metric it is graded on and the report that last
    graded it; and `regulator check` refuses it without one.
 
-5. **The component split, written down.** Harness²'s eight components give a clean way
-   to say which parts of the definition a loop may touch, and `BOUNDARY.md` should say
-   it: *never editable by a loop* (guardrails, that is identity, the profile grants and
-   the checks); *proposable* (the system prompt's advice, tool guidance, contract advice,
-   skills, memory); *declared, not learned* (subagents, which are unit types in the
-   workload; plugins, which are extensions under the trust rule).
+5. **The accept paths, written down.** Harness²'s eight components are all editable by
+   its loop. Here every definition file is *proposable*, because INV-002 already makes a
+   proposal change nothing, and identity is proposed that way today through
+   `propose_policy_change`. What differs per file is the path an accepted proposal
+   takes, and `BOUNDARY.md` should say it. Identity lands only through `identity
+   accept`. An advice file (the system prompt's advice, tool guidance, contract advice,
+   skills, memory) lands through `definition accept` after its probe. Anything that
+   executes or grants (a unit type, which is a profile, a grant, a budget and a route;
+   the profile grants; the host checks; extensions under the trust rule) lands as a
+   unit of work against the definition's repository under a contract, verified by
+   `regulator check` and the tests at closeout, merged by a person. So the reflector may
+   propose a new kind of unit and how it joins the workload; it may not author the code
+   or the grant the proposal becomes. The line Harness² crosses is not proposing a
+   subagent or a script. It is the editor writing the script and the executor running
+   it in the same step, with nothing between.
 
 ## 5. The experiment the two projects suggest together
 
@@ -327,6 +336,13 @@ Harness²'s word for the same component, which helps a reader of both. "Proposer
 fallback; "intelligence" is right in Beer's terms and already taken by the instance-level
 profile. Neither word is on the identity glossary's refused list.
 
+**Corrected (2026-10-18).** An earlier version of item 5 and of figure 2 sorted the
+definition's files into *never editable*, *proposable* and *declared, not learned*, with
+unit types and extensions in the last set. That conflated who may ask with who may
+write. A new unit type, and how it joins the workload, is a legitimate proposal; what it
+cannot be is a file a person copies into place, because it is a grant and code. The
+split is now by accept path, as item 5 says, and figure 2's S5 box says the same.
+
 ### The two levels, drawn
 
 Hand-drawn, light theme, in the course's figure vocabulary; the research directory is not
@@ -352,7 +368,7 @@ What changes, at its mechanism level and seam:
 
 | Change | Level | Seam | Refuses |
 | --- | --- | --- | --- |
-| The advice split on `BOUNDARY.md` | 2, definition check | `regulator check` over the registry and the instance manifest | a proposal against a file outside the proposable set, at intake |
+| The accept-path split on `BOUNDARY.md` (§4, item 5) | 2, definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
 | `harness-edit` proposal kind | 3, typed tool and schema | `packages/protocol`; routed by `routeMessages` like every proposal | a proposal whose observation (unit, revision, moment) does not resolve |
 | Probe as an eval arm | 2, deterministic graders | `evals/*.json`: an arm gains an `advice` field | adoption from a report without an interpretation |
 | `regulator definition accept` | 2, authority check then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
