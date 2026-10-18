@@ -38,6 +38,13 @@ repository under a contract, checked at closeout and merged by a person. So the
 reflector may propose a new kind of unit and how it joins the workload. It may not
 author the code or the grant that the proposal becomes.
 
+A proposal also states its bet before anyone decides: the metric it expects to move,
+from one of the eval harness's fifteen pre-registered names, the baseline it is measured
+against, the horizon over which it resolves, and the value that would count against it.
+The probe resolves the first horizon. The next units after acceptance resolve the
+second, and a bet that fails there opens an obligation to revert or re-decide. The
+reflector's instrument card is graded on exactly those resolutions.
+
 It is registered as an **instrument**, not a regulator: a record kind for things that
 inform rather than refuse, graded on calibration. Its question is whether the proposals
 a person accepted moved the metric they named. `regulator check` refuses an instrument
@@ -319,7 +326,7 @@ the difference the figures below draw.
 | Change | Mechanism level | Seam | Refuses |
 | --- | --- | --- | --- |
 | The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `definition accept`, code and grants (unit types, profile grants, checks, extensions) through a unit under a contract that a person merges | 2, the definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
-| The `harness-edit` proposal kind | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation (unit, revision, moment) does not resolve |
+| The `harness-edit` proposal kind: a diagnosis (what was observed, by reference), a change (the diff) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it), kept as three records because a trace that supports a diagnosis is not evidence that the remedy works | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation does not resolve, or whose prediction is missing a part |
 | A proposed edit probed as an eval arm | 2, deterministic graders | an eval suite's arms gain an `advice` field | adoption from a report without an interpretation |
 | `regulator definition accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
 | The instrument record kind | 2, the registry check | the registry, a second record kind beside regulators | an instrument without a calibration report |
