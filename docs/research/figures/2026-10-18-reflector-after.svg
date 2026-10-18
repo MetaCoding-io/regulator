@@ -1,0 +1,127 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="720" color="#1c1b19" font-family="ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" viewBox="0 0 1040 720" role="img" aria-labelledby="title">
+<title id="title">A second level is drawn above the instances. Its S1 units are instances, its S3* is the existing eval harness, its S5 is the maintainers with the identity seed and a boundary split, and its S4 is a new reflector that reads every instance's records and emits three existing record kinds: memory facts, intelligence signals, and harness-edit proposals owed to S5. A proposed edit is probed as an eval arm before a person accepts it into an advice file. Crossed edges show the reflector never writing identity, grants or checks and never scheduling a unit.</title>
+<rect fill="#fbfaf6" x="0" y="0" width="1040" height="720"/>
+  <defs>
+    <marker id="after-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+    <marker id="after-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#136e79"/></marker>
+    <marker id="after-x" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" orient="auto"><path d="M2 2L8 8M8 2L2 8" stroke="#b4532a" stroke-width="1.8" fill="none"/></marker>
+  </defs>
+  <g font-size="12" fill="currentColor" stroke="currentColor">
+    <!-- level frame -->
+    <rect x="30" y="20" width="980" height="440" rx="6" fill="none" stroke-width="1.5"/>
+    <text x="46" y="42" font-weight="600" stroke="none">LEVEL n+1</text>
+    <text x="128" y="42" stroke="none" fill="#5c574f">the definition as a viable system</text>
+
+    <!-- probe edge, over the top row -->
+    <path d="M 330 66 L 330 54 L 830 54 L 830 64" stroke="#136e79" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="820" y="46" stroke="none" font-size="10" text-anchor="end" fill="#136e79">probe: the proposed edit runs as an eval arm against the fixture</text>
+
+    <!-- S5 -->
+    <rect x="46" y="66" width="320" height="78" rx="3" fill="#f0ede6" stroke-width="1.2"/>
+    <text x="56" y="84" stroke="none" font-weight="600">S5</text>
+    <text x="80" y="84" stroke="none">maintainers · identity seed · <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BOUNDARY.md</tspan></text>
+    <text x="56" y="102" stroke="none" font-size="11" fill="#5c574f">never editable by a loop: identity, profile grants, checks</text>
+    <text x="56" y="117" stroke="none" font-size="11" fill="#5c574f">proposable: advice files, skills, memory</text>
+    <text x="56" y="132" stroke="none" font-size="11" fill="#5c574f">declared, not learned: unit types, extensions</text>
+
+    <!-- S3 -->
+    <rect x="386" y="66" width="260" height="78" rx="3" fill="none" stroke-width="1.5"/>
+    <text x="396" y="84" stroke="none" font-weight="600">S3</text>
+    <text x="420" y="84" stroke="none">maintainers</text>
+    <text x="396" y="102" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator doctor</tspan> under CI</text>
+    <text x="396" y="117" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">review --due</tspan>, releases, <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">init</tspan> / <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">upgrade</tspan></text>
+    <text x="396" y="132" stroke="none" font-size="11" fill="#5c574f">dispositions on what the reflector raises</text>
+
+    <!-- S3* -->
+    <rect x="666" y="66" width="328" height="78" rx="3" fill="none" stroke-width="1.5"/>
+    <text x="676" y="84" stroke="none" font-weight="600">S3*</text>
+    <text x="706" y="84" stroke="none">eval harness (exists)</text>
+    <text x="676" y="102" stroke="none" font-size="11" fill="#5c574f">arms · ablation · deterministic graders · intervals</text>
+    <text x="676" y="117" stroke="none" font-size="11" fill="#5c574f">report refused without a person's interpretation</text>
+    <text x="676" y="132" stroke="none" font-size="11" fill="#136e79">+ an arm may differ in an advice file</text>
+
+    <!-- report returns to S5 -->
+    <path d="M 690 144 L 690 172 L 236 172 L 236 146" stroke="#136e79" stroke-width="1.2" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="700" y="186" stroke="none" font-size="10" text-anchor="end" fill="#136e79">report + interpretation</text>
+    <!-- accept: S5 -> definition files -->
+    <line x1="206" y1="144" x2="206" y2="196" stroke="#136e79" stroke-width="2" marker-end="url(#after-arrow-accent)"/>
+    <text x="198" y="162" stroke="none" font-size="10" text-anchor="end" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">definition accept</tspan> (a person)</text>
+    <text x="198" y="176" stroke="none" font-size="10" text-anchor="end" fill="#136e79">writes an advice file</text>
+    <!-- proposal: reflector -> S5 -->
+    <path d="M 386 212 L 320 212 L 320 146" stroke="#136e79" stroke-width="2" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="326" y="192" stroke="none" font-size="10" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">harness-edit</tspan> proposal → obligation owed to S5</text>
+
+    <!-- definition files (domain of this level) -->
+    <rect x="46" y="198" width="320" height="78" rx="3" fill="none" stroke-width="1.5" stroke-dasharray="5 4"/>
+    <text x="56" y="218" stroke="none" font-weight="600">DEFINITION FILES</text>
+    <text x="180" y="218" stroke="none" fill="#5c574f">the domain</text>
+    <text x="56" y="238" stroke="none" font-size="11">advice files: profile advice, contract advice, skills</text>
+    <text x="56" y="256" stroke="none" font-size="11" fill="#5c574f">identity seed, grants, checks, registry cards</text>
+    <text x="56" y="270" stroke="none" font-size="11" fill="#5c574f">written only by <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">identity promote</tspan> or a release</text>
+
+    <!-- S4 reflector -->
+    <rect x="386" y="198" width="608" height="78" rx="3" fill="#d9ecee" stroke="#136e79" stroke-width="2"/>
+    <text x="396" y="218" stroke="none" font-weight="600" fill="#136e79">S4</text>
+    <text x="422" y="218" stroke="none" font-weight="600">reflector</text>
+    <text x="490" y="218" stroke="none" fill="#5c574f">a package beside <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">checks</tspan>; or a <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reflect</tspan> unit with a contract, a budget and a lease</text>
+    <text x="396" y="238" stroke="none" font-size="11">reads the records of every instance; writes three record kinds that already exist; adopts nothing</text>
+    <text x="396" y="256" stroke="none" font-size="11" fill="#5c574f">registered as an <tspan font-weight="600">instrument</tspan>, not a regulator: <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan> refuses it without a calibration report</text>
+    <text x="396" y="270" stroke="none" font-size="11" fill="#5c574f">(did the proposals a person accepted move the metric they named?)</text>
+    <!-- never writes a definition file -->
+    <path d="M 386 262 L 372 262" stroke="#b4532a" stroke-width="1.5" fill="none" marker-end="url(#after-x)"/>
+    <text x="236" y="292" stroke="none" font-size="10" fill="#b4532a">never writes a definition file</text>
+
+    <!-- S1 instances -->
+    <text x="136" y="310" stroke="none" font-weight="600">S1</text>
+    <text x="158" y="310" stroke="none" fill="#5c574f">instances, each the whole of the figure above</text>
+    <g stroke-width="1.2">
+      <rect x="46" y="320" width="290" height="64" rx="3" fill="#f0ede6"/>
+      <rect x="356" y="320" width="290" height="64" rx="3" fill="#f0ede6"/>
+      <rect x="666" y="320" width="328" height="64" rx="3" fill="#f0ede6"/>
+    </g>
+    <g stroke="none">
+      <text x="58" y="340">instance A</text><text x="58" y="357" font-size="11" fill="#5c574f">S3 loop · units · router · memory</text><text x="58" y="373" font-size="11" fill="#5c574f">identity files · host checks</text>
+      <text x="368" y="340">instance B</text><text x="368" y="357" font-size="11" fill="#5c574f">S3 loop · units · router · memory</text><text x="368" y="373" font-size="11" fill="#5c574f">identity files · host checks</text>
+      <text x="678" y="340">instance C</text><text x="678" y="357" font-size="11" fill="#5c574f">S3 loop · units · router · memory</text><text x="678" y="373" font-size="11" fill="#5c574f">identity files · host checks</text>
+    </g>
+    <!-- init/upgrade: definition files -> instances -->
+    <line x1="120" y1="276" x2="120" y2="318" stroke-width="1.2" marker-end="url(#after-arrow)"/>
+    <text x="114" y="302" stroke="none" font-size="10" text-anchor="end" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">init</tspan> / <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">upgrade</tspan></text>
+    <!-- reflector -> instances -->
+    <path d="M 440 276 L 440 318" stroke="#136e79" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="446" y="292" stroke="none" font-size="10" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">remember</tspan>: a fact, scoped, expiring</text>
+    <text x="446" y="304" stroke="none" font-size="10" fill="#136e79">rendered as advice to later units</text>
+    <path d="M 640 276 L 640 318" stroke="#b4532a" stroke-width="1.5" fill="none" marker-end="url(#after-x)"/>
+    <text x="646" y="292" stroke="none" font-size="10" fill="#b4532a">never dispatches</text>
+    <text x="646" y="304" stroke="none" font-size="10" fill="#b4532a">never dispositions</text>
+    <path d="M 790 276 L 790 318" stroke="#136e79" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="796" y="292" stroke="none" font-size="10" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">intelligence-signal</tspan> → the router</text>
+    <text x="796" y="304" stroke="none" font-size="10" fill="#136e79">→ an obligation that may hold a unit</text>
+
+    <!-- records strip -->
+    <rect x="46" y="412" width="948" height="34" rx="3" fill="none" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
+    <text x="56" y="433" stroke="none" font-weight="600">RECORDS</text>
+    <text x="130" y="433" stroke="none" font-size="11" fill="#5c574f">per instance, append-only: execution store · regulatory log · audit log · memory · effect journal · spans · eval reports</text>
+    <line x1="191" y1="384" x2="191" y2="410" stroke-width="1.2" marker-end="url(#after-arrow)"/>
+    <line x1="501" y1="384" x2="501" y2="410" stroke-width="1.2" marker-end="url(#after-arrow)"/>
+    <line x1="830" y1="384" x2="830" y2="410" stroke-width="1.2" marker-end="url(#after-arrow)"/>
+    <text x="197" y="402" stroke="none" font-size="10" fill="#5c574f">writes</text>
+    <!-- records -> reflector (the new read) -->
+    <path d="M 994 429 C 1024 429, 1024 237, 996 237" stroke="#136e79" stroke-width="2" fill="none" marker-end="url(#after-arrow-accent)"/>
+    <text x="1006" y="340" stroke="none" font-size="10" fill="#136e79" transform="rotate(-90 1006 340)">reads, read-only</text>
+    <!-- records -> S3* (exists) -->
+    <path d="M 994 420 C 1016 420, 1016 118, 996 118" stroke-width="1.2" stroke-dasharray="2 4" fill="none" marker-end="url(#after-arrow)"/>
+
+    <!-- below the frame -->
+    <text x="46" y="490" stroke="none" font-weight="600">What a person sees</text>
+    <text x="46" y="510" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator obligations</tspan>: a harness-edit proposal, the trajectory moment it cites, the arm it was probed in, and the report's interpretation.</text>
+    <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator definition accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reject</tspan> changes nothing.</text>
+    <text x="46" y="550" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan>: the reflector's instrument card, its level (<tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">model-judgment</tspan>), and the date of its last calibration report.</text>
+
+    <text x="46" y="594" stroke="none" font-weight="600">What Harness² does here that this refuses</text>
+    <text x="46" y="614" stroke="none" font-size="12" fill="#5c574f">Its composer adopts: the person's edge above is a model's. Its guardrails are an editable component: the identity row here.</text>
+    <text x="46" y="632" stroke="none" font-size="12" fill="#5c574f">Its lessons are edits to the harness: here they are memory or a proposal. Its judge is the executor's own model family:</text>
+    <text x="46" y="650" stroke="none" font-size="12" fill="#5c574f">here the probe's graders are deterministic and the interpretation is a person's.</text>
+    <text x="46" y="684" stroke="none" font-size="11" fill="#8a847a">Dependency direction: reflector → protocol, core, the status read model. Nothing depends on the reflector. Same posture as control-room.</text>
+  </g>
+</svg>

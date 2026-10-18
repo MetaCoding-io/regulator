@@ -1,6 +1,6 @@
 # Harness² read through the control plane
 
-- **Status:** open.
+- **Status:** open. The component's name is decided (§7); the rest is design.
 - **Source:** *Harness²: Recursive Agent Harnessing for an Open World*, Xu et al., Google
   Cloud AI Research and Northwestern, [arXiv 2610.14224](https://arxiv.org/abs/2610.14224)
   (9 Oct 2026), the code at
@@ -231,4 +231,134 @@ Item 1 is the slice with a seam ready for it: a `harness-edit` proposal payload 
 protocol, routed as a proposal, with a `definition accept` path that writes an advice
 file under S5 authority the way `identity accept` writes an identity file. It needs a
 design decision first on which definition files count as advice (item 5), recorded on
-`BOUNDARY.md`. Items 2 to 4 wait on #46.
+`BOUNDARY.md`. Items 2 to 4 wait on #46. §7 names the component and draws the level it
+belongs to.
+
+## 7. The reflector: S4 of the level above
+
+### Is this second-order cybernetics?
+
+The phrase appears nowhere in this repository or the course, and the thing it names is
+already here under Beer's word for it. Second-order cybernetics is the cybernetics of
+observing systems: the observer is inside the loop, and the system that regulates
+becomes the object of regulation. The course's primer says it as recursion running
+upward ("the harness is an S1 unit of the team that operates it", §7), lesson 14 applies
+the evidence rule "one recursion level up", and the registry's lifecycle (owner, review
+date, ablation switch, retirement condition on every card) is a regulator regulating the
+regulators. The pathology catalog names the absence as *missing recursion*. So the
+second-order observer exists. It is a person reading a table of numbers under the
+interpretation rule. Harness² is the same move with the model as the observer and
+nothing above it, which is what its propagated-false-premise regressions measure: an
+observer with no observer.
+
+### Is "analyze the past and propose updates" S4?
+
+In three parts, on three functions. *What happened* is S3\*: the stores, the audit log,
+the eval reports, all of which exist. *What it means for how the system should behave*
+is S4 in Beer's strict sense, since S4 carries "a model of the whole system in its
+environment" and not only a scan of the outside; nothing holds that model here today.
+*Whether to change* is S5: `identity accept`, a person. Harness²'s reflector collapses
+the three into one editor call.
+
+The recursion level matters. The S4 the instance has (`research` units,
+`report_intelligence`, `intelligence-intake`) scans the *repository's* environment. A
+component that reads an *instance's* past and proposes changes to the *definition* is
+the S4 of the level above, where the operations are instances and the domain is the
+definition's files. `docs/PATHOLOGIES.md` already names that gap on the missing-recursion
+row: "the definition's own S4 (the Pi upgrade path) is a checklist a person runs."
+
+### What S4 is today, and every note that widens it
+
+One intake, one producer, one effect: a `research` unit under the read-only
+`intelligence` profile, dispatched by S3 under its own contract, budget and route, calls
+`report_intelligence`; the router derives severity under policy, opens one obligation
+per affected unit, vetoes dispatch and close at `blocking`, notes an expired finding and
+never re-raises it (`packages/core/src/obligations.ts`). It is demand-triggered only. The
+`intelligence-intake` card's own retirement condition is a second intake.
+
+The notes that widen it, in order of age: the archived `DESIGN-ROADMAP.md` C2 ("S4
+operating model": demand-triggered research from obligations, freshness, aggregation of
+recurring uncertainty, when intelligence should propose an S5 change rather than inform
+S3); the archived `REGULATORY-STATE-AND-ROUTING.md` (a refresh obligation when stale
+intelligence is relied on, time-triggered refresh); [open questions
+§2](2026-09-25-open-questions.md#2-a-person-should-be-able-to-create-s4-intelligence)
+(a person as a sensor; sensors declared in the definition); [open questions
+§4](2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then)
+(predictions that resolve; the instrument record kind); the [ArticleMiner
+note](2026-09-25-articleminer-knowledge-production.md) (S4 for parser and model drift,
+"S4 proposes a change, S5 accepts it"); and §4 of this note. Every one of them widens S4
+along one of three axes: who may be a sensor (unit, person, watcher, schedule), what it
+models (the environment, the instance's own future, the definition), and what it emits
+(a signal, a prediction, a proposal). None widens the consumer. It is always an
+obligation owed to S3 or a proposal owed to S5, and that is the invariant the reflector
+keeps.
+
+### The component
+
+It is the shape of `checks`: a package that reads what the instance writes and emits
+typed records, with the loop never depending on it.
+
+- **Reads** the execution store, the regulatory and audit logs, the memory store, the
+  eval reports and the span projection, all append-only.
+- **Emits** three record kinds that exist (`intelligence-signal`, `remember`,
+  `policy-proposal`) plus the `harness-edit` proposal kind of §4. It never writes a
+  definition file; `identity accept` and its `definition accept` sibling stay the only
+  writers, so INV-001 and INV-002 hold without a new mechanism.
+- **Depends on** `protocol`, `core` and the `status` read model. Nothing depends on it,
+  the posture `control-room` has.
+- **Runs** either as a CLI over a repository of instances or as a `reflect` unit inside
+  an instance, which gives it a contract, a budget, a lease and a profile. The primer's
+  rule applies: give it those and it is a unit, give it a prompt and it is a paragraph.
+- **Is registered as an instrument, not a regulator** (open questions §4), graded on
+  calibration: did the proposals a person accepted move the metric they named?
+  `regulator check` refuses it without that report. Harness²'s leave-one-out library
+  analysis is the shape of the report.
+- **Hazard for the card:** a loop that reads the instance's trace and feeds the instance
+  can oscillate and can be self-fulfilling (§4's hazards, one level up), so its output
+  is advice with a horizon, probed as an eval arm where a fixture exists and held for a
+  person where none does.
+
+**Decided (2026-10-18).** The component is the **reflector**; the unit type is `reflect`
+and the package is `packages/reflector`. Not "improver": that names an outcome nobody has
+measured, and the card must be able to say "did not improve" without contradicting
+itself (Harness²'s own improver made nine tasks worse). "Reflector" names what it does,
+reading the whole record, pairs with `research` and `intelligence` one level down, and is
+Harness²'s word for the same component, which helps a reader of both. "Proposer" is the
+fallback; "intelligence" is right in Beer's terms and already taken by the instance-level
+profile. Neither word is on the identity glossary's refused list.
+
+### The two levels, drawn
+
+Hand-drawn, light theme, in the course's figure vocabulary; the research directory is not
+built into the docs site, so these are not subject to the generator rule of [open
+questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
+When the level above is built, the generator reproduces these from the definition and
+these files become history.
+
+![Figure 1. Before: the instance is regulated, every channel typed and every writer named; the definition above it is changed only by people, and nothing reads the instance's records back into it.](figures/2026-10-18-reflector-before.svg)
+
+*Figure 1 — before. One recursion level is regulated. The level above has people for
+S3, S3\* and S5, and a checklist for S4. The records flow out and are read for status,
+evals and audit; no mechanism carries what they say back up.*
+
+![Figure 2. After: the definition as a viable system whose operations are instances; the reflector is its S4, reading every instance's records and emitting memory, intelligence and harness-edit proposals; a proposed edit is probed as an eval arm before a person accepts it into an advice file; crossed edges mark what the reflector can never write or schedule.](figures/2026-10-18-reflector-after.svg)
+
+*Figure 2 — after. Four things are new: the reflector, its read of the records, the
+`harness-edit` proposal kind, and an eval arm that may differ in an advice file.
+Everything it emits lands in a record kind that exists, and every write to the
+definition still goes through a person.*
+
+What changes, at its mechanism level and seam:
+
+| Change | Level | Seam | Refuses |
+| --- | --- | --- | --- |
+| The advice split on `BOUNDARY.md` | 2, definition check | `regulator check` over the registry and the instance manifest | a proposal against a file outside the proposable set, at intake |
+| `harness-edit` proposal kind | 3, typed tool and schema | `packages/protocol`; routed by `routeMessages` like every proposal | a proposal whose observation (unit, revision, moment) does not resolve |
+| Probe as an eval arm | 2, deterministic graders | `evals/*.json`: an arm gains an `advice` field | adoption from a report without an interpretation |
+| `regulator definition accept` | 2, authority check then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
+| Instrument record kind | 2, registry check | `packages/regulator/registry/`, a second record kind beside regulators | an instrument without a calibration report |
+| `packages/reflector` | 4, model judgment | reads `.regulator/` and the reports; depends on `protocol` and `core` | dispatching, dispositioning, writing under `regulator/`: it has no tool that does |
+
+Order: the boundary split first, because every other row names it. The probe arm and the
+instrument card wait on the first live eval report (#46), since a calibration report
+needs live numbers to calibrate against.
