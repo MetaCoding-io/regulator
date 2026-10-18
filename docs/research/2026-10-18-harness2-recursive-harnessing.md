@@ -369,7 +369,7 @@ What changes, at its mechanism level and seam:
 | Change | Level | Seam | Refuses |
 | --- | --- | --- | --- |
 | The accept-path split on `BOUNDARY.md` (§4, item 5) | 2, definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
-| `harness-edit` proposal kind | 3, typed tool and schema | `packages/protocol`; routed by `routeMessages` like every proposal | a proposal whose observation (unit, revision, moment) does not resolve |
+| `harness-edit` proposal kind, carrying a diagnosis, a change and a prediction (§8) | 3, typed tool and schema | `packages/protocol`; routed by `routeMessages` like every proposal | a proposal whose observation (unit, revision, moment) does not resolve, or whose prediction names no metric, baseline, horizon or disconfirming value |
 | Probe as an eval arm | 2, deterministic graders | `evals/*.json`: an arm gains an `advice` field | adoption from a report without an interpretation |
 | `regulator definition accept` | 2, authority check then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
 | Instrument record kind | 2, registry check | `packages/regulator/registry/`, a second record kind beside regulators | an instrument without a calibration report |
@@ -378,3 +378,112 @@ What changes, at its mechanism level and seam:
 Order: the boundary split first, because every other row names it. The probe arm and the
 instrument card wait on the first live eval report (#46), since a calibration report
 needs live numbers to calibrate against.
+
+## 8. Three records: what was seen, what is expected, what was decided
+
+A reader of §4 and §7 (via a second model asked to review them) put two objections that
+the schema sketch had not met. First: observed evidence, predicted effects and
+authoritative decisions are three different records, and a trace that supports a
+*diagnosis* is not evidence that the proposed *remedy* will work; the distinction
+belongs in the schemas, not the narrative. Second: every reflector proposal should state
+the counterfactual it is betting on, that is, what measurable outcome it expects,
+relative to what baseline, over what horizon, and which observation would count against
+it. Both are right, and both land on seams that exist. What they expose is a gap in the
+`harness-edit` proposal as §4 specified it.
+
+### What the protocol already keeps apart
+
+Two of the three records exist, and the rule that separates them is already written.
+
+- **Observed evidence** is an `EvidenceRecord` (`packages/protocol/src/audit.ts`): a
+  host check's observation bound to a unit, an attempt, a revision, an environment and
+  the criteria it speaks to, produced by S3\*. The identity glossary says the rest: a
+  unit's report is a claim, not evidence. An `IntelligenceSignal` keeps `claim` and
+  `observation` as separate fields for the same reason, with `evidence[]` as references.
+- **Authoritative decisions** are events: an obligation's disposition with its `--by`
+  and rationale (`packages/core/src/obligations.ts`), an identity decision
+  (`regulator identity accept | reject`), a recovery decision under the versioned
+  policy. Each names who decided and cites what it decided on.
+- **Predicted effects** have no record kind. [Open questions
+  §4](2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then)
+  designs one: a prediction is an intelligence signal whose claim is about the future,
+  with a `horizon` (when it resolves), a `confidence` that is a probability, and the
+  evidence it was computed from; when the unit closes or aborts, the loop records the
+  outcome against every open prediction that named it, and the resolved pair
+  (probability, outcome) is regulatory state like an evidence record.
+
+So the first objection asks for §4's record to exist, and for the proposal schema to
+reference it rather than fold it into `rationale`.
+
+### The gap in the `harness-edit` proposal
+
+As §4 specified it, a `harness-edit` carries the diagnosis (the trajectory moment the
+edit traces to) and the change (the diff), and nothing else. That is Harness²'s shape,
+and it is how Harness²'s worst regression happens: a trace that justified a diagnosis
+is read as evidence that the remedy works, the remedy is adopted, and the false premise
+propagates into every later candidate at a cost of 2 to 11 points (the paper's Appendix
+E.6). The calibration question §7 gave the instrument card, *did the proposals a person
+accepted move the metric they named*, presupposes a named metric that the schema never
+asked for. The second objection supplies the missing field.
+
+`PolicyProposalSchema` today is an envelope, a `rationale`, a `requestedChange` of
+unknown shape and `evidence[]` references. A `harness-edit` is a `requestedChange` with
+three parts, each a different record:
+
+| Part | What it holds | What it is evidence of |
+| --- | --- | --- |
+| **Diagnosis** | references to the observations the edit traces to: a unit, a revision, the moment in the trajectory, and the evidence records or signals read there | that something happened. Nothing more |
+| **Change** | the diff against one advice file in the proposable set (§4 item 5) | nothing. It is the thing being asked for |
+| **Prediction** | a §4 prediction record: `metric`, one of the fifteen names in `EVAL_METRICS`; `baseline`, a committed report's fingerprint or the arm the probe runs against; `direction` and `magnitude`; two `horizon`s (below); and `disconfirmedBy`, the grader value at the horizon that counts against it | nothing yet. It is a bet that resolves |
+
+The host refuses a `harness-edit` whose diagnosis references do not resolve (the rule
+§4 already states), and one whose prediction is missing any of its parts. A proposal
+without a prediction is still a legal `policy-proposal`; it is simply not a
+`harness-edit`, and it cannot be probed, because there is nothing to probe against.
+
+### Two horizons, and what resolution does
+
+An advice edit has two horizons, and the prediction names both.
+
+1. **The probe horizon** is the eval arm of §4 item 2, run before anyone decides. The
+   arm's report resolves it: the metric at the baseline's fingerprint against the metric
+   under the edit, with the interval the harness already computes.
+2. **The live horizon** is the next N units of the named types after acceptance, which
+   is when the effect matters. It stays open after the decision. The loop resolves it
+   the way §4 resolves any prediction, from the stores, with the same graders.
+
+Resolution is three-valued, because the baseline problem is real now: at three
+repetitions few intervals separate, and the live report (#46) is still owed. A
+prediction resolves as *confirmed*, *disconfirmed* or *inconclusive*. Inconclusive is
+not neutral. It counts against the prediction's precision (the effect was too small to
+see at the budget the probe had), never for the edit; Harness²'s composer treats a
+single-rollout effect the same way, as noise. A disconfirmed live horizon opens an
+obligation owed to S5 to revert or re-decide, which is the loop the reflector otherwise
+lacks: its own output becomes auditable by the graders that audit everything else.
+
+The chain for one proposal is then five records, no two of the same kind: a diagnosis
+(evidence records and signals), a change (the diff), a prediction (a record that
+resolves), a decision (the obligation's disposition, citing the prediction's id), and a
+resolution (a grader's observation at each horizon). The instrument card's calibration
+report (§7) is nothing more than the set of resolved predictions.
+
+### Where this sits in the architecture
+
+This is not a new rule. It is the eval harness's pre-registration rule
+([evidence about the regulators](../concepts/evidence-about-the-regulators.md): a suite
+states what it will measure before it is run, so a report cannot choose afterwards the
+metric that happened to look good) applied one level down, to one proposal instead of
+one suite. The disconfirming value is the interpretation rule's "where the gated arm
+lost", asked in advance instead of after.
+
+It may also deserve stating beside INV-003 as a candidate invariant, since INV-003 is
+the same shape one function over: *evidence for a proposal's diagnosis does not satisfy
+its effect; the effect is a prediction that resolves.* Whether it is an invariant or a
+schema rule is a decision for when the prediction record lands; the note records the
+candidate so it is not re-derived.
+
+**Decided (2026-10-18).** The `harness-edit` proposal carries three parts, diagnosis,
+change and prediction, and the prediction is the record open questions §4 designs, not a
+field of its own. The change table in §7 says so. The prediction record therefore moves
+ahead of the reflector in the build order: it is the second slice after the accept-path
+split, since the probe arm (§4 item 2) has nothing to resolve without it.
