@@ -28,6 +28,16 @@ person accepts it with a `definition accept` command that is the only writer of 
 advice file. The reflector never writes a definition file, never dispatches a unit and
 never dispositions an obligation, because it has no tool that does.
 
+Every file in the definition is proposable, because a proposal changes nothing by
+itself (INV-002) and identity is proposed that way today. What differs is the path an
+accepted proposal takes. Identity lands through `identity accept`. An advice file lands
+through `definition accept` after its probe. Anything that executes or grants (a unit
+type, which is a profile, a grant, a budget and a route; a profile grant; a host check;
+an extension under the trust rule) lands as a unit of work against the definition's
+repository under a contract, checked at closeout and merged by a person. So the
+reflector may propose a new kind of unit and how it joins the workload. It may not
+author the code or the grant that the proposal becomes.
+
 It is registered as an **instrument**, not a regulator: a record kind for things that
 inform rather than refuse, graded on calibration. Its question is whether the proposals
 a person accepted moved the metric they named. `regulator check` refuses an instrument
@@ -196,9 +206,9 @@ the difference the figures below draw.
     <rect x="46" y="66" width="320" height="78" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
     <text x="56" y="84" stroke="none" font-weight="600">S5</text>
     <text x="80" y="84" stroke="none">maintainers · identity seed · <tspan font-family="var(--vp-font-family-mono)">BOUNDARY.md</tspan></text>
-    <text x="56" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)">never editable by a loop: identity, profile grants, checks</text>
-    <text x="56" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">proposable: advice files, skills, memory</text>
-    <text x="56" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">declared, not learned: unit types, extensions</text>
+    <text x="56" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)">every file proposable (INV-002); accept paths differ:</text>
+    <text x="56" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity → identity accept · advice → definition accept</text>
+    <text x="56" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">code &amp; grants → a unit under a contract; a person merges</text>
 
     <!-- S3 -->
     <rect x="386" y="66" width="260" height="78" rx="3" fill="none" stroke-width="1.5"/>
@@ -233,7 +243,7 @@ the difference the figures below draw.
     <text x="180" y="218" stroke="none" fill="var(--vp-c-text-2)">the domain</text>
     <text x="56" y="238" stroke="none" font-size="11">advice files: profile advice, contract advice, skills</text>
     <text x="56" y="256" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity seed, grants, checks, registry cards</text>
-    <text x="56" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">written only by <tspan font-family="var(--vp-font-family-mono)">identity promote</tspan> or a release</text>
+    <text x="56" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">written by <tspan font-family="var(--vp-font-family-mono)">identity accept</tspan>, <tspan font-family="var(--vp-font-family-mono)">definition accept</tspan>, a merge</text>
 
     <!-- S4 reflector -->
     <rect x="386" y="198" width="608" height="78" rx="3" fill="var(--vp-c-brand-soft)" stroke="var(--vp-c-brand-1)" stroke-width="2"/>
@@ -308,7 +318,7 @@ the difference the figures below draw.
 
 | Change | Mechanism level | Seam | Refuses |
 | --- | --- | --- | --- |
-| The advice split on `BOUNDARY.md`: never editable by a loop (identity, grants, checks); proposable (advice files, skills, memory); declared, not learned (unit types, extensions) | 2, the definition check | `regulator check` over the registry and the instance manifest | a proposal against a file outside the proposable set, at intake |
+| The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `definition accept`, code and grants (unit types, profile grants, checks, extensions) through a unit under a contract that a person merges | 2, the definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
 | The `harness-edit` proposal kind | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation (unit, revision, moment) does not resolve |
 | A proposed edit probed as an eval arm | 2, deterministic graders | an eval suite's arms gain an `advice` field | adoption from a report without an interpretation |
 | `regulator definition accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
