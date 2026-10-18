@@ -99,6 +99,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: "Roadmap", link: "/project/roadmap" },
+          { text: "What's coming", link: "/project/whats-coming" },
           { text: "Changelog", link: "/project/changelog" },
           { text: "Build debt", link: "/DEBT" },
           { text: "Decisions", link: "/decisions/0001-own-orchestrator" },
