@@ -96,6 +96,7 @@ The academic track is **not a product release or milestone**. Research issues ca
 | --- | --- | --- | --- |
 | T1: two-level cybernetic model | [#103](https://github.com/MetaCoding-io/regulator/issues/103) | functions, channels, authority graph, assumptions, candidate invariants | begin now |
 | T2: primary-source literature and novelty | [#104](https://github.com/MetaCoding-io/regulator/issues/104) | related-work matrix, strongest competing theories, explicit originality limit | begin alongside T1 |
+| T2a: portable VSM vocabulary — three-system pilot | [#113](https://github.com/MetaCoding-io/regulator/issues/113) | [pilot map](docs/research/2026-10-18-paper-113-vsm-vocabulary-pilot.md) of Regulator, OpenCode and CrewAI, criteria and MAPE-K comparison | exploratory draft now; independent re-coding/source checks before claims of utility |
 | T3: propositions and bounded evaluation | [#105](https://github.com/MetaCoding-io/regulator/issues/105) | falsifiable properties, protocol, failure scenarios and metrics | draft after T1; baseline [#46](https://github.com/MetaCoding-io/regulator/issues/46) for live probe |
 | T4: worked case and critical boundary assessment | [#106](https://github.com/MetaCoding-io/regulator/issues/106) | provenance-linked positive, rejected and inconclusive/negative traces | study design now, real trace after prototype |
 | T5: reproducibility and manuscript | [#107](https://github.com/MetaCoding-io/regulator/issues/107) | frozen tagged artifact, limits, journal/preprint plan | final form after evaluation |
