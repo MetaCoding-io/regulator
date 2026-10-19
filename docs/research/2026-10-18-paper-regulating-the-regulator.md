@@ -16,7 +16,7 @@
 
 **Paper kind:** a conceptual + design-science article with a small, reproducible implementation and bounded evaluation, not a general quantitative claim of superior agent performance. A larger controlled performance study belongs to Paper 2, not this track.
 
-**Do not claim:** (a) a proven general theorem, (b) autonomous S5 editing, (c) adversarial-security guarantees beyond the documented host/deployment trust boundary, (d) that VSM recursion and second-order cybernetics are identical, (e) that Refector/Reflector already works or improves agent performance, or (f) empirical effects before results exist.
+**Do not claim:** (a) a proven general theorem, (b) autonomous S5 editing, (c) adversarial-security guarantees beyond the documented host/deployment trust boundary, (d) that VSM recursion and second-order cybernetics are identical, (e) that Reflector already works or improves agent performance, or (f) empirical effects before results exist.
 
 ## 2. Initial analytic model (a scaffold, not a theorem)
 
