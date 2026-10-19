@@ -80,10 +80,28 @@ names the issue its current slice is in.
 | ArticleMiner as a knowledge-production workload | [ArticleMiner note §5](docs/research/2026-09-25-articleminer-knowledge-production.md#5-phases-against-the-features) | proposed, in phases | Phase 1: declared checks for non-Node domains (§4.1) | 0.3, under #61 |
 | A homelab control plane, designed with its infrastructure | [homelab note §7](docs/research/2026-09-27-homelab-control-plane.md#7-architectural-conflicts) | design note; ten of thirteen decisions made (§9) | Choose the file service (§9, decision 11); then stage 0 in a separate homelab repository | unscheduled |
 | The reflector: the definition's S4, a package that reads an instance's records and emits `harness-edit` proposals over the advice files, accepted by a person; a proposed edit probed as an eval arm before the decision | [Harness² note §4, §7, §8](docs/research/2026-10-18-harness2-recursive-harnessing.md#7-the-reflector-s4-of-the-level-above); [the accept-path split](docs/research/2026-10-18-accept-path-split.md) | name decided; the proposal's three records decided (§8); the split designed, awaiting two decisions (split note §10) | Decide split note §3 (advice as a file set) and §5 (`advice accept \| reject \| promote`); then file slice 1 (split note §8) as a `roadmap:0.2` issue with its done-when list; then the prediction record of open questions §4 and the proposal payload in `protocol` | slice 1 in 0.2; the probe arm waits on #46 |
+| Regulating the Regulator — Paper 1 research track (theoretical model, novelty, evaluation protocol, governed-adaptation demonstration, replication and journal submission) | [paper plan](docs/research/2026-10-18-paper-regulating-the-regulator.md) | research active; no paper findings claimed; engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108) remains proposal-stage | Work [#103](https://github.com/MetaCoding-io/regulator/issues/103) and [#104](https://github.com/MetaCoding-io/regulator/issues/104) first; research may proceed before the accept-path decisions; engineering follows the existing Reflector thread | separate paper track, not 0.2/0.3 product scope |
 | The control room accepts the CLI's dispositions | [open questions §5](docs/research/2026-09-25-open-questions.md#5-should-the-control-room-write) | deferred: the control room stays read-only for now | None until reopened | — |
 
 The open questions' backlog (§6) holds smaller items with no design yet; one becomes a
 row here when it gets one.
+
+## Academic research track — Paper 1: Regulating the Regulator
+
+**Purpose:** investigate, formalize, and test the proposed two-level cybernetic governance architecture without expanding the product roadmap by implication. Source of truth: [the Paper 1 research plan](docs/research/2026-10-18-paper-regulating-the-regulator.md). The candidate venue is *Systems Research and Behavioral Science*, including its [Stafford Beer centenary special issue](https://onlinelibrary.wiley.com/page/journal/10991743a/homepage/call-for-papers) (announced submission deadline: February 2027; recheck before submitting).
+
+The academic track is **not a product release or milestone**. Research issues carry `research` and `paper_regulating_the_regulator`; engineering handoff carries `proposal` and the paper tag. No paper issue certifies a product mechanism, changes the S5 boundary, or replaces an existing `docs/DEBT.md` row. Claude's engineering slices follow the Reflector research note and accept-path note, with their decisions and normal `roadmap:0.x` issue discipline.
+
+| Task | Issue | Required research deliverable | Prerequisite |
+| --- | --- | --- | --- |
+| T1: two-level cybernetic model | [#103](https://github.com/MetaCoding-io/regulator/issues/103) | functions, channels, authority graph, assumptions, candidate invariants | begin now |
+| T2: primary-source literature and novelty | [#104](https://github.com/MetaCoding-io/regulator/issues/104) | related-work matrix, strongest competing theories, explicit originality limit | begin alongside T1 |
+| T3: propositions and bounded evaluation | [#105](https://github.com/MetaCoding-io/regulator/issues/105) | falsifiable properties, protocol, failure scenarios and metrics | draft after T1; baseline [#46](https://github.com/MetaCoding-io/regulator/issues/46) for live probe |
+| T4: worked case and critical boundary assessment | [#106](https://github.com/MetaCoding-io/regulator/issues/106) | provenance-linked positive, rejected and inconclusive/negative traces | study design now, real trace after prototype |
+| T5: reproducibility and manuscript | [#107](https://github.com/MetaCoding-io/regulator/issues/107) | frozen tagged artifact, limits, journal/preprint plan | final form after evaluation |
+| Engineering coordination | [#108](https://github.com/MetaCoding-io/regulator/issues/108) | resolve two open accept-path decisions, then file/scaffold the smallest Reflector proof of design under normal product tracking | no decisions implied by creating this issue |
+
+**Not required for Paper 1:** full arbitrary-depth VSM recursion, autonomous S5 mutation, multi-instance improvement library, second host, RDF/SHACL, production-scale benchmarks or control-room write UI. These remain deferred or separately tracked. Paper 2's broad empirical comparison is a distinct future program.
 
 ## Not planned
 

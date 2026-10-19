@@ -98,6 +98,16 @@ Work is tracked in four places — a design note under `docs/research/`, a row i
 - Re-check a work list against `main` before filing an issue from it.
 - The `Next:` line under "Current goal" is a summary; the roadmap is the order.
 
+## Academic research tracking
+
+The first academic paper is tracked separately from implementation: [Regulating the Regulator — Paper 1](docs/research/2026-10-18-paper-regulating-the-regulator.md), with research issues [#103–#107](https://github.com/MetaCoding-io/regulator/issues/103) and engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108). Research issues use `research` and `paper_regulating_the_regulator` labels; the handoff is a `proposal` until its design decisions are recorded.
+
+- Research can produce theoretical definitions, literature analysis, protocols, and candidate manuscript prose without changing the product or certifying a mechanism.
+- Development proceeds from the existing Reflector and accept-path design notes using the normal decision → roadmap issue → PR sequence. The paper track does **not** override the two open accept-path decisions, the live-eval prerequisite (#46), or any existing S5/host boundary.
+- Never call the proposed Reflector a shipped feature or call an experiment conclusive before its evidence exists. Keep research interpretations and product test results distinct.
+- A paper milestone does not pay a `DEBT.md` row, and research prose does not replace code-level evidence; update registry cards, limitations and debt only when actual mechanism changes warrant it.
+- The public repo may link to the separate private course but must not copy nonpublic course content into a paper artifact.
+
 ## Before finishing an issue
 
 Confirm:
