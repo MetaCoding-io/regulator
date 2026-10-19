@@ -145,3 +145,37 @@ The prior-art stream has already surfaced three threats that **narrow the novelt
 - After author review, promote stabilized definitions and diagrams into the manuscript; leave unsettled issues explicitly open.
 
 **Status:** substantial draft of the formal model and challenge list. No formal proof, static verification, or empirical evaluation has been run.
+
+## 10. Author clarification and cross-review (2026-10-18): S5, vocabulary and adaptive *subtraction*
+
+This note records a discussion intended to **narrow** the scholarly claims without introducing new product requirements. See the parallel [#104 close-reading addendum](2026-10-18-paper-104-prior-art-novelty.md), including full text of [Jackson (1988)](https://doi.org/10.1111/j.1467-6486.1988.tb00047.x) and [Hu et al. (2026)](https://arxiv.org/abs/2609.32459).
+
+### Same maintainer, two decision contexts
+
+Distinguish **S5 as a governance function at a system-in-focus** from a human actor or organization's formal deliberation process. For a single-maintainer instance, the actor exercising operational S5 authority may be **the same** individual exercising meta-definition S5 authority. The two functions differ in **object/authority scope**:
+
+- Operational S5: uphold the instance/workload's identity, boundaries, and policy dispositions within a given definition.
+- Meta S5: decide whether to alter the definition's own advice, regulatory controls, scopes and evolution/retirement conditions, via its own acceptance paths.
+
+Neither role is an extra AI agent; the upper-level Reflector is proposed as **S4, not S5**. A two-level VSM diagram cannot itself establish either that these are distinct persons or that the upper level is a fully self-standing viable organization. For a team, representation, procedural fairness and collective decision-making remain **organizational choices external to Regulator**; `--by` is attributable role assertion, **not authentication or a constitution**.
+
+Jackson's deeper critique concerns not requiring a board everywhere but understanding **whose objectives a system can preserve**, whether they are contested, and whether a mechanically coherent design forecloses change. For Paper 1, treat purpose/legitimacy as a declared boundary condition rather than manufacture a team-democracy feature. Even in a solo system, ask whether existing instrumentation could mistake excessive conformance for viability.
+
+### Reversibility and under-regulation versus over-regulation
+
+Hu et al. find complex performance scaffolds are less beneficial for some stronger-model issue-repair tasks but more beneficial for stronger models on open-ended repository tasks. That is **not evidence that stronger models require weaker authorization boundaries**. Combine with Regulator's existing [per-regulator ablation switch/review/retirement](../concepts/evidence-about-the-regulators.md): the higher-level S4 should evaluate when to *propose removal or attenuation* of an unnecessary constraint as carefully as it evaluates additions. It must not retire any gate itself. The existing documented human-only registry retirement rule remains authoritative.
+
+**Candidate research proposition G10 (not demonstrated):** With model/workload/risk/definition revision held appropriately fixed and independently observed, a governed proposal to attenuate optional scaffolding can lower resource/human costs without unacceptable deterioration in outcome or boundary metrics, provided an authorized acceptance path and live reversal mechanism exist. The null outcome (added machinery costs more than it saves, or a supposedly redundant guard is still essential) must be preserved.
+
+**Proposed taxonomy for comparative measurement:** model family/version × task/workload family × mechanism class × outcome risk × probe/live horizon. Mechanism class distinguishes (a) performance scaffolding (optional advice/steps/context/delegation) from (b) assurance/authorization (gates, checkers, evidence, S5 routes). Evidence that one is redundant says nothing automatic about the other.
+
+### VSM as a shared engineering vocabulary is itself a candidate contribution
+
+The author emphasizes that the **consistent VSM vocabulary across practitioners and harness products** (as developed in the separate course and Regulator) is a core motivation, potentially independent of Regulator itself. This suggests two distinguishable publication claims:
+
+1. **Conceptual/diagnostic contribution:** an operational *pattern language* that lets developers of heterogeneous agent systems identify S1 operations, S2 coordination, S3 orchestration, S3* independent auditing, S4 environment/future-facing intelligence, S5 identity/authority, and channel/pathology concepts **without confusing them with agent personas**. This can be specified in portable, platform-neutral terms rather than as names of classes in a Pi repository.
+2. **Implementation/demonstration contribution:** Regulator/Reflector as *one* implementation of that vocabulary and of a bounded second-level proposal/evaluation/adoption protocol, including explicit scope and failure claims.
+
+Neither contribution should be framed as inventing the VSM. Novelty might lie in a rigorous **translation into agent engineering**, concrete cross-harness mapping rules, and empirical demonstration of diagnostic use. To test the *vocabulary* claim scientifically, consider a modest independent exercise: have multiple practitioners label the same 2–3 agent architectures using a published glossary/coding rubric, measure agreement and disagreements, and compare the **identification of omitted regulatory functions and authority ambiguities** against unstructured descriptions or an ordinary MAPE-K vocabulary. This is a *suggested future study*, not required for the first bounded formal article; avoid claiming demonstrated transferability or inter-rater reliability prematurely.
+
+**Reviewer challenge:** Why should practitioners adopt Beer vocabulary rather than MAPE-K, control theory, or existing software assurance terminology? Answer must be concrete: expressiveness, detection of otherwise-hidden distinctions, reproducible mappings, and reduced ambiguity, with **counterexamples where the VSM mapping adds no value**.
