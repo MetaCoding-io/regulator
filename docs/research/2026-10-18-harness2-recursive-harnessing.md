@@ -214,6 +214,8 @@ definition file.
    or the grant the proposal becomes. The line Harness² crosses is not proposing a
    subagent or a script. It is the editor writing the script and the executor running
    it in the same step, with nothing between.
+   The split is designed as data in [the accept-path note](2026-10-18-accept-path-split.md),
+   where the command is named `advice accept`; `definition accept` below reads as that.
 
 ## 5. The experiment the two projects suggest together
 
