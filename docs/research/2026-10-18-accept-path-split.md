@@ -1,7 +1,7 @@
 # The accept-path split on `BOUNDARY.md`
 
-- **Status:** proposed. The design asks for two decisions (§3 and §5) before an issue is
-  filed for its first slice (§8).
+- **Status:** graduated: slice 1 is [#110](https://github.com/MetaCoding-io/regulator/issues/110)
+  (`roadmap:0.2`); slices 2 to 4 of §8 stay designed here until each becomes an issue.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the
   split has to sit on, cited by file below.
@@ -291,3 +291,11 @@ Two decisions, then an issue:
 
 With those two taken, slice 1 of §8 is filed as a `roadmap:0.2` issue with its "done
 when" list as the acceptance criteria, and this note's status changes to `graduated`.
+
+**Decided (2026-10-19).** Both, as proposed. Advice becomes a file set seeded like
+identity (§3), and the commands are `advice accept | reject | promote` (§5);
+`definition accept` in the Harness² note and the "What's coming" figures reads as
+`advice accept` until slice 1 redraws them. Slice 1 is filed as
+[#110](https://github.com/MetaCoding-io/regulator/issues/110), a sub-issue of the
+engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108), with
+§8's done-when list as its acceptance criteria.
