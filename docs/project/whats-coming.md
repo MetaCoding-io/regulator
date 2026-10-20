@@ -24,14 +24,14 @@ units, an intelligence signal the router turns into an obligation, and a proposa
 to S5. The new proposal kind, `harness-edit`, carries a diff against one of the
 definition's *advice* files and the trajectory moment it traces to. A proposed edit is
 probed as an eval arm against the workload's fixture before anyone decides, and a
-person accepts it with a `definition accept` command that is the only writer of an
+person accepts it with an `advice accept` command that is the only writer of an
 advice file. The reflector never writes a definition file, never dispatches a unit and
 never dispositions an obligation, because it has no tool that does.
 
 Every file in the definition is proposable, because a proposal changes nothing by
 itself (INV-002) and identity is proposed that way today. What differs is the path an
 accepted proposal takes. Identity lands through `identity accept`. An advice file lands
-through `definition accept` after its probe. Anything that executes or grants (a unit
+through `advice accept` after its probe. Anything that executes or grants (a unit
 type, which is a profile, a grant, a budget and a route; a profile grant; a host check;
 an extension under the trust rule) lands as a unit of work against the definition's
 repository under a contract, checked at closeout and merged by a person. So the
@@ -85,19 +85,16 @@ the difference the figures below draw.
     </g>
     <text x="886" y="72" stroke="none" font-size="11" fill="var(--vp-c-text-2)">its own S4 today:</text>
     <text x="886" y="86" stroke="none" font-size="11" fill="var(--vp-c-text-2)">a person's checklist</text>
-
     <!-- init arrow -->
     <line x1="110" y1="116" x2="110" y2="176" stroke-width="1.5" marker-end="url(#a1)"/>
     <text x="118" y="150" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">regulator init</tspan> seeds</text>
     <!-- promote arrow -->
     <line x1="250" y1="212" x2="250" y2="94" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a1)"/>
     <text x="258" y="150" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">identity promote</tspan> (a person)</text>
-
     <!-- INSTANCE box -->
     <rect x="30" y="176" width="730" height="444" rx="6" fill="none" stroke-width="1.5"/>
     <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>
     <text x="126" y="198" stroke="none" fill="var(--vp-c-text-2)">one repository under the control plane</text>
-
     <!-- S5 -->
     <rect x="46" y="212" width="330" height="40" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
     <text x="56" y="229" stroke="none" font-weight="600">S5</text>
@@ -109,12 +106,10 @@ the difference the figures below draw.
     <line x1="430" y1="232" x2="378" y2="232" stroke-width="1.5" marker-end="url(#a1)"/>
     <text x="404" y="226" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">accept</text>
     <text x="404" y="262" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">the only writer</text>
-
     <!-- S3 loop -->
     <rect x="46" y="290" width="574" height="40" rx="3" fill="none" stroke-width="1.5"/>
     <text x="56" y="314" stroke="none" font-weight="600">S3</text>
     <text x="80" y="314" stroke="none">the loop: contract → dispatch → verify → route → close; budgets; recovery policy</text>
-
     <!-- S1 units -->
     <g stroke-width="1.2">
       <rect x="46" y="372" width="130" height="44" rx="3" fill="var(--vp-c-bg-soft)"/>
@@ -135,7 +130,6 @@ the difference the figures below draw.
     <line x1="255" y1="330" x2="255" y2="370" stroke-width="1.2" marker-end="url(#a1)"/>
     <line x1="409" y1="330" x2="409" y2="370" stroke-width="1.2" marker-end="url(#a1)"/>
     <text x="118" y="352" stroke="none" font-size="10" fill="var(--vp-c-text-2)">dispatch</text>
-
     <!-- router -->
     <rect x="520" y="372" width="200" height="44" rx="3" fill="none" stroke-width="1.5"/>
     <text x="620" y="389" stroke="none" text-anchor="middle">router → obligations</text>
@@ -147,7 +141,6 @@ the difference the figures below draw.
     <!-- proposal -->
     <path d="M 255 416 L 255 470 L 740 470 L 740 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#a1)"/>
     <text x="262" y="462" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">propose_policy_change</tspan> → obligation owed to S5; changes nothing</text>
-
     <!-- S3* -->
     <rect x="46" y="500" width="450" height="40" rx="3" fill="none" stroke-width="1.5"/>
     <text x="56" y="517" stroke="none" font-weight="600">S3*</text>
@@ -162,7 +155,6 @@ the difference the figures below draw.
     <path d="M 300 416 L 300 448 L 600 448 L 600 498" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#a1)"/>
     <text x="606" y="444" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">remember</tspan></text>
     <text x="46" y="600" stroke="none" font-size="11" fill="var(--vp-c-text-2)">Every edge inside the instance is typed, stamped by the host, and recorded on a card with its limitations.</text>
-
     <!-- RECORDS column -->
     <rect x="790" y="176" width="220" height="300" rx="6" fill="none" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
     <text x="806" y="198" font-weight="600" stroke="none">RECORDS</text>
@@ -204,11 +196,9 @@ the difference the figures below draw.
     <rect x="30" y="20" width="980" height="440" rx="6" fill="none" stroke-width="1.5"/>
     <text x="46" y="42" font-weight="600" stroke="none">LEVEL n+1</text>
     <text x="128" y="42" stroke="none" fill="var(--vp-c-text-2)">the definition as a viable system</text>
-
     <!-- probe edge, over the top row -->
     <path d="M 330 66 L 330 54 L 830 54 L 830 64" stroke="var(--vp-c-brand-1)" stroke-width="2" stroke-dasharray="5 4" fill="none" marker-end="url(#a2acc)"/>
     <text x="820" y="46" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)">probe: the proposed edit runs as an eval arm against the fixture</text>
-
     <!-- S5 -->
     <rect x="46" y="66" width="320" height="78" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
     <text x="56" y="84" stroke="none" font-weight="600">S5</text>
@@ -216,7 +206,6 @@ the difference the figures below draw.
     <text x="56" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)">every file proposable (INV-002); accept paths differ:</text>
     <text x="56" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity → identity accept · advice → definition accept</text>
     <text x="56" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">code &amp; grants → a unit under a contract; a person merges</text>
-
     <!-- S3 -->
     <rect x="386" y="66" width="260" height="78" rx="3" fill="none" stroke-width="1.5"/>
     <text x="396" y="84" stroke="none" font-weight="600">S3</text>
@@ -224,7 +213,6 @@ the difference the figures below draw.
     <text x="396" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">regulator doctor</tspan> under CI</text>
     <text x="396" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">review --due</tspan>, releases, <tspan font-family="var(--vp-font-family-mono)">init</tspan> / <tspan font-family="var(--vp-font-family-mono)">upgrade</tspan></text>
     <text x="396" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">dispositions on what the reflector raises</text>
-
     <!-- S3* -->
     <rect x="666" y="66" width="328" height="78" rx="3" fill="none" stroke-width="1.5"/>
     <text x="676" y="84" stroke="none" font-weight="600">S3*</text>
@@ -232,7 +220,6 @@ the difference the figures below draw.
     <text x="676" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)">arms · ablation · deterministic graders · intervals</text>
     <text x="676" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">report refused without a person's interpretation</text>
     <text x="676" y="132" stroke="none" font-size="11" fill="var(--vp-c-brand-1)">+ an arm may differ in an advice file</text>
-
     <!-- report returns to S5 -->
     <path d="M 690 144 L 690 172 L 236 172 L 236 146" stroke="var(--vp-c-brand-1)" stroke-width="1.2" fill="none" marker-end="url(#a2acc)"/>
     <text x="700" y="186" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)">report + interpretation</text>
@@ -243,7 +230,6 @@ the difference the figures below draw.
     <!-- proposal: reflector -> S5 -->
     <path d="M 386 212 L 320 212 L 320 146" stroke="var(--vp-c-brand-1)" stroke-width="2" fill="none" marker-end="url(#a2acc)"/>
     <text x="326" y="192" stroke="none" font-size="10" fill="var(--vp-c-brand-1)"><tspan font-family="var(--vp-font-family-mono)">harness-edit</tspan> proposal → obligation owed to S5</text>
-
     <!-- definition files (domain of this level) -->
     <rect x="46" y="198" width="320" height="78" rx="3" fill="none" stroke-width="1.5" stroke-dasharray="5 4"/>
     <text x="56" y="218" stroke="none" font-weight="600">DEFINITION FILES</text>
@@ -251,7 +237,6 @@ the difference the figures below draw.
     <text x="56" y="238" stroke="none" font-size="11">advice files: profile advice, contract advice, skills</text>
     <text x="56" y="256" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity seed, grants, checks, registry cards</text>
     <text x="56" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">written by <tspan font-family="var(--vp-font-family-mono)">identity accept</tspan>, <tspan font-family="var(--vp-font-family-mono)">definition accept</tspan>, a merge</text>
-
     <!-- S4 reflector -->
     <rect x="386" y="198" width="608" height="78" rx="3" fill="var(--vp-c-brand-soft)" stroke="var(--vp-c-brand-1)" stroke-width="2"/>
     <text x="396" y="218" stroke="none" font-weight="600" fill="var(--vp-c-brand-1)">S4</text>
@@ -263,7 +248,6 @@ the difference the figures below draw.
     <!-- never writes a definition file -->
     <path d="M 386 262 L 372 262" stroke="var(--vp-c-danger-1)" stroke-width="1.5" fill="none" marker-end="url(#x2)"/>
     <text x="236" y="292" stroke="none" font-size="10" fill="var(--vp-c-danger-1)">never writes a definition file</text>
-
     <!-- S1 instances -->
     <text x="136" y="310" stroke="none" font-weight="600">S1</text>
     <text x="158" y="310" stroke="none" fill="var(--vp-c-text-2)">instances, each the whole of the figure above</text>
@@ -290,7 +274,6 @@ the difference the figures below draw.
     <path d="M 790 276 L 790 318" stroke="var(--vp-c-brand-1)" stroke-width="1.5" stroke-dasharray="5 4" fill="none" marker-end="url(#a2acc)"/>
     <text x="796" y="292" stroke="none" font-size="10" fill="var(--vp-c-brand-1)"><tspan font-family="var(--vp-font-family-mono)">intelligence-signal</tspan> → the router</text>
     <text x="796" y="304" stroke="none" font-size="10" fill="var(--vp-c-brand-1)">→ an obligation that may hold a unit</text>
-
     <!-- records strip -->
     <rect x="46" y="412" width="948" height="34" rx="3" fill="none" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
     <text x="56" y="433" stroke="none" font-weight="600">RECORDS</text>
@@ -304,13 +287,11 @@ the difference the figures below draw.
     <text x="1006" y="340" stroke="none" font-size="10" fill="var(--vp-c-brand-1)" transform="rotate(-90 1006 340)">reads, read-only</text>
     <!-- records -> S3* (exists) -->
     <path d="M 994 420 C 1016 420, 1016 118, 996 118" stroke-width="1.2" stroke-dasharray="2 4" fill="none" marker-end="url(#a2)"/>
-
     <!-- below the frame -->
     <text x="46" y="490" stroke="none" font-weight="600">What a person sees</text>
     <text x="46" y="510" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator obligations</tspan>: a harness-edit proposal, the trajectory moment it cites, the arm it was probed in, and the report's interpretation.</text>
     <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator definition accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="var(--vp-font-family-mono)">reject</tspan> changes nothing.</text>
     <text x="46" y="550" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator check</tspan>: the reflector's instrument card, its level (<tspan font-family="var(--vp-font-family-mono)">model-judgment</tspan>), and the date of its last calibration report.</text>
-
     <text x="46" y="594" stroke="none" font-weight="600">What Harness² does here that this refuses</text>
     <text x="46" y="614" stroke="none" font-size="12" fill="var(--vp-c-text-2)">Its composer adopts: the person's edge above is a model's. Its guardrails are an editable component: the identity row here.</text>
     <text x="46" y="632" stroke="none" font-size="12" fill="var(--vp-c-text-2)">Its lessons are edits to the harness: here they are memory or a proposal. Its judge is the executor's own model family:</text>
@@ -325,10 +306,10 @@ the difference the figures below draw.
 
 | Change | Mechanism level | Seam | Refuses |
 | --- | --- | --- | --- |
-| The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `definition accept`, code and grants (unit types, profile grants, checks, extensions) through a unit under a contract that a person merges | 2, the definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
+| The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `advice accept`, code and grants (unit types, profile grants, checks, extensions) through a unit under a contract that a person merges | 2, the definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
 | The `harness-edit` proposal kind: a diagnosis (what was observed, by reference), a change (the diff) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it), kept as three records because a trace that supports a diagnosis is not evidence that the remedy works | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation does not resolve, or whose prediction is missing a part |
 | A proposed edit probed as an eval arm | 2, deterministic graders | an eval suite's arms gain an `advice` field | adoption from a report without an interpretation |
-| `regulator definition accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
+| `regulator advice accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
 | The instrument record kind | 2, the registry check | the registry, a second record kind beside regulators | an instrument without a calibration report |
 | The reflector package | 4, model judgment | reads `.regulator/` and the reports; depends on `protocol` and `core`; nothing depends on it | dispatching, dispositioning, writing under `regulator/` |
 
