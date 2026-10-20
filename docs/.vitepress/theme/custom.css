@@ -37,3 +37,21 @@
   .sidebar-toggle { left: calc((100vw - var(--vp-layout-max-width)) / 2 + var(--vp-sidebar-width)); }
   html.sidebar-hidden .sidebar-toggle { left: 0; }
 }
+
+/*
+ * Wide screens: the document takes the width the layout has. By default the theme
+ * caps the document column at 688px and lets the outline's column grow into the
+ * rest, so a wide figure scrolls while half the row is empty. Here the outline
+ * keeps a fixed column, the document column grows to 1040px (the width of the
+ * widest figure), and running text keeps its reading measure, so only figures,
+ * tables and code use the extra width. Above 1600px the layout itself widens.
+ */
+@media (min-width: 1280px) {
+  /* The theme's component styles are scoped, so each rule here outranks its counterpart by one `html`. */
+  html .VPDoc .aside { flex: 0 0 288px; width: 288px; }
+  html .VPDoc.has-aside .content-container.content-container { max-width: 1040px; }
+  html .vp-doc :is(p, ul, ol, dl, blockquote, figcaption, .custom-block) { max-width: 688px; }
+}
+@media (min-width: 1600px) {
+  html:root { --vp-layout-max-width: 1760px; }
+}
