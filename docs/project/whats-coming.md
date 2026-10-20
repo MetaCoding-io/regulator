@@ -57,7 +57,7 @@ the difference the figures below draw.
 
 ## Before
 
-<figure>
+<figure style="overflow-x:auto">
 <svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 640" role="img" aria-label="The instance is regulated: S3 loop dispatches units, host checks produce evidence, a research unit reports intelligence into an obligation, a person is the only writer of identity, and a person promotes decisions back into the definition. The definition above it is changed only by people, and nothing reads the instance's records back into it except an eval report a person interprets.">
   <defs>
     <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
@@ -83,8 +83,8 @@ the difference the figures below draw.
       <text x="670" y="79">workloads</text>
       <text x="810" y="79">evals</text>
     </g>
-    <text x="886" y="72" stroke="none" font-size="11" fill="var(--vp-c-text-2)">its own S4 today:</text>
-    <text x="886" y="86" stroke="none" font-size="11" fill="var(--vp-c-text-2)">a person's checklist</text>
+    <text x="878" y="72" stroke="none" font-size="11" fill="var(--vp-c-text-2)">its own S4 today:</text>
+    <text x="878" y="86" stroke="none" font-size="11" fill="var(--vp-c-text-2)">a person's checklist</text>
     <!-- init arrow -->
     <line x1="110" y1="116" x2="110" y2="176" stroke-width="1.5" marker-end="url(#a1)"/>
     <text x="118" y="150" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">regulator init</tspan> seeds</text>
@@ -170,7 +170,7 @@ the difference the figures below draw.
     </g>
     <line x1="760" y1="300" x2="788" y2="300" stroke-width="1.5" marker-end="url(#a1)"/>
     <text x="774" y="292" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">writes</text>
-    <text x="806" y="420" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read by: <tspan font-family="var(--vp-font-family-mono)">status</tspan>, the control room,</text>
+    <text x="806" y="420" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read by <tspan font-family="var(--vp-font-family-mono)">status</tspan>, the control room,</text>
     <text x="806" y="435" stroke="none" font-size="11" fill="var(--vp-c-text-2)">the eval harness, a person.</text>
     <text x="806" y="458" stroke="none" font-size="11" fill="var(--vp-c-danger-1)">Nothing reads them to change</text>
     <text x="806" y="472" stroke="none" font-size="11" fill="var(--vp-c-danger-1)">the definition.</text>
@@ -184,7 +184,7 @@ the difference the figures below draw.
 
 ## After
 
-<figure>
+<figure style="overflow-x:auto">
 <svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 720" role="img" aria-label="A second level is drawn above the instances. Its S1 units are instances, its S3* is the existing eval harness, its S5 is the maintainers with the identity seed and a boundary split, and its S4 is a new reflector that reads every instance's records and emits three existing record kinds: memory facts, intelligence signals, and harness-edit proposals owed to S5. A proposed edit is probed as an eval arm before a person accepts it into an advice file. Crossed edges show the reflector never writing identity, grants or checks and never scheduling a unit.">
   <defs>
     <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
@@ -204,14 +204,14 @@ the difference the figures below draw.
     <text x="56" y="84" stroke="none" font-weight="600">S5</text>
     <text x="80" y="84" stroke="none">maintainers · identity seed · <tspan font-family="var(--vp-font-family-mono)">BOUNDARY.md</tspan></text>
     <text x="56" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)">every file proposable (INV-002); accept paths differ:</text>
-    <text x="56" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity → identity accept · advice → definition accept</text>
-    <text x="56" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">code &amp; grants → a unit under a contract; a person merges</text>
+    <text x="56" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity → identity accept · advice → advice accept</text>
+    <text x="56" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">code &amp; grants → a merged unit under a contract</text>
     <!-- S3 -->
     <rect x="386" y="66" width="260" height="78" rx="3" fill="none" stroke-width="1.5"/>
     <text x="396" y="84" stroke="none" font-weight="600">S3</text>
     <text x="420" y="84" stroke="none">maintainers</text>
     <text x="396" y="102" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">regulator doctor</tspan> under CI</text>
-    <text x="396" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">review --due</tspan>, releases, <tspan font-family="var(--vp-font-family-mono)">init</tspan> / <tspan font-family="var(--vp-font-family-mono)">upgrade</tspan></text>
+    <text x="396" y="117" stroke="none" font-size="11" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">review --due</tspan> · releases · <tspan font-family="var(--vp-font-family-mono)">upgrade</tspan></text>
     <text x="396" y="132" stroke="none" font-size="11" fill="var(--vp-c-text-2)">dispositions on what the reflector raises</text>
     <!-- S3* -->
     <rect x="666" y="66" width="328" height="78" rx="3" fill="none" stroke-width="1.5"/>
@@ -225,7 +225,7 @@ the difference the figures below draw.
     <text x="700" y="186" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)">report + interpretation</text>
     <!-- accept: S5 -> definition files -->
     <line x1="206" y1="144" x2="206" y2="196" stroke="var(--vp-c-brand-1)" stroke-width="2" marker-end="url(#a2acc)"/>
-    <text x="198" y="162" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)"><tspan font-family="var(--vp-font-family-mono)">definition accept</tspan> (a person)</text>
+    <text x="198" y="162" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)"><tspan font-family="var(--vp-font-family-mono)">advice accept</tspan> (a person)</text>
     <text x="198" y="176" stroke="none" font-size="10" text-anchor="end" fill="var(--vp-c-brand-1)">writes an advice file</text>
     <!-- proposal: reflector -> S5 -->
     <path d="M 386 212 L 320 212 L 320 146" stroke="var(--vp-c-brand-1)" stroke-width="2" fill="none" marker-end="url(#a2acc)"/>
@@ -236,14 +236,14 @@ the difference the figures below draw.
     <text x="180" y="218" stroke="none" fill="var(--vp-c-text-2)">the domain</text>
     <text x="56" y="238" stroke="none" font-size="11">advice files: profile advice, contract advice, skills</text>
     <text x="56" y="256" stroke="none" font-size="11" fill="var(--vp-c-text-2)">identity seed, grants, checks, registry cards</text>
-    <text x="56" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">written by <tspan font-family="var(--vp-font-family-mono)">identity accept</tspan>, <tspan font-family="var(--vp-font-family-mono)">definition accept</tspan>, a merge</text>
+    <text x="56" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">written only by an accept command or a merge</text>
     <!-- S4 reflector -->
     <rect x="386" y="198" width="608" height="78" rx="3" fill="var(--vp-c-brand-soft)" stroke="var(--vp-c-brand-1)" stroke-width="2"/>
     <text x="396" y="218" stroke="none" font-weight="600" fill="var(--vp-c-brand-1)">S4</text>
     <text x="422" y="218" stroke="none" font-weight="600">reflector</text>
-    <text x="490" y="218" stroke="none" fill="var(--vp-c-text-2)">a package beside <tspan font-family="var(--vp-font-family-mono)">checks</tspan>; or a <tspan font-family="var(--vp-font-family-mono)">reflect</tspan> unit with a contract, a budget and a lease</text>
-    <text x="396" y="238" stroke="none" font-size="11">reads the records of every instance; writes three record kinds that already exist; adopts nothing</text>
-    <text x="396" y="256" stroke="none" font-size="11" fill="var(--vp-c-text-2)">registered as an <tspan font-weight="600">instrument</tspan>, not a regulator: <tspan font-family="var(--vp-font-family-mono)">regulator check</tspan> refuses it without a calibration report</text>
+    <text x="490" y="218" stroke="none" fill="var(--vp-c-text-2)">a package beside <tspan font-family="var(--vp-font-family-mono)">checks</tspan>, or a <tspan font-family="var(--vp-font-family-mono)">reflect</tspan> unit under a contract</text>
+    <text x="396" y="238" stroke="none" font-size="11">reads every instance's records; writes three record kinds that already exist; adopts nothing</text>
+    <text x="396" y="256" stroke="none" font-size="11" fill="var(--vp-c-text-2)">an <tspan font-weight="600">instrument</tspan>, not a regulator: <tspan font-family="var(--vp-font-family-mono)">regulator check</tspan> refuses it without a calibration report</text>
     <text x="396" y="270" stroke="none" font-size="11" fill="var(--vp-c-text-2)">(did the proposals a person accepted move the metric they named?)</text>
     <!-- never writes a definition file -->
     <path d="M 386 262 L 372 262" stroke="var(--vp-c-danger-1)" stroke-width="1.5" fill="none" marker-end="url(#x2)"/>
@@ -290,7 +290,7 @@ the difference the figures below draw.
     <!-- below the frame -->
     <text x="46" y="490" stroke="none" font-weight="600">What a person sees</text>
     <text x="46" y="510" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator obligations</tspan>: a harness-edit proposal, the trajectory moment it cites, the arm it was probed in, and the report's interpretation.</text>
-    <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator definition accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="var(--vp-font-family-mono)">reject</tspan> changes nothing.</text>
+    <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator advice accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="var(--vp-font-family-mono)">reject</tspan> changes nothing.</text>
     <text x="46" y="550" stroke="none" font-size="12"><tspan font-family="var(--vp-font-family-mono)">regulator check</tspan>: the reflector's instrument card, its level (<tspan font-family="var(--vp-font-family-mono)">model-judgment</tspan>), and the date of its last calibration report.</text>
     <text x="46" y="594" stroke="none" font-weight="600">What Harness² does here that this refuses</text>
     <text x="46" y="614" stroke="none" font-size="12" fill="var(--vp-c-text-2)">Its composer adopts: the person's edge above is a model's. Its guardrails are an editable component: the identity row here.</text>

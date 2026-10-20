@@ -21,15 +21,15 @@
     <text x="56" y="84" stroke="none" font-weight="600">S5</text>
     <text x="80" y="84" stroke="none">maintainers · identity seed · <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">BOUNDARY.md</tspan></text>
     <text x="56" y="102" stroke="none" font-size="11" fill="#5c574f">every file proposable (INV-002); accept paths differ:</text>
-    <text x="56" y="117" stroke="none" font-size="11" fill="#5c574f">identity → identity accept · advice → definition accept</text>
-    <text x="56" y="132" stroke="none" font-size="11" fill="#5c574f">code &amp; grants → a unit under a contract; a person merges</text>
+    <text x="56" y="117" stroke="none" font-size="11" fill="#5c574f">identity → identity accept · advice → advice accept</text>
+    <text x="56" y="132" stroke="none" font-size="11" fill="#5c574f">code &amp; grants → a merged unit under a contract</text>
 
     <!-- S3 -->
     <rect x="386" y="66" width="260" height="78" rx="3" fill="none" stroke-width="1.5"/>
     <text x="396" y="84" stroke="none" font-weight="600">S3</text>
     <text x="420" y="84" stroke="none">maintainers</text>
     <text x="396" y="102" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator doctor</tspan> under CI</text>
-    <text x="396" y="117" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">review --due</tspan>, releases, <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">init</tspan> / <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">upgrade</tspan></text>
+    <text x="396" y="117" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">review --due</tspan> · releases · <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">upgrade</tspan></text>
     <text x="396" y="132" stroke="none" font-size="11" fill="#5c574f">dispositions on what the reflector raises</text>
 
     <!-- S3* -->
@@ -45,7 +45,7 @@
     <text x="700" y="186" stroke="none" font-size="10" text-anchor="end" fill="#136e79">report + interpretation</text>
     <!-- accept: S5 -> definition files -->
     <line x1="206" y1="144" x2="206" y2="196" stroke="#136e79" stroke-width="2" marker-end="url(#after-arrow-accent)"/>
-    <text x="198" y="162" stroke="none" font-size="10" text-anchor="end" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">definition accept</tspan> (a person)</text>
+    <text x="198" y="162" stroke="none" font-size="10" text-anchor="end" fill="#136e79"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">advice accept</tspan> (a person)</text>
     <text x="198" y="176" stroke="none" font-size="10" text-anchor="end" fill="#136e79">writes an advice file</text>
     <!-- proposal: reflector -> S5 -->
     <path d="M 386 212 L 320 212 L 320 146" stroke="#136e79" stroke-width="2" fill="none" marker-end="url(#after-arrow-accent)"/>
@@ -57,15 +57,15 @@
     <text x="180" y="218" stroke="none" fill="#5c574f">the domain</text>
     <text x="56" y="238" stroke="none" font-size="11">advice files: profile advice, contract advice, skills</text>
     <text x="56" y="256" stroke="none" font-size="11" fill="#5c574f">identity seed, grants, checks, registry cards</text>
-    <text x="56" y="270" stroke="none" font-size="11" fill="#5c574f">written by <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">identity accept</tspan>, <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">definition accept</tspan>, a merge</text>
+    <text x="56" y="270" stroke="none" font-size="11" fill="#5c574f">written only by an accept command or a merge</text>
 
     <!-- S4 reflector -->
     <rect x="386" y="198" width="608" height="78" rx="3" fill="#d9ecee" stroke="#136e79" stroke-width="2"/>
     <text x="396" y="218" stroke="none" font-weight="600" fill="#136e79">S4</text>
     <text x="422" y="218" stroke="none" font-weight="600">reflector</text>
-    <text x="490" y="218" stroke="none" fill="#5c574f">a package beside <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">checks</tspan>; or a <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reflect</tspan> unit with a contract, a budget and a lease</text>
-    <text x="396" y="238" stroke="none" font-size="11">reads the records of every instance; writes three record kinds that already exist; adopts nothing</text>
-    <text x="396" y="256" stroke="none" font-size="11" fill="#5c574f">registered as an <tspan font-weight="600">instrument</tspan>, not a regulator: <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan> refuses it without a calibration report</text>
+    <text x="490" y="218" stroke="none" fill="#5c574f">a package beside <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">checks</tspan>, or a <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reflect</tspan> unit under a contract</text>
+    <text x="396" y="238" stroke="none" font-size="11">reads every instance's records; writes three record kinds that already exist; adopts nothing</text>
+    <text x="396" y="256" stroke="none" font-size="11" fill="#5c574f">an <tspan font-weight="600">instrument</tspan>, not a regulator: <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan> refuses it without a calibration report</text>
     <text x="396" y="270" stroke="none" font-size="11" fill="#5c574f">(did the proposals a person accepted move the metric they named?)</text>
     <!-- never writes a definition file -->
     <path d="M 386 262 L 372 262" stroke="#b4532a" stroke-width="1.5" fill="none" marker-end="url(#after-x)"/>
@@ -115,7 +115,7 @@
     <!-- below the frame -->
     <text x="46" y="490" stroke="none" font-weight="600">What a person sees</text>
     <text x="46" y="510" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator obligations</tspan>: a harness-edit proposal, the trajectory moment it cites, the arm it was probed in, and the report's interpretation.</text>
-    <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator definition accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reject</tspan> changes nothing.</text>
+    <text x="46" y="530" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator advice accept &lt;obligation&gt; --file … --by …</tspan>: the only writer of an advice file. <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">reject</tspan> changes nothing.</text>
     <text x="46" y="550" stroke="none" font-size="12"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan>: the reflector's instrument card, its level (<tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">model-judgment</tspan>), and the date of its last calibration report.</text>
 
     <text x="46" y="594" stroke="none" font-weight="600">What Harness² does here that this refuses</text>
