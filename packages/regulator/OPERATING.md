@@ -45,7 +45,7 @@ regulator unit drive packages/regulator/contracts/fix-known-issue.json
 ```
 
 `init` seeds the identity under `regulator/identity/`, ignores `.regulator/`, records
-any credential-looking value in a committed `.env` as a canary, writes
+any credential-looking value in a committed `.env` as a credential canary, writes
 `.regulator/instance.json` — the *instance manifest*: which definition, at which
 revision, under which Pi, initialized when and by whom, and the layout you declared —
 and commits the identity on the base branch. Everything the lab once assumed about the
@@ -154,7 +154,7 @@ the definition's repository so every later `init` starts from it.
 - The shell is granted to the implement profile un-gated by path; the bash watch
   restores protected paths and the closeout diff catches the rest at the revision.
   For untrusted or unattended runs, the container declares the shell's reach.
-- Credentials: canaries from a committed `.env` are watched in tool results and
+- Credentials: credential canaries from a committed `.env` are watched in tool results and
   redacted from spans; anything else is the deployment's secret manager.
 - Authority: no tool can supply S5 authority; a person runs `identity accept` and
   `identity promote`, checked against the interaction policy's people (asserted names,

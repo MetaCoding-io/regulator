@@ -11,7 +11,7 @@ that is committed.
 | --- | --- | --- |
 | `regulator/identity/IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` | S5 | the instance's identity, seeded from the definition and committed on the base branch. It is protected by the write gate, by the bash snapshot-and-restore and by the `identity-untouched` check, and only `identity accept` writes it |
 | `.gitignore` | `init` | gains the `.regulator/` line |
-| `.env` (if committed) | the project | any credential-looking value in it is recorded as a canary and watched for in every tool result |
+| `.env` (if committed) | the project | any credential-looking value in it is recorded as a credential canary and watched for in every tool result |
 
 ## Under `.regulator/`
 
@@ -29,7 +29,7 @@ that is committed.
 | `memory.ndjson` | regulatory | operational memory: facts with provenance and expiry, and their retractions, scoped by unit type |
 | `outbox` | delivery | one line per delivery of an obligation owed to a person. `watch` forwards new lines to a channel command, and `REGULATOR_OUTBOX` moves the file |
 | `outbox.cursor` | delivery | how far `watch` has forwarded, so that a restart forwards nothing twice |
-| `canaries` | manifest | the credential-looking values `init` found in a committed `.env`, one per line. They are watched for in every tool result and redacted from spans |
+| `canaries` | manifest | the credential canaries: the credential-looking values `init` found in a committed `.env`, one per line. They are watched for in every tool result and redacted from spans |
 
 Execution state and regulatory state live in different stores on purpose. The loop
 decides what a unit may do next by reading the regulatory log, and the regulators never

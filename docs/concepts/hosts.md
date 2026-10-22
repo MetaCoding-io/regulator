@@ -79,7 +79,7 @@ runner, outside the session and outside the host.
 ## Which regulators live where
 
 The registry records where each regulator is implemented, and the split follows the
-seam. Of the active regulators, 22 are implemented in the control plane and 20 in the
+seam. Of the active regulators, 22 are implemented in the control plane and 21 in the
 host's session.
 
 The 22 in the control plane are the contract gate, the closeout gate and every host
@@ -89,11 +89,12 @@ delivery and the outbox watcher, disposition authority, the definition check, th
 harness, the span projection, and the instance manifest. These run the same under any
 host, and under none.
 
-The 20 in the host's session are the lease gate and the thrash detector, the profile
+The 21 in the host's session are the lease gate and the thrash detector, the profile
 grant, the report gate and the evidence preflight, the budget guard, the model router
 and compaction, the failure observer and the effect journal, the write gate, the bash
-watch, the canary watch, proposal intake and the trust rule, identity in context and
-the memory store, intelligence intake, the interaction contract and the pause gate.
+watch, the credential canary watch, proposal intake and the trust rule, identity in
+context, the behavioral canary and the memory store, intelligence intake, the
+interaction contract and the pause gate.
 
 The second group exists only where a host implements it. A dispatcher that runs no
 session, such as the scripted units the drift suite and the household-ledger example use
@@ -115,9 +116,9 @@ extensions. Each extension carries a single concern:
 | `budget` | the budget guard, compaction, the model ledger |
 | `recovery` | the failure observer, and `notify_owner` through the effect journal |
 | `evidence` | provenance on test and check results, and the evidence preflight on `report_result` |
-| `authority` | the write gate, the bash watch, proposals, the canary watch |
+| `authority` | the write gate, the bash watch, proposals, the credential canary watch |
 | `intelligence` | `report_intelligence` |
-| `identity` | identity and memory in context, and `remember` |
+| `identity` | identity and memory in context, the behavioral canary, and `remember` |
 | `algedonic` | `ask_human` and the pause gate |
 
 Its dispatcher runs each unit's session through the Pi SDK. It uses a resource loader

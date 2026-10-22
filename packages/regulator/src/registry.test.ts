@@ -19,6 +19,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.algedonic.pause-gate.v1",
     "reg.assurance.eval-harness.v1",
     "reg.assurance.span-projection.v1",
+    "reg.audit.behavioral-canary.v1",
     "reg.audit.behaviour-check.v1",
     "reg.audit.canary-watch.v1",
     "reg.audit.closeout-gate.v1",

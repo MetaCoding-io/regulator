@@ -16,6 +16,17 @@ Not covered:
 - Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
 
+## Behavioral canary (`reg.audit.behavioral-canary.v1`)
+
+Enforced at `host:before_agent_start` (render the rule), `host:message_end` (read the reply) in `../regulator-pi/src/identity.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
+
 ## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
 
 Enforced at `loop:runHostChecks` (export-signature: the probe run at HEAD, one result per carrying expectation), `loop:auditUnit` (bindEvidence binds by criterion; technicalVerdict takes host evidence before acceptance for runtime criteria) in `../checks/src/verify.ts`; S3*, deterministic-gate.
@@ -38,7 +49,7 @@ Not covered:
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
 
-## Canary watch (`reg.audit.canary-watch.v1`)
+## Credential canary watch (`reg.audit.canary-watch.v1`)
 
 Enforced at `host:tool_result` (redact), `host:message_end` (record) in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
 
