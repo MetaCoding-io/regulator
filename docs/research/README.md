@@ -15,7 +15,8 @@ item. When it does, the note says so at the top and stays as the record of why.
 Conventions:
 
 - One file per source, named `<date>-<topic>.md`, with a status line (`open`,
-  `graduated: #NN`, `dropped: <reason>`).
+  `graduated: #NN`, `dropped: <reason>`). A note with companion files (a todo list, data)
+  is a folder of the same name with the note as its `README.md`.
 - Claims about what the code does today cite the file. Claims about what a source does
   cite the source. The two are kept apart, because the gap between them is the point.
 - Features are proposed at a [mechanism level](../ARCHITECTURE.md#mechanism-hierarchy)
@@ -34,4 +35,5 @@ Like `archive/`, this directory is not built into the documentation site.
 | [Harness² read through the control plane](2026-10-18-harness2-recursive-harnessing.md) — Google's recursive harness-editing loop mapped onto the VSM functions and the pathology catalog: what it has that regulator lacks (a measured learning loop over the harness), what it lacks that regulator has (S5, independent audit, a person), and the proposal-not-adoption slice regulator could take; §7 names the component (the reflector, decided) as the S4 of the level above, with before-and-after figures | open |
 | [The accept-path split on `BOUNDARY.md`](2026-10-18-accept-path-split.md) — which definition files land through which accept path, as data: advice becomes a file set seeded like identity, the split is a closed list in `protocol` rendered into `BOUNDARY.md`, the commands are `advice accept | reject | promote`, and the third path is a merged change under the loop; four slices with their done-when lists | graduated: slice 1 is #110; slices 2–4 open |
 | [Paper 1 — Regulating the Regulator](2026-10-18-paper-regulating-the-regulator.md) — formal two-level governance model, novelty/critical literature, falsifiable study protocol, minimal Reflector demonstration, replication package and SRBS publication plan; tracked in issues #103–#108 | active research track; separate from product milestones |
+| [Wintercorn (2026): a run-time-generated knowledge graph read through the control plane](2026-10-22-wintercorn-semantic-sos/README.md) — a thesis on semantic interoperability for industrial systems of systems, read for what it says about trusting a generated graph: asserted versus entailed versus derived triples, closed-world violation versus open-world absence, severity declared rather than judged, and the pipeline as the thing to audit; §8 maps each onto S3\*, the verdict's freshness rule and the knowledge-production workload, with a `todos.md` of candidates for the roadmap | open |
 | [Paper 1 / #113 — Cross-harness VSM vocabulary pilot](2026-10-18-paper-113-vsm-vocabulary-pilot.md) — exploratory, evidence-coded mapping of Regulator, OpenCode and CrewAI against S1–S5/S3*/recursion, counterexamples, MAPE-K comparison and an independent-rater study design | exploratory; awaiting review and source-level reproduction |
