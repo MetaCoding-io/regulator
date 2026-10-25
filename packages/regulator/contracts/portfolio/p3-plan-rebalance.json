@@ -1,0 +1,95 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p3-plan-rebalance",
+  "unitId": "p3-plan-rebalance",
+  "unitType": "plan-rebalance",
+  "objective": "Plan September's rebalance: write trades/pending/2026-09-30.json — the trades that move every position toward targets/2026-09-30.json at the 2026-09-30 prices, each sell naming the lots it comes from — after a person consents to the whole list.",
+  "contribution": "The one unit whose output the household acts on. Consent is asked once, before the file exists, naming every trade; without a yes, nothing is written and the unit waits.",
+  "constraintRefs": [
+    "reg.algedonic.interaction-contract.v1",
+    "reg.algedonic.pause-gate.v1",
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-target",
+      "subject": "the target",
+      "decision": "The target is targets/2026-09-30.json and is not changed by this unit.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-universe",
+      "subject": "the universe and the exchangeable sets",
+      "decision": "The universe and its exchangeable sets are universe.json; a trade names a ticker the target names, and the file is not extended.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-band",
+      "subject": "the band",
+      "decision": "The band is 0.02 of the portfolio's value, the maximum deviation from the target any position lands at; it is the number the target carries. No trade moves a position past its target.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-tax",
+      "subject": "the tax parameters",
+      "decision": "The rates, the long-term cutoff and the wash-sale window are tax.json; the jurisdiction is the one it declares, and the rules are its rules.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-consent",
+      "subject": "consent before a trade list",
+      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-lots",
+      "subject": "which lots each sell comes from",
+      "bounds": "Within the tax ordering — a loss before a gain, and among gains a long-term lot before a short-term one — and never a lot whose sale is a wash sale against the lot history. Report the lot chosen for every sell, with the gain or loss and the tax it realises."
+    },
+    {
+      "id": "d-extent",
+      "subject": "whether to trade all the way to the target or only back inside the band",
+      "bounds": "Every targeted position lands inside the band either way. Report the choice with the tax consequence of each."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-vnq",
+      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
+      "reason": "Nobody has said what it is or what it cost; the target does not name it and no lot holds it.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the list moves every position toward its target and not past it, lands inside the band, sells only from held lots, and creates no wash sale",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

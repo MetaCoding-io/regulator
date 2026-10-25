@@ -1,0 +1,71 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p1-ingest-positions",
+  "unitId": "p1-ingest-positions",
+  "unitType": "ingest-positions",
+  "objective": "Ingest September 2026: apply the fills under trades/executed/ since 2026-08-31 to lots/lots.csv, set lots/lots.json current to 2026-09-30, and write reports/2026-09.md in the shape of reports/2026-08.md — the valuation, the time-weighted return over the period's exports, the holdings, and the open items.",
+  "contribution": "The first unit of the September close. Nothing is judged yet; the lots must simply be what the fills and the custodian say.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.identity-untouched-check.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-custodian",
+      "subject": "the custodian's exports",
+      "decision": "positions/ and prices/ are the custodian's record and are not edited; when the lots and the positions disagree, the lots change.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there. A lot is opened by a fill, at the fill's price, and reduced by the fills that name it.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-open-items",
+      "subject": "open items",
+      "decision": "A position the custodian carries that universe.json does not name is listed under Open items with its shares and value; the close does not settle it.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-prose",
+      "subject": "the account line's wording",
+      "bounds": "One or two sentences; the numbers are the custodian's and the return is the time-weighted one over the period's exports."
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-vnq",
+      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
+      "reason": "Transferred in before the opening purchases; nobody has said what it is or what it cost, and there is no fill to open a lot from.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the lots reconcile to the fills and to the custodian's positions, and the report's return is the positions' time-weighted return",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}
