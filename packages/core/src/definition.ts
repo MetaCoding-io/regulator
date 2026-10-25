@@ -4,13 +4,17 @@
  * workload, the policies and the identity are each validated, and the
  * references between them must resolve — a unit type's profile exists, a
  * policy's unit types exist, a check name is one the host runs, the identity
- * set is complete. The registry has its own check; this is the rest.
+ * set is complete, every profile has its advice file and no file names a
+ * profile nobody declared, and every directory of the definition falls in a
+ * class of `DEFINITION_WRITERS` (#110). The registry has its own check; this
+ * is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
+  CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
 } from "@metacoding.io/regulator-protocol";
+import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
 import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { isReadOnlyProfile } from "./profiles.js";
@@ -29,13 +33,21 @@ export interface CheckedDefinition {
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
   identity: IdentitySet;
+  /** The advice files under advice/, one per declared profile (#110). */
+  advice: AdviceSet;
   /** Eval suites under evals/ and committed reports under evals/reports/ (lesson 14). */
   evals: EvalSuite[];
   reports: EvalReport[];
   problems: DefinitionProblem[];
-  /** What is true and worth knowing, and refuses nothing: the identity set over its context budget. */
+  /** What is true and worth knowing, and refuses nothing: the identity set or an advice file over its context budget. */
   warnings: DefinitionProblem[];
 }
+
+/**
+ * The package's own code and tooling beside the definition: not definition files, so not placed in a class. Everything
+ * else under the root that is a directory must be declared by `DEFINITION_WRITERS` before anything reads it.
+ */
+const NOT_DEFINITION_DIRS: ReadonlySet<string> = new Set(["src", "dist", "node_modules"]);
 
 async function jsonFiles(dir: string): Promise<string[]> {
   try {
@@ -53,7 +65,7 @@ function unknownCheckOptions(entry: CheckEntry): string[] {
 }
 
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, "identity")), evals: [], reports: [], problems: [], warnings: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, seedDirFor("identity"))), advice: { dir: path.join(dir, seedDirFor("advice")), files: {}, problems: [] }, evals: [], reports: [], problems: [], warnings: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
@@ -133,8 +145,18 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   for (const p of out.identity.problems) problem("identity/", p);
   // A long set is valid and partly unseen (#51): a warning, not a problem, since the check refuses nothing over it. The limit is
   // the budget policy's (#91): the one named "default", as the software workload's units run under; a deployment raises it there.
-  const budget = identityContextBudget(out.identity, identityMaxChars(out.policies.find((p) => p.name === "default") ?? out.policies[0]));
+  const defaultPolicy = out.policies.find((p) => p.name === "default") ?? out.policies[0];
+  const budget = identityContextBudget(out.identity, identityMaxChars(defaultPolicy));
   if (budget.warning) out.warnings.push({ file: "identity/", message: budget.warning });
+
+  // Advice (#110): a file per declared profile, no file for an undeclared one, and no profile carrying the text twice while
+  // the inline field lasts its one release of overlap. Over the budget policy's `advice.maxChars` is a warning, as for identity.
+  out.advice = await readAdviceSet(out.advice.dir, out.profiles.map((p) => ({ name: p.name, inline: (p.advice?.length ?? 0) > 0 })));
+  for (const p of out.advice.problems) problem(p.file, p.message);
+  for (const [profile, text] of Object.entries(out.advice.files)) {
+    const cut = adviceContextBudget(profile, text, adviceMaxChars(defaultPolicy));
+    if (cut.warning) out.warnings.push({ file: `advice/${profile}.md`, message: cut.warning });
+  }
 
   // Evals (lesson 14): a suite is part of the declaration — its tasks must exist, its baseline must be an arm, its checks must be
   // ones the host runs, and an ablation arm must say which switch it throws. A committed report must validate, or it is a rumour.
@@ -172,6 +194,14 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
     } catch (error) {
       problem(`evals/reports/${file}`, (error as Error).message);
     }
+  }
+
+  // Who writes it (#110): a directory of the definition that no class of DEFINITION_WRITERS declares is refused, so a
+  // new kind of definition file is declared — with the path an accepted proposal against it takes — before anything reads it.
+  let entries: Array<{ name: string; isDirectory(): boolean }> = [];
+  try { entries = await readdir(dir, { withFileTypes: true }); } catch { entries = []; }
+  for (const entry of entries.filter((e) => e.isDirectory() && !e.name.startsWith(".") && !NOT_DEFINITION_DIRS.has(e.name)).sort((a, b) => a.name.localeCompare(b.name))) {
+    if (!definitionClassOf(entry.name)) problem(`${entry.name}/`, `is a definition directory in no class of DEFINITION_WRITERS (${DEFINITION_WRITERS.map((w) => w.class).join(", ")}): declare who writes it, and through which path, before anything reads it`);
   }
   return out;
 }

@@ -17,11 +17,17 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
   assert.deepEqual(empty.problems.map((p) => p.message).slice(0, 2), ["no profiles declared: the definition grants no capabilities", "no workload declared"]);
   assert.ok(empty.problems.some((p) => p.file === "identity/" && /INVARIANTS\.md is missing/.test(p.message)));
 
-  await write(dir, "profiles/research.json", { name: "research", description: "Read-only.", tools: ["read", "run_tests"], writablePaths: [], advice: [] });
-  await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
-  await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
+  await write(dir, "profiles/research.json", { name: "research", description: "Read-only.", tools: ["read", "run_tests"], writablePaths: [], advice: ["Report; do not change."] });
+  await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"] });
+  await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"] });
+  // Advice is a file set (#110): builder has its file (a long one, over the policy's cap); research carries the text twice; implementer has none; nobody is not a profile.
+  await write(dir, "advice/builder.md", `- ${"Build small, build often. ".repeat(20).trim()}\n`);
+  await write(dir, "advice/research.md", "- Report; do not change.\n");
+  await write(dir, "advice/nobody.md", "- x\n");
+  // A directory of the definition in no class of DEFINITION_WRITERS: nobody declared who writes it.
+  await write(dir, "skills/review.md", "# a skill\n");
   await write(dir, "workload/sd.json", { name: "sd", version: 1, description: "d", unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: ["run_tests", "lint", { name: "run_tests", options: { commitMessages: "advisory" } }], requiresContract: true }, { name: "plan", description: "d", profile: "nope", checks: [], requiresContract: false }, { name: "sketch", description: "d", profile: "research", checks: [], requiresContract: false }, { name: "build", description: "d", profile: "builder", checks: [], requiresContract: true }] });
-  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", identity: { maxChars: 1000 }, budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
+  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", identity: { maxChars: 1000 }, advice: { maxChars: 100 }, budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
   await write(dir, "policies/routing.json", { name: "routing", version: 1, description: "d", rules: [], impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking", floors: [{ pattern: "(", severity: "blocking", reason: "r" }] });
   await write(dir, "policies/odd.json", { name: "odd" });
   for (const name of ["IDENTITY.md", "GLOSSARY.md"]) await write(dir, `identity/${name}`, "# x\n\ntext\n");
@@ -43,8 +49,16 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "policies/routing.json: floor pattern \"(\" is not a regular expression",
     "policies/: no recovery policy declared",
     "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
+    "advice/nobody.md: names no declared profile (declared: builder, implementer, research); an advice file is `<profile>.md` for a profile under profiles/",
+    "profiles/research.json: carries advice inline and advice/research.md exists: move the text into the file, do not carry two copies",
+    "advice/implementer.md: is missing: profile \"implementer\" declares no advice; every profile has an advice file (an empty one says the profile is told nothing beyond its grant)",
+    "skills/: is a definition directory in no class of DEFINITION_WRITERS (identity, advice, declaration): declare who writes it, and through which path, before anything reads it",
   ]);
-  assert.deepEqual(checked.warnings.map((w) => `${w.file}: ${w.message.slice(0, 60)}`), ["identity/: the identity set renders to 1761 characters and a unit's pro"], "the policy's identity.maxChars (1000) is the limit the check measures against (#91)");
+  assert.deepEqual(checked.warnings.map((w) => `${w.file}: ${w.message.slice(0, 60)}`), [
+    "identity/: the identity set renders to 1761 characters and a unit's pro",
+    "advice/builder.md: the advice for profile \"builder\" renders to 521 characters a",
+  ], "the policy's identity.maxChars (1000) and advice.maxChars (100) are the limits the check measures against (#91, #110)");
   assert.deepEqual(checked.identity.invariants.map((i) => i.id), ["INV-001"]);
+  assert.deepEqual(Object.keys(checked.advice.files).sort(), ["builder", "research"]);
   assert.equal(checked.profiles.length, 3, "a profile with a naming problem is still loaded; the problem is reported");
 });
