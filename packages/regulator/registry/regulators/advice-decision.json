@@ -27,9 +27,9 @@
   "limitations": [
     "Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).",
     "The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.",
-    "An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 42).",
+    "An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).",
     "Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.",
-    "It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 43, with #53)."
+    "It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53)."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-10-25", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "A CLI command a person runs; there is no arm in which a person changes advice without it, only the drill that edits a file by hand (which the gate, the bash watch and the closeout refuse for a unit)."},

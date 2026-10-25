@@ -122,15 +122,46 @@ a check or a policy changes only by a merged change to the definition's reposito
 the [enforcement boundary](/reference/boundary) renders the three classes as *Who writes
 the definition*.
 
-## Protected values: the canary watch
+## Protected values: the credential canary watch
 
-The same checkpoint protects one other kind of state. `regulator init` records canary
-values, which are credential-looking values taken from a committed `.env`. The canary
-watch then looks for them in every tool result and in the model's own text. A canary
-found in a tool result is redacted before the model sees it and recorded as a critical
-audit finding. A canary the model itself writes cannot be unsaid, so it is recorded.
-This measures whether an exposure path exists. It does not guarantee that every secret
-is safe.
+The same checkpoint protects one other kind of state. `regulator init` records
+*credential canaries*, which are credential-looking values taken from a committed `.env`.
+The credential canary watch then looks for them in every tool result and in the model's
+own text. A canary found in a tool result is redacted before the model sees it and
+recorded as a critical audit finding. A canary the model itself writes cannot be unsaid,
+so it is recorded. This measures whether an exposure path exists. It does not guarantee
+that every secret is safe.
+
+A credential canary is a *presence* canary: a known value that must never appear, and
+its appearance is the alarm. The next section is the other polarity.
+
+## The behavioral canary
+
+Identity rendered from the files answers "has the model lost the rules?" with "it cannot:
+they are in every prompt". It does not answer "is the model still following them?", and
+that is a different question, because attention decays before competence does. A long
+session keeps answering fluently after it has stopped doing the small things it was asked
+to do, and the next thing it drops is a fixed decision or an invariant. The closeout
+catches that, at the cost of the attempt.
+
+The **behavioral canary** is an *absence* canary, the warrant canary's shape: a statement
+re-asserted every period, whose silence says that something upstream has changed. The
+budget policy declares it (`identity.canary`): a marker every reply must begin with, with
+`{unit}` standing for the unit id so the marker is the instance's and not one a model has
+seen, and the number of consecutive replies without it that count. The identity extension
+renders the rule as a prompt section of its own, outside the identity's character limit,
+and reads every assistant reply for the marker. A reply that begins with it is a hit. A
+reply with no text, tool calls only, is not a reply. A run of misses is recorded as an
+advisory `audit-finding` of class `context-degradation`, from the host to S3, and the
+session's status line says how long the silence is. The shipped `default` policy declares
+`[{unit}]` with two misses.
+
+The canary decides nothing. Under the shipped routing policy an advisory finding is noted
+as trace, and no recovery cause names a degraded session yet, so the fresh session the
+signal argues for is a person's call after reading the unit's record
+([`docs/DEBT.md`](../DEBT.md) row 42). The marker is a proxy: a model that keeps it and
+still hallucinates is not seen, and one that drops it for a harmless reason is. That is
+why the finding is advisory and why the registry record states what it does not catch.
 
 ## What is not there yet
 
@@ -163,9 +194,12 @@ ones that matter most:
 - An advice file is text. Nothing checks that an accepted edit is advice rather than a
   rule in disguise; the person's reading is the only pressure, and the file is cut at
   `advice.maxChars` (4000 characters unless the policy says otherwise) with the cut
-  reported, never refused (`docs/DEBT.md` rows 42 and 45).
+  reported, never refused (`docs/DEBT.md` rows 43 and 46).
 - Names are asserted only. `--by` is checked against the interaction policy's grants,
   never against who is typing (`docs/DEBT.md` row 28).
-- Canaries are known values only. A secret the harness was not told about is not
-  watched, an encoded or paraphrased canary is not redacted, and network egress is not
-  watched at all.
+- Credential canaries are known values only. A secret the harness was not told about is
+  not watched, an encoded or paraphrased canary is not redacted, and network egress is
+  not watched at all.
+- The behavioral canary reads a prefix and records. A marker inside a code fence or after
+  a heading is a miss, a kept marker says nothing about the rest of the reply, and S3
+  does not act on the finding yet.

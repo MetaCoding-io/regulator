@@ -2,7 +2,7 @@
 
 - **Status:** graduated; slice 1 landed ([#110](https://github.com/MetaCoding-io/regulator/issues/110),
   `roadmap:0.2`: advice as a seeded file set, `DEFINITION_WRITERS`, `advice accept | reject |
-  promote`, the three cards, DEBT rows 42 to 45). Slices 2 to 4 of §8 stay designed here until
+  promote`, the three cards, DEBT rows 43 to 46). Slices 2 to 4 of §8 stay designed here until
   each becomes an issue; slice 2 is next.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the

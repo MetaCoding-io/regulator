@@ -30,9 +30,9 @@ Not covered:
 
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
-- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 42).
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
 - Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
-- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 43, with #53).
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
 
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
 
@@ -43,6 +43,17 @@ Not covered:
 - The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names, and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.
 - Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
+
+## Behavioral canary (`reg.audit.behavioral-canary.v1`)
+
+Enforced at `host:before_agent_start` (render the rule), `host:message_end` (read the reply) in `../regulator-pi/src/identity.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
 
 ## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
 
@@ -66,7 +77,7 @@ Not covered:
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
 
-## Canary watch (`reg.audit.canary-watch.v1`)
+## Credential canary watch (`reg.audit.canary-watch.v1`)
 
 Enforced at `host:tool_result` (redact), `host:message_end` (record) in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
 
@@ -96,7 +107,7 @@ Not covered:
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
 - The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.
-- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 42).
+- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43).
 
 ## Definition writers (the accept-path split) (`reg.identity.definition-writers.v1`)
 
@@ -104,7 +115,7 @@ Enforced at `check:checkDefinition` (a definition directory in no class of DEFIN
 
 Not covered:
 
-- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 44).
+- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
 - Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
 - It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
 - A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
@@ -189,7 +200,7 @@ Not covered:
 
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 43, with #53).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53).
 
 ## Identity-untouched check (the instance's harness-owned files) (`reg.audit.identity-untouched-check.v1`)
 

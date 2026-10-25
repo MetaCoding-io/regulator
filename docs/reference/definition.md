@@ -110,6 +110,7 @@ attempts per unit, and the models each unit type may use.
 | `models.byUnitType.<type>` | route | |
 | `coordination.oscillationThreshold` | integer | the number of reversals of the same file within one unit before the thrash detector raises `oscillation` |
 | `identity.maxChars` | integer, optional | the number of characters of rendered identity a unit's prompt carries before the rendering is cut; 12000 unless set. `check`, `doctor` and the session all measure against it and warn once it is passed, and nothing is refused |
+| `identity.canary` | `{ marker, misses }`, optional | the behavioral canary: `marker` is what every reply must begin with (`{unit}` stands for the unit id), `misses` the consecutive replies without it before the host records an advisory `audit-finding`. Unset, nothing is rendered and nothing is read. The shipped `default` declares `[{unit}]` with 2 |
 | `advice.maxChars` | integer, optional | the same for a profile's advice file; 4000 unless set. `check`, `doctor` and the session's status line warn with the size, the limit and the cut, and `advice accept` refuses a file over it rather than accept advice a unit would not see |
 
 A ceiling is made of `tokens`, `cost` (which is optional), `wallClockMs`, `turns` and

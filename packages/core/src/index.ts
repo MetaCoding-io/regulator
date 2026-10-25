@@ -26,6 +26,7 @@ export {
 export { EffectJournal, effectKey, type EffectState } from "./effect-journal.js";
 export { AuditLog, type UnitAudit } from "./audit-log.js";
 export { checkFilesystemPath, expandToolPath, isUnderProtectedPath, prepareWritePath, type PrepareWriteOptions, type PreparedWrite, type WriteRefusal } from "./authority.js";
+export { BehavioralCanary, CANARY_UNIT_PLACEHOLDER, canaryMarker, renderCanarySection, type BehavioralCanaryPolicy, type CanaryObservation } from "./canary.js";
 export { IDENTITY_CONTEXT_MAX_CHARS, IDENTITY_FILES, checkAuthorityRefs, identityContextBudget, identityMaxChars, type IdentityContextBudget, parseForbiddenTerms, parseInvariants, readIdentity, renderIdentitySection, type AuthorityContext, type AuthorityProblem, type ForbiddenTerm, type IdentityFile, type IdentitySet, type Invariant } from "./identity.js";
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";

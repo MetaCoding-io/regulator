@@ -63,7 +63,7 @@
     "Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.",
     "It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.",
     "The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.",
-    "An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 42)."
+    "An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43)."
   ],
   "ownership": {
     "owner": "regulator-maintainers",

@@ -27,7 +27,7 @@
   "limitations": [
     "Level 5 by design: what is rendered is advice. A model can ignore it; what keeps the file what a person decided is the write gate (identity-write-gate), the bash watch and the identity-untouched check.",
     "The advice rendered is the worktree's copy, which a unit's shell can change before the session reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not changed advice.",
-    "Rendering is cut at the budget policy's `advice.maxChars` (4000 characters unless the policy says otherwise); a file longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the file, the session's status line says so and the session warns once — and refuses nothing: shortening the file is a person's decision (docs/DEBT.md row 45).",
+    "Rendering is cut at the budget policy's `advice.maxChars` (4000 characters unless the policy says otherwise); a file longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the file, the session's status line says so and the session warns once — and refuses nothing: shortening the file is a person's decision (docs/DEBT.md row 46).",
     "Outside an instance that carries the file (a session run by hand in a plain checkout, or an instance initialized before advice was a file set) the grant alone renders, or the inline advice a profile still carries during the one release of overlap; nothing says the unit was told less than the definition intends."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-10-25", "reviewBy": "2026-12-01" },

@@ -26,7 +26,7 @@
   },
   "evidence": { "tests": ["../protocol/src/definition-writers.test.ts", "../core/src/definition.test.ts", "../regulator-pi/src/authority.test.ts", "src/controller.test.ts", "src/registry.test.ts"] },
   "limitations": [
-    "The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 44).",
+    "The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).",
     "Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.",
     "It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.",
     "A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split."

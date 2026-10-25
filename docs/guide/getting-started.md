@@ -53,8 +53,8 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
    way.
 2. It adds `.regulator/` to `.gitignore`, because that directory holds the instance's
    state and is never source.
-3. It records any credential-looking value found in a committed `.env` as a *canary*,
-   and every tool result is then watched for that value.
+3. It records any credential-looking value found in a committed `.env` as a *credential
+   canary*, and every tool result is then watched for that value.
 4. It writes the instance manifest, `.regulator/instance.json`. The manifest records
    which definition the instance runs, at which revision, under which Pi, when it was
    initialized and by whom (`--by`, or else your user and host), and the layout you

@@ -17,9 +17,10 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.identity.advice-context.v1` | Advice context | S5 | prompt | active | 2026-12-01 |
 | `reg.authority.advice-decision.v1` | Advice decision path | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.delivery.v1` | Algedonic delivery | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.behavioral-canary.v1` | Behavioral canary | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.behaviour-check.v1` | Behaviour check (export-signature) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.canary-watch.v1` | Canary watch | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.canary-watch.v1` | Credential canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
@@ -92,7 +93,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - Level 5 by design: what is rendered is advice. A model can ignore it; what keeps the file what a person decided is the write gate (identity-write-gate), the bash watch and the identity-untouched check.
 - The advice rendered is the worktree's copy, which a unit's shell can change before the session reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not changed advice.
-- Rendering is cut at the budget policy's `advice.maxChars` (4000 characters unless the policy says otherwise); a file longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the file, the session's status line says so and the session warns once — and refuses nothing: shortening the file is a person's decision (docs/DEBT.md row 45).
+- Rendering is cut at the budget policy's `advice.maxChars` (4000 characters unless the policy says otherwise); a file longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the file, the session's status line says so and the session warns once — and refuses nothing: shortening the file is a person's decision (docs/DEBT.md row 46).
 - Outside an instance that carries the file (a session run by hand in a plain checkout, or an instance initialized before advice was a file set) the grant alone renders, or the inline advice a profile still carries during the one release of overlap; nothing says the unit was told less than the definition intends.
 
 **Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
@@ -135,9 +136,9 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
-- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 42).
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
 - Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
-- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 43, with #53).
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
 
 **Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
 
@@ -184,6 +185,46 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `loop:deliver-pending` — Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only.
 
 **Retirement condition.** Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before.
+
+
+## Behavioral canary
+
+`reg.audit.behavioral-canary.v1` · S3* · deterministic-gate · active · unreleased
+
+**Purpose.** Ask, in a rule rendered beside the identity on every run, that each reply begin with a marker the budget policy declares (`identity.canary`: the marker, with `{unit}` for the unit id, and the number of misses), and read every assistant reply for it. A run of replies without the marker is recorded as an advisory audit finding to S3. A behavioral canary is an absence canary, the warrant canary's shape: the marker is re-asserted every reply while the model still follows the small rules it is shown each turn, and its silence says that attention has gone before the large rules go with it. The credential canary (`reg.audit.canary-watch.v1`) is the other polarity: a value whose presence is the alarm.
+
+**Absorbs.** `context-degradation` — Forty turns in, the unit still answers fluently, but it has stopped doing the small things the prompt asks for; the next thing it drops is a fixed decision or an invariant, and nothing in the loop sees the slide until the closeout refuses the result.
+
+**Mechanism.** `../regulator-pi/src/identity.ts` at `host:before_agent_start` (render the rule), `host:message_end` (read the reply)
+
+**Channels.** consumes `the budget policy's `identity.canary``, `message_end (assistant)` · emits `audit-finding → S3 (context-degradation, advisory)`
+
+**Scope.** subjects assistant reply · resources the session's marker
+
+**Cost.** One short system-prompt section per run and one prefix comparison per assistant reply; a few output tokens per reply for the marker; no model calls.
+
+**May.**
+- render the rule as a prompt section of its own, outside the identity's character limit
+- record an advisory finding and set the status line
+
+**May not.**
+- block a tool call or stop the model
+- end the attempt or open a fresh session (S3 decides: the recovery router under its policy)
+- infer anything from a single miss
+
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`
+
+**Limitations.**
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-22 · review by 2026-12-01
+
+**Ablation.** `extension:identity` — Shares the identity extension with identity in context and the memory store; the control arm, which renders no identity, has no canary by construction. A treatment arm without the extension loses all three. The live drift runs (#46) are the first place the canary's firing can be read against what the closeout later found.
+
+**Retirement condition.** Across three model versions in the live drift runs, the canary never falls silent before an attempt that the closeout then refuses, or falls silent only after the budget guard or the closeout has already caught the failure: the signal adds no lead time.
 
 
 ## Behaviour check (export-signature)
@@ -267,11 +308,11 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models.
 
 
-## Canary watch
+## Credential canary watch
 
 `reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
+**Purpose.** Watch for the instance's credential canaries — credential-looking values recorded at init or fixture time from a committed .env — in every tool result and in the model's own text. A credential canary is a presence canary: the value must never appear, and its appearance is the alarm (the behavioral canary, `reg.audit.behavioral-canary.v1`, is the other polarity). A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
@@ -452,7 +493,7 @@ does not do. `since` is the package version that first shipped the record.
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
 - The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.
-- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 42).
+- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -490,7 +531,7 @@ does not do. `since` is the package version that first shipped the record.
 **Evidence.** `../protocol/src/definition-writers.test.ts`, `../core/src/definition.test.ts`, `../regulator-pi/src/authority.test.ts`, `src/controller.test.ts`, `src/registry.test.ts`
 
 **Limitations.**
-- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 44).
+- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
 - Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
 - It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
 - A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
@@ -848,7 +889,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 43, with #53).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
