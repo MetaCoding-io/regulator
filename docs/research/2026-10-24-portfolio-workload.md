@@ -1,7 +1,11 @@
 # A portfolio under management as the third workload
 
-- **Status:** open; proposed in three phases (§6). Phase 1 is the candidate for the
-  contributed workload [#61](https://github.com/MetaCoding-io/regulator/issues/61) asks for.
+- **Status:** graduated: Phase 1 is [#120](https://github.com/MetaCoding-io/regulator/issues/120) (`roadmap:0.3`, under
+  [#61](https://github.com/MetaCoding-io/regulator/issues/61)); Phase 2's four items are filed as [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#122](https://github.com/MetaCoding-io/regulator/issues/122),
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), waiting on #120; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
+  blocked on the open-metric row and the prediction record. All six are sub-issues of
+  #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
+  the designed slices are not lost.
 - **Source:** *Build a Robo-Advisor with Python (From Scratch)*, Rob Reider and Alexander
   Michalka, Manning 2025, cited below by chapter and section. The book is held in the
   private `MetaCoding-io/library` repository and is not reproduced here; a reader of this
@@ -273,7 +277,7 @@ arrives in the ledger today.
 
 ## 6. Phases
 
-**Phase 1 — the close, scripted (nothing new in the control plane).** The fixture: the
+**Phase 1 — the close, scripted (nothing new in the control plane).** [#120](https://github.com/MetaCoding-io/regulator/issues/120). The fixture: the
 book's six-ETF universe and target (10.3, 13.3.4), a lots file in the shape of 13.3.2's
 inputs, two periods of positions and prices as files, `universe.json`, `tax.json`,
 `benchmark.json`, and `test/portfolio.test.js` with the checks of §1 ported to
@@ -287,17 +291,18 @@ second. Consent on the trade list through `ask_human`, paused, answered, closed.
 worked example page, written to the recipe in the finance example §6. This is what #61
 asks for, with its authoring guide written from the experience of writing it.
 
-**Phase 2 — the mechanisms the workload is the case for.** `place_trade` under #60; the
-`command` runner with the book's optimiser behind it; the three sensors; the harvest
-contract with the exchangeable sets and the wash-sale check live; the lots adjusted for
-an executed wash sale (14.2.2). Each lands as its own issue against the seam named in §5.
+**Phase 2 — the mechanisms the workload is the case for.** `place_trade` under #60
+([#121](https://github.com/MetaCoding-io/regulator/issues/121)); the `command` runner with the book's optimiser behind it
+([#122](https://github.com/MetaCoding-io/regulator/issues/122)); the three sensors ([#123](https://github.com/MetaCoding-io/regulator/issues/123)); the harvest contract with the
+exchangeable sets and the wash-sale check live, and the lots adjusted for an executed
+wash sale (14.2.2) ([#124](https://github.com/MetaCoding-io/regulator/issues/124)). Each is its own issue against the seam named in §5.
 
 **Phase 3 — evidence.** A suite over the fixture's price history with the book's
 backtester as the grader and its summary statistics as pre-registered metrics; arms with
 and without the band check and the wash-sale check, so the two regulators the workload
 adds get ablation evidence; views as prediction records with a probe horizon; the
 success-probability prediction with its horizon and the longevity one with its
-limitation. Waits on the open-metric row and on the prediction record.
+limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits on the open-metric row and on the prediction record.
 
 ## 7. What this note does not claim
 
@@ -316,7 +321,12 @@ limitation. Waits on the open-metric row and on the prediction record.
 
 ## 8. Next step
 
-File Phase 1 as an issue under #61 (`roadmap:0.3`, `workload`), with §3's tables as the
-acceptance criteria and §5's first row as its one recorded decision. Phase 2's four
-items become issues when Phase 1 is merged, each against the seam §5 names. Phase 3
-waits on the open-metric row.
+Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
+first row as its one recorded decision. Phase 2's four issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
+[#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names.
+Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row when the open-metric row and the
+prediction record are issues.
+
+**Decided (2026-10-25, James).** All three phases are filed at once rather than Phase 2
+waiting for Phase 1 to merge and Phase 3 for its blockers, so the designed slices have a
+number and are not re-derived; the order of work is unchanged.
