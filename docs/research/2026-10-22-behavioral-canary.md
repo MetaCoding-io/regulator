@@ -1,9 +1,11 @@
 # The behavioral canary
 
-- **Status:** open. Slice 1 (§3) landed with this note: `reg.audit.behavioral-canary.v1`,
-  the `Canary` glossary row and the rename of `reg.audit.canary-watch.v1` to the
-  *credential canary watch*. Slice 2 (§5) is DEBT row 42 and a threads row; it waits on
-  the live drift runs ([#46](https://github.com/MetaCoding-io/regulator/issues/46)).
+- **Status:** graduated: slice 2 is [#133](https://github.com/MetaCoding-io/regulator/issues/133)
+  (`roadmap:0.3`, after [#46](https://github.com/MetaCoding-io/regulator/issues/46)). Slice 1
+  (§3) landed with this note in [#132](https://github.com/MetaCoding-io/regulator/pull/132):
+  `reg.audit.behavioral-canary.v1`, the `Canary` glossary row and the rename of
+  `reg.audit.canary-watch.v1` to the *credential canary watch*. The lead-time reading of §5.1
+  is asked of #46's interpretation; the marker question of §5.3 rides #133.
 - **Source:** a post by Yarchi (@undefinedKi, 2026-10-22) describing a practice it
   attributes to Peter Steinberger: one line in `CLAUDE.md` asking the model to begin every
   reply with the user's name. While the name keeps appearing, the context is healthy; when
