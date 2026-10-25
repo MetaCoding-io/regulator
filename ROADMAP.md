@@ -39,6 +39,7 @@ measured ones and closes the debt that a card's own retirement condition points 
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
 | The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
 | The accept-path split, slice 1: advice as a file set seeded like identity, `DEFINITION_WRITERS` in `protocol` rendered into `BOUNDARY.md`, and `advice accept \| reject \| promote` | — (opens four rows) | [#110](https://github.com/MetaCoding-io/regulator/issues/110) |
+| Drift suite: a `confident` behaviour (self-report as control variety) and a poisoned-memory fixture (data absorbed as control), after #46 | — | [#130](https://github.com/MetaCoding-io/regulator/issues/130) |
 
 0.2 is done when the live report is committed, every row above is struck or moved to
 "not planned" with a reason, and `regulator review --due` is clean at the first review
@@ -57,6 +58,7 @@ polled.*
 | Per-tool consent grants as a profile field, enforced by interception | row 29 | [#60](https://github.com/MetaCoding-io/regulator/issues/60) |
 | A third workload, contributed: the authoring guide and a template | — | [#61](https://github.com/MetaCoding-io/regulator/issues/61) |
 | The `portfolio` workload, Phase 1: the fixture with its checks in Node, the workload, the `manager` profile, four contracts, the scripted close with consent on the trade list, and the worked example | — | [#120](https://github.com/MetaCoding-io/regulator/issues/120), under #61 |
+| Open metrics: a workload or an instrument declares a metric with its grader command; the fifteen trajectory counts become the built-ins | — (unblocks #125, #49's judged metrics, the probe arm) | [#129](https://github.com/MetaCoding-io/regulator/issues/129) |
 | Semantic S2: typed coordination commitments between units | — | [#14](https://github.com/MetaCoding-io/regulator/issues/14) |
 
 Alongside: a contributor pathway ([`CONTRIBUTING.md`](CONTRIBUTING.md), issue templates
@@ -85,7 +87,6 @@ names the issue its current slice is in.
 | The reflector: the definition's S4, a package that reads an instance's records and emits `harness-edit` proposals over the advice files, accepted by a person; a proposed edit probed as an eval arm before the decision | [Harness² note §4, §7, §8](docs/research/2026-10-18-harness2-recursive-harnessing.md#7-the-reflector-s4-of-the-level-above); [the accept-path split](docs/research/2026-10-18-accept-path-split.md) | name decided; the proposal's three records decided (§8); the split decided (split note §10) and its slice 1 scheduled | Slice 1 is [#110](https://github.com/MetaCoding-io/regulator/issues/110) (0.2). Next after it: the prediction record of open questions §4 and the `harness-edit` payload in `protocol` (split note §8 slice 2); then the probe arm after #46 (slice 3); then the reflector package. The engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108) sequences the same | slice 1 in 0.2; the probe arm waits on #46 |
 | Regulating the Regulator — Paper 1 research track (theoretical model, novelty, evaluation protocol, governed-adaptation demonstration, replication and journal submission) | [paper plan](docs/research/2026-10-18-paper-regulating-the-regulator.md) | research active; no paper findings claimed; engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108) remains proposal-stage | Work [#103](https://github.com/MetaCoding-io/regulator/issues/103) and [#104](https://github.com/MetaCoding-io/regulator/issues/104) first; research may proceed before the accept-path decisions; engineering follows the existing Reflector thread | separate paper track, not 0.2/0.3 product scope |
 | The control room accepts the CLI's dispositions | [open questions §5](docs/research/2026-09-25-open-questions.md#5-should-the-control-room-write) | deferred: the control room stays read-only for now | None until reopened | — |
-| Two scripted foils from the agent-engineering books: a `confident` behaviour (self-report as control variety) and a poisoned-memory fixture (data absorbed as control) | [agent-engineering books note §6](docs/research/2026-10-25-agent-engineering-books.md#6-two-scripted-foils-for-the-drift-suite) | designed; the catalog rows name them as their reproduction | one `evidence` issue when the drift suite next grows, after [#46](https://github.com/MetaCoding-io/regulator/issues/46)'s live report is committed | 0.2 |
 
 The open questions' backlog (§6) holds smaller items with no design yet; one becomes a
 row here when it gets one.

@@ -302,7 +302,7 @@ backtester as the grader and its summary statistics as pre-registered metrics; a
 and without the band check and the wash-sale check, so the two regulators the workload
 adds get ablation evidence; views as prediction records with a probe horizon; the
 success-probability prediction with its horizon and the longevity one with its
-limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits on the open-metric row and on the prediction record.
+limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits on the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) and on the prediction record.
 
 ## 7. What this note does not claim
 
@@ -324,7 +324,7 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
 first row as its one recorded decision. Phase 2's four issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
 [#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names.
-Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row when the open-metric row and the
+Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row when the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) and the
 prediction record are issues.
 
 **Decided (2026-10-25, James).** All three phases are filed at once rather than Phase 2
