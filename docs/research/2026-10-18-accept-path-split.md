@@ -1,7 +1,9 @@
 # The accept-path split on `BOUNDARY.md`
 
-- **Status:** graduated: slice 1 is [#110](https://github.com/MetaCoding-io/regulator/issues/110)
-  (`roadmap:0.2`); slices 2 to 4 of §8 stay designed here until each becomes an issue.
+- **Status:** graduated; slice 1 landed ([#110](https://github.com/MetaCoding-io/regulator/issues/110),
+  `roadmap:0.2`: advice as a seeded file set, `DEFINITION_WRITERS`, `advice accept | reject |
+  promote`, the three cards, DEBT rows 42 to 45). Slices 2 to 4 of §8 stay designed here until
+  each becomes an issue; slice 2 is next.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the
   split has to sit on, cited by file below.
@@ -249,7 +251,9 @@ Limitations that become `DEBT.md` rows:
    and refuses a dirty definition; `BOUNDARY.md` carries the new section and
    `regulator docs --check` is clean; the test holding `DEFINITION_WRITERS` against
    `ENFORCEMENT_POINTS.cli` passes; the committed eval reports are unchanged (scripted
-   units read no advice).
+   units read no advice). **Landed** in #110, with two readings the note had left open,
+   recorded in §9: how a plain proposal names its advice file, and how the fixtures are
+   placed in a class.
 2. **The prediction record** (Harness² note §8), its own issue: the record, its
    resolution from the stores, and the `harness-edit` payload that carries it.
 3. **The probe arm and the probe rule.** `EvalArmSchema` gains an optional `advice`
@@ -278,6 +282,18 @@ Slice 1 is one issue in 0.2 and pays nothing in `DEBT.md`; it opens the four row
 - Whether `regulator/advice/` should be per unit type as well as per profile when a
   workload has two unit types on one profile with different needs. Not today: the
   shipped workloads have no such pair.
+- How a plain proposal names its advice file, until the `harness-edit` payload (slice 2)
+  names its target by type. Slice 1 reads the file off the proposal's `subject`: it
+  names a profile when it contains `advice/<profile>.md`, under the seed or as the
+  instance path, and `advice accept` refuses a `--file` that is not that file or a
+  subject that names none (`adviceProfileNamed` in core). The typed payload should
+  replace the reading, not sit beside it.
+- Whether the fixtures (`fixture*/`, `drift/`) belong in the declaration class by name,
+  as slice 1 lists them in `DEFINITION_WRITERS`, or should be derived from the eval suites
+  and the `fixture` command that read them. Listing them keeps the class check one closed
+  list; deriving them would make a new fixture declared by the suite that uses it. The
+  package's own `src/`, `dist/` and `node_modules/` are not definition files and the check
+  skips them either way.
 
 ## 10. What this asks of the reader
 
