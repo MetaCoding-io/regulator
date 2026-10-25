@@ -44,7 +44,8 @@ regulator doctor                    # exit 1 on any problem
 regulator unit drive packages/regulator/contracts/fix-known-issue.json
 ```
 
-`init` seeds the identity under `regulator/identity/`, ignores `.regulator/`, records
+`init` seeds the identity under `regulator/identity/` and the profiles' advice under
+`regulator/advice/`, ignores `.regulator/`, records
 any credential-looking value in a committed `.env` as a credential canary, writes
 `.regulator/instance.json` — the *instance manifest*: which definition, at which
 revision, under which Pi, initialized when and by whom, and the layout you declared —
@@ -54,7 +55,7 @@ fixture's layout is a declaration here or a discovered convention:
 | The lab assumed | Now |
 | --- | --- |
 | `src/` and `test/` are writable | the profile's prefixes, or `--writable` in the manifest (a read-only profile stays read-only) |
-| `vendor/` is protected | `regulator/identity/` always; `vendor/` when it exists (convention); `--protected` for the rest |
+| `vendor/` is protected | `regulator/identity/` and `regulator/advice/` always (the instance paths of `DEFINITION_WRITERS`); `vendor/` when it exists (convention); `--protected` for the rest |
 | `npm test` or `node --test` | discovered from `package.json` scripts or a `test/` directory (`packages/checks/src/conventions.ts`) |
 | the glossary's words | `regulator/identity/GLOSSARY.md`, "Words this instance does not use", read by `glossary-lint` |
 | the tests a unit may not weaken | the base's `test/` and `package.json`, staged and run by `inherited-tests` against the unit's tree; a contract exempts the files it changes on purpose |
@@ -144,7 +145,11 @@ with what is installed). An upgrade is a change with evidence:
 The definition's own release path: an identity decision accepted in an instance
 (`regulator identity accept`) is promoted into the seed with
 `regulator identity promote <file>.md --by <who> --rationale <text>`, which commits in
-the definition's repository so every later `init` starts from it.
+the definition's repository so every later `init` starts from it; an advice decision
+(`regulator advice accept`) the same way with `regulator advice promote <profile>.md`.
+An instance initialized before advice was a file set carries no `regulator/advice/`;
+`doctor` says so, and seeding it from the definition's `advice/` is a person's step
+until `regulator upgrade` exists (#53).
 
 ## Security posture
 
@@ -156,9 +161,11 @@ the definition's repository so every later `init` starts from it.
   For untrusted or unattended runs, the container declares the shell's reach.
 - Credentials: credential canaries from a committed `.env` are watched in tool results and
   redacted from spans; anything else is the deployment's secret manager.
-- Authority: no tool can supply S5 authority; a person runs `identity accept` and
-  `identity promote`, checked against the interaction policy's people (asserted names,
-  not authenticated ones).
+- Authority: no tool can supply S5 authority; a person runs `identity accept`,
+  `advice accept` and their `promote` siblings, checked against the interaction
+  policy's people (asserted names, not authenticated ones). `BOUNDARY.md` § Who writes
+  the definition says which files each command may write, and that a grant changes
+  only by a merged change.
 
 ## Ownership: the harness as a viable system
 

@@ -383,3 +383,4 @@ export {
 } from "./evals.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
 export { InstanceManifestSchema, isInstanceManifest, type InstanceManifest } from "./instance.js";
+export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";

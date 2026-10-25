@@ -2,7 +2,7 @@
  * Instances (lesson 15): installing the definition into a repository and
  * checking that the installation can run.
  *
- *   initInstance   seed the identity, ignore `.regulator/`, record canaries,
+ *   initInstance   seed the identity and the advice, ignore `.regulator/`, record canaries,
  *                  and write the instance manifest — which definition, at
  *                  which revision, under which Pi, with the layout a person
  *                  declared for this project. Committed on the base branch,
@@ -23,10 +23,10 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, checkDefinition, checkRegistry, identityContextBudget, identityMaxChars, loadRegistry, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, identityContextBudget, identityMaxChars, loadRegistry, readAdviceSet, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
 import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
-import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, IDENTITY_SEED_DIR, canariesFromEnv } from "./unit.js";
+import { ADVICE_RELATIVE_DIR, CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, INSTANCE_SEEDS, canariesFromEnv } from "./unit.js";
 import { LAB_ROOT } from "./workload.js";
 import { hostPin } from "./host.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
@@ -62,7 +62,7 @@ export interface InitInstanceOptions {
 
 export interface InitializedInstance {
   manifest: InstanceManifest;
-  /** What init committed: the identity seed, the ignore line — or nothing, when both were already there. */
+  /** What init committed: the identity and advice seeds, the ignore line — or nothing, when all were already there. */
   committed: string | undefined;
   canaries: number;
 }
@@ -87,16 +87,15 @@ export async function initInstance(exec: Exec, options: InitInstanceOptions): Pr
   if (problems.length) throw new Error(`the definition at ${definitionRoot} does not pass its check; nothing installed:\n${problems.join("\n")}`);
 
   const staged: string[] = [];
-  const identityDir = path.join(repo, IDENTITY_RELATIVE_DIR);
-  let identitySeeded = false;
-  try {
-    await readFile(path.join(identityDir, "INVARIANTS.md"));
-  } catch {
-    const { cp } = await import("node:fs/promises");
-    await cp(IDENTITY_SEED_DIR, identityDir, { recursive: true, force: false });
-    staged.push(IDENTITY_RELATIVE_DIR);
-    identitySeeded = true;
+  // The harness-owned directories (DEFINITION_WRITERS: identity, advice) are seeded where absent and never overwritten.
+  const { cp, readdir } = await import("node:fs/promises");
+  for (const { seed, instance } of INSTANCE_SEEDS) {
+    const present = await readdir(path.join(repo, instance)).then((entries) => entries.length > 0).catch(() => false);
+    if (present) continue;
+    await cp(seed, path.join(repo, instance), { recursive: true, force: false });
+    staged.push(instance);
   }
+  const identitySeeded = staged.includes(IDENTITY_RELATIVE_DIR);
   const ignore = path.join(repo, ".gitignore");
   const current = await readFile(ignore, "utf8").catch(() => "");
   if (!current.split("\n").some((l) => l.trim() === ".regulator/" || l.trim() === ".regulator")) {
@@ -210,6 +209,12 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     } else {
       check("identity", false, `${IDENTITY_RELATIVE_DIR} missing: run \`regulator init\``);
     }
+    // The instance's advice (#110), as a unit of each profile would see it: a file per declared profile, and the cut past
+    // `advice.maxChars` said, not refused. An instance initialized before advice was a file set has no directory: say so.
+    const advice = await readAdviceSet(path.join(repo, ADVICE_RELATIVE_DIR), definition.profiles.map((p) => ({ name: p.name, inline: (p.advice?.length ?? 0) > 0 })));
+    const adviceWarnings = Object.entries(advice.files).map(([profile, text]) => adviceContextBudget(profile, text, adviceMaxChars(definition.policies.find((p) => p.name === "default") ?? definition.policies[0])).warning).filter((w): w is string => w !== undefined);
+    const adviceFiles = Object.keys(advice.files).sort();
+    check("advice", advice.problems.length === 0, adviceFiles.length ? `${ADVICE_RELATIVE_DIR} present: ${adviceFiles.length} file(s) for ${adviceFiles.join(", ")}${advice.problems.length ? `; problems: ${advice.problems.map((p) => p.message).join("; ")}` : ""}` : `${ADVICE_RELATIVE_DIR} missing: seed it from the definition's advice/ (an instance initialized before advice was a file set carries none; OPERATING.md § Upgrading)`, adviceWarnings.join("; ") || undefined);
     const clean = await isClean(exec, repo).catch(() => false);
     const branch = await currentBranch(exec, repo).catch(() => "?");
     check("base", clean, clean ? `clean, on ${branch}` : `the base checkout has uncommitted changes (on ${branch}); nothing dispatches until it is clean`);
