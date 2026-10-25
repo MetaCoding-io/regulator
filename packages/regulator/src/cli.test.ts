@@ -365,3 +365,117 @@ test("`unit start` prints the host's session command (#79): every `pi -e` path e
   const status = await regulator(repo, "unit", "status");
   assert.match(status.stdout, /u3/, "the lease is held");
 });
+
+test("the advice decision path (#110): `advice accept` mirrors `identity accept` — a proposal owed to S5, a person who may act as S5, a clean tree, a declared profile's file, non-empty and under the cap — plus one rule identity lacks: --file is the file the proposal's subject names; it commits on the base branch citing the obligation and resolves it as accepted; `advice reject` changes nothing", async (t) => {
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  await appendSignal(repo, { id: "a1", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: "regulator/advice/implement.md: say to run the inherited suite before reporting", unit: "u1", rationale: "two units reported without running it", requestedChange: "add a line", evidence: [] });
+  await appendSignal(repo, { id: "a2", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "rename src/", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await appendSignal(repo, { id: "a3", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "advice/research.md: drop the line about line numbers", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await appendSignal(repo, { id: "f1", timestamp: "t", source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking", subject: "x", unit: "u1", observation: "o", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const [accept, elsewhere, reject, finding] = (await ledger.obligations()).map((o) => o.id);
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const outside = await mkdtemp(path.join(tmpdir(), "regulator-advice-proposal-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const proposed = path.join(outside, "proposed-implement.md");
+  const current = await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8");
+  await writeFile(proposed, `${current}- Run the inherited suite (inherited-tests) before reporting; a passing new test is not evidence the old ones still pass.\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args);
+
+  // The refusals, in the order the accept-path note gives them (§5). Each leaves the tree and the obligation as they were.
+  let r = await attempt(finding!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is audit-finding owed to S3; `advice accept\|reject` decides proposals owed to S5/);
+  r = await attempt(accept!, "--by", "bob", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  await writeFile(path.join(repo, "scratch.txt"), "dirty\n");
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the base checkout has uncommitted changes; an advice decision is committed on its own/);
+  await rm(path.join(repo, "scratch.txt"));
+  r = await attempt(accept!, "--by", "alice", "--file", "AGENTS.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--file must be a declared profile's advice file \(one of auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, research\.md\); "AGENTS\.md" is not/);
+  r = await attempt(accept!, "--by", "alice", "--file", "deployer.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--file must be a declared profile's advice file/, "an undeclared profile");
+  r = await attempt(accept!, "--by", "alice", "--file", "research.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's subject names implement\.md; --file must be that file, not research\.md/);
+  r = await attempt(elsewhere!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's subject \("rename src\/"\) names no advice file/);
+  await writeFile(path.join(outside, "empty.md"), "\n");
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", path.join(outside, "empty.md"), "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposed implement\.md is empty; nothing to accept/);
+  await writeFile(path.join(outside, "long.md"), `- ${"Run the tests. ".repeat(400)}\n`);
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", path.join(outside, "long.md"), "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposed implement\.md renders to \d{4} characters and a unit's prompt carries 4000 \(`advice\.maxChars`\); shorten it, or raise the limit in the budget policy first/);
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), current, "nothing written by a refusal");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before);
+  assert.equal((await ledger.get(accept!))?.status, "open");
+
+  // The decision: the file is written under S5 authority, committed on main citing the obligation, and the obligation is resolved as accepted with the revision.
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "two units reported without running the inherited suite");
+  assert.equal(r.code, 0, r.stderr);
+  const after = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  assert.notEqual(after, before);
+  assert.match(r.stdout, new RegExp(`^proposal ${accept!.slice(0, 8)} accepted by alice \\(S5\\): regulator/advice/implement\\.md committed as ${after.slice(0, 7)} on main; the obligation is resolved as accepted`));
+  assert.match((await gitExec("git", ["log", "-1", "--format=%B"], { cwd: repo })).stdout, new RegExp(`^S5: accept proposal ${accept!.slice(0, 8)} into regulator/advice/implement\\.md\\n\\nDecided by alice under S5 authority\\. Obligation ${accept}\\.\\ntwo units reported`));
+  assert.match(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), /\n- Run the inherited suite \(inherited-tests\) before reporting/);
+  const state = await ledger.get(accept!);
+  assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
+  assert.match(state?.rationale ?? "", new RegExp(`regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority`));
+  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: repo })).stdout.trim(), "", "committed, not left in the tree");
+
+  r = await regulator(repo, "advice", "reject", reject!.slice(0, 8), "--by", "alice", "--rationale", "line numbers are how a finding is checked");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /rejected by alice \(S5\): line numbers are how a finding is checked; advice unchanged/);
+  assert.equal((await ledger.get(reject!))?.disposition, "rejected");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), after, "a rejection commits nothing");
+});
+
+test("the release path for advice (#110): `advice promote` carries the instance's accepted file into the definition's seed and refuses identical content, a dirty definition, a person who may not act as S5, and a profile the definition does not declare", async (t) => {
+  const { mkdtemp, rm, cp, readdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const repo = await initRepo(t);
+  const definition = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(definition, { recursive: true, force: true }));
+  for (const dir of ["advice", "profiles"]) await cp(path.join(LAB_ROOT, dir), path.join(definition, dir), { recursive: true });
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "seed"]]) await gitExec("git", args, { cwd: definition });
+  const promote = (...args: string[]) => regulator(repo, "advice", "promote", ...args, "--definition", definition);
+
+  let r = await promote("implement.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /identical to the definition's seed; nothing to promote/);
+  await writeFile(path.join(repo, "regulator/advice/implement.md"), `${await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8")}- Run the inherited suite before reporting.\n`);
+  await gitExec("git", ["commit", "-qam", "S5: accept an advice change (simulated)"], { cwd: repo });
+  r = await promote("implement.md", "--by", "bob", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await promote("deployer.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /deployer\.md names no profile the definition at .* declares \(auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, research\.md\)/);
+  r = await promote("AGENTS.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 2, "not an advice file name at all: usage");
+  await writeFile(path.join(definition, "scratch.txt"), "dirty\n");
+  r = await promote("implement.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the definition at .* has uncommitted changes; a promotion is committed on its own/);
+  await rm(path.join(definition, "scratch.txt"));
+  assert.doesNotMatch(await readFile(path.join(definition, "advice", "implement.md"), "utf8"), /inherited suite/, "the seed is untouched by a refused promotion");
+
+  r = await promote("implement.md", "--by", "alice", "--rationale", "the instance learned to run the inherited suite");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^implement\.md promoted by alice \(S5\): the definition's seed at .* now carries this instance's advice for implement, committed as [0-9a-f]{7}; every instance initialized from now on starts from it\n$/);
+  assert.match(await readFile(path.join(definition, "advice", "implement.md"), "utf8"), /- Run the inherited suite before reporting\.\n$/);
+  assert.deepEqual((await readdir(path.join(definition, "advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "research.md"], "one file per profile, as before");
+  assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote advice implement\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned to run the inherited suite/);
+  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
+});

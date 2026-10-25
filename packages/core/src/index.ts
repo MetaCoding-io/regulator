@@ -6,7 +6,7 @@ export { assertRegulatoryEvent, createRegulatoryEvent } from "./reporting.js";
 export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatoryEvent } from "./event-store.js";
 export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
 export { isReadOnlyProfile, isWritableUnder, renderProfileSection, type RenderProfileOptions } from "./profiles.js";
-export { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, profileOfAdviceFile, readAdviceSet, renderAdvice, type AdviceContextBudget, type AdviceProblem, type AdviceSet, type DeclaredProfile } from "./advice.js";
+export { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, profileOfAdviceFile, readAdviceSet, renderAdvice, type AdviceContextBudget, type AdviceProblem, type AdviceSet, type DeclaredProfile } from "./advice.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
 export { checkRegistry, formatEnforcementPoint, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type CheckRegistryOptions, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";

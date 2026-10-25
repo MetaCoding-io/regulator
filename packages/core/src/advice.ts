@@ -23,6 +23,17 @@ export function profileOfAdviceFile(file: string): string | undefined {
   return m?.[1];
 }
 
+/**
+ * The profile an advice proposal names: its subject carries the file's path, `advice/<profile>.md` under the seed or
+ * `regulator/advice/<profile>.md` in the instance. `advice accept` requires `--file` to be that file (accept-path note §5):
+ * a proposal names its target, and the decision does not drift to another file. A subject naming no advice file is
+ * undefined; until the `harness-edit` payload lands (slice 2) the subject is the one place a plain proposal says which.
+ */
+export function adviceProfileNamed(subject: string): string | undefined {
+  const m = /(?:^|[^a-z0-9-])advice\/([a-z][a-z0-9-]*)\.md(?![a-z0-9-])/.exec(subject);
+  return m?.[1];
+}
+
 export interface AdviceProblem {
   /** The definition file the problem is about, as `checkDefinition` reports it. */
   file: string;

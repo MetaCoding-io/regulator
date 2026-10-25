@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
-import { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, profileOfAdviceFile, readAdviceSet, renderAdvice } from "./advice.js";
+import { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, profileOfAdviceFile, readAdviceSet, renderAdvice } from "./advice.js";
 import { renderProfileSection } from "./profiles.js";
 
 const implement: CapabilityProfile = {
@@ -19,6 +19,12 @@ test("advice as a file set (#110): a file per declared profile, no file for an u
   assert.equal(profileOfAdviceFile("implement.md"), "implement");
   assert.equal(profileOfAdviceFile("README.md"), undefined, "a profile name is lower-case");
   assert.equal(profileOfAdviceFile("implement.txt"), undefined);
+  // A proposal names its target by path, under the seed or in the instance; anything else names no advice file.
+  assert.equal(adviceProfileNamed("regulator/advice/implement.md: say to run the tests twice"), "implement");
+  assert.equal(adviceProfileNamed("tighten advice/bookkeeper.md on consent"), "bookkeeper");
+  assert.equal(adviceProfileNamed("the implement profile's advice"), undefined);
+  assert.equal(adviceProfileNamed("advice/README.md"), undefined, "a profile name is lower-case");
+  assert.equal(adviceProfileNamed("myadvice/implement.md"), undefined, "the path is advice/, not a suffix of another");
 
   const none = await readAdviceSet(path.join(dir, "advice"), [{ name: "implement", inline: false }, { name: "research", inline: true }]);
   assert.deepEqual(none.problems, [{ file: "advice/implement.md", message: 'is missing: profile "implement" declares no advice; every profile has an advice file (an empty one says the profile is told nothing beyond its grant)' }], "a profile still carrying inline advice is not asked for a file during the overlap release");

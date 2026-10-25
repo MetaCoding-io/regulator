@@ -35,13 +35,20 @@
  *   regulator remind                           deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
  *   regulator signals route                    route every unrouted message under the routing policy (for sessions run by hand)
  *
- * Identity and memory
+ * Identity, advice and memory
  *   regulator identity accept <obligation> --by <who> --file <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --from <path> --rationale <text>
  *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
  *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
  *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
  *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path: copy the instance's accepted identity file into the definition's seed (the manifest's, or --definition) and commit it there
+ *   regulator advice accept <obligation> --by <who> --file <profile>.md --from <path> --rationale <text>
+ *                                                         the advice decision: write the proposed file into regulator/advice/ under S5 authority, commit it on the base
+ *                                                         branch citing the obligation, and resolve the obligation as accepted. --file must be the advice file the
+ *                                                         proposal's subject names (`advice/<profile>.md`), for a profile the definition declares
+ *   regulator advice reject <obligation> --by <who> --rationale <text>   decline an advice proposal owed to S5
+ *   regulator advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]
+ *                                                         the release path for advice: copy the instance's accepted advice file into the definition's seed and commit it there
  *   regulator memory [--all]                   operational memory: current facts; --all includes expired and retracted
  *   regulator memory retract <id> --by <who> --reason <text>   retract a fact; the retraction is appended, nothing is deleted
  *
@@ -65,7 +72,7 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
 import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
@@ -77,7 +84,8 @@ import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
-import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { ADVICE_RELATIVE_DIR, HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { loadProfilesSync } from "./profiles.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
@@ -208,6 +216,48 @@ ${rationale}`]]) {
     }
     const sha = await headRevision(realExec, definitionRoot);
     console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's file, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
+  } else if (command === "advice" && sub === "promote" && rest[0]) {
+    // The release path for advice (#110): an instance's accepted advice file becomes the definition's seed, committed in the definition's repository. Mirrors `identity promote`.
+    const file = rest[0];
+    const rationale = flag("rationale");
+    const profile = profileOfAdviceFile(file);
+    if (!rationale || !profile) { console.error("advice promote needs <profile>.md and --rationale"); usage(); }
+    const by = await authorized(flag("by"), { severity: "blocking", s5: true });
+    const repo = process.cwd();
+    const manifest = await readManifest(repo);
+    const definitionRoot = flag("definition") ? path.resolve(flag("definition")!) : manifest?.definition.root ?? labRoot;
+    const declared = Object.values(loadProfilesSync(path.join(definitionRoot, "profiles"))).map((p) => ({ name: p.name, inline: (p.advice?.length ?? 0) > 0 }));
+    if (!declared.some((p) => p.name === profile)) throw new Error(`${file} names no profile the definition at ${definitionRoot} declares (${declared.map((p) => adviceFileName(p.name)).join(", ")})`);
+    const instanceFile = path.join(repo, ADVICE_RELATIVE_DIR, file);
+    const seedFile = path.join(definitionRoot, "advice", file);
+    if (!(await isClean(realExec, definitionRoot))) throw new Error(`the definition at ${definitionRoot} has uncommitted changes; a promotion is committed on its own`);
+    const content = await readFile(instanceFile, "utf8");
+    if (content === (await readFile(seedFile, "utf8").catch(() => ""))) throw new Error(`${file} in this instance is identical to the definition's seed; nothing to promote`);
+    const decision = authorizeWrite(path.posix.join(ADVICE_RELATIVE_DIR, file), "s5-authority");
+    if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+    const { mkdtemp, cp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const trial = await mkdtemp(path.join(tmpdir(), "regulator-promote-"));
+    try {
+      await cp(path.join(definitionRoot, "advice"), trial, { recursive: true }).catch(() => undefined);
+      await writeFile(path.join(trial, file), content, "utf8");
+      const set = await readAdviceSet(trial, declared);
+      if (set.problems.length) throw new Error(`promoting ${file} would leave the definition's advice set invalid (${set.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}); nothing changed`);
+    } finally {
+      await rm(trial, { recursive: true, force: true });
+    }
+    await mkdir(path.dirname(seedFile), { recursive: true });
+    await writeFile(seedFile, content, "utf8");
+    const instanceRev = await headRevision(realExec, repo).catch(() => "unknown");
+    for (const args of [["add", "--", path.relative(definitionRoot, seedFile)], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: promote advice ${file} from instance ${path.basename(repo)}@${instanceRev.slice(0, 7)} into the definition
+
+Decided by ${by} under S5 authority.
+${rationale}`]]) {
+      const r = await realExec("git", args, { cwd: definitionRoot });
+      if (r.code !== 0) throw new Error(`git ${args[0]} failed in the definition: ${r.stderr.trim()}`);
+    }
+    const sha = await headRevision(realExec, definitionRoot);
+    console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's advice for ${profile}, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
   } else if (command === "fixture" && sub) {
     const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : rest.includes("--finance") ? "fixture-finance" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
@@ -451,6 +501,50 @@ ${rationale}`]]) {
         const r = await realExec("git", ["checkout", "--", target], { cwd: repo });
         throw new Error(`the proposed ${file} leaves the identity set invalid (${identity.problems.join("; ")}); reverted${r.code === 0 ? "" : " (revert failed)"}`);
       }
+      const branch = await currentBranch(realExec, repo);
+      for (const args of [["add", "--", target], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: ${sub} proposal ${o.id.slice(0, 8)} into ${target}\n\nDecided by ${by} under S5 authority. Obligation ${o.id}.\n${rationale}`]]) {
+        const r = await realExec("git", args, { cwd: repo });
+        if (r.code !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr.trim()}`);
+      }
+      const sha = await headRevision(realExec, repo);
+      await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.` });
+      console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted`);
+    }
+  } else if (command === "advice" && (sub === "accept" || sub === "reject") && rest[0]) {
+    // The advice decision path (#110): the only writer of an advice file, run by a person, citing the obligation it decides.
+    // Mirrors `identity accept|reject` line for line, with one rule more: --file is the file the proposal's subject names.
+    const rationale = flag("rationale");
+    if (!rationale) usage();
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, rest[0]);
+    if (o.concern !== "policy-proposal" || o.consumer !== "S5") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.concern} owed to ${o.consumer}; \`advice accept|reject\` decides proposals owed to S5`);
+    const by = await authorized(flag("by"), { severity: o.severity, s5: true });
+    if (sub === "reject") {
+      await ledger.resolve(o.id, { by: by!, disposition: "rejected", rationale: rationale! });
+      console.log(`proposal ${o.id.slice(0, 8)} rejected by ${by} (S5): ${rationale}; advice unchanged`);
+    } else {
+      const file = flag("file");
+      const from = flag("from");
+      if (!file || !from) { console.error("advice accept needs --file <profile>.md and --from <path>"); usage(); }
+      const repo = process.cwd();
+      if (!(await isClean(realExec, repo))) throw new Error("the base checkout has uncommitted changes; an advice decision is committed on its own");
+      const manifest = await readManifest(repo);
+      const definitionRoot = manifest?.definition.root ?? labRoot;
+      const declared = Object.keys(loadProfilesSync(path.join(definitionRoot, "profiles"))).sort();
+      const profile = profileOfAdviceFile(file!);
+      if (!profile || !declared.includes(profile)) throw new Error(`--file must be a declared profile's advice file (one of ${declared.map(adviceFileName).join(", ")}); "${file}" is not`);
+      const named = adviceProfileNamed(o.subject);
+      if (named !== profile) throw new Error(named ? `the proposal's subject names ${adviceFileName(named)}; --file must be that file, not ${file}` : `the proposal's subject ("${o.subject}") names no advice file; an advice proposal names advice/<profile>.md, and the decision writes that file`);
+      const content = await readFile(path.resolve(from!), "utf8");
+      if (!content.trim()) throw new Error(`the proposed ${file} is empty; nothing to accept`);
+      const policy = await loadPolicy(path.resolve(flag("policy") ?? path.join(definitionRoot, "policies", "default.json"))).catch(() => undefined);
+      const budget = adviceContextBudget(profile, content, adviceMaxChars(policy));
+      if (budget.truncated) throw new Error(`the proposed ${file} renders to ${budget.chars} characters and a unit's prompt carries ${budget.max} (\`advice.maxChars\`); shorten it, or raise the limit in the budget policy first`);
+      const target = path.posix.join(ADVICE_RELATIVE_DIR, file!);
+      const decision = authorizeWrite(target, "s5-authority");
+      if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+      await mkdir(path.join(repo, ADVICE_RELATIVE_DIR), { recursive: true });
+      await writeFile(path.join(repo, target), content, "utf8");
       const branch = await currentBranch(realExec, repo);
       for (const args of [["add", "--", target], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: ${sub} proposal ${o.id.slice(0, 8)} into ${target}\n\nDecided by ${by} under S5 authority. Obligation ${o.id}.\n${rationale}`]]) {
         const r = await realExec("git", args, { cwd: repo });
