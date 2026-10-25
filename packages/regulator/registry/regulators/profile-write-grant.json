@@ -3,7 +3,7 @@
   "name": "Profile write grant",
   "status": "active",
   "vsmFunction": "S3",
-  "purpose": "Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools.",
+  "purpose": "Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools. The grant only: what a unit of the profile is told is the advice file's, rendered by advice-context from the instance's copy, not this card's.",
   "absorbs": {
     "failureClass": "ungranted-capability-use",
     "description": "Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise."

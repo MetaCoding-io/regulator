@@ -92,6 +92,7 @@ with the package, and every part of it is a declared file:
 | --- | --- | --- |
 | Registry | `registry/regulators/*.json` | one record per regulator |
 | Identity seed | `identity/*.md` | the four S5 files every instance starts from |
+| Advice seed | `advice/<profile>.md` | what every unit of a profile is told beyond its grant, one file per profile |
 | Profiles | `profiles/*.json` | what a unit type may use and where it may write |
 | Policies | `policies/*.json` | budgets and model routes, recovery, routing, and interaction |
 | Workloads | `workload/*.json` | the unit types, with their profiles and their checks |
@@ -107,10 +108,12 @@ passed. The check runs under `pnpm check`, so the definition cannot drift from t
 that enforces it without the check failing. The
 [definition reference](/reference/definition) documents each file.
 
-A change to the definition is a pull request. The identity seed has one more way to
-change. An identity decision accepted in an instance can be promoted into the seed with
-`regulator identity promote`, and every later `init` then starts from the promoted
-version.
+A change to the definition is a pull request. The two seeds have one more way to
+change. An identity or advice decision accepted in an instance can be promoted into the
+seed with `regulator identity promote` or `regulator advice promote`, and every later
+`init` then starts from the promoted version. Which files take which path is declared
+once, as `DEFINITION_WRITERS`, and rendered into the
+[enforcement boundary](/reference/boundary) as *Who writes the definition*.
 
 ## The instance
 
@@ -142,10 +145,11 @@ trust rule: the project is the domain, and the domain does not configure its reg
 The domain is the repository: the code, the tests, the ledger, whatever the workload is
 about. Units change it in worktrees, on branches, and the loop reintegrates what
 verified. The harness reads the domain as evidence at a revision, through the host
-checks, and never as state. Two files are the exception, and they are the domain's only
-harness-owned content. The first is `regulator/identity/`, the instance's copy of the S5
-files, which is committed and protected by the write gate, the bash snapshot-and-restore
-and the `identity-untouched` check. The second is the `.regulator/` line in `.gitignore`.
+checks, and never as state. Three things are the exception, and they are the domain's
+only harness-owned content. The first is `regulator/identity/`, the instance's copy of
+the S5 files, and the second is `regulator/advice/`, the instance's copy of the profiles'
+advice; both are committed and protected by the write gate, the bash snapshot-and-restore
+and the `identity-untouched` check. The third is the `.regulator/` line in `.gitignore`.
 [Protecting identity](/concepts/identity) explains those layers and the one path that
 changes an identity file.
 

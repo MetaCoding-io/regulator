@@ -6,6 +6,34 @@ A gate protects the calls that reach it. This statement lists, for every mechani
 enforced and what it does not cover — the routes around it. A route that is not named here is not known
 to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.
 
+## Who writes the definition
+
+Every definition file is proposable (INV-002: a proposal changes nothing). What differs is the path an accepted
+proposal takes, declared once as `DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol`: the write gate, the
+bash watch and the closeout diff protect the instance paths below, `regulator check` refuses a definition directory
+in no class, and a test holds every command named here against the CLI.
+
+| Class | Paths | Proposed by | Lands through | Probed by | Refused to |
+| --- | --- | --- | --- | --- | --- |
+| identity | `identity/`, `regulator/identity/` | `propose_policy_change` | `identity accept`, then `identity promote` | an eval arm's `identity` switch toggles the whole set; no per-file probe | every tool; `advice accept` (closed file list) |
+| advice | `advice/`, `regulator/advice/` | a `harness-edit` (diagnosis, change, prediction) or a plain proposal | `advice accept`, then `advice promote` | an eval arm's `advice` field, once the prediction record exists (accept-path note §8, slice 3) | every tool; `identity accept` (closed file list) |
+| declaration | `profiles/`, `workload/`, `policies/`, `evals/`, `contracts/`, `registry/`, `drift/`, `fixture/`, `fixture-finance/`, `fixture-injection/`, `fixture-oscillation/` | a plain proposal, `requestedChange` as text | a merged change to the definition's repository; a unit of work against the definition's repository under a contract, with `regulator check` and the tests at closeout and a merge by a person, waits for the definition's repository to run under the loop (accept-path note §6); until then the path is a pull request a person writes | the definition's own CI | `identity accept` and `advice accept`, by construction |
+
+A path not named here is not known to be covered: a definition directory in no class does not pass `regulator check`,
+and an instance path outside the list is protected only if the project's conventions or its manifest declare it.
+
+## Advice decision path (`reg.authority.advice-decision.v1`)
+
+Enforced at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted), `cli:advice reject` (ledger.resolve rejected) in `src/cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
+- The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 42).
+- Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 43, with #53).
+
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
 
 Enforced at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder), `cli:signals route` (deliverPending after routing), `cli:remind` (remindDue) in `src/deliver.ts`; S5, deterministic-gate.
@@ -61,13 +89,25 @@ Not covered:
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
-Enforced at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close) in `src/registry-cli.ts`; S5, deterministic-gate.
+Enforced at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close), `check:checkDefinition` (advice: a file per declared profile, no file for an undeclared profile, no profile with both inline advice and a file; an advice file over the policy's advice.maxChars is a warning), `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (definition-writers)) in `src/registry-cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
-- The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+- The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.
+- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 42).
+
+## Definition writers (the accept-path split) (`reg.identity.definition-writers.v1`)
+
+Enforced at `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (src/, dist/ and node_modules/ are the package's, not the definition's)), `cli:check` (under pnpm check and regulator check), `cli:docs` (renderBoundaryMarkdown: the "Who writes the definition" section from the list) in `../protocol/src/definition-writers.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 44).
+- Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
+- It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
+- A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
 
 ## Disposition authority (`reg.authority.disposition-authority.v1`)
 
@@ -141,22 +181,23 @@ Not covered:
 - The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
-## Identity promotion (the release path) (`reg.authority.identity-promotion.v1`)
+## Identity and advice promotion (the release path) (`reg.authority.identity-promotion.v1`)
 
-Enforced at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition) in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition), `cli:advice promote` (the same, for advice/<profile>.md: a declared profile, identical-content and dirty-definition refusals, trial validation of the advice set against the declared profiles) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 43, with #53).
 
-## Identity-untouched check (`reg.audit.identity-untouched-check.v1`)
+## Identity-untouched check (the instance's harness-owned files) (`reg.audit.identity-untouched-check.v1`)
 
 Enforced at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
+- Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
 - It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
@@ -170,7 +211,7 @@ Not covered:
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
-- Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
 ## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
 
@@ -434,6 +475,7 @@ Not covered:
 
 These regulators do not enforce; they inform. A rule that only they carry is not enforced.
 
+- Advice context (`reg.identity.advice-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what keeps the file what a person decided is the write gate (identity-write-gate), the bash watch and the identity-untouched check.
 - Contract advice section (`reg.control.contract-advice.v1`, prompt): Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - Contract-preserving compaction (`reg.control.contract-preserving-compaction.v1`, model-judgment): The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
 - Identity context (`reg.identity.identity-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (identity-write-gate) and the identity-untouched check, and the drift suite measures the gap.

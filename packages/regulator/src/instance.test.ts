@@ -51,7 +51,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 44);
+  assert.equal(result.manifest.definition.registry, 47);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
