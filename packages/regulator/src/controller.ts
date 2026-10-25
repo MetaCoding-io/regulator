@@ -52,7 +52,7 @@ import type {
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
-import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
+import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
 import { unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
@@ -326,12 +326,13 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
   const revision = await headRevision(exec, worktree);
   let records: EvidenceRecord[] = [];
   if (clean) {
-    // INV-001 in code: the protected prefixes — the identity, and whatever the project's conventions protect — are
-    // diffed against the base branch, so a change committed around the write gate is a failing check, not a clean tree.
+    // INV-001 in code: the protected prefixes — the harness-owned directories (identity and advice, from DEFINITION_WRITERS),
+    // and whatever the project's conventions protect — are diffed against the base branch, so a change committed around
+    // the write gate is a failing check, not a clean tree.
     const conventions = await discoverConventions(worktree);
     // The instance manifest (lesson 15) is where a person declared this project's layout; the conventions are what the host discovered.
     const manifest = await readManifest(options.repo);
-    const protectedPaths = [...new Set([IDENTITY_RELATIVE_DIR, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
+    const protectedPaths = [...new Set([...HARNESS_OWNED_INSTANCE_DIRS, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
     const identity = await readIdentity(path.join(worktree, IDENTITY_RELATIVE_DIR));
     const results = await runHostChecks(exec, {
       cwd: worktree, checks: checkNames(unitType.checks), checkOptions: checkOptions(unitType.checks), fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),

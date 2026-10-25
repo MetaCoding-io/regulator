@@ -30,7 +30,7 @@ test("identity write gate: every route to a protected path is refused — direct
   createAuthorityExtension()(pi);
   const { ctx, statuses } = ctxFor(repo);
   await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
-  assert.match(statuses.authority ?? "", /^authority: protecting regulator\/identity\/, vendor\/; project untrusted; 0 canaries/);
+  assert.match(statuses.authority ?? "", /^authority: protecting regulator\/identity\/, regulator\/advice\/, vendor\/; project untrusted; 0 canaries/);
   const call = (toolName: string, input: Record<string, unknown>) => handlers.get("tool_call")!({ type: "tool_call", toolName, toolCallId: "c", input }, ctx) as Promise<{ block: boolean; reason: string } | undefined>;
 
   for (const [tool, p] of [["write", "regulator/identity/INVARIANTS.md"], ["edit", "regulator/identity/INVARIANTS.md"], ["write", "@regulator/identity/INVARIANTS.md"], ["write", "regulator/identity/new.md"], ["write", "src/../regulator/identity/INVARIANTS.md"], ["write", "notes.md"], ["write", "vendor/left-pad.js"], ["write", "regulator"], ["write", "vsm/INVARIANTS.md"], ["write", "/etc/passwd"], ["write", "~/x"]] as const) {

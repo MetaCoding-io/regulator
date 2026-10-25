@@ -228,7 +228,7 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.doesNotMatch(r.stdout, /manifest/);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(44 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(44 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/, regulator\/advice\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
   r = await regulator(dir, "init");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /is already an instance/);

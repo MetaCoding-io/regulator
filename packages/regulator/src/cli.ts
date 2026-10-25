@@ -4,13 +4,13 @@
  *
  * Instance
  *   regulator init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository:
- *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
+ *                                                         identity and advice seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
  *   regulator doctor [--json] [--today <date>]   the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
  *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
  *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
- *   regulator fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
+ *   regulator fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity and advice seeded, canaries recorded)
  *
  * Units
  *   regulator unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>]   the autoloop: run, route, and run again while the policy says so
@@ -77,7 +77,7 @@ import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
-import { IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
@@ -134,8 +134,8 @@ try {
     const result = await initInstance(realExec, { repo: dir, by, ...(writablePaths ? { writablePaths } : {}), ...(protectedPaths ? { protectedPaths } : {}), ...(initFlag("definition") ? { definitionRoot: path.resolve(initFlag("definition")!) } : {}) });
     const m = result.manifest;
     console.log(`instance ready at ${dir}: definition ${m.definition.name} at ${m.definition.harnessRevision.slice(0, 7)} (${m.definition.registry} regulators, pi ${m.definition.pi}), initialized by ${m.initializedBy}`);
-    console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[IDENTITY_RELATIVE_DIR, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
-    console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity seeded, .regulator/ ignored)` : "  nothing to commit: identity and ignore line were already there");
+    console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[...HARNESS_OWNED_INSTANCE_DIRS, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
+    console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity and advice seeded, .regulator/ ignored)` : "  nothing to commit: identity, advice and ignore line were already there");
     console.log("  next: `regulator doctor`, then `regulator unit drive <contract.json>`");
   } else if (command === "status") {
     // A read-only projection of a definition and an instance. There is no subcommand that changes anything, and that
@@ -211,7 +211,7 @@ ${rationale}`]]) {
   } else if (command === "fixture" && sub) {
     const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : rest.includes("--finance") ? "fixture-finance" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
-    console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity seeded at regulator/identity/)`);
+    console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity and advice seeded at ${HARNESS_OWNED_INSTANCE_DIRS.join(", ")})`);
   } else if (command === "unit" && sub === "start" && rest[0]) {
     const unitId = rest[0];
     // A unit started here runs without a contract (lesson 05). A unit type that requires one is refused: dispatch it under

@@ -10,7 +10,7 @@ import { randomUUID } from "node:crypto";
 import { cp, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import type { CoordinationSignal } from "@metacoding.io/regulator-protocol";
+import { HARNESS_OWNED_INSTANCE_DIRS, definitionWriter, seedDirFor, type CoordinationSignal } from "@metacoding.io/regulator-protocol";
 import { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding.io/regulator-core";
 import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
@@ -170,20 +170,34 @@ export async function unitStatus(exec: Exec, repo: string, now?: () => number): 
   return (await store.list()).map((lease) => ({ lease, live: store.isLive(lease) }));
 }
 
-/** Copy a fixture project to `dest` and make it its own git repository with one commit. */
 /** Where the definition keeps the identity it seeds into every instance. */
-export const IDENTITY_SEED_DIR = fileURLToPath(new URL("../identity/", import.meta.url));
-/** Where an instance carries its identity: protected by checkpoint 9's gate. */
-export const IDENTITY_RELATIVE_DIR = "regulator/identity/";
+export const IDENTITY_SEED_DIR = fileURLToPath(new URL(`../${seedDirFor("identity")}`, import.meta.url));
+/** Where an instance carries its identity: protected by the write gate, the bash watch and the closeout. Derived from `DEFINITION_WRITERS`. */
+export const IDENTITY_RELATIVE_DIR: string = definitionWriter("identity").instance!;
+/** Where the definition keeps the profiles' advice it seeds into every instance (#110). */
+export const ADVICE_SEED_DIR = fileURLToPath(new URL(`../${seedDirFor("advice")}`, import.meta.url));
+/** Where an instance carries its advice, one file per profile: protected like the identity, written only by `advice accept`. Derived from `DEFINITION_WRITERS`. */
+export const ADVICE_RELATIVE_DIR: string = definitionWriter("advice").instance!;
+/**
+ * The instance directories the harness owns, in one list the write gate, the bash watch and the closeout's diff all read:
+ * `DEFINITION_WRITERS`' instance paths, never restated here.
+ */
+export { HARNESS_OWNED_INSTANCE_DIRS };
+/** The definition directory each harness-owned instance directory is seeded from, in the same order. */
+export const INSTANCE_SEEDS: ReadonlyArray<{ seed: string; instance: string }> = [
+  { seed: IDENTITY_SEED_DIR, instance: IDENTITY_RELATIVE_DIR },
+  { seed: ADVICE_SEED_DIR, instance: ADVICE_RELATIVE_DIR },
+];
 
 /**
- * Copy a fixture into its own repository. The definition's identity is seeded
- * into it (lesson 10), and any `*_TOKEN` / `*_SECRET` / `*_KEY` value in a
- * committed `.env` is recorded as a canary the harness watches for.
+ * Copy a fixture into its own repository. The definition's identity and
+ * advice are seeded into it (lesson 10; #110), and any `*_TOKEN` /
+ * `*_SECRET` / `*_KEY` value in a committed `.env` is recorded as a canary
+ * the harness watches for.
  */
 export async function initFixture(exec: Exec, source: string, dest: string): Promise<string> {
   await cp(source, dest, { recursive: true, errorOnExist: true, force: false });
-  await cp(IDENTITY_SEED_DIR, path.join(dest, IDENTITY_RELATIVE_DIR), { recursive: true, force: false });
+  for (const { seed, instance } of INSTANCE_SEEDS) await cp(seed, path.join(dest, instance), { recursive: true, force: false });
   const canaries = await canariesFromEnv(path.join(dest, ".env"));
   if (canaries.length) {
     await mkdir(path.join(dest, REGULATOR_DIR), { recursive: true });
