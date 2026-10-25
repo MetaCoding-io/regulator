@@ -19,3 +19,9 @@ registry records.
   `contracts/finance/`; the worked example is
   [`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) and
   `src/finance.test.ts` runs its August close scripted.
+- **Third workload:** `workload/portfolio.json` over `fixture-portfolio/`, with the
+  `manager` profile (the `auditor` reused), `policies/portfolio.json` and
+  `contracts/portfolio/`; the worked example is
+  [`docs/examples/portfolio.md`](../../docs/examples/portfolio.md), the authoring guide
+  written from it is [`docs/guide/authoring-a-workload.md`](../../docs/guide/authoring-a-workload.md),
+  and `src/portfolio.test.ts` runs its September close scripted.
