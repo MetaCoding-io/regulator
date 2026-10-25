@@ -110,9 +110,12 @@ Writing the third workload against this checklist, these were the decisions that
 actually the author's. Everything else was already decided.
 
 - **Where a check's number lives.** The rebalance band is fixed by the contract, but a
-  check cannot read a contract, so the band has to be in a file. The portfolio puts it
-  in the target file; a person's file would keep it out of every unit's reach at the
-  cost of a fourth such file. Either way the contract names the same number.
+  check cannot read a contract, so the band has to be in a file, and the file has to be
+  one no unit can write. The portfolio puts it in `benchmark.json`, beside the subset
+  tolerances; the contract names the same number. A first draft put it in the target
+  file a unit writes, which would have let the unit widen the band it was checked
+  against. If a check's number lives in a file under a write grant, the check is
+  reading what the unit wrote.
 - **How many questions a trade list gets.** One. A rebalance is one decision with many
   legs. The question names every leg, the lot each sell comes from and the tax it
   realises, because that is what the person consents to; the attempt ceiling allows

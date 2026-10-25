@@ -1,9 +1,30 @@
 {
   "name": "65/35 reference",
-  "description": "The reference weights a target is held to by subset: each named subset's total target weight stays within its tolerance of the subset's total here.",
-  "weights": { "VTI": 0.40, "VXUS": 0.25, "BND": 0.35 },
+  "description": "The reference weights a target is held to by subset: each named subset's total target weight stays within its tolerance of the subset's total here. `band` is the rebalance band: the maximum deviation from its target, as a fraction of the portfolio's value, that any targeted position may land at after a rebalance. The person's number; a unit never writes this file, so no unit can widen the band it is checked against.",
+  "band": 0.02,
+  "weights": {
+    "VTI": 0.4,
+    "VXUS": 0.25,
+    "BND": 0.35
+  },
   "subsets": [
-    { "name": "equity", "tickers": ["VTI", "ITOT", "VXUS", "IXUS"], "tolerance": 0.05 },
-    { "name": "fixed-income", "tickers": ["BND", "AGG"], "tolerance": 0.05 }
+    {
+      "name": "equity",
+      "tickers": [
+        "VTI",
+        "ITOT",
+        "VXUS",
+        "IXUS"
+      ],
+      "tolerance": 0.05
+    },
+    {
+      "name": "fixed-income",
+      "tickers": [
+        "BND",
+        "AGG"
+      ],
+      "tolerance": 0.05
+    }
   ]
 }

@@ -103,7 +103,8 @@ test("the September close, done as the contracts ask: the lots are brought up to
   const report = await readFile(path.join(repo, "reports", "2026-09.md"), "utf8");
   assert.match(report, /^Time-weighted return: 2\.71%\.$/m, "chained over the three exports with the deposit valued on its day; the naive return would be 3.98%");
   assert.match(report, /Open items:\n- VNQ 2 shares/);
-  assert.match(await readFile(path.join(repo, "targets", "2026-09-30.json"), "utf8"), /"band": 0\.02/);
+  assert.doesNotMatch(await readFile(path.join(repo, "targets", "2026-09-30.json"), "utf8"), /"band"/, "the band is the benchmark's, not the target's: a unit-written file carries no number a check judges it by");
+  assert.match(await readFile(path.join(repo, "benchmark.json"), "utf8"), /"band": 0\.02/);
 
   const audit = new AuditLog(repo);
   const p1 = await audit.forUnit("p1-ingest-positions");
@@ -171,7 +172,7 @@ test("the careless close: a list that trades past the target, sells from a lot t
   assert.deepEqual(verdicts.map((v) => v.verdict), ["fail", "pass"]);
   const refused = verdicts[0]!.reasons.join("\n");
   assert.match(refused, /run_tests/);
-  for (const check of [/not ok: every pending trade list moves each position toward its target, not past it, and lands every targeted position inside the band/, /not ok: every sell in a pending list names lots the portfolio holds, in the shares it holds/, /not ok: no trade in a pending list creates a wash sale against the lot history/]) assert.match(refused, check, "refused by the named check");
+  for (const check of [/not ok: every pending trade list moves each position toward its target, not past it, and lands every targeted position inside the benchmark's band/, /not ok: every sell in a pending list names lots the portfolio holds, in the shares it holds/, /not ok: no trade in a pending list creates a wash sale against the lot history/]) assert.match(refused, check, "refused by the named check");
   const list = JSON.parse(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8")) as { trades: Array<{ ticker: string; shares: number; lots?: Array<{ lot: string }> }> };
   assert.deepEqual(list.trades.map((x) => [x.ticker, x.shares, x.lots?.map((l) => l.lot) ?? []]), [["VTI", 3, ["2025-03-14-VTI"]], ["BND", 4, ["2026-09-02-BND"]], ["VXUS", 29, []]], "the base carries the repaired list, never the refused one");
   await assertProtectedUntouched(repo);

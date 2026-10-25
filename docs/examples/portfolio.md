@@ -42,7 +42,7 @@ prompt), and give a reason whenever the answer sits below the top.
 
 | | For the portfolio |
 | --- | --- |
-| Domain output | `targets/<date>.json`, the target weights and the band; `trades/pending/<date>.json`, a trade list the household has agreed to execute; `lots/lots.csv`, the tax-lot ledger derived from executed trades, with `lots/lots.json` saying the date it is current to; `reports/<period>.md`, the period review. |
+| Domain output | `targets/<date>.json`, the target weights; `trades/pending/<date>.json`, a trade list the household has agreed to execute; `lots/lots.csv`, the tax-lot ledger derived from executed trades, with `lots/lots.json` saying the date it is current to; `reports/<period>.md`, the period review. |
 | Source of truth | `positions/`, the custodian's exports of holdings and cash, and `prices/`, the closing prices on each export date. The harness reads them and never writes them. If the lots and the positions disagree, the lots are wrong. |
 | The person's record | `trades/executed/`, what was actually traded, written by the person from the custodian's confirmations. A unit never writes there. |
 | The person's choices | `universe.json`, the ETFs the portfolio may hold, grouped into sets the person considers exchangeable but not substantially identical; `tax.json`, the rates, the long-term cutoff, the wash-sale window and the jurisdiction; `benchmark.json`, the reference weights and the subsets a target holds within a tolerance of them. A unit never extends any of them. |
@@ -89,7 +89,7 @@ The contract for `plan-rebalance` sorts its decisions into the three kinds:
 
 - Fixed, which the unit preserves: the target is `targets/2026-09-30.json` and is not
   changed by this unit; the universe and the exchangeable sets are `universe.json`; the
-  band is 0.02 of the portfolio's value, the number the target carries, and no trade
+  band is 0.02 of the portfolio's value, the number `benchmark.json` carries, and no trade
   moves a position past its target; the tax parameters and the wash-sale window are
   `tax.json`, and the jurisdiction is the one it declares; no file is written under
   `trades/pending/` until a person answers yes to one question naming every trade, its
@@ -204,7 +204,7 @@ managed-portfolio/
     2025-03-14.json  2026-09-02.json
   trades/pending/                a file here is a commitment
   lots/lots.csv, lots.json       the open lots, current to 2026-08-31
-  targets/2026-08-31.json        August's target, with its band
+  targets/2026-08-31.json        August's target
   reports/2026-08.md             August's review
   lib/portfolio.js, test/        the portfolio's own checks — outside every write grant
   package.json                   scripts.test = node --test  (what run_tests discovers)
@@ -273,7 +273,7 @@ consent rule, with its decisions sorted as §1 says:
   "fixed": [
     { "id": "f-target",   "subject": "the target", "decision": "The target is targets/2026-09-30.json and is not changed by this unit.", "authorityRef": "human:alice" },
     { "id": "f-universe", "subject": "the universe and the exchangeable sets", "decision": "…a trade names a ticker the target names, and the file is not extended.", "authorityRef": "human:alice" },
-    { "id": "f-band",     "subject": "the band", "decision": "The band is 0.02 of the portfolio's value…; it is the number the target carries. No trade moves a position past its target.", "authorityRef": "human:alice" },
+    { "id": "f-band",     "subject": "the band", "decision": "The band is 0.02 of the portfolio's value…; it is the number benchmark.json carries. No trade moves a position past its target.", "authorityRef": "human:alice" },
     { "id": "f-tax",      "subject": "the tax parameters", "decision": "The rates, the long-term cutoff and the wash-sale window are tax.json; the jurisdiction is the one it declares…", "authorityRef": "human:alice" },
     { "id": "f-consent",  "subject": "consent before a trade list", "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.", "authorityRef": "human:alice" },
     { "id": "f-executed", "subject": "trades/executed/", "decision": "The record of what was traded is the person's; a unit never writes there.", "authorityRef": "human:alice" }
@@ -427,9 +427,10 @@ of the ledger instance; this one reads the same way.
   exist: the bound is a number nobody has set and the check needs a covariance input.
 - The price history carries closing prices and no dividends. Cash is the custodian's,
   and the return treats a deposit as the one kind of external flow.
-- The band lives in the target file, which `propose-target` writes under a fixed
-  decision; the trade-list check reads it there. A person's file would hold it out of
-  every unit's reach, at the cost of a fourth file beside the three the design names.
+- The band lives in `benchmark.json`, a person's file outside every write grant, and
+  the trade-list check reads it there. A first draft put it in the target file, which
+  `propose-target` writes under a fixed decision; that let a unit write the number a
+  check judges it by, the catalog's *S3\* that reads what S1 wrote*, so it moved.
 - VNQ is carried as an open item and never resolved. Resolving it would take a
   `clarification` question to a person, which this close does not ask.
 

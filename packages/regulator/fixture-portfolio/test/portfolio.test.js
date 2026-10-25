@@ -1,20 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {
-  applyTrades, benchmark, executedTrades, lots, pendingLists, percent, periodDates, positionDates, positions, prices, replayLots, reportOpenItems, reportPeriods, reportReturn,
-  target, targetDates, tax, timeWeightedReturn, universe, washSales, weights,
-} from "../lib/portfolio.js";
+import { applyTrades, band, benchmark, executedTrades, lots, pendingLists, percent, periodDates, positionDates, positions, prices, replayLots, reportOpenItems, reportPeriods, reportReturn, target, targetDates, tax, timeWeightedReturn, universe, washSales, weights } from "../lib/portfolio.js";
 
 const EPSILON = 1e-9;
 const u = universe();
 const held = new Set(u.tickers);
 
-test("every target is feasible under the declared constraints: long-only, summing to one, naming only the universe, each benchmark subset within its tolerance, with a band", () => {
+test("every target is feasible under the declared constraints: long-only, summing to one, naming only the universe, each benchmark subset within its tolerance", () => {
   const b = benchmark();
   for (const date of targetDates()) {
     const t = target(date);
     assert.equal(t.asOf, date, `targets/${date}.json: asOf ${t.asOf} is not the file's date`);
-    assert.ok(t.band > 0 && t.band < 1, `targets/${date}.json: band ${t.band} is not a fraction of the portfolio`);
     let sum = 0;
     for (const [ticker, w] of t.weights) {
       assert.ok(held.has(ticker), `targets/${date}.json: ${ticker} is not in universe.json`);
@@ -30,7 +26,9 @@ test("every target is feasible under the declared constraints: long-only, summin
   }
 });
 
-test("every pending trade list moves each position toward its target, not past it, and lands every targeted position inside the band", () => {
+test("every pending trade list moves each position toward its target, not past it, and lands every targeted position inside the benchmark's band", () => {
+  const bandWidth = band();
+  assert.ok(bandWidth > 0 && bandWidth < 1, `benchmark.json: band ${bandWidth} is not a fraction of the portfolio`);
   for (const list of pendingLists()) {
     assert.ok(targetDates().includes(list.date), `${list.file}: no targets/${list.date}.json to plan against`);
     const t = target(list.date);
@@ -46,7 +44,7 @@ test("every pending trade list moves each position toward its target, not past i
       const pct = (d) => `${(d * 100).toFixed(2)}%`;
       assert.ok(dBefore * dAfter >= -EPSILON, `${list.file}: ${ticker} trades past its target, from ${pct(dBefore)} to ${pct(dAfter)}`);
       assert.ok(Math.abs(dAfter) <= Math.abs(dBefore) + EPSILON, `${list.file}: ${ticker} moves away from its target, from ${pct(dBefore)} to ${pct(dAfter)}`);
-      assert.ok(Math.abs(dAfter) <= t.band + EPSILON, `${list.file}: ${ticker} lands at ${pct(dAfter)} from its target; the band is ${pct(t.band)}`);
+      assert.ok(Math.abs(dAfter) <= bandWidth + EPSILON, `${list.file}: ${ticker} lands at ${pct(dAfter)} from its target; the band is ${pct(bandWidth)}`);
     }
   }
 });

@@ -63,9 +63,14 @@ export function tax() {
   return json("tax.json");
 }
 
-/** The reference weights, and the subsets a target holds within a tolerance of them. */
+/** The reference weights, the subsets a target holds within a tolerance of them, and the rebalance band. */
 export function benchmark() {
   return json("benchmark.json");
+}
+
+/** The rebalance band: the person's number in benchmark.json, the maximum deviation any targeted position lands at after a rebalance. */
+export function band() {
+  return benchmark().band;
 }
 
 // ---------------------------------------------------------------- the custodian's files
@@ -124,7 +129,7 @@ export function targetDates() {
   return readdirSync(path.join(ROOT, "targets")).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, 10)).sort();
 }
 
-/** A target: the weights by ticker, and the band a rebalance lands every position inside. */
+/** A target: the weights by ticker. The band it is rebalanced within is the benchmark's, not the target's. */
 export function target(date) {
   const t = json(`targets/${date}.json`);
   return { ...t, weights: new Map(Object.entries(t.weights)) };

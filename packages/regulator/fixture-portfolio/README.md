@@ -12,13 +12,13 @@ files.
 | `positions/` | the custodian's exports: one CSV of holdings and one summary (cash, external flows) per export date | the person, from the custodian; **protected** |
 | `prices/` | the closing prices on each export date, for every ETF in the universe and everything held | the person, from the custodian; **protected** |
 | `lots/` | the tax-lot ledger: `lots.csv`, the open lots, and `lots.json`, the date it is current to | units under the `manager` profile |
-| `targets/` | one target per date: the weights, and the band a rebalance lands every position inside | units |
+| `targets/` | one target per date: the weights; the band it is rebalanced within is `benchmark.json`'s | units |
 | `trades/pending/` | trade lists the household has agreed to execute; a file here is a commitment | units, after consent |
 | `trades/executed/` | what was actually traded, one file per fill date, from the custodian's confirmations | the person; **protected** |
 | `reports/` | the period review: the valuation, the time-weighted return, the open items | units |
 | `universe.json` | the ETFs the portfolio may hold, grouped into exchangeable sets | the person |
 | `tax.json` | the rates, the long-term cutoff, the wash-sale window, the jurisdiction | the person |
-| `benchmark.json` | the reference weights, and the subsets a target holds within a tolerance of them | the person |
+| `benchmark.json` | the reference weights, the subsets a target holds within a tolerance of them, and the rebalance band | the person |
 | `lib/`, `test/` | the portfolio's own checks | the person; outside every unit's write grant |
 
 Money is written with two decimals and share counts are whole, so a holding's value is

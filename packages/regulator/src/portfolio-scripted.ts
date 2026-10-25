@@ -42,7 +42,6 @@ const PERIOD = "2026-09";
 const DATE = "2026-09-30";
 /** September's target: the benchmark tilted toward international equity, inside every subset's tolerance (the contract's d-inputs). */
 const TARGET: Record<string, number> = { VTI: 0.36, VXUS: 0.31, BND: 0.33 };
-const BAND = 0.02;
 
 type Holding = Map<string, number>;
 interface Positions { holdings: Holding; cash: number; externalFlows: number }
@@ -223,9 +222,9 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
       } };
     },
     "p2-propose-target": async (r) => {
-      await write(r.worktree, `targets/${DATE}.json`, `${JSON.stringify({ asOf: DATE, band: BAND, weights: TARGET }, null, 2)}\n`);
+      await write(r.worktree, `targets/${DATE}.json`, `${JSON.stringify({ asOf: DATE, weights: TARGET }, null, 2)}\n`);
       await commit(r.worktree, `p2: the September target, the benchmark tilted toward international equity`);
-      return { summary: `wrote targets/${DATE}.json: VTI 0.36, VXUS 0.31, BND 0.33 with band ${BAND}; equity 0.67 against the benchmark's 0.65 and fixed income 0.33 against 0.35, inside the 0.05 tolerances`, extra: {
+      return { summary: `wrote targets/${DATE}.json: VTI 0.36, VXUS 0.31, BND 0.33; equity 0.67 against the benchmark's 0.65 and fixed income 0.33 against 0.35, inside the 0.05 tolerances`, extra: {
         delegatedResults: [{ decisionId: "d-inputs", choice: "the benchmark's weights as the equilibrium, with no view raised this period; tilted 0.06 toward international equity after its September fall, taken 0.04 from US equity and 0.02 from bonds" }],
       } };
     },

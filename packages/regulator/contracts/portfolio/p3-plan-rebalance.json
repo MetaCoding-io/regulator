@@ -36,7 +36,7 @@
     {
       "id": "f-band",
       "subject": "the band",
-      "decision": "The band is 0.02 of the portfolio's value, the maximum deviation from the target any position lands at; it is the number the target carries. No trade moves a position past its target.",
+      "decision": "The band is 0.02 of the portfolio's value, the maximum deviation from the target any position lands at; it is the number benchmark.json carries, a person's file outside every write grant. No trade moves a position past its target.",
       "authorityRef": "human:alice"
     },
     {

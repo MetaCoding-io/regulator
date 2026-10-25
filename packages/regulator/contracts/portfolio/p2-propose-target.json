@@ -12,7 +12,7 @@
   "id": "tc-p2-propose-target",
   "unitId": "p2-propose-target",
   "unitType": "propose-target",
-  "objective": "Propose September's target: write targets/2026-09-30.json in the shape of targets/2026-08-31.json — the weight of each ETF the portfolio holds, and the band — feasible under benchmark.json's subsets and tolerances.",
+  "objective": "Propose September's target: write targets/2026-09-30.json in the shape of targets/2026-08-31.json — the weight of each ETF the portfolio holds — feasible under benchmark.json's subsets and tolerances.",
   "contribution": "The one judgment of the close, bounded: the target the rebalance is planned against. Its feasibility is the host's run of the portfolio's checks, not the unit's claim.",
   "constraintRefs": [
     "reg.control.profile-write-grant.v1",
@@ -40,7 +40,7 @@
     {
       "id": "f-band",
       "subject": "the band",
-      "decision": "The target carries the band 0.02: the maximum deviation from the target any position lands at after a rebalance, as a fraction of the portfolio's value.",
+      "decision": "The band is benchmark.json's 0.02, the maximum deviation from the target any position lands at after a rebalance, as a fraction of the portfolio's value. The target carries weights only; a unit does not write the band it is checked against.",
       "authorityRef": "human:alice"
     }
   ],
