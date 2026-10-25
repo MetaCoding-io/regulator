@@ -1,0 +1,8 @@
+{
+  "description": "The ETFs this portfolio may hold, grouped into sets the household considers exchangeable but not substantially identical: a harvested position is replaced from its set, never by the same ticker. A unit never extends this file.",
+  "sets": [
+    { "name": "us-equity", "tickers": ["VTI", "ITOT"] },
+    { "name": "international-equity", "tickers": ["VXUS", "IXUS"] },
+    { "name": "us-bonds", "tickers": ["BND", "AGG"] }
+  ]
+}

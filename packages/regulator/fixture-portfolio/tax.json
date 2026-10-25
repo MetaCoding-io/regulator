@@ -1,0 +1,8 @@
+{
+  "jurisdiction": "US",
+  "note": "The rules are this jurisdiction's and the numbers are this household's: a gain on a lot held more than longTermAfterDays is taxed at the long-term rate, any other at the short-term rate; a loss sale with shares of the same ticker acquired within washSaleWindowDays before or after it is a wash sale. A second jurisdiction is a second file.",
+  "shortTermRate": 0.35,
+  "longTermRate": 0.15,
+  "longTermAfterDays": 365,
+  "washSaleWindowDays": 30
+}

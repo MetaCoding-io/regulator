@@ -55,7 +55,7 @@ export const DEFINITION_WRITERS: readonly DefinitionWriter[] = [
   },
   {
     class: "declaration",
-    seed: ["profiles/", "workload/", "policies/", "evals/", "contracts/", "registry/", "drift/", "fixture/", "fixture-finance/", "fixture-injection/", "fixture-oscillation/"],
+    seed: ["profiles/", "workload/", "policies/", "evals/", "contracts/", "registry/", "drift/", "fixture/", "fixture-finance/", "fixture-injection/", "fixture-oscillation/", "fixture-portfolio/"],
     proposedBy: "a plain proposal, `requestedChange` as text",
     acceptedBy: "a merged change to the definition's repository",
     probedBy: "the definition's own CI",
