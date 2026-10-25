@@ -4,7 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { MemoryStore } from "@metacoding.io/regulator-core";
-import { IDENTITY_SECTION_TAG, MEMORY_ENTRY_TYPE, MEMORY_SECTION_TAG, createIdentityExtension } from "./identity.js";
+import { CANARY_SECTION_TAG, IDENTITY_SECTION_TAG, MEMORY_ENTRY_TYPE, MEMORY_SECTION_TAG, createIdentityExtension } from "./identity.js";
 import { gitExec, initRepo , LAB_ROOT } from "@metacoding.io/regulator";
 import { ctxFor, mockPi } from "./test-support.js";
 import { startUnit } from "@metacoding.io/regulator";
@@ -145,4 +145,62 @@ test("memory scope (lesson 15): a fact recorded for research units is rendered t
   assert.doesNotMatch((await sections(imp.worktree.path)).section, /advisory feed/, "an implement unit never sees it");
   await tools.get("remember")!.execute("m2", { subject: "everyone", note: "n", evidence: [], reviewBy: new Date(clock + 7 * DAY).toISOString() }, undefined as never, undefined as never, ctx as never);
   assert.match((await sections(imp.worktree.path)).section, /everyone: n/);
+});
+
+test("the behavioral canary (reg.audit.behavioral-canary.v1): the policy's rule is rendered as its own section with the unit id in the marker; a reply that begins with it is a hit, a run of replies without it is one advisory audit finding to S3 per run, a reply with no text is not a reply, and a policy without `identity.canary` renders and reads nothing", async (t) => {
+  const repo = await initRepo(t);
+  const started = await startUnit(gitExec, { repo, unitId: "u1", owner: "alice" });
+  const clock = Date.parse("2026-10-22T12:00:00.000Z");
+  const { pi, handlers } = mockPi();
+  createIdentityExtension({ now: () => clock, canary: { marker: "[{unit}]", misses: 2 } })(pi);
+  const { ctx, statuses, notices } = ctxFor(started.worktree.path);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  assert.equal(statuses.canary, "canary: [u1] (0 replies)");
+
+  const event = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
+  await handlers.get("before_agent_start")!(event, ctx);
+  assert.match(event.systemPromptOptions.sections[CANARY_SECTION_TAG] ?? "", /^Begin every reply with `\[u1\]` as its first characters/);
+  assert.doesNotMatch(event.systemPromptOptions.sections[IDENTITY_SECTION_TAG] ?? "", /\[u1\]/, "the rule is its own section, outside the identity's limit");
+
+  const reply = (...blocks: Array<{ type: string; text?: string }>) => handlers.get("message_end")!({ type: "message_end", message: { role: "assistant", content: blocks } }, ctx);
+  await reply({ type: "text", text: "[u1] Reading the contract." });
+  assert.equal(statuses.canary, "canary: [u1] (1/1 replies)");
+  await reply({ type: "toolCall" }, { type: "text", text: "" });
+  assert.equal(statuses.canary, "canary: [u1] (1/1 replies)", "tool calls only: not a reply");
+  await handlers.get("message_end")!({ type: "message_end", message: { role: "user", content: [{ type: "text", text: "go on" }] } }, ctx);
+  await reply({ type: "text", text: "Now the tests." });
+  assert.equal(statuses.canary, "canary: [u1] silent for 1 (1/2 replies)");
+  assert.equal(notices.length, 0, "one miss is noise");
+  await reply({ type: "text", text: "They pass. Committing." });
+  assert.equal(statuses.canary, "canary: [u1] silent for 2 (1/3 replies)");
+  assert.equal(notices.length, 1);
+  assert.match(notices[0]!.message, /^regulator: the behavioral canary is silent — 2 replies without \[u1\]; recorded as an advisory audit finding$/);
+  const signals = (await readFile(path.join(repo, ".regulator/signals.ndjson"), "utf8")).trim().split("\n").map((l) => JSON.parse(l) as Record<string, unknown>);
+  assert.equal(signals.length, 1);
+  assert.deepEqual([signals[0]!.kind, signals[0]!.source, signals[0]!.destination, signals[0]!.severity, signals[0]!.unit, signals[0]!.subject, signals[0]!.invariant, signals[0]!.timestamp], ["audit-finding", "S3*", "S3", "advisory", "u1", "behavioral canary silent", "context-degradation", "2026-10-22T12:00:00.000Z"]);
+  assert.match(signals[0]!.observation as string, /^2 consecutive replies did not begin with the marker `\[u1\]`.*\(1 of 3 replies have\)/);
+  assert.deepEqual(signals[0]!.evidence, [{ class: "runtime", ref: "message_end", observation: "2 consecutive replies without [u1]" }]);
+  await reply({ type: "text", text: "Still going." });
+  assert.equal(notices.length, 1, "three misses: the next signal is at four");
+  await reply({ type: "text", text: "[u1] Done." });
+  assert.equal(statuses.canary, "canary: [u1] (2/5 replies)", "a hit resets the run");
+
+  // The shipped policy declares the canary; a policy without it runs none.
+  const none = mockPi();
+  createIdentityExtension({ now: () => clock, canary: null })(none.pi);
+  const quiet = ctxFor(started.worktree.path);
+  await none.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, quiet.ctx);
+  assert.equal(quiet.statuses.canary, undefined);
+  const bare = { type: "before_agent_start", systemPromptOptions: { sections: {} as Record<string, string> } };
+  await none.handlers.get("before_agent_start")!(bare, quiet.ctx);
+  assert.equal(bare.systemPromptOptions.sections[CANARY_SECTION_TAG], undefined);
+  await none.handlers.get("message_end")!({ type: "message_end", message: { role: "assistant", content: [{ type: "text", text: "no marker, no rule" }] } }, quiet.ctx);
+  assert.equal(quiet.notices.length, 0);
+
+  // From the policy itself: the shipped default declares `[{unit}]` with two misses.
+  const shipped = mockPi();
+  createIdentityExtension({ now: () => clock })(shipped.pi);
+  const fromPolicy = ctxFor(started.worktree.path);
+  await shipped.handlers.get("session_start")!({ type: "session_start", reason: "startup" }, fromPolicy.ctx);
+  assert.equal(fromPolicy.statuses.canary, "canary: [u1] (0 replies)");
 });

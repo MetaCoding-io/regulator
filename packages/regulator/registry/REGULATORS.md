@@ -15,9 +15,10 @@ does not do. `since` is the package version that first shipped the record.
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
 | `reg.algedonic.delivery.v1` | Algedonic delivery | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.behavioral-canary.v1` | Behavioral canary | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.behaviour-check.v1` | Behaviour check (export-signature) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.canary-watch.v1` | Canary watch | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.canary-watch.v1` | Credential canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
@@ -97,6 +98,46 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `loop:deliver-pending` — Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only.
 
 **Retirement condition.** Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before.
+
+
+## Behavioral canary
+
+`reg.audit.behavioral-canary.v1` · S3* · deterministic-gate · active · unreleased
+
+**Purpose.** Ask, in a rule rendered beside the identity on every run, that each reply begin with a marker the budget policy declares (`identity.canary`: the marker, with `{unit}` for the unit id, and the number of misses), and read every assistant reply for it. A run of replies without the marker is recorded as an advisory audit finding to S3. A behavioral canary is an absence canary, the warrant canary's shape: the marker is re-asserted every reply while the model still follows the small rules it is shown each turn, and its silence says that attention has gone before the large rules go with it. The credential canary (`reg.audit.canary-watch.v1`) is the other polarity: a value whose presence is the alarm.
+
+**Absorbs.** `context-degradation` — Forty turns in, the unit still answers fluently, but it has stopped doing the small things the prompt asks for; the next thing it drops is a fixed decision or an invariant, and nothing in the loop sees the slide until the closeout refuses the result.
+
+**Mechanism.** `../regulator-pi/src/identity.ts` at `host:before_agent_start` (render the rule), `host:message_end` (read the reply)
+
+**Channels.** consumes `the budget policy's `identity.canary``, `message_end (assistant)` · emits `audit-finding → S3 (context-degradation, advisory)`
+
+**Scope.** subjects assistant reply · resources the session's marker
+
+**Cost.** One short system-prompt section per run and one prefix comparison per assistant reply; a few output tokens per reply for the marker; no model calls.
+
+**May.**
+- render the rule as a prompt section of its own, outside the identity's character limit
+- record an advisory finding and set the status line
+
+**May not.**
+- block a tool call or stop the model
+- end the attempt or open a fresh session (S3 decides: the recovery router under its policy)
+- infer anything from a single miss
+
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`
+
+**Limitations.**
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-22 · review by 2026-12-01
+
+**Ablation.** `extension:identity` — Shares the identity extension with identity in context and the memory store; the control arm, which renders no identity, has no canary by construction. A treatment arm without the extension loses all three. The live drift runs (#46) are the first place the canary's firing can be read against what the closeout later found.
+
+**Retirement condition.** Across three model versions in the live drift runs, the canary never falls silent before an attempt that the closeout then refuses, or falls silent only after the budget guard or the closeout has already caught the failure: the signal adds no lead time.
 
 
 ## Behaviour check (export-signature)
@@ -180,11 +221,11 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models.
 
 
-## Canary watch
+## Credential canary watch
 
 `reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
+**Purpose.** Watch for the instance's credential canaries — credential-looking values recorded at init or fixture time from a committed .env — in every tool result and in the model's own text. A credential canary is a presence canary: the value must never appear, and its appearance is the alarm (the behavioral canary, `reg.audit.behavioral-canary.v1`, is the other polarity). A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
