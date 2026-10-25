@@ -93,6 +93,8 @@ A CrewAI **function-based** output validator can perform checks independent of t
 
 The diagnostic question is **who evaluates which artifact, with which mechanism, and whose outcome can it overrule?** This distinguishes quality review, deterministic conformance, and independent technical audit without alleging other frameworks cannot support the latter. ([CrewAI Tasks](https://docs.crewai.com/v1.15.28/en/concepts/tasks), [OpenCode Plugins](https://docs.opencode.ai/docs/plugins/))
 
+**Added 2026-10-25.** A documented countercase from a different tradition: Lanham (*AI Agents in Action*, 2nd ed., §7.3.3) builds a grounding guardrail whose agent reads the task agent's context through a tool over a global the task agent filled, on the same model, and the book's own §7.1 sidebar names the consequence (an evaluator sharing the unit's model shares its blind spots and "validates the same hallucinations"; an evaluation layer that colludes is worse than none). Hur and Song's `LoopWorkflow` (*Build an AI Agent (From Scratch)*, §9.3) is the same shape: a reviewer agent on the writer's model, in the shared context, with a code `stop_condition` that reads the reviewer's score. Both are guardrails by name; neither is S3*. The diagnostic question above separates them without any claim about the frameworks.
+
 ### D3. Advice and enforced authority are not interchangeable
 
 OpenCode's `AGENTS.md` instructions, agent-specific prompts, and permission rules are different kinds of influence on behavior. A human-written rule in a prompt is not identical to a tool permission that can refuse an action. CrewAI's role/goal/backstory similarly shape behavior but do not on their own establish protected S5 authority. Regulator's “prompts advise, types describe, gates enforce” is an implementation of a more general vocabulary distinction, **not proof that competing frameworks lack gates**. ([OpenCode Rules](https://docs.opencode.ai/docs/rules/), [Permissions](https://docs.opencode.ai/docs/permissions/), [CrewAI Agents](https://docs.crewai.com/v1.15.28/en/concepts/agents))
@@ -130,6 +132,8 @@ This is a **conceptual dual coding**, not a controlled evaluation. A MAPE-K anal
 
 **Provisional conclusion:** a VSM function vocabulary may help authors make *hidden obligations* explicit, especially S2, S3* and S5, but cannot claim to be the only or inherently superior language. MAPE-K can be extended with organizational governance and independent audit. The paper should compare **what is easier to see or describe**, not whether other approaches are philosophically incapable of expressing it.
 
+**Added 2026-10-25.** One piece of evidence for the conclusion from plain production vocabulary: Lanham §8.4.6 arrives at the advice/enforcement line and versioned policy with no cybernetic framing at all ("policies are best enforced outside the agents themselves where they can be audited"; a policy registry of machine-enforceable rules; "log overrides with reason codes"; a policy in a prompt leaves "no record of which policy version was active when a decision was made"). The distinction D3 draws is reachable without VSM, which supports the modest reading here: the vocabulary's value, if any, is in making the obligation *expected*, not in making it expressible.
+
 ## 7. From pilot to evidence: suggested follow-on test
 
 A future small independent *practitioner coding study* could estimate whether the vocabulary actually improves analysis.
@@ -155,3 +159,47 @@ Before including this as journal evidence:
 5. Keep Regulator's implementation advantage/positive-control status explicit; do not treat the cross-framework mapping as an endorsement of Regulator.
 
 **No software implementation or governance change follows automatically from this exploratory mapping.**
+
+## 9. Two further cases from full source (added 2026-10-25)
+
+Two books read in full for the [agent-engineering books note](2026-10-25-agent-engineering-books.md)
+supply cases the first pass lacked. Unlike OpenCode and CrewAI, both come with complete
+source in the book, so the "documentation only" caveat of §3 does not apply to them, and
+the first is close to what a course learner builds. Coded under §1's rubric by one coder,
+not yet independently recoded (§8 item 2 applies).
+
+**Case (d): `scratch_agents`** (Hur and Song, *Build an AI Agent (From Scratch)*,
+Manning 2026, chapters 4–9), configured as its chapter 9 multi-agent examples:
+
+| Function | Code | Evidence |
+| --- | --- | --- |
+| **S1** | **D** | one role and tool set per agent (§9.3); effects are undeclared, and two gateway tools (`execute_python`, `bash_tool`, §8.5.5) carry arbitrary execution |
+| **S2** | **N** | `ParallelWorkflow` merges concurrent agents' events into one context (§9.3.3); no lease, no resource isolation, no commitment between agents |
+| **S3** | **M** | an orchestrator agent delegates by description (§9.4, §9.5); `max_steps` and `max_iterations` are the only budgets, and a child's steps are not counted against the parent's |
+| **S3\*** | **N/M** | `LoopWorkflow`'s reviewer is the same model in the shared context scoring the writer; `stop_condition` is code but reads the model's score (§9.3.4) — D2 again. Chapter 10's evaluation is offline over a dataset, not a gate at a revision |
+| **S4** | **N** | no channel from environment or future to anything that decides |
+| **S5** | **H** | instructions are strings the developer writes; nothing is protected, versioned or authorized |
+| **Recursion** | **N** | the quality flywheel (§10.4.2) is a developer process, not a loop the system runs |
+
+Two consequences for open issues, recorded there: an A2A agent card (§9.6.1) is a
+discovery record (name, description, url, capabilities) and not a commitment in #14's
+sense; and `RemoteAgent.run` (§9.6.3) returns one text and an unchanged context, so an
+A2A-backed dispatcher would write none of the five records the host read-back table
+requires and would declare all eleven concerns unimplemented — the lower bound for #58.
+
+**Case (e): the three loop layers** (Lanham, *AI Agents in Action*, 2nd ed., Manning
+2026, §9.1–9.3, listings 9.5 and 9.8). The book names an L1 inner loop inside the agent,
+an L2 task loop where goal, plan, state and decision are in code and "the tool is the
+agent itself", and an L3 meta loop where an agent controls the loop. L2 codes as S3 in
+code (**M**: budgets and a decision point exist; no contract, no evidence bound to a
+revision), S3* as **N** (`goal_satisfied` is the unit's own flag; the book concedes the
+bias and proposes a second LLM agent, which is D2's string guard), S2 as **N**. L3 codes
+as execution recursion, D5's exact negative: an agent that dispatches agents, with
+nothing examining or amending the rules it runs under. Regulator's reflector (Harness²
+note §7) is neither L2 nor L3, because it holds none of decide, state or schedule; it
+proposes.
+
+**What the two cases add to the pilot's claims.** D2 and D5 each gain a worked instance
+with source, which is the kind of evidence §8 item 1 asks for. Nothing here changes the
+methodological warning: both cases were coded by a reader who knows regulator, and the
+codings should be recoded before they are cited as more than illustration.

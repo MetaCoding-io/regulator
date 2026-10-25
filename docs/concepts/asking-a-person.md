@@ -133,6 +133,10 @@ the outbox watcher and disposition authority state their limitations. In short:
 - Whether an action needs consent is the model's to notice. The tool defines what
   consent means once it is asked for; nothing yet derives "this needs consent" from a
   tool's declared effects.
+- Consent is yes or no. A person who would approve the action with one argument
+  changed can only reject it, which costs the unit a second attempt and a second
+  consent question against a cap of two. An answer that carries amended arguments is
+  part of [#60](https://github.com/MetaCoding-io/regulator/issues/60).
 - A dialog answer is trusted to the terminal. An answer typed into a session's dialog
   is attributed to the session's user and is not checked against the interaction
   policy, whereas the CLI path does check. Neither path authenticates the name
