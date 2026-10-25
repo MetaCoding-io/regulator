@@ -1,9 +1,9 @@
 {
   "id": "reg.audit.identity-untouched-check.v1",
-  "name": "Identity-untouched check",
+  "name": "Identity-untouched check (the instance's harness-owned files)",
   "status": "active",
   "vsmFunction": "S3*",
-  "purpose": "INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the identity and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.",
+  "purpose": "INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the instance's harness-owned directories (regulator/identity/ and regulator/advice/, derived from DEFINITION_WRITERS' instance paths, so the set is the gate's), the manifest's protected prefixes and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.",
   "absorbs": {
     "failureClass": "committed-around-the-gate",
     "description": "A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base."
@@ -16,15 +16,16 @@
       {"where": "loop", "point": "auditUnit", "note": "before reintegration"}
     ]
   },
-  "channels": { "consumes": ["worktree branch vs base", "protected prefixes (identity + conventions)"], "emits": ["evidence record (audit log)", "audit-finding → S3 on fail (via the closeout gate)"] },
-  "scope": { "subjects": ["unit", "revision"], "resources": ["regulator/identity/", "vendor/", "worktree"] },
+  "channels": { "consumes": ["worktree branch vs base", "protected prefixes (DEFINITION_WRITERS' instance paths + manifest + conventions)"], "emits": ["evidence record (audit log)", "audit-finding → S3 on fail (via the closeout gate)"] },
+  "scope": { "subjects": ["unit", "revision"], "resources": ["regulator/identity/", "regulator/advice/", "vendor/", "worktree"] },
   "cost": { "description": "One `git diff --name-only` per closeout; no model calls." },
   "authority": {
     "may": ["fail the closeout of a unit whose branch changed a protected prefix"],
-    "mayNot": ["revert the change (a person or a repair attempt does)", "decide what the unit does next (the recovery router does)", "check a prefix the identity or conventions do not declare"]
+    "mayNot": ["revert the change (a person or a repair attempt does)", "decide what the unit does next (the recovery router does)", "check a prefix DEFINITION_WRITERS, the manifest or the conventions do not declare"]
   },
   "evidence": { "tests": ["../checks/src/verify.test.ts", "src/controller.test.ts"] },
   "limitations": [
+    "Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.",
     "It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.",
     "The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.",
     "It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run."

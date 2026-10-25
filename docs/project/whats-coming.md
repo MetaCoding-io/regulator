@@ -4,8 +4,9 @@ This page is a picture of one thing the project has designed and not yet built, 
 reader can see what would change before it changes. The order of work is the
 [roadmap](/project/roadmap); the design, with its sources and its hazards, is the
 research note [*Harness² read through the control
-plane*](../research/2026-10-18-harness2-recursive-harnessing.md). Nothing here is
-shipped, and nothing here is a promise of a date.
+plane*](../research/2026-10-18-harness2-recursive-harnessing.md). Of what is drawn
+below, only the first row of the last table has shipped (the accept-path split, slice 1,
+#110); nothing else here is shipped, and nothing here is a promise of a date.
 
 ## The reflector: the definition's S4
 
@@ -306,16 +307,17 @@ the difference the figures below draw.
 
 | Change | Mechanism level | Seam | Refuses |
 | --- | --- | --- | --- |
-| The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `advice accept`, code and grants (unit types, profile grants, checks, extensions) through a unit under a contract that a person merges | 2, the definition check | `regulator check` over the registry and the instance manifest | a `harness-edit` against a file outside the advice set; it is routed as a plain proposal instead |
+| **Landed (#110, slice 1).** The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `advice accept` (advice is a file set seeded like identity, and `DEFINITION_WRITERS` declares the three classes), code and grants (unit types, profile grants, checks, extensions) through a merged change that a person makes, with the unit-under-a-contract form of that path still to come | 2, the definition check | `regulator check` over the definition's directories; the gates derive their protected set from the list | a definition directory in no class; a `--file` that is not the one a proposal named |
 | The `harness-edit` proposal kind: a diagnosis (what was observed, by reference), a change (the diff) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it), kept as three records because a trace that supports a diagnosis is not evidence that the remedy works | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation does not resolve, or whose prediction is missing a part |
 | A proposed edit probed as an eval arm | 2, deterministic graders | an eval suite's arms gain an `advice` field | adoption from a report without an interpretation |
 | `regulator advice accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
 | The instrument record kind | 2, the registry check | the registry, a second record kind beside regulators | an instrument without a calibration report |
 | The reflector package | 4, model judgment | reads `.regulator/` and the reports; depends on `protocol` and `core`; nothing depends on it | dispatching, dispositioning, writing under `regulator/` |
 
-The boundary split comes first, because every other row names it. The probe arm and
-the instrument card wait on the first live eval report, since a calibration report needs
-live numbers to calibrate against. The thread's current step is on the
+The boundary split came first, because every other row names it; it landed as slice 1
+of the [accept-path note](../research/2026-10-18-accept-path-split.md). The prediction
+record is next. The probe arm and the instrument card wait on the first live eval
+report, since a calibration report needs live numbers to calibrate against. The thread's current step is on the
 [roadmap](/project/roadmap#threads--designed-not-yet-scheduled).
 
 ## About these figures

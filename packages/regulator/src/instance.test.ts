@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
@@ -8,6 +8,7 @@ import type { WorkContract } from "@metacoding.io/regulator-protocol";
 import { driveUnit } from "./controller.js";
 import { gitExec } from "./git-support.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
+import { LAB_ROOT } from "./workload.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadRecoveryPolicy } from "./recovery-policy.js";
@@ -50,11 +51,19 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 45);
+  assert.equal(result.manifest.definition.registry, 48);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
   assert.match(await readFile(path.join(repo, "regulator/identity/INVARIANTS.md"), "utf8"), /INV-001/);
+  // Advice is seeded beside identity (#110): one file per declared profile, committed with it, and doctor sees both.
+  assert.deepEqual((await readdir(path.join(repo, "regulator/advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "research.md"]);
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice/implement.md"), "utf8"));
+  const tracked = (await gitExec("git", ["ls-files", "regulator/"], { cwd: repo })).stdout.trim().split("\n");
+  assert.ok(tracked.includes("regulator/advice/implement.md") && tracked.includes("regulator/identity/INVARIANTS.md"), "both harness-owned directories are committed by init");
+  const report = await doctor(gitExec, { repo, now: () => clock });
+  const advice = report.checks.find((c) => c.name === "advice");
+  assert.deepEqual([advice?.ok, advice?.detail, advice?.warning], [true, "regulator/advice/ present: 5 file(s) for auditor, bookkeeper, implement, intelligence, research", undefined]);
 });
 
 test("doctor says when the instance's identity set is over its context budget (#51): the identity check passes with a warning that names the size, the limit and the files cut, `--json` carries it, and nothing is a problem", async (t) => {

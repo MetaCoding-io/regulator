@@ -3,11 +3,13 @@
  *
  * A persona says who the agent is; a profile says what it can reach. The
  * checks here are mechanisms (levels 2–3 of the hierarchy); the profile's
- * `advice` is the level-5 remainder, rendered for the model but never relied
- * on for enforcement.
+ * advice — the file `advice/<profile>.md`, or the inline `advice[]` for one
+ * release of overlap — is the level-5 remainder, rendered for the model but
+ * never relied on for enforcement.
  */
 import path from "node:path";
 import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
+import { renderAdvice } from "./advice.js";
 import { readOnlyViolations } from "./effects.js";
 
 /**
@@ -34,8 +36,18 @@ export function isWritableUnder(profile: CapabilityProfile, input: string): bool
   return profile.writablePaths.some((prefix) => normalized.startsWith(prefix));
 }
 
-/** The profile as the model sees it: a system-prompt section, not a persona. */
-export function renderProfileSection(profile: CapabilityProfile): string {
+export interface RenderProfileOptions {
+  /** The text of the instance's advice file for this profile; when given it is rendered in place of the inline `advice[]`. */
+  advice?: string;
+  /** The budget policy's `advice.maxChars`; the file's text is cut there, with a marker, as the identity is at `identity.maxChars`. */
+  maxChars?: number;
+}
+
+/**
+ * The profile as the model sees it: a system-prompt section, not a persona. The advice file renders byte for byte as
+ * the inline lines did — one `- ` bullet per line — so moving the text into the file changes nothing a unit is told.
+ */
+export function renderProfileSection(profile: CapabilityProfile, options: RenderProfileOptions = {}): string {
   const writable = profile.writablePaths.length ? profile.writablePaths.join(", ") : "none (no direct writes)";
   const lines = [
     `Active capability profile: ${profile.name} — ${profile.description}`,
@@ -44,6 +56,11 @@ export function renderProfileSection(profile: CapabilityProfile): string {
   if (profile.tools.includes("bash")) {
     lines.push("bash is granted and is not path-gated: the writable paths bind you there too, and the harness cannot check it.");
   }
-  lines.push(...profile.advice.map((line) => `- ${line}`));
+  if (options.advice !== undefined) {
+    const advice = options.maxChars === undefined ? renderAdvice(options.advice, Number.POSITIVE_INFINITY) : renderAdvice(options.advice, options.maxChars);
+    if (advice) lines.push(advice);
+  } else {
+    lines.push(...(profile.advice ?? []).map((line) => `- ${line}`));
+  }
   return lines.join("\n");
 }

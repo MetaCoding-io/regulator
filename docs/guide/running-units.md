@@ -92,6 +92,8 @@ is written:
 | `answer <id> --by <who> --answer <t>` | the answer to a unit's question, which the next attempt carries into the session |
 | `identity accept <id> --by <who> --file <name>.md --from <path> --rationale <t>` | the S5 decision on a proposal: the file is written and committed under S5 authority |
 | `identity reject <id> --by <who> --rationale <t>` | that the proposal is declined |
+| `advice accept <id> --by <who> --file <profile>.md --from <path> --rationale <t>` | the decision on a proposal against a profile's advice: the instance's `regulator/advice/<profile>.md` is written and committed under S5 authority; `--file` must be the file the proposal named |
+| `advice reject <id> --by <who> --rationale <t>` | that the advice proposal is declined |
 
 Obligations owed to a person are delivered to `.regulator/outbox`, one line each. To
 get them somewhere a person will see them, `regulator watch --exec <cmd>` forwards each

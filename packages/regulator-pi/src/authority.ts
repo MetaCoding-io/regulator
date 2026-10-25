@@ -5,7 +5,7 @@
  *
  * 1. The identity write gate. `write` and `edit` go through `prepareWritePath`
  *    (core): malformed input, home expansion, file URLs, traversal, the S5
- *    artifacts, the instance's identity (`regulator/identity/`), the project's
+ *    artifacts, the instance's harness-owned directories (`regulator/identity/`, `regulator/advice/`), the project's
  *    protected paths (from its conventions), their parents, and the aliases a
  *    lexical check cannot see — symlinks, hard links, non-directory parents —
  *    all refused; the tool executes exactly the normalized path that was
@@ -34,7 +34,7 @@ import { SeveritySchema, type AuditFinding, type PolicyProposal } from "@metacod
 import { discoverConventions } from "@metacoding.io/regulator-checks";
 import { PROTECTED_S5_PATHS, appendSignal, prepareWritePath } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
-import { CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, leaseStoreFor } from "@metacoding.io/regulator";
+import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, leaseStoreFor } from "@metacoding.io/regulator";
 import { baseRoot } from "@metacoding.io/regulator";
 
 export interface AuthorityExtensionOptions {
@@ -103,7 +103,7 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
     };
     let base = "";
     let unitId = "";
-    let protectedPaths: string[] = [IDENTITY_RELATIVE_DIR];
+    let protectedPaths: string[] = [...HARNESS_OWNED_INSTANCE_DIRS];
     let canaries: string[] = [...(options.canaries ?? [])];
     const snapshots = new Map<string, Map<string, Buffer>>();
 
@@ -128,7 +128,8 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
         base = "";
       }
       const conventions = await discoverConventions(ctx.cwd);
-      protectedPaths = [IDENTITY_RELATIVE_DIR, ...conventions.protectedPaths.filter((p) => p !== IDENTITY_RELATIVE_DIR)];
+      // The harness-owned directories come from DEFINITION_WRITERS (identity, advice), never restated here; the conventions add the project's.
+      protectedPaths = [...HARNESS_OWNED_INSTANCE_DIRS, ...conventions.protectedPaths.filter((p) => !HARNESS_OWNED_INSTANCE_DIRS.includes(p))];
       unitId = "";
       if (base) {
         for (const lease of await leaseStoreFor(base, now).list()) {
