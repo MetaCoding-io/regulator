@@ -44,6 +44,6 @@ export function renderProfileSection(profile: CapabilityProfile): string {
   if (profile.tools.includes("bash")) {
     lines.push("bash is granted and is not path-gated: the writable paths bind you there too, and the harness cannot check it.");
   }
-  lines.push(...profile.advice.map((line) => `- ${line}`));
+  lines.push(...(profile.advice ?? []).map((line) => `- ${line}`));
   return lines.join("\n");
 }
