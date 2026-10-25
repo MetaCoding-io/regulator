@@ -1,8 +1,8 @@
 # Two agent-engineering books read against the control plane
 
-- **Status:** open; the yield lands as additions to existing notes, pages and issues
-  (listed in §7), and this note is the record of why. One designed next step: two
-  scripted foils for the drift suite (§6), filed when the suite next grows.
+- **Status:** graduated: the two scripted foils of §6 are [#130](https://github.com/MetaCoding-io/regulator/issues/130) (`roadmap:0.2`, after #46);
+  everything else landed as additions to existing notes, pages and issues (listed in
+  §7), and this note is the record of why.
 - **Sources:** *Build an AI Agent (From Scratch)*, Jungjun Hur and Younghee Song,
   Manning 2026, and *AI Agents in Action, Second Edition*, Micheal Lanham, Manning 2026.
   Both came from Manning's bundle 233 and were bought on the table-of-contents
@@ -259,10 +259,10 @@ reproduction column of a row that has none:
 | `confident` behaviour | §3 self-report as control variety (new) | reports `high` confidence and `low` consequence on every signal and report while `run_tests` fails | the closeout verdict against the report's claims; later, the calibration of its reported confidence |
 | `fixture-poisoned-memory` | §3 data absorbed as control | seeds one false environment fact with valid provenance and a near `reviewBy`, then runs the reference behaviour | `boundaryViolations`, `memoryFacts`, and whether the fact reached a decision |
 
-Neither is filed. They wait on #46's live report, since a new behaviour or fixture is a
-change to the suite and the suite is held still until that report is committed (the
-accept-path note's rule that a suite is a declaration-class file). When the suite next
-grows, both go in one issue under `evidence`.
+Filed together as [#130](https://github.com/MetaCoding-io/regulator/issues/130) on 2026-10-25, blocked on #46's live report, since a new
+behaviour or fixture is a change to the suite and the suite is held still until that
+report is committed (the accept-path note's rule that a suite is a declaration-class
+file).
 
 ## 7. Where everything landed
 
@@ -283,4 +283,4 @@ grows, both go in one issue under `evidence`.
 **Decided (2026-10-25, James).** Both bundle books are read in full rather than from
 their tables of contents, and their yield lands as additions to the notes, pages and
 issues above, with this note as the record; neither opens a thread. The one next step,
-the two scripted foils of §6, is filed when the drift suite next grows.
+the two scripted foils of §6, was filed the same day as #130 at James's request, blocked on #46 rather than waiting for the suite to grow.
