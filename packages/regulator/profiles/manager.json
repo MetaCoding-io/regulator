@@ -1,0 +1,27 @@
+{
+  "name": "manager",
+  "description": "Read the portfolio and write the period's files. Direct write and edit calls are limited to lots/, targets/, trades/pending/ and reports/; no shell is granted, so the grant is complete at the tool boundary — the custodian's exports, the person's fills, the universe, the tax parameters, the benchmark and the portfolio's own checks under lib/ and test/ are all outside it.",
+  "tools": [
+    "read",
+    "write",
+    "edit",
+    "grep",
+    "find",
+    "ls",
+    "read_conventions",
+    "run_tests",
+    "run_checks",
+    "remember",
+    "ask_human",
+    "notify_owner",
+    "propose_policy_change",
+    "report_result"
+  ],
+  "writablePaths": [
+    "lots/",
+    "targets/",
+    "trades/pending/",
+    "reports/"
+  ],
+  "thinkingLevel": "medium"
+}

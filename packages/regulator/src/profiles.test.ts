@@ -41,9 +41,16 @@ const INLINE_BEFORE: Record<string, string[]> = {
   ]
 };
 
+/** Profiles declared after #110, as a file from the start (#120's manager): there is no inline text to compare, only the rule that none is carried inline. */
+const BORN_AS_FILES = ["manager"];
+
 test("moving the shipped profiles' advice into advice/<profile>.md changes nothing a unit is told (#110): for every profile the section rendered from the file is byte-identical to the one rendered from the inline advice[] it replaced, and no profile carries the text inline any more", async () => {
   const profiles = loadProfilesSync();
-  assert.deepEqual(Object.keys(profiles).sort(), Object.keys(INLINE_BEFORE).sort(), "every shipped profile has its before-text frozen here");
+  assert.deepEqual(Object.keys(profiles).sort(), [...Object.keys(INLINE_BEFORE), ...BORN_AS_FILES].sort(), "every shipped profile has its before-text frozen here, or was born as a file");
+  for (const name of BORN_AS_FILES) {
+    assert.equal(profiles[name]!.advice, undefined, `${name} carries no advice inline`);
+    assert.match(await readFile(path.join(ADVICE_SEED_DIR, `${name}.md`), "utf8"), /^- You are in the manager profile/, `${name}: the file is the only copy`);
+  }
   for (const [name, inline] of Object.entries(INLINE_BEFORE)) {
     const profile = profiles[name]!;
     assert.equal(profile.advice, undefined, `${name} no longer carries advice inline`);

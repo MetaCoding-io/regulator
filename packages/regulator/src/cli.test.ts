@@ -399,7 +399,7 @@ test("the advice decision path (#110): `advice accept` mirrors `identity accept`
   await rm(path.join(repo, "scratch.txt"));
   r = await attempt(accept!, "--by", "alice", "--file", "AGENTS.md", "--from", proposed, "--rationale", "x");
   assert.equal(r.code, 1);
-  assert.match(r.stderr, /--file must be a declared profile's advice file \(one of auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, research\.md\); "AGENTS\.md" is not/);
+  assert.match(r.stderr, /--file must be a declared profile's advice file \(one of auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\); "AGENTS\.md" is not/);
   r = await attempt(accept!, "--by", "alice", "--file", "deployer.md", "--from", proposed, "--rationale", "x");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /--file must be a declared profile's advice file/, "an undeclared profile");
@@ -461,7 +461,7 @@ test("the release path for advice (#110): `advice promote` carries the instance'
   assert.match(r.stderr, /bob may not act as S5/);
   r = await promote("deployer.md", "--by", "alice", "--rationale", "x");
   assert.equal(r.code, 1);
-  assert.match(r.stderr, /deployer\.md names no profile the definition at .* declares \(auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, research\.md\)/);
+  assert.match(r.stderr, /deployer\.md names no profile the definition at .* declares \(auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\)/);
   r = await promote("AGENTS.md", "--by", "alice", "--rationale", "x");
   assert.equal(r.code, 2, "not an advice file name at all: usage");
   await writeFile(path.join(definition, "scratch.txt"), "dirty\n");
@@ -475,7 +475,7 @@ test("the release path for advice (#110): `advice promote` carries the instance'
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /^implement\.md promoted by alice \(S5\): the definition's seed at .* now carries this instance's advice for implement, committed as [0-9a-f]{7}; every instance initialized from now on starts from it\n$/);
   assert.match(await readFile(path.join(definition, "advice", "implement.md"), "utf8"), /- Run the inherited suite before reporting\.\n$/);
-  assert.deepEqual((await readdir(path.join(definition, "advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "research.md"], "one file per profile, as before");
+  assert.deepEqual((await readdir(path.join(definition, "advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"], "one file per profile, as before");
   assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote advice implement\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned to run the inherited suite/);
   assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
 });
