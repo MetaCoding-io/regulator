@@ -58,6 +58,8 @@ export default defineConfig({
           { text: "The control room", link: "/guide/control-room" },
           { text: "Operating", link: "/guide/operating" },
           { text: "Worked example: a household ledger", link: "/examples/personal-finance" },
+          { text: "Worked example: a managed portfolio", link: "/examples/portfolio" },
+          { text: "Authoring a workload", link: "/guide/authoring-a-workload" },
         ],
       },
       {

@@ -52,7 +52,7 @@ The user documentation is a VitePress site built from `docs/`: <https://docs.reg
 
 Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`regulator`) and the read-only control room over it (`control-room`).
 
-Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-five records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
+Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over three workloads (software development, personal finance, a managed portfolio), the regulator registry of forty-five records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
 The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
 
@@ -85,7 +85,8 @@ shows it in Pi, in GSD-Pi as the comparison case, and here. The course is a priv
 repository; what it shares with the product is public in `docs/`: the
 [glossary](docs/GLOSSARY.md), the [pathology catalog](docs/PATHOLOGIES.md) and the
 [worked example](docs/examples/personal-finance.md) of a household ledger under the
-same control plane.
+same control plane, the [second](docs/examples/portfolio.md) of a managed portfolio, and
+the [authoring guide](docs/guide/authoring-a-workload.md) written from them.
 ## Status
 
 Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,
