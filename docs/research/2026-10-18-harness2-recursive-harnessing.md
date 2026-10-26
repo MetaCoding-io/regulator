@@ -490,7 +490,7 @@ candidate so it is not re-derived.
 change and prediction, and the prediction is the record open questions §4 designs, not a
 field of its own. The change table in §7 says so. The prediction record therefore moves
 ahead of the reflector in the build order: it is the second slice after the accept-path
-split, since the probe arm (§4 item 2) has nothing to resolve without it.
+split, since the probe arm (§4 item 2) has nothing to resolve without it. Filed 2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138).
 
 **Added 2026-10-25.** Lanham §8.3.5 promotes a release through offline tests, shadow traffic, a canary and a full rollout "with auto-rollback if SLOs degrade". The first three are the gates a definition change already passes here (`regulator check`, a scripted eval report, a live report), and #53's migration note should say which. The fourth is the step this design leaves to a person on purpose: a disconfirmed live horizon opens an obligation to S5 (above), it does not revert the advice file, because a revert is a change to a definition file and those land through an accept path. Recorded so that automatic rollback is not re-proposed as an omission; shadow traffic and canaries across instances are the deployment's and belong in the roadmap's not-planned table if anyone asks.
 
