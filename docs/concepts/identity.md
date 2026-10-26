@@ -21,7 +21,10 @@ directories, both of them.
 The shipped seed declares four invariants, and the first two are about identity itself.
 INV-001 says that identity is write-protected. INV-002 says that a proposal is not
 policy. INV-003 says that audit is independent of self-report, and INV-004 says that
-memory is not identity.
+memory is not identity. A fifth is a candidate, recorded beside INV-003 in [evidence about
+the regulators](/concepts/evidence-about-the-regulators#pre-registration-one-level-down)
+and not promoted: evidence for a proposal's diagnosis does not satisfy its effect; the
+effect is a prediction that resolves.
 
 Because identity is files, it survives what a transcript does not. Compaction cannot
 drop it, a forked session cannot diverge from it, and a new model version cannot

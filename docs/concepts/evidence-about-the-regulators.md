@@ -143,6 +143,40 @@ with its held-out score; that record kind does not exist yet, so no declared met
 model's judgment. A suite may mark at most one declared metric as the thing an optimiser
 could select on; every other metric is reported only, and the harness optimises nothing.
 
+### Pre-registration, one level down
+
+A suite states what it will measure before it is run, so a report cannot choose afterwards
+the metric that happened to look good. The same rule applies to one proposal instead of
+one suite. A `harness-edit`, a proposal against a profile's advice, carries three parts,
+and each is a different record: a **diagnosis**, references to the evidence records and
+signals the edit traces to; a **change**, the diff against one advice file; and a
+**prediction**, an intelligence signal with a `prediction` block that names, before
+anyone decides, the metric the edit is meant to move, the baseline it is measured
+against (a committed report's arm, by fingerprint), the direction and size, a
+probability, and at each horizon the grader value that would count against it. The
+disconfirming value is the interpretation rule's "where the gated arm lost", asked in
+advance instead of after.
+
+The prediction resolves from the stores with these same graders, never from a unit's
+report, into a `prediction-resolution`: confirmed, disconfirmed, or inconclusive. The
+three values are needed because the baseline problem is real: at three repetitions few
+intervals separate, so a probe's arm often neither reaches the predicted effect nor the
+disconfirming value. Inconclusive counts against the prediction's precision and never for
+the edit. A disconfirmed live horizon opens an obligation owed to S5 to revert or
+re-decide, which is how an accepted edit becomes auditable by the graders that audit
+everything else. [Intelligence and memory](/concepts/intelligence-and-memory#predictions)
+has the record and its resolution rule.
+
+The rule stands beside INV-003 as a candidate invariant, recorded here and not promoted:
+*evidence for a proposal's diagnosis does not satisfy its effect; the effect is a
+prediction that resolves.* INV-003 says a unit's claim cannot close the unit; this is
+the same shape one function over, a trace that justified a diagnosis cannot certify the
+remedy. For now it is a schema rule and a host check: the payload refuses a missing
+part, `advice accept` refuses references that do not resolve, and the resolution record
+is what the disposition is later held against. Whether it becomes INV-005 is a person's
+decision, taken on the record once resolved predictions exist to show what the rule
+caught.
+
 ## Reports
 
 A report summarizes the runs per arm and compares each arm with the baseline. It holds
@@ -250,3 +284,7 @@ short:
 - Only `check:` and `extension:` switches can be thrown, and scripted runs can only
   throw `check:` switches. Every regulator whose switch is `loop:`, `policy:` or `none`,
   and every session gate under a scripted run, has no ablation evidence yet.
+- No probe arm runs a proposed advice edit before the decision, so `advice accept` does
+  not refuse a `harness-edit` that was never probed; a probe horizon resolves only
+  against a report a person committed. The probe arm and the probe rule are slice 3 of
+  the accept-path split, after the live report.

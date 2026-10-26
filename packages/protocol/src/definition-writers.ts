@@ -47,10 +47,10 @@ export const DEFINITION_WRITERS: readonly DefinitionWriter[] = [
     class: "advice",
     seed: ["advice/"],
     instance: "regulator/advice/",
-    proposedBy: "a `harness-edit` (diagnosis, change, prediction) or a plain proposal",
+    proposedBy: "a typed `harness-edit` (`HarnessEditSchema`: diagnosis references, a diff by profile, the id of a signal with a `prediction` block; checked against the stores at `advice accept`) or a plain proposal",
     acceptedBy: "advice accept",
     promotedBy: "advice promote",
-    probedBy: "an eval arm's `advice` field, once the prediction record exists (accept-path note §8, slice 3)",
+    probedBy: "the prediction's horizons: a probe horizon resolves from a committed report by fingerprint, a live horizon from the next N units after acceptance (#138); an eval arm's `advice` override is slice 3 (accept-path note §8, after #46)",
     refusedTo: "every tool; `identity accept` (closed file list)",
   },
   {
