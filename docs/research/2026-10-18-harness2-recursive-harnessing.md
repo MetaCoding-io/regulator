@@ -347,7 +347,9 @@ split is now by accept path, as item 5 says, and figure 2's S5 box says the same
 
 ### The two levels, drawn
 
-Hand-drawn, light theme, in the course's figure vocabulary; the research directory is not
+Drawn from one generator script, so the second figure is the first with the additions
+overlaid rather than a second composition; light theme, in the course's figure
+vocabulary. The research directory is not
 built into the docs site, so these are not subject to the generator rule of [open
 questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
 When the level above is built, the generator reproduces these from the definition and
@@ -356,15 +358,20 @@ these files become history.
 ![Figure 1. Before: the instance is regulated, every channel typed and every writer named; the definition above it is changed only by people, and nothing reads the instance's records back into it.](figures/2026-10-18-reflector-before.svg)
 
 *Figure 1 — before. One recursion level is regulated. The level above has people for
-S3, S3\* and S5, and a checklist for S4. The records flow out and are read for status,
-evals and audit; no mechanism carries what they say back up.*
+S3, S3\* and S5, and the slot for its S4 holds a checklist a person runs. The records
+flow out and are read for status, evals and audit; no mechanism carries what they say
+back up.*
 
 ![Figure 2. After: the definition as a viable system whose operations are instances; the reflector is its S4, reading every instance's records and emitting memory, intelligence and harness-edit proposals; a proposed edit is probed as an eval arm before a person accepts it into an advice file; crossed edges mark what the reflector can never write or schedule.](figures/2026-10-18-reflector-after.svg)
 
-*Figure 2 — after. Four things are new: the reflector, its read of the records, the
-`harness-edit` proposal kind, and an eval arm that may differ in an advice file.
-Everything it emits lands in a record kind that exists, and every write to the
-definition still goes through a person.*
+*Figure 2 — after. The same picture as figure 1 with the additions drawn onto it in
+the accent colour, each marked with a plus: the reflector in the S4 slot, reading the
+records and appending to them; an advice seed in the definition and advice files beside
+identity in the instance, with `advice accept` and `advice promote` beside their
+identity counterparts; predictions in the records, a probe arm in the eval harness, and
+the `harness-edit` kind on the obligation a proposal becomes. The crossed marks are
+what the reflector can never do. Everything it emits lands in a record kind that
+exists, and every write to the definition still goes through a person.*
 
 What changes, at its mechanism level and seam:
 
