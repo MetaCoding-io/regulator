@@ -7,6 +7,7 @@
  */
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import { MetricDeclarationSchema } from "./metrics.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
 
@@ -53,6 +54,11 @@ export const WorkloadDefinitionSchema = Type.Object({
   version: Type.Integer({ minimum: 1 }),
   description: NonEmpty,
   unitTypes: Type.Array(UnitTypeSchema, { minItems: 1 }),
+  /**
+   * The metrics this workload declares, each with its grader (#129): named `workload:<this workload>/<metric>`, so a
+   * declaration lives beside what owns it. A suite pre-registers a declared name as it does a built-in one.
+   */
+  metrics: Type.Optional(Type.Array(MetricDeclarationSchema)),
 }, { additionalProperties: false });
 export type WorkloadDefinition = Static<typeof WorkloadDefinitionSchema>;
 

@@ -51,3 +51,8 @@ sale against the lot history; the lots reconcile to the executed trades and to t
 custodian's positions; and a period's report states the positions' time-weighted return
 and carries every position outside the universe as an open item. A unit cannot weaken
 these: `lib/` and `test/` are not under any profile's writable prefixes.
+
+`test/turnover.test.js` covers `turnover` in `lib/portfolio.js`, the one-way turnover a
+target implies against the current weights. It is not a check over the tree; it is the
+arithmetic the portfolio workload's declared metric (`workload:portfolio/turnover`, in
+the definition's `workload/portfolio.json`) reads through its grader command.

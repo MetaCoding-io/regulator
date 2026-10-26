@@ -124,7 +124,7 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
   assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);
-  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift", 6, 6]], "the drift suite is part of the declaration");
+  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift", 6, 6], ["portfolio-turnover", 2, 2]], "the drift suite and the portfolio's turnover suite are part of the declaration");
   assert.deepEqual(definition.reports.map((r) => r.fingerprint.dispatcher).sort(), ["scripted:drifter", "scripted:reference", "scripted:self-certifier", "scripted:sloppy"]);
 });
 

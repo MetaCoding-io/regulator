@@ -602,10 +602,15 @@ good or known bad on exactly those questions.
 A metric function takes an example and a prediction and returns a score, or a score and a
 feedback text (4.2.1, 6.4.2). It is tested like any function, with known-good and
 known-bad pairs (4.2.5). Regulator's graders are the same shape minus the feedback, and
-the harness cannot yet accept one a workload brings. So the open-metric row of open
-questions §6 gains a third consumer beside calibration and a corpus F₁: a workload or
+the harness could not accept one a workload brings. So the open-metric row of open
+questions §6 gained a third consumer beside calibration and a corpus F₁: a workload or
 instrument grader that returns a score and an observation, which is what SIMBA and GEPA
 read. The grader's observation is the feedback; nothing new is needed to produce it.
+*The seam exists* ([#129](https://github.com/MetaCoding-io/regulator/issues/129), 2026-10-26): a declared grader
+is a command the host runs after each unit, emitting `{ metric, value, observation? }`,
+and its verdict carries the observation beside the number; a suite marks at most one
+declared metric as the thing an optimiser may select on (item 2 above), with every other
+metric reported only. The harness stores the flag and optimises nothing.
 
 ### The boundary, restated against the book
 

@@ -1,7 +1,7 @@
 {
   "name": "portfolio",
   "version": 1,
-  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Nothing here trades: a trade list is a file a person executes at the custodian, written only after consent on every trade in it.",
+  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output \u2014 the portfolio's own test suite, run by the orchestrator, is the arithmetic. Nothing here trades: a trade list is a file a person executes at the custodian, written only after consent on every trade in it.",
   "unitTypes": [
     {
       "name": "ingest-positions",
@@ -18,7 +18,7 @@
     },
     {
       "name": "propose-target",
-      "description": "Write the period's target weights under targets/, with the band a rebalance lands inside. The target is feasible by the host's run of the portfolio's checks — long-only, summing to one, inside every benchmark subset's tolerance — not by the unit's say-so.",
+      "description": "Write the period's target weights under targets/, with the band a rebalance lands inside. The target is feasible by the host's run of the portfolio's checks \u2014 long-only, summing to one, inside every benchmark subset's tolerance \u2014 not by the unit's say-so.",
       "profile": "manager",
       "checks": [
         "run_checks",
@@ -59,6 +59,20 @@
       "profile": "auditor",
       "checks": [],
       "requiresContract": true
+    }
+  ],
+  "metrics": [
+    {
+      "name": "workload:portfolio/turnover",
+      "description": "The one-way turnover the latest target implies against the custodian's latest positions, at that export's prices: half the sum over the target's tickers of the absolute gap between the target weight and the current one, the fraction of the portfolio a rebalance to the target would trade. Lower is cheaper: every dollar traded is a spread paid and, on a sell, a gain realised. Measured by the workload's own grader over the tree (lib/portfolio.js's turnover), never from a unit's report.",
+      "kind": "rate",
+      "direction": "lower",
+      "grader": {
+        "argv": [
+          "node",
+          "workload/portfolio/turnover.mjs"
+        ]
+      }
     }
   ]
 }

@@ -304,3 +304,17 @@ export function reportOpenItems(period) {
 export function hasReport(period) {
   return existsSync(path.join(ROOT, "reports", `${period}.md`));
 }
+
+// ---------------------------------------------------------------- turnover
+
+/**
+ * The one-way turnover a target implies against the current weights: half the sum, over the target's tickers, of the
+ * absolute gap between the target weight and the current one — the fraction of the portfolio's value a rebalance to
+ * the target would trade, each dollar counted once. A position the target does not name is not traded and does not
+ * count. A pure function of two weight maps; the workload's turnover grader reads it.
+ */
+export function turnover(targetWeights, currentWeights) {
+  let gap = 0;
+  for (const [ticker, w] of targetWeights) gap += Math.abs(w - (currentWeights.get(ticker) ?? 0));
+  return gap / 2;
+}

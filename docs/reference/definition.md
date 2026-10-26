@@ -23,6 +23,11 @@ behaviour lives.
 | `unitTypes[].profile` | string | the capability profile the unit runs under; it must exist |
 | `unitTypes[].checks` | [host check names](/reference/host-checks), each a name or `{ "name", "options" }` | the checks the host runs at the unit's revision to reach the technical verdict. Only `glossary-lint` takes an option, `commitMessages: "blocking" \| "advisory"`, and an option given to a check that does not take one fails the definition check |
 | `unitTypes[].requiresContract` | boolean | `false` only for a type that may run without a contract; such a type must then run under a read-only profile |
+| `metrics[]` | optional | the metrics this workload declares for the eval harness, each with its grader: a declaration, never an inference. A suite pre-registers a declared name as it does a built-in one |
+| `metrics[].name` | `workload:<this workload>/<metric>` | namespaced to the workload that owns it; a declaration in another workload's name, or in an instrument's, fails the definition check |
+| `metrics[].kind`, `metrics[].direction` | `count` \| `rate` \| `score`; `lower` \| `higher` \| `none` | what the number is, and which way is better |
+| `metrics[].instrument` | optional string | the instrument record whose judgment the metric is. Refused until that record exists with its held-out score; the record kind does not exist yet |
+| `metrics[].grader.argv` | string[] | the command the host runs in the instance after each unit, with the first argument that is a file under the definition made absolute (the file's hash goes into the report's fingerprint; a command naming no such file fails the check). It reads the tree and writes one JSON line per metric, `{ "metric", "value", "observation"? }`; it never reads a unit's report, and it is never a model. `grader.timeoutMs` is optional |
 
 The shipped `software-development` workload declares the unit types `plan`, `research`,
 `implement`, `verify`, `integrate` and `close`. The `personal-finance` workload declares
@@ -224,12 +229,13 @@ against scripted behaviours, or live, through the host.
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
 | `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target |
-| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. The metrics are pre-registered, so the interpretation of the result is a person's |
+| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the fifteen built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
 
 The harness can throw a `check` or `extension` switch without a code change. A `loop`,
 `policy` or `tool` switch on a record means the opposite: an ablation of that regulator
 needs a code change. An eval report carries a fingerprint of the definition, the host pin
-and the suite, together with a person's interpretation. `regulator eval` writes a
+and the suite — and, for each declared metric, the grader's command and the hash of the
+file it ran from — together with a person's interpretation. `regulator eval` writes a
 placeholder in place of the interpretation when it is run without `--interpretation`,
 and `regulator check` refuses a report under `evals/reports/` that still carries that
 placeholder. [Evidence about the

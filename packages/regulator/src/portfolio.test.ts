@@ -14,6 +14,10 @@ import { portfolioDispatcher, type PortfolioBehaviour } from "./portfolio-script
 import { PROFILES } from "./profiles.js";
 import { loadRecoveryPolicy } from "./recovery-policy.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
+import { createHash } from "node:crypto";
+import { isEvalReport, metricNames } from "@metacoding.io/regulator-protocol";
+import { EVALS_DIR, REPORTS_DIR, loadSuite, runSuite } from "./evals.js";
+import { portfolioDispatchers } from "./portfolio-scripted.js";
 import { LAB_ROOT, loadWorkloadFor } from "./workload.js";
 
 const FIXTURE = path.join(LAB_ROOT, "fixture-portfolio");
@@ -110,7 +114,7 @@ test("the September close, done as the contracts ask: the lots are brought up to
   const p1 = await audit.forUnit("p1-ingest-positions");
   assert.deepEqual(p1.evidence.filter((r) => r.attempt === 1 && !r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict]), [["run_checks:syntax:lib/portfolio.js", "pass"], ["run_tests", "pass"], ["inherited-tests", "pass"], ["identity-untouched", "pass"], ["glossary-lint", "pass"]], "the workload's checks, with the portfolio's suite discovered from package.json");
   assert.deepEqual(p1.evidence.filter((r) => r.check.startsWith("pre-merge:")).map((r) => [r.check, r.verdict]), [["pre-merge:run_checks:syntax:lib/portfolio.js", "pass"], ["pre-merge:run_tests", "pass"]]);
-  assert.match(p1.evidence.find((r) => r.check === "run_tests")!.observation, /^6 passed, 0 failed/, "the six assertions ran");
+  assert.match(p1.evidence.find((r) => r.check === "run_tests")!.observation, /^7 passed, 0 failed/, "the six assertions ran, and the turnover arithmetic's test beside them");
   const memory = await new MemoryStore(repo, clock).current("plan-rebalance");
   assert.deepEqual(memory.map((m) => [m.subject, m.scope]), [["VNQ, 2 shares", ["ingest-positions", "plan-rebalance", "review"]]]);
   assert.deepEqual(await new MemoryStore(repo, clock).current("propose-target"), [], "scoped memory is rendered to the unit types it names");
@@ -176,4 +180,44 @@ test("the careless close: a list that trades past the target, sells from a lot t
   const list = JSON.parse(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8")) as { trades: Array<{ ticker: string; shares: number; lots?: Array<{ lot: string }> }> };
   assert.deepEqual(list.trades.map((x) => [x.ticker, x.shares, x.lots?.map((l) => l.lot) ?? []]), [["VTI", 3, ["2025-03-14-VTI"]], ["BND", 4, ["2026-09-02-BND"]], ["VXUS", 29, []]], "the base carries the repaired list, never the refused one");
   await assertProtectedUntouched(repo);
+});
+
+test("the first declared metric (#129): the portfolio workload declares turnover with its grader command, a small suite over the fixture pre-registers it beside three built-ins, and a scripted run carries it per arm with its interval, per run with its observation, and in the fingerprint with the grader's file hash — without a report committed, since nobody has read it", async (t) => {
+  t.diagnostic("runs p1 and p2 under two arms, two repetitions each; ~40 seconds");
+  const suite = await loadSuite(path.join(EVALS_DIR, "portfolio-turnover.json"));
+  assert.deepEqual(metricNames(suite.metrics), ["closed", "attempts", "refusals", "workload:portfolio/turnover"], "pre-registered: three built-ins and the one declared metric");
+  const workload = await loadWorkloadFor("portfolio");
+  assert.deepEqual(workload.metrics?.map((m) => [m.name, m.kind, m.direction, m.instrument, m.grader.argv]), [["workload:portfolio/turnover", "rate", "lower", undefined, ["node", "workload/portfolio/turnover.mjs"]]], "declared beside the workload that owns it, as data, deterministic (no instrument)");
+  const report = await runSuite(gitExec, {
+    suite, dispatcherFor: portfolioDispatchers(gitExec, "manager", clock), owner: "eval", now: clock, policyPath: PORTFOLIO_POLICY, instance: { writablePaths: WRITABLE, protectedPaths: PROTECTED },
+    dispatcher: "scripted:manager", model: "none", interpretation: "test", interpretedBy: "test",
+  });
+  assert.ok(isEvalReport(report), "the report validates");
+  assert.equal(report.suite.optimise, "workload:portfolio/turnover", "the one metric an optimiser could select on is stored on the report; nothing optimised anything");
+  assert.deepEqual(report.arms.map((a) => [a.arm, a.runs, Object.keys(a.metrics)]), [["control", 4, metricNames(suite.metrics)], ["treatment", 4, metricNames(suite.metrics)]], "two tasks × two repetitions per arm, summarized over the pre-registered metrics only");
+  const byTask = (arm: string) => Object.fromEntries(report.runs.filter((r) => r.arm === arm && r.repetition === 1).map((r) => [r.task, r]));
+  for (const arm of ["control", "treatment"]) {
+    const runs = byTask(arm);
+    assert.deepEqual(Object.values(runs).map((r) => [r.outcome, r.metrics.refusals, r.metrics.boundaryViolations]), [["closed", 0, 0], ["closed", 0, 0]], `${arm}: both units close on the first attempt, and the writes under the manifest's prefixes are no boundary violation`);
+    // After p1 the latest target is still August's; after p2 the September target the unit wrote is what the custodian's 30 September positions are measured against.
+    const p1 = runs["p1-ingest-positions"]!.graders.find((g) => g.grader === "workload:portfolio/turnover")!;
+    const p2 = runs["p2-propose-target"]!.graders.find((g) => g.grader === "workload:portfolio/turnover")!;
+    assert.equal(p1.kind, "declared");
+    assert.equal(p1.value.toFixed(4), "0.0317", `${arm}: the August target against the 30 September export: 2.33% over on VTI, 3.34% under on VXUS, 0.68% under on BND, halved`);
+    assert.equal(p1.observation, "targets/2026-08-31.json against positions/2026-09-30.csv at prices/2026-09-30.csv: VTI 2.33% over, VXUS 3.34% under, BND 0.68% under");
+    assert.equal(p2.value.toFixed(4), "0.0450", `${arm}: the September target the unit proposed, tilted toward VXUS, implies more trading`);
+    assert.match(p2.observation, /^targets\/2026-09-30\.json against positions\/2026-09-30\.csv at prices\/2026-09-30\.csv: VTI 2\.33% over, VXUS 5\.34% under, BND 1\.32% over$/);
+    assert.equal(runs["p2-propose-target"]!.metrics["workload:portfolio/turnover"], p2.value, "the declared value is folded into the run's metrics beside the built-ins");
+    const summary = report.arms.find((a) => a.arm === arm)!.metrics["workload:portfolio/turnover"]!;
+    assert.equal(summary.n, 4);
+    assert.equal(summary.mean.toFixed(4), "0.0383");
+    assert.deepEqual([summary.min.toFixed(4), summary.max.toFixed(4)], ["0.0317", "0.0450"]);
+    assert.ok(summary.ci95[0] < summary.mean && summary.mean < summary.ci95[1], `${arm}: a Student's t interval on four runs: ${JSON.stringify(summary.ci95)}`);
+  }
+  const lift = report.lifts.find((l) => l.arm === "treatment" && l.metric === "workload:portfolio/turnover")!;
+  assert.deepEqual([lift.delta, lift.separated], [0, false], "the scripted manager proposes the same target under every arm, so the gates change nothing about turnover — the lift is a zero with overlapping intervals, not a claim");
+  const file = "workload/portfolio/turnover.mjs";
+  assert.deepEqual(report.fingerprint.graders, [{ metric: "workload:portfolio/turnover", argv: ["node", file], file, sha256: createHash("sha256").update(await readFile(path.join(LAB_ROOT, file))).digest("hex") }], "the fingerprint says what measured it");
+  assert.deepEqual(Object.keys(report.fingerprint.policies), ["portfolio", "recovery", "routing", "interaction"], "the units ran under the portfolio budget policy");
+  assert.ok(!(await readdir(REPORTS_DIR)).some((f) => f.startsWith("portfolio")), "no portfolio report is committed under evals/reports/: a report commits only with a person's interpretation");
 });

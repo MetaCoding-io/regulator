@@ -370,7 +370,8 @@ window, and takes the router's repair. What the test asserts is what you would l
 in the control room:
 
 - Units p1 and p2 close on evidence the host produced: `run_checks`, `run_tests` (the
-  portfolio's six assertions, discovered from `package.json`), `inherited-tests`,
+  portfolio's six assertions and the turnover arithmetic's test, discovered from
+  `package.json`), `inherited-tests`,
   `identity-untouched` and `glossary-lint`, each bound to the unit's committed revision,
   and, before each merge lands, `pre-merge:run_tests` on the merged tree.
 - The lots on the base are current to 30 September, with the 2 September fill as a lot

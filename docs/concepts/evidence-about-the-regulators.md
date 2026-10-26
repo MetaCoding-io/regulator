@@ -29,7 +29,7 @@ test.
 | `tasks[]` | contracts, run in order in one instance per repetition, so drift can accumulate |
 | `arms[]` | the configurations compared (below) |
 | `repetitions` | runs per arm; agent runs are stochastic, so one run proves nothing |
-| `metrics[]` | the metrics the report summarizes, declared before any run |
+| `metrics[]` | the metrics the report summarizes, declared before any run: built-in, or declared by a workload; at most one marked `optimise` |
 | `baseline` | the arm every other arm is compared against |
 
 The metrics are pre-registered: a suite states what it will measure before it is run,
@@ -118,8 +118,30 @@ Trajectory graders read the records of how the unit got there:
 | `memoryFacts` | entries in the memory store: the sanctioned place for what was learned |
 | `tokens`, `turns`, `wallClockMs` | what the unit spent |
 
-These fifteen names are a closed list (`EVAL_METRICS` in the protocol). A suite chooses
-from them, and a workload cannot yet declare a metric of its own.
+These fifteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
+ship in the harness and run on every unit.
+
+A **declared** metric is one a workload brings, as data beside the workload that owns it:
+`workload/<name>.json` carries `metrics[]`, each a namespaced name
+(`workload:portfolio/turnover`), a kind (`count`, `rate` or `score`), a direction (which
+way is better, or none), an optional instrument reference, and a grader. The grader is a
+declared command the host runs in the instance after each unit, in the shape the host
+checks use: it reads the instance's outputs and the fixture's ground truth, and writes
+one JSON line per metric, `{ metric, value, observation? }`. Its exit code and its output
+are the only things read. It never reads a unit's report, nothing in it is computed from
+text a unit wrote, and it is never a model. The first one is the portfolio workload's
+turnover, computed by the fixture's own library and pre-registered by
+[`evals/portfolio-turnover.json`](../../packages/regulator/evals/portfolio-turnover.json).
+
+Declared metrics run under the same rules as the built-ins. Pre-registration is
+unchanged: a suite names a declared metric before any run, the report summarizes only
+what the suite named, and a declared name the definition does not carry is refused by
+`regulator check`, not warned about — as is a grader whose command names no file under
+the definition, and a workload declaring a metric it does not own. A **judged** metric,
+one whose declaration names an instrument, is refused until the instrument record exists
+with its held-out score; that record kind does not exist yet, so no declared metric is a
+model's judgment. A suite may mark at most one declared metric as the thing an optimiser
+could select on; every other metric is reported only, and the harness optimises nothing.
 
 ## Reports
 
@@ -138,8 +160,10 @@ warrants.
 
 It carries a fingerprint: the Node version, the platform, the pinned Pi version, the
 harness revision, the dispatcher (`scripted:<behaviour>` or a live host), the model, the
-number of registry records, and each policy's version. A number without that stamp
-cannot be reproduced or compared.
+number of registry records, each policy's version and, for each declared metric, the
+grader's command and the hash of the file it ran from. A number without that stamp
+cannot be reproduced or compared, and a declared number without its grader's hash could
+not say what measured it.
 
 And it keeps every run, with its outcome, its metrics and each grader's observation, so
 a reader can check what any number was made of.
@@ -220,8 +244,9 @@ short:
   scripted units, and not against a model's actual drift.
 - Contamination (a fixture leaking into a prompt or into a model's training data) is
   not detected.
-- The metric list is closed, so a workload cannot bring its own grader: the household
-  ledger's balance, a corpus F₁, or calibration for a predictor.
+- A declared grader is run as declared and that is all the harness checks: whether its
+  number measures what its declaration says is the workload's correctness, evidenced by
+  the workload's own tests. A judged metric waits on the instrument record kind.
 - Only `check:` and `extension:` switches can be thrown, and scripted runs can only
   throw `check:` switches. Every regulator whose switch is `loop:`, `policy:` or `none`,
   and every session gate under a scripted run, has no ablation evidence yet.

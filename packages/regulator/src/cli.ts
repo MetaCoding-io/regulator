@@ -55,7 +55,7 @@
  * Evidence
  *   regulator effects                          the effect journal: every side-effecting tool call, its outcome and its reconciliation
  *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
- *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
+ *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier|manager|careless>] [--arm <name>]... [--reps <n>] [--out <file>] [--policy <file>] [--writable a/,b/] [--protected x/]
  *                                 [--interpretation <file>] [--by <who>] [--keep] [--host <package>]   run a suite: scripted units headlessly, or live units through the host's dispatcher
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
@@ -73,7 +73,7 @@ import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, metricNames, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -81,6 +81,7 @@ import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-po
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
+import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
 import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
@@ -99,7 +100,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> --file <profile>.md --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> --file <profile>.md --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -580,7 +581,12 @@ ${rationale}`]]) {
     // Evidence about the regulators (lesson 14). A behaviour names a scripted unit; without one the Pi dispatcher runs live units under each arm's extensions.
     const suite = await loadSuite(path.resolve(sub));
     const behaviour = flag("behaviour");
-    if (behaviour !== undefined && !isBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy | self-certifier)`);
+    // The drift behaviours script the software-development tasks; the portfolio behaviours script the September close. The suite's tasks say which workload runs.
+    if (behaviour !== undefined && !isBehaviour(behaviour) && !isPortfolioBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy | self-certifier | manager | careless)`);
+    const evalPolicyPath = path.resolve(flag("policy") ?? POLICY_PATH);
+    const splitPrefixes = (v: string | undefined) => (v ? v.split(",").map((p) => p.trim()).filter(Boolean) : undefined);
+    const evalWritable = splitPrefixes(flag("writable"));
+    const evalProtected = splitPrefixes(flag("protected"));
     const arms = rest.flatMap((a, i) => (a === "--arm" && rest[i + 1] ? [rest[i + 1]!] : []));
     const reps = flag("reps") ? Number(flag("reps")) : undefined;
     const interpretationFile = flag("interpretation");
@@ -591,12 +597,14 @@ ${rationale}`]]) {
     const live = behaviour ? undefined : await loadHost(flag("host"));
     const report = await runSuite(realExec, {
       suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
-      dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
-      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
+      dispatcherFor: behaviour ? (isBehaviour(behaviour) ? scriptedDispatchers(realExec, behaviour) : portfolioDispatchers(realExec, behaviour)) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
+      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy(evalPolicyPath)).models.default.primary,
+      policyPath: evalPolicyPath, ...(evalWritable || evalProtected ? { instance: { ...(evalWritable ? { writablePaths: evalWritable } : {}), ...(evalProtected ? { protectedPaths: evalProtected } : {}) } } : {}),
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
-      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
+      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => metricNames(suite.metrics).includes(k)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
     });
-    for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s)}`).join("; ")}`);
+    // A built-in is a count, read to one decimal; a declared rate or score needs its digits.
+    for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s, isBuiltInMetric(m) ? 1 : 4)}`).join("; ")}`);
     for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
     const out = flag("out");
     if (out) {
