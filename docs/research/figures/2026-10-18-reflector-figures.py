@@ -216,8 +216,9 @@ def figure(after: bool) -> str:
     add(f'  <g font-size="12" fill="currentColor" stroke="currentColor">')
     AR = f"url(#{p}-arrow)"; AA = f"url(#{p}-arrow-accent)"; X = f"url(#{p}-x)"
 
-    # ---- DEFINITION band ----
-    add(f'    <rect x="30" y="20" width="730" height="96" rx="6" fill="none" stroke-width="1.5"/>')
+    # ---- left half: the definition band and the instance, shifted 16 left to widen the gutter ----
+    add(f'    <g transform="translate(-16 0)">')
+    add(f'    <rect x="30" y="20" width="722" height="96" rx="6" fill="none" stroke-width="1.5"/>')
     hot("definition",
         f'    <text x="46" y="42" font-weight="600" stroke="none">DEFINITION</text>',
         f'    <text x="140" y="42" stroke="none" fill="{muted}">versioned, checked by {mono("regulator check")}, changed by people</text>')
@@ -230,24 +231,6 @@ def figure(after: bool) -> str:
     if after:
         hot("advice-seed",
             f'    <text x="278" y="109" stroke="none" font-size="10" fill="{acc}">+ {mono("advice/&lt;profile&gt;.md")}, the seed of the instance\'s advice files</text>')
-
-    # ---- top-right slot: the definition's S4 ----
-    if not after:
-        hot("slot-today",
-            f'    <rect x="780" y="20" width="230" height="96" rx="6" fill="none" pointer-events="all" stroke-width="1.5" stroke-dasharray="5 4"/>',
-            f'    <text x="792" y="42" font-weight="600" stroke="none">THE DEFINITION\'S S4</text>',
-            f'    <text x="792" y="62" stroke="none" font-size="10.5" fill="{muted}">today: a checklist a person runs</text>',
-            f'    <text x="792" y="78" stroke="none" font-size="10.5" fill="{muted}">(the Pi upgrade, the review dates)</text>',
-            f'    <text x="792" y="94" stroke="none" font-size="10.5" fill="{muted}">nothing models what the instance did</text>')
-    else:
-        hot("reflector",
-            f'    <rect x="780" y="20" width="230" height="96" rx="6" fill="var(--accent-soft)" stroke="{acc}" stroke-width="2"/>',
-            f'    <text x="792" y="42" font-weight="600" stroke="none" fill="{acc}">S4</text>',
-            f'    <text x="814" y="42" font-weight="600" stroke="none">REFLECTOR</text>',
-            f'    <text x="792" y="62" stroke="none" font-size="10.5">reads the records; adopts nothing</text>',
-            f'    <text x="792" y="78" stroke="none" font-size="10.5">writes only record kinds that exist:</text>',
-            f'    <text x="792" y="94" stroke="none" font-size="10.5">proposal · intelligence · memory</text>',
-            f'    <text x="792" y="110" stroke="none" font-size="10.5" fill="{muted}">an instrument, graded on calibration</text>')
 
     # ---- definition <-> instance edges ----
     hot("init",
@@ -263,14 +246,9 @@ def figure(after: bool) -> str:
             f'    <line x1="356" y1="212" x2="356" y2="118" stroke="{acc}" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AA}"/>',
             f'    <text x="362" y="150" stroke="none" font-size="10" fill="{acc}">{mono("advice promote")}</text>',
             hit="M 356 212 L 356 118")
-        # never writes the definition
-        hot("never",
-            f'    <path d="M 780 68 L 766 68" stroke="{alarm}" stroke-width="1.5" fill="none" marker-end="{X}"/>',
-            f'    <text x="756" y="138" stroke="none" font-size="10" text-anchor="end" fill="{alarm}">never writes a definition file · never dispatches a unit</text>',
-            hit="M 782 68 L 760 68")
 
     # ---- INSTANCE ----
-    add(f'    <rect x="30" y="176" width="730" height="424" rx="6" fill="none" stroke-width="1.5"/>')
+    add(f'    <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>')
     hot("instance",
         f'    <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>',
         f'    <text x="126" y="198" stroke="none" fill="{muted}">one repository under the control plane</text>')
@@ -318,25 +296,25 @@ def figure(after: bool) -> str:
         hit="M 111 330 L 111 370 M 255 330 L 255 370 M 409 330 L 409 370")
     # router
     hot("router",
-        f'    <rect x="520" y="372" width="200" height="44" rx="3" fill="none" pointer-events="all" stroke-width="1.5"/>',
-        f'    <text x="620" y="389" stroke="none" text-anchor="middle">router → obligations</text>',
-        f'    <text x="620" y="405" stroke="none" text-anchor="middle" font-size="11" fill="{muted}">routing policy · floors · veto</text>')
+        f'    <rect x="520" y="372" width="176" height="44" rx="3" fill="none" pointer-events="all" stroke-width="1.5"/>',
+        f'    <text x="608" y="389" stroke="none" text-anchor="middle">router → obligations</text>',
+        f'    <text x="608" y="405" stroke="none" text-anchor="middle" font-size="11" fill="{muted}">routing policy · floors · veto</text>')
     hot("report",
         f'    <line x1="494" y1="394" x2="518" y2="394" stroke-width="1.5" marker-end="{AR}"/>',
         f'    <text x="506" y="366" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">report_intelligence</text>',
         hit="M 494 394 L 518 394")
     hot("holds",
-        f'    <path d="M 620 372 L 620 330" stroke-width="1.5" marker-end="{AR}"/>',
-        f'    <text x="628" y="352" stroke="none" font-size="10" fill="{muted}">obligation holds the unit</text>',
-        hit="M 620 372 L 620 330")
+        f'    <path d="M 608 372 L 608 330" stroke-width="1.5" marker-end="{AR}"/>',
+        f'    <text x="616" y="352" stroke="none" font-size="10" fill="{muted}">obligation holds the unit</text>',
+        hit="M 608 372 L 608 330")
     if after:
         hot("harness-edit",
-            f'    <text x="520" y="432" stroke="none" font-size="10" fill="{acc}">+ a {mono("harness-edit")}: an obligation owed to S5</text>')
+            f'    <text x="508" y="432" stroke="none" font-size="10" fill="{acc}">+ a {mono("harness-edit")}: an obligation owed to S5</text>')
     # proposal path and remember path
     hot("propose",
-        f'    <path d="M 255 416 L 255 470 L 740 470 L 740 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="{AR}"/>',
+        f'    <path d="M 255 416 L 255 470 L 732 470 L 732 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="{AR}"/>',
         f'    <text x="262" y="462" stroke="none" font-size="10" fill="{muted}">{mono("propose_policy_change")} → obligation owed to S5; changes nothing</text>',
-        hit="M 255 416 L 255 470 L 740 470 L 740 232 L 622 232")
+        hit="M 255 416 L 255 470 L 732 470 L 732 232 L 622 232")
     hot("remember",
         f'    <path d="M 300 416 L 300 448 L 600 448 L 600 498" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="{AR}"/>',
         f'    <text x="606" y="444" stroke="none" font-size="10" fill="{muted}">{mono("remember")}</text>',
@@ -358,6 +336,39 @@ def figure(after: bool) -> str:
     hot("typed",
         f'    <text x="46" y="584" stroke="none" font-size="11" fill="{muted}">Every edge inside the instance is typed, stamped by the host, and recorded on a card with its limitations.</text>')
 
+    add(f'    </g>')
+
+    # ---- the gutter: edges that cross between the two halves, in final coordinates ----
+    hot("writes",
+        f'    <line x1="736" y1="300" x2="794" y2="300" stroke-width="1.5" marker-end="{AR}"/>',
+        f'    <text x="765" y="292" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">writes</text>',
+        hit="M 734 300 L 796 300")
+    if after:
+        hot("never",
+            f'    <path d="M 796 68 L 776 68" stroke="{alarm}" stroke-width="1.5" fill="none" marker-end="{X}"/>',
+            f'    <text x="736" y="138" stroke="none" font-size="10" text-anchor="end" fill="{alarm}">never writes a definition file · never dispatches a unit</text>',
+            hit="M 798 68 L 770 68")
+
+    # ---- right half: the S4 slot, the records and the eval harness, shifted 16 right ----
+    add(f'    <g transform="translate(16 0)">')
+    # ---- top-right slot: the definition's S4 ----
+    if not after:
+        hot("slot-today",
+            f'    <rect x="780" y="20" width="230" height="96" rx="6" fill="none" pointer-events="all" stroke-width="1.5" stroke-dasharray="5 4"/>',
+            f'    <text x="792" y="42" font-weight="600" stroke="none">THE DEFINITION\'S S4</text>',
+            f'    <text x="792" y="62" stroke="none" font-size="10.5" fill="{muted}">today: a checklist a person runs</text>',
+            f'    <text x="792" y="78" stroke="none" font-size="10.5" fill="{muted}">(the Pi upgrade, the review dates)</text>',
+            f'    <text x="792" y="94" stroke="none" font-size="10.5" fill="{muted}">nothing models what the instance did</text>')
+    else:
+        hot("reflector",
+            f'    <rect x="780" y="20" width="230" height="96" rx="6" fill="var(--accent-soft)" stroke="{acc}" stroke-width="2"/>',
+            f'    <text x="792" y="42" font-weight="600" stroke="none" fill="{acc}">S4</text>',
+            f'    <text x="814" y="42" font-weight="600" stroke="none">REFLECTOR</text>',
+            f'    <text x="792" y="62" stroke="none" font-size="10.5">reads the records; adopts nothing</text>',
+            f'    <text x="792" y="78" stroke="none" font-size="10.5">writes only record kinds that exist:</text>',
+            f'    <text x="792" y="94" stroke="none" font-size="10.5">proposal · intelligence · memory</text>',
+            f'    <text x="792" y="110" stroke="none" font-size="10.5" fill="{muted}">an instrument, graded on calibration</text>')
+
     # ---- RECORDS column ----
     add(f'    <rect x="780" y="176" width="230" height="290" rx="6" fill="none" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>')
     hot("records",
@@ -375,10 +386,6 @@ def figure(after: bool) -> str:
     if not after:
         read_lines.append(f'    <text x="796" y="460" stroke="none" font-size="11" fill="{alarm}">Nothing carries them back up.</text>')
     hot("read-by-after" if after else "read-by", *read_lines)
-    hot("writes",
-        f'    <line x1="760" y1="300" x2="778" y2="300" stroke-width="1.5" marker-end="{AR}"/>',
-        f'    <text x="769" y="292" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">writes</text>',
-        hit="M 758 300 L 780 300")
     # records -> the S4 slot
     if after:
         hot("reads",
@@ -397,17 +404,18 @@ def figure(after: bool) -> str:
 
     # ---- EVAL HARNESS ----
     hot("eval",
-        f'    <rect x="780" y="496" width="230" height="78" rx="6" fill="none" pointer-events="all" stroke-width="1.5"/>',
-        f'    <text x="792" y="518" font-weight="600" stroke="none">EVAL HARNESS</text>',
-        f'    <text x="888" y="518" stroke="none" font-size="10.5" fill="{muted}">S3* one level up</text>',
-        f'    <text x="792" y="536" stroke="none" font-size="10.5" fill="{muted}">arms · ablation · graders · intervals</text>',
-        f'    <text x="792" y="552" stroke="none" font-size="10.5" fill="{muted}">a report needs a person\'s interpretation</text>')
+        f'    <rect x="780" y="496" width="230" height="104" rx="6" fill="none" pointer-events="all" stroke-width="1.5"/>',
+        f'    <text x="792" y="520" font-weight="600" stroke="none">EVAL HARNESS</text>',
+        f'    <text x="888" y="520" stroke="none" font-size="10.5" fill="{muted}">S3* one level up</text>',
+        f'    <text x="792" y="544" stroke="none" font-size="10.5" fill="{muted}">arms · ablation · graders · intervals</text>',
+        f'    <text x="792" y="562" stroke="none" font-size="10.5" fill="{muted}">a report needs a person\'s interpretation</text>')
     if after:
-        hot("probe", f'    <text x="792" y="568" stroke="none" font-size="10.5" fill="{acc}">+ the probe: an arm per advice edit</text>')
+        hot("probe", f'    <text x="792" y="582" stroke="none" font-size="10.5" fill="{acc}">+ the probe: an arm per advice edit</text>')
     hot("reports",
         f'    <line x1="900" y1="496" x2="900" y2="468" stroke-width="1.2" marker-end="{AR}"/>',
         f'    <text x="906" y="486" stroke="none" font-size="10" fill="{muted}">reports</text>',
         hit="M 900 496 L 900 468")
+    add(f'    </g>')
 
     add('  </g>')
     add('</svg>')
