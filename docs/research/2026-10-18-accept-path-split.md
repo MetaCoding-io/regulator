@@ -255,7 +255,8 @@ Limitations that become `DEBT.md` rows:
    recorded in §9: how a plain proposal names its advice file, and how the fixtures are
    placed in a class.
 2. **The prediction record** (Harness² note §8), its own issue: the record, its
-   resolution from the stores, and the `harness-edit` payload that carries it.
+   resolution from the stores, and the `harness-edit` payload that carries it. **Filed**
+   2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138) (0.2).
 3. **The probe arm and the probe rule.** `EvalArmSchema` gains an optional `advice`
    override (a map from profile to file); `advice accept` refuses an unprobed
    `harness-edit`. Waits on the live report (#46), since a probe with no live baseline
