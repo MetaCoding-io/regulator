@@ -7,7 +7,8 @@
   example's §5: the band lives in `benchmark.json` (a first draft had it in the target file, a unit's file), the harvest checks and the risk-tolerance check wait for their inputs, and
   `plan-rebalance` runs as a session until #122. Phase 2's four items are filed as [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#122](https://github.com/MetaCoding-io/regulator/issues/122),
   [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
-  blocked on the open-metric row and the prediction record. All six are sub-issues of
+  blocked on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)); its other blocker, the
+  open-metric row, landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129) with this workload's turnover as the first declared metric. All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
   the designed slices are not lost.
 - **Source:** *Build a Robo-Advisor with Python (From Scratch)*, Rob Reider and Alexander
@@ -270,7 +271,7 @@ and against its seam, in the order the phases (§6) need it.
 | A `place_trade` tool with a declared effect | 3 | a workload-declared tool with `sideEffects: "irreversible"` (`packages/protocol/src/effects.ts`), writing under `trades/pending/` | DEBT row 29, [#60](https://github.com/MetaCoding-io/regulator/issues/60): the per-tool consent grant as a profile field, enforced by interception. This workload is the case that makes #60 concrete without a tool that moves money |
 | The `command` runner for `plan-rebalance` and `harvest-losses` | 2 | the workload definition's unit type gains a `runner` (open questions §3) | designed; no issue. The optimiser is the book's Python; the runner's effect declaration is what the read-only check reads; the host checks the output in Node |
 | Sensors declared in the definition | 2 | `policies/intelligence.json` with `sensors[]` (open questions §2) | proposed; no issue. Three sensors here: a path glob over `positions/` and `prices/`, a drift-band command, a harvest-threshold command |
-| Workload-declared metrics and graders | 2 | `evals/*.json` gains `graders[]` as commands; `EVAL_METRICS` opens (open questions §6, the ArticleMiner note §4.6) | backlog row. The book's summary statistics (13.4.4: turnover, tax cost, spread cost, mean and maximum deviation) are the metrics; the backtester is the grader |
+| Workload-declared metrics and graders | 2 | `workload/<name>.json` gains `metrics[]`, each with its grader argv; `EVAL_METRICS` becomes the built-in set (open questions §6, the ArticleMiner note §4.6) | landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129): `workload:portfolio/turnover`, the one-way turnover the latest target implies against the custodian's positions, by `workload/portfolio/turnover.mjs` over `lib/portfolio.js`, pre-registered by `evals/portfolio-turnover.json`. The book's other summary statistics (13.4.4: tax cost, spread cost, mean and maximum deviation) and the backtester as the grader are #125's to declare the same way |
 | The prediction record | 3 | the intelligence signal with `horizon` and a numeric `confidence` (open questions §4; the Harness² note §8 orders it second after #110) | designed; sequenced behind the accept-path split |
 
 Two things this workload deliberately does not ask for. It does not ask the harness to
@@ -306,7 +307,7 @@ backtester as the grader and its summary statistics as pre-registered metrics; a
 and without the band check and the wash-sale check, so the two regulators the workload
 adds get ablation evidence; views as prediction records with a probe horizon; the
 success-probability prediction with its horizon and the longevity one with its
-limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits on the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) and on the prediction record.
+limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)). The open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) landed with turnover as the first declared metric, so the suite's remaining metrics are declarations in the same shape.
 
 ## 7. What this note does not claim
 
@@ -328,8 +329,8 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
 first row as its one recorded decision. Phase 2's four issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
 [#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names.
-Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row when the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) and the
-prediction record are issues.
+Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row after the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138));
+the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) has landed.
 
 **Decided (2026-10-25, James).** All three phases are filed at once rather than Phase 2
 waiting for Phase 1 to merge and Phase 3 for its blockers, so the designed slices have a

@@ -299,11 +299,15 @@ policy is evaluated against a reference corpus *before* promotion. The parts exi
   fixed decision cites (`authorityRef: "policy:finance@3#workload.backends"`) and a
   `forEach` node (§4.3) expands over. A changed policy is a new version; nothing else
   about the mechanism is new.
-- **Workload-declared outcome graders.** The eval harness's graders are the drift
+- **Workload-declared outcome graders.** The eval harness's graders were the drift
   suite's (`packages/regulator/src/graders.ts`). A suite over a paper corpus with ground
   truth needs a grader the workload ships: a declared command that reads the instance's
   published outputs and the fixture's ground truth and emits the pre-registered metrics.
-  The suite schema already carries `metrics[]`; it needs `graders[]` as commands.
+  *The seam exists* ([#129](https://github.com/MetaCoding-io/regulator/issues/129), 2026-10-26): the workload's
+  `metrics[]` declares each metric with its `grader.argv`, the host runs the command in
+  the instance after each unit and reads `{ metric, value, observation? }` per line, and
+  the suite pre-registers the declared name as it does a built-in. A corpus F₁ is a
+  declaration of that shape over ArticleMiner's fixture; nothing in the harness waits.
 - **Evidence-gated promotion.** `identity promote` carries an accepted identity file into
   the definition's seed, refusing a dirty definition. Its analogue for a policy version
   — `policy promote <file>` — should additionally refuse when no committed eval report
