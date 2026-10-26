@@ -347,11 +347,13 @@ split is now by accept path, as item 5 says, and figure 2's S5 box says the same
 
 ### The two levels, drawn
 
-Drawn from one generator script, so the second figure is the first with the additions
-overlaid rather than a second composition; light theme, in the course's figure
-vocabulary. The research directory is not
-built into the docs site, so these are not subject to the generator rule of [open
-questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
+Drawn by one hand-written script, [`figures/2026-10-18-reflector-figures.py`](figures/2026-10-18-reflector-figures.py),
+not generated from the definition: the second figure is the first with the additions
+overlaid rather than a second composition, every box and edge carries the card a
+tooltip shows, and the research files, the docs page and the website are colour-mapped
+variants of the same output. Light theme, in the course's figure vocabulary. The research
+directory is not built into the docs site, so these are not subject to the generator
+rule of [open questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
 When the level above is built, the generator reproduces these from the definition and
 these files become history.
 
