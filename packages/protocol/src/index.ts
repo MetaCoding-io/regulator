@@ -376,11 +376,17 @@ export {
   type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
 } from "./interaction.js";
 export {
-  ArmSummarySchema, AblationSwitchSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
-  GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isEvalSuite, isUninterpreted,
-  type AblationSwitch, type ArmSummary, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
-  type GraderVerdict, type Lift, type MetricSummary,
+  ArmSummarySchema, AblationSwitchSchema, BuiltInMetricSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
+  GraderFingerprintSchema, GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricEntrySchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER,
+  declaredMetrics, isBuiltInMetric, isEvalReport, isEvalSuite, isUninterpreted, metricName, metricNames, optimisedMetrics,
+  type AblationSwitch, type ArmSummary, type BuiltInMetric, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
+  type GraderFingerprint, type GraderVerdict, type Lift, type MetricEntry, type MetricSummary,
 } from "./evals.js";
+export {
+  DECLARED_METRIC_PATTERN, DeclaredMetricNameSchema, GraderCommandSchema, GraderOutputSchema, MetricDeclarationSchema, MetricDirectionSchema, MetricKindSchema,
+  isDeclaredMetricName, isMetricDeclaration, parseDeclaredMetric,
+  type DeclaredMetricName, type GraderCommand, type GraderOutput, type MetricDeclaration, type MetricDirection, type MetricKind,
+} from "./metrics.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
 export { InstanceManifestSchema, isInstanceManifest, type InstanceManifest } from "./instance.js";
 export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";

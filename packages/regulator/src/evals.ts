@@ -14,7 +14,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { lifts, loadRegistry, summarizeArms } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition, checkNames } from "@metacoding.io/regulator-protocol";
+import { EvalSuiteSchema, assertValid, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
 import { driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
@@ -151,7 +151,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
       }
     }
   }
-  const summaries = summarizeArms(runs, suite.metrics);
+  const summaries = summarizeArms(runs, metricNames(suite.metrics));
   return {
     suite: { name: suite.name, version: suite.version }, generatedAt: stamp(),
     fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model }),

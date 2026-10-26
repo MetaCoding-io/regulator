@@ -413,7 +413,7 @@ const PAGE = String.raw`<!doctype html>
     html += "<h3>Assurance — what the evals say</h3>";
     if (!(d.evals || []).length) html += "<p class='empty'>no eval suite declared under evals/</p>";
     for (const s of d.evals || []) {
-      html += "<p><b>" + esc(s.name) + "</b> v" + s.version + " — " + esc(s.description) + "</p><p class='banner'>" + s.tasks.length + " task(s) in order · " + s.repetitions + " repetition(s) · baseline " + esc(s.baseline) + " · pre-registered: " + s.metrics.map(esc).join(", ") + "</p>";
+      html += "<p><b>" + esc(s.name) + "</b> v" + s.version + " — " + esc(s.description) + "</p><p class='banner'>" + s.tasks.length + " task(s) in order · " + s.repetitions + " repetition(s) · baseline " + esc(s.baseline) + " · pre-registered: " + s.metrics.map((m) => esc(typeof m === "string" ? m : m.name + " (optimise)")).join(", ") + "</p>";
       html += "<table><tr><th>arm</th><th>checks</th><th>extensions</th><th>ablates</th></tr>";
       for (const a of s.arms) html += "<tr><td class='mono'>" + esc(a.name) + "</td><td class='mono'>" + a.checks.map((c) => esc(checkLabel(c))).join(", ") + "</td><td>" + a.extensions.length + "</td><td class='mono'>" + (a.ablates ? esc(a.ablates) + " <span class='banner'>(" + esc(a.switch || "") + ")</span>" : "—") + "</td></tr>";
       html += "</table>";

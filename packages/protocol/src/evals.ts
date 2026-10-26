@@ -16,6 +16,7 @@
  * has no ablation evidence, rather than pretending one exists.
  */
 import { Type, type Static } from "typebox";
+import { DeclaredMetricNameSchema, isDeclaredMetricName } from "./metrics.js";
 import { CheckEntrySchema } from "./workload.js";
 import { Value } from "typebox/value";
 
@@ -43,12 +44,37 @@ export const EvalArmSchema = Type.Object({
 }, { additionalProperties: false });
 export type EvalArm = Static<typeof EvalArmSchema>;
 
+/** The built-in set: the fifteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
 export const EVAL_METRICS = [
   "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
   "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
 ] as const;
-export const EvalMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
+export const BuiltInMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
+export type BuiltInMetric = Static<typeof BuiltInMetricSchema>;
+export function isBuiltInMetric(name: string): name is BuiltInMetric {
+  return (EVAL_METRICS as readonly string[]).includes(name);
+}
+/** A metric a suite may pre-register: one of the built-ins, or a name a workload or an instrument declares (#129). */
+export const EvalMetricSchema = Type.Union([BuiltInMetricSchema, DeclaredMetricNameSchema]);
 export type EvalMetric = Static<typeof EvalMetricSchema>;
+
+/**
+ * A pre-registered metric: the name alone, or the name marked `optimise` — the one declared metric an optimiser may
+ * select on (the Harness² note §9: one metric to optimise, many to report). Every other metric is reported only, and
+ * the definition check refuses a second flag and a flag on a built-in. Nothing in the harness optimises anything.
+ */
+export const MetricEntrySchema = Type.Union([EvalMetricSchema, Type.Object({ name: EvalMetricSchema, optimise: Type.Literal(true) }, { additionalProperties: false })]);
+export type MetricEntry = Static<typeof MetricEntrySchema>;
+export function metricName(entry: MetricEntry): string { return typeof entry === "string" ? entry : entry.name; }
+export function metricNames(entries: readonly MetricEntry[]): string[] { return entries.map(metricName); }
+/** The names marked `optimise`, in order; more than one is a declaration the definition check refuses. */
+export function optimisedMetrics(entries: readonly MetricEntry[]): string[] {
+  return entries.flatMap((e) => (typeof e === "string" || !e.optimise ? [] : [e.name]));
+}
+/** The declared (not built-in) names a suite pre-registers. */
+export function declaredMetrics(entries: readonly MetricEntry[]): string[] {
+  return metricNames(entries).filter((m) => isDeclaredMetricName(m));
+}
 
 export const EvalSuiteSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
@@ -60,8 +86,8 @@ export const EvalSuiteSchema = Type.Object({
   tasks: Type.Array(NonEmpty, { minItems: 1 }),
   arms: Type.Array(EvalArmSchema, { minItems: 2 }),
   repetitions: Type.Integer({ minimum: 1 }),
-  /** Pre-registered: the metrics the report summarizes, declared before any run. */
-  metrics: Type.Array(EvalMetricSchema, { minItems: 1 }),
+  /** Pre-registered: the metrics the report summarizes, built-in or declared, named before any run; at most one marked `optimise`. */
+  metrics: Type.Array(MetricEntrySchema, { minItems: 1 }),
   /** Which arm each other arm is compared against. */
   baseline: NonEmpty,
 }, { additionalProperties: false });
@@ -69,8 +95,8 @@ export type EvalSuite = Static<typeof EvalSuiteSchema>;
 
 export const GraderVerdictSchema = Type.Object({
   grader: NonEmpty,
-  /** `outcome`: the resulting environment; `trajectory`: the records of how it got there. */
-  kind: Type.Union([Type.Literal("outcome"), Type.Literal("trajectory")]),
+  /** `outcome`: the resulting environment; `trajectory`: the records of how it got there; `declared`: a workload's or an instrument's own grader command, run by the host over the instance (#129). */
+  kind: Type.Union([Type.Literal("outcome"), Type.Literal("trajectory"), Type.Literal("declared")]),
   value: Type.Number(),
   observation: NonEmpty,
 }, { additionalProperties: false });
@@ -102,6 +128,16 @@ export const MetricSummarySchema = Type.Object({
 }, { additionalProperties: false });
 export type MetricSummary = Static<typeof MetricSummarySchema>;
 
+/** A declared grader as it ran: the metric, the argv, the file under the definition it ran from and that file's SHA-256. */
+export const GraderFingerprintSchema = Type.Object({
+  metric: DeclaredMetricNameSchema,
+  argv: Type.Array(NonEmpty, { minItems: 1 }),
+  /** Relative to the definition root. */
+  file: NonEmpty,
+  sha256: Type.String({ pattern: "^[0-9a-f]{64}$" }),
+}, { additionalProperties: false });
+export type GraderFingerprint = Static<typeof GraderFingerprintSchema>;
+
 /** Where the numbers came from: without this a result is a rumour. */
 export const EnvironmentFingerprintSchema = Type.Object({
   node: NonEmpty,
@@ -117,6 +153,8 @@ export const EnvironmentFingerprintSchema = Type.Object({
   /** Registry records and the definition's policy versions at run time. */
   registry: Type.Integer({ minimum: 0 }),
   policies: Type.Record(Type.String(), Type.Integer({ minimum: 1 })),
+  /** Each declared grader the suite pre-registered: its command and the hash of the file it ran from, so the report can say what measured it (#129). Absent when the suite declares nothing. */
+  graders: Type.Optional(Type.Array(GraderFingerprintSchema)),
 }, { additionalProperties: false });
 export type EnvironmentFingerprint = Static<typeof EnvironmentFingerprintSchema>;
 
@@ -138,7 +176,12 @@ export const LiftSchema = Type.Object({
 export type Lift = Static<typeof LiftSchema>;
 
 export const EvalReportSchema = Type.Object({
-  suite: Type.Object({ name: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false }),
+  suite: Type.Object({
+    name: NonEmpty,
+    version: Type.Integer({ minimum: 1 }),
+    /** The one declared metric the suite marked `optimise`, when it marked one: what an optimiser may select on; every other metric was reported only. */
+    optimise: Type.Optional(DeclaredMetricNameSchema),
+  }, { additionalProperties: false }),
   generatedAt: NonEmpty,
   fingerprint: EnvironmentFingerprintSchema,
   arms: Type.Array(ArmSummarySchema),

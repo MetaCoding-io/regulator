@@ -73,7 +73,7 @@ import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, metricNames, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -594,7 +594,7 @@ ${rationale}`]]) {
       dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
       owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
-      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
+      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => metricNames(suite.metrics).includes(k)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
     });
     for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s)}`).join("; ")}`);
     for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);

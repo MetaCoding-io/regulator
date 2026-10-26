@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isUninterpreted, type EvalRun } from "@metacoding.io/regulator-protocol";
+import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isUninterpreted, metricNames, type EvalRun } from "@metacoding.io/regulator-protocol";
 import { checkDefinition, loadRegistry } from "@metacoding.io/regulator-core";
 import { EVALS_DIR, ablationCoverage, loadSuite, runSuite, workloadForArm } from "./evals.js";
 import { BEHAVIOURS, scriptedDispatchers } from "./evals-scripted.js";
@@ -56,7 +56,7 @@ test("the harness validates its graders against four scripted learner-style unit
     assert.equal(report.fingerprint.dispatcher, `scripted:${behaviour}`);
     assert.equal(report.fingerprint.pi, "0.87.0");
     assert.equal(report.fingerprint.registry, (await loadRegistry(path.join(LAB_ROOT, "registry"))).records.length);
-    assert.deepEqual(Object.keys(report.arms[0]!.metrics), [...suite.metrics], "pre-registered metrics only");
+    assert.deepEqual(Object.keys(report.arms[0]!.metrics), metricNames(suite.metrics), "pre-registered metrics only");
   }
 
   // Reference: everything closes, nothing drifts, under both arms. The treatment costs nothing extra because nothing was refused.
