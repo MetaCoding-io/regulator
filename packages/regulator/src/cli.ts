@@ -42,10 +42,13 @@
  *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
  *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path: copy the instance's accepted identity file into the definition's seed (the manifest's, or --definition) and commit it there
- *   regulator advice accept <obligation> --by <who> --file <profile>.md --from <path> --rationale <text>
+ *   regulator advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text>
  *                                                         the advice decision: write the proposed file into regulator/advice/ under S5 authority, commit it on the base
- *                                                         branch citing the obligation, and resolve the obligation as accepted. --file must be the advice file the
- *                                                         proposal's subject names (`advice/<profile>.md`), for a profile the definition declares
+ *                                                         branch citing the obligation, and resolve the obligation as accepted. A `harness-edit` names its target in its
+ *                                                         typed payload, which the host first checks against the stores (its diagnosis references resolve, its prediction
+ *                                                         carries the block); --file, if given, must agree, the disposition cites the prediction's id and its live horizon
+ *                                                         is open from the decision. A plain proposal names its target in its subject (`advice/<profile>.md`), and --file
+ *                                                         must be that file, for a profile the definition declares
  *   regulator advice reject <obligation> --by <who> --rationale <text>   decline an advice proposal owed to S5
  *   regulator advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path for advice: copy the instance's accepted advice file into the definition's seed and commit it there
@@ -72,8 +75,8 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, metricNames, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isHarnessEdit, metricNames, type Disposition, type HarnessEdit, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -100,7 +103,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> --file <profile>.md --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -513,7 +516,8 @@ ${rationale}`]]) {
     }
   } else if (command === "advice" && (sub === "accept" || sub === "reject") && rest[0]) {
     // The advice decision path (#110): the only writer of an advice file, run by a person, citing the obligation it decides.
-    // Mirrors `identity accept|reject` line for line, with one rule more: --file is the file the proposal's subject names.
+    // Mirrors `identity accept|reject` line for line, with one rule more: the file is the one the proposal names — in its typed
+    // `harness-edit` payload (#138), checked against the stores first, or in its subject for a plain proposal.
     const rationale = flag("rationale");
     if (!rationale) usage();
     const ledger = new ObligationLedger(process.cwd());
@@ -524,18 +528,33 @@ ${rationale}`]]) {
       await ledger.resolve(o.id, { by: by!, disposition: "rejected", rationale: rationale! });
       console.log(`proposal ${o.id.slice(0, 8)} rejected by ${by} (S5): ${rationale}; advice unchanged`);
     } else {
-      const file = flag("file");
+      let file = flag("file");
       const from = flag("from");
-      if (!file || !from) { console.error("advice accept needs --file <profile>.md and --from <path>"); usage(); }
+      if (!from) { console.error("advice accept needs --from <path> (and --file <profile>.md for a plain proposal)"); usage(); }
       const repo = process.cwd();
       if (!(await isClean(realExec, repo))) throw new Error("the base checkout has uncommitted changes; an advice decision is committed on its own");
       const manifest = await readManifest(repo);
       const definitionRoot = manifest?.definition.root ?? labRoot;
       const declared = Object.keys(loadProfilesSync(path.join(definitionRoot, "profiles"))).sort();
-      const profile = profileOfAdviceFile(file!);
-      if (!profile || !declared.includes(profile)) throw new Error(`--file must be a declared profile's advice file (one of ${declared.map(adviceFileName).join(", ")}); "${file}" is not`);
-      const named = adviceProfileNamed(o.subject);
-      if (named !== profile) throw new Error(named ? `the proposal's subject names ${adviceFileName(named)}; --file must be that file, not ${file}` : `the proposal's subject ("${o.subject}") names no advice file; an advice proposal names advice/<profile>.md, and the decision writes that file`);
+      // The proposal's message, for the typed payload (#138). A harness-edit names its target by profile and bets on a prediction;
+      // the host reads it against the stores before anything else, and --file, if given, must agree with it.
+      const message = (await readSignals(repo)).find((m) => m.kind === "policy-proposal" && o.sources.includes(m.id));
+      const edit: HarnessEdit | undefined = message?.kind === "policy-proposal" && isHarnessEdit(message.requestedChange) ? message.requestedChange : undefined;
+      let profile: string;
+      if (edit) {
+        const problems = await checkHarnessEdit(repo, edit, { declaredProfiles: declared });
+        if (problems.length) throw new Error(`the proposal's harness-edit does not resolve against this instance: ${problems.join("; ")}. Nothing accepted`);
+        profile = edit.change.profile;
+        if (file !== undefined && file !== adviceFileName(profile)) throw new Error(`the proposal's payload names ${adviceFileName(profile)} (its change is against profile "${profile}"); --file must be that file, not ${file}`);
+        file = adviceFileName(profile);
+      } else {
+        if (!file) { console.error("advice accept on a plain proposal needs --file <profile>.md: its subject names the file, and the decision writes that file"); usage(); }
+        const named = profileOfAdviceFile(file!);
+        if (!named || !declared.includes(named)) throw new Error(`--file must be a declared profile's advice file (one of ${declared.map(adviceFileName).join(", ")}); "${file}" is not`);
+        const inSubject = adviceProfileNamed(o.subject);
+        if (inSubject !== named) throw new Error(inSubject ? `the proposal's subject names ${adviceFileName(inSubject)}; --file must be that file, not ${file}` : `the proposal's subject ("${o.subject}") names no advice file; an advice proposal names advice/<profile>.md, and the decision writes that file`);
+        profile = named;
+      }
       const content = await readFile(path.resolve(from!), "utf8");
       if (!content.trim()) throw new Error(`the proposed ${file} is empty; nothing to accept`);
       const policy = await loadPolicy(path.resolve(flag("policy") ?? path.join(definitionRoot, "policies", "default.json"))).catch(() => undefined);
@@ -552,8 +571,14 @@ ${rationale}`]]) {
         if (r.code !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr.trim()}`);
       }
       const sha = await headRevision(realExec, repo);
-      await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.` });
-      console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted`);
+      // The decision cites the prediction it was made on (#138): the fifth record of the chain names the third. The live horizon opens
+      // from this disposition — the fold reads the acceptance, so nothing else is written for it — and what it is over is said here.
+      const bet = edit ? (await readSignals(repo)).find((m) => m.id === edit.prediction) : undefined;
+      const live = bet?.kind === "intelligence-signal" ? (bet.prediction?.horizons ?? []).flatMap((h) => (h.kind === "live" ? [h] : [])) : [];
+      const horizonNote = edit ? ` Prediction ${edit.prediction}: ${live.length ? `its live horizon over the next ${live.map((h) => `${h.count} ${h.unitTypes.join("|")}`).join(" and ")} unit(s) is open from this decision` : "it names no live horizon"}; a disconfirming reading is owed to S5.` : "";
+      await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.${horizonNote}` });
+      const opened = edit ? (await readPredictions(repo)).find((p) => p.signal.id === edit.prediction)?.horizons.filter((h) => h.horizon.kind === "live").map((h) => h.status) ?? [] : [];
+      console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted${edit ? `; prediction ${edit.prediction.slice(0, 8)} live horizon ${opened.length ? opened.join(", ") : "none"}` : ""}`);
     }
   } else if (command === "signals" && sub === "route") {
     const routed = await routeMessages(new ObligationLedger(process.cwd()), { policy: await routingP() });

@@ -479,3 +479,71 @@ test("the release path for advice (#110): `advice promote` carries the instance'
   assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote advice implement\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned to run the inherited suite/);
   assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
 });
+
+test("the typed harness-edit on `advice accept` (#138): the host refuses a payload whose diagnosis references do not resolve against the stores and one whose prediction lacks the block; a payload that resolves names its own target, so --file may be omitted and one that disagrees is refused; the disposition's rationale cites the prediction's id, and its live horizon shows as open from the decision; a plain proposal is decided as #110 left it", async (t) => {
+  const { AuditLog, ExecutionStore, readPredictions } = await import("@metacoding.io/regulator-core");
+  const { loadContract } = await import("./contract-file.js");
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  // What the stores hold about u1: one attempt refused at closeout, with the evidence that refused it.
+  const store = new ExecutionStore(repo);
+  await store.createUnit(await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json")));
+  await store.setStatus("u1", "dispatched");
+  await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
+  await store.setStatus("u1", "blocked", "audit refused closeout");
+  await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
+  const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }] };
+  await appendSignal(repo, { id: "i1", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused less", observation: "u1 was refused for a suite it never ran", claim: "fewer refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction } as never);
+  await appendSignal(repo, { id: "i0", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "no block", observation: "o", evidence: [] });
+  const diagnosis = { unit: "u1", attempt: 1, revision: "abc1234", moment: "attempt-failed", evidence: ["e1"], signals: [] };
+  const propose = (id: string, edit: object) => appendSignal(repo, { id, timestamp: "2026-10-26T10:02:00.000Z", source: "S4", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: `advice/implement.md: ${id}`, rationale: "two units were refused for a suite they never ran", requestedChange: edit, evidence: [] } as never);
+  await propose("he-ok", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "implement", diff: "+- Run the inherited suite (inherited-tests) before reporting." }, prediction: "i1" });
+  await propose("he-unresolved", { kind: "harness-edit", diagnosis: [{ ...diagnosis, unit: "u9" }, { ...diagnosis, evidence: ["e7"] }], change: { profile: "implement", diff: "+x" }, prediction: "i1" });
+  await propose("he-no-block", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "implement", diff: "+x" }, prediction: "i0" });
+  await propose("he-undeclared", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "deployer", diff: "+x" }, prediction: "i1" });
+  await appendSignal(repo, { id: "plain", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "advice/research.md: drop the line about line numbers", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const owed = Object.fromEntries((await ledger.obligations()).filter((o) => o.concern === "policy-proposal").map((o) => [o.sources[0], o.id]));
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const outside = await mkdtemp(path.join(tmpdir(), "regulator-harness-edit-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const proposed = path.join(outside, "proposed-implement.md");
+  const current = await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8");
+  await writeFile(proposed, `${current}- Run the inherited suite (inherited-tests) before reporting.\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args);
+
+  // The host's refusals: the payload is read against the stores before anything is written.
+  let r = await attempt(owed["he-unresolved"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's harness-edit does not resolve against this instance: diagnosis\[0\]: unit "u9" is not in the execution store; diagnosis\[1\]: evidence "e7" is not in the audit log for unit "u1"\. Nothing accepted/);
+  r = await attempt(owed["he-no-block"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /prediction: intelligence signal "i0" carries no prediction block \(metric, baseline, direction, magnitude, probability, horizons\)/);
+  r = await attempt(owed["he-undeclared"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /change: profile "deployer" is not one the definition declares \(auditor, bookkeeper, implement, intelligence, manager, research\)/);
+  r = await attempt(owed["he-ok"]!, "--by", "alice", "--file", "research.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's payload names implement\.md \(its change is against profile "implement"\); --file must be that file, not research\.md/);
+  r = await attempt(owed["plain"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 2, "a plain proposal still needs --file: its subject names the file, the person names it back");
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), current, "nothing written by a refusal");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before);
+  assert.deepEqual((await readPredictions(repo)).map((p) => [p.signal.id, p.status, p.horizons[0]?.status]), [["i1", "awaiting-decision", "awaiting-decision"]], "before the decision the live horizon is not open: the edit is not in effect");
+
+  // The decision: the target comes from the payload, the rationale cites the prediction, and the live horizon is open from it.
+  r = await attempt(owed["he-ok"]!, "--by", "alice", "--from", proposed, "--rationale", "the diagnosis traces to u1's refused attempt");
+  assert.equal(r.code, 0, r.stderr);
+  const after = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  assert.match(r.stdout, new RegExp(`^proposal ${owed["he-ok"]!.slice(0, 8)} accepted by alice \\(S5\\): regulator/advice/implement\\.md committed as ${after.slice(0, 7)} on main; the obligation is resolved as accepted; prediction i1 live horizon open\\n$`));
+  assert.match(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), /\n- Run the inherited suite \(inherited-tests\) before reporting\.\n$/);
+  const state = await ledger.get(owed["he-ok"]!);
+  assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
+  assert.match(state?.rationale ?? "", new RegExp(`^the diagnosis traces to u1's refused attempt\\. regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority\\. Prediction i1: its live horizon over the next 3 implement unit\\(s\\) is open from this decision; a disconfirming reading is owed to S5\\.$`));
+  const [p1] = await readPredictions(repo);
+  assert.deepEqual([p1?.status, p1?.horizons[0]?.status, p1?.horizons[0]?.openedAt, p1?.proposals[0]?.disposition], ["open", "open", state?.closedAt, "accepted"], "open from the acceptance, read from the obligation and not from the rationale");
+  r = await regulator(repo, "status", "--instance", repo);
+  assert.match(r.stdout, /predictions: 1 open of 1\n {4}open {14}i1 {2}refusals lower by 1 \(p=0\.7\) {2}live open: 0\/3 implement unit\(s\) {2}bet on by he-ok accepted, he-unres open, he-undec open {2}advice\/implement\.md: units told to run the inherited suite are refused less\n/);
+});
