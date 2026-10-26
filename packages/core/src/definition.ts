@@ -6,17 +6,21 @@
  * policy's unit types exist, a check name is one the host runs, the identity
  * set is complete, every profile has its advice file and no file names a
  * profile nobody declared, and every directory of the definition falls in a
- * class of `DEFINITION_WRITERS` (#110). The registry has its own check; this
- * is the rest.
+ * class of `DEFINITION_WRITERS` (#110), and a suite pre-registers only
+ * metrics the definition carries — built in, or declared beside the workload
+ * that owns them with a grader file the report can fingerprint (#129). The
+ * registry has its own check; this is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
+  isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric,
 } from "@metacoding.io/regulator-protocol";
 import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
 import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
+import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
 import { isReadOnlyProfile } from "./profiles.js";
 
 export interface DefinitionProblem {
@@ -109,6 +113,18 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
           for (const option of unknownCheckOptions(entry)) problem(`workload/${file}`, `unit type "${type.name}" gives check "${check}" the option "${option}", which it does not take${CHECK_OPTIONS[check]?.length ? ` (it takes ${CHECK_OPTIONS[check]!.join(", ")})` : ""}`);
         }
       }
+      // Declared metrics (#129): a declaration is data beside what owns it. The name must be this workload's, each name
+      // once, the grader must be a file under the definition (what the report fingerprints), and a judged metric — one
+      // with an instrument ref — waits until the instrument record exists with its held-out score.
+      const declaredNames = new Set<string>();
+      for (const metric of value.metrics ?? []) {
+        const parsed = parseDeclaredMetric(metric.name);
+        if (!parsed || parsed.owner !== "workload" || parsed.id !== value.name) problem(`workload/${file}`, `declares metric "${metric.name}", which belongs to ${parsed?.owner === "instrument" ? `instrument "${parsed.id}": an instrument's metric is declared on its record` : `workload "${parsed?.id}": a declaration lives beside the workload that owns it`}`);
+        if (declaredNames.has(metric.name)) problem(`workload/${file}`, `declares metric "${metric.name}" twice`);
+        declaredNames.add(metric.name);
+        if (!(await graderFile(dir, metric.grader.argv))) problem(`workload/${file}`, `metric "${metric.name}" declares the grader \`${metric.grader.argv.join(" ")}\`, and no argument of it is a file under the definition: the grader's file is what the report fingerprints, and it is missing`);
+        if (metric.instrument !== undefined && (await instrumentHeldOutScore(dir, metric.instrument)) === undefined) problem(`workload/${file}`, `metric "${metric.name}" is judged by instrument "${metric.instrument}", and no instrument record carries its held-out score: a judged metric waits on the record (open questions §4, #49)`);
+      }
     } catch (error) {
       problem(`workload/${file}`, (error as Error).message);
     }
@@ -175,6 +191,25 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         if (arm.ablates && !arm.switch) problem(`evals/${file}`, `arm "${arm.name}" ablates ${arm.ablates} but names no switch`);
         if (arm.switch?.startsWith("check:") && checkNames(arm.checks).includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
       }
+      // Pre-registration over declared metrics (#129): a declared name the definition does not carry is refused, not
+      // warned about — a report summarizes only what was declared before the run. At most one declared metric is marked
+      // as the optimisation target; the built-ins are reported only.
+      const declared = declaredMetricsOf(out.workloads);
+      const registered = new Set<string>();
+      for (const name of metricNames(value.metrics)) {
+        if (registered.has(name)) problem(`evals/${file}`, `pre-registers "${name}" twice`);
+        registered.add(name);
+        if (isBuiltInMetric(name) || declared.has(name)) continue;
+        const parsed = parseDeclaredMetric(name);
+        if (parsed?.owner === "instrument") problem(`evals/${file}`, `pre-registers "${name}", an instrument's metric, and no instrument record declares it: the instrument record kind does not exist yet (open questions §4)`);
+        else {
+          const owner = out.workloads.find((w) => w.name === parsed?.id);
+          problem(`evals/${file}`, `pre-registers "${name}", which ${owner ? `workload "${owner.name}" does not declare (it declares ${owner.metrics?.length ? owner.metrics.map((m) => m.name).join(", ") : "no metrics"})` : `no workload declares (no workload "${parsed?.id}")`}`);
+        }
+      }
+      const targets = optimisedMetrics(value.metrics);
+      if (targets.length > 1) problem(`evals/${file}`, `marks ${targets.length} metrics optimise (${targets.join(", ")}): at most one declared metric is the optimisation target, and every other is reported only`);
+      for (const target of targets) if (isBuiltInMetric(target)) problem(`evals/${file}`, `marks "${target}" optimise, but a built-in is reported only: only a declared metric may be the optimisation target`);
       for (const task of value.tasks) {
         try { await readFile(path.join(dir, task)); } catch { problem(`evals/${file}`, `task "${task}" does not exist`); }
       }
@@ -189,6 +224,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       assertValid(EvalReportSchema, value, `eval report ${file}`);
       out.reports.push(value);
       if (!out.evals.some((s) => s.name === value.suite.name)) problem(`evals/reports/${file}`, `reports on suite "${value.suite.name}", which evals/ does not declare`);
+      // A report over the declared suite version says the same optimisation target the suite marks: what a run was selected on is not the report's to choose.
+      const declaredSuite = out.evals.find((s) => s.name === value.suite.name && s.version === value.suite.version);
+      if (declaredSuite && (optimisedMetrics(declaredSuite.metrics)[0] ?? undefined) !== value.suite.optimise) problem(`evals/reports/${file}`, `says the optimisation target was ${value.suite.optimise ? `"${value.suite.optimise}"` : "none"}, but suite ${value.suite.name} v${value.suite.version} marks ${optimisedMetrics(declaredSuite.metrics)[0] ? `"${optimisedMetrics(declaredSuite.metrics)[0]}"` : "none"}`);
       // The number is never the conclusion: a committed report without a person's reading of it is a table, not evidence.
       if (isUninterpreted(value)) problem(`evals/reports/${file}`, `carries the placeholder interpretation ("${UNINTERPRETED_MARKER}", by "${value.interpretedBy}"); re-run with --interpretation <file> --by <who>, or do not commit it`);
     } catch (error) {
