@@ -90,18 +90,33 @@ Each step names the check that proves it before the next step starts.
    position outside the universe.
    *Proof:* `node --test packages/regulator/dist/<name>.test.js`, then `pnpm check`.
 
-9. **Give the fixture a flag.** `regulator fixture <dest> --<name>` in `src/cli.ts`
+9. **Declare your metric and its grader.** If the workload has a number worth
+   comparing across arms — the portfolio's turnover, a corpus F₁ — declare it in
+   `workload/<name>.json` under `metrics[]`: the name as `workload:<name>/<metric>`, its
+   kind and direction, and a `grader.argv` naming a file under the definition
+   (`workload/<name>/<metric>.mjs`) that the host runs in the instance after each unit.
+   The grader reads the tree through the fixture's own `lib/` and writes one JSON line,
+   `{ metric, value, observation }`; it never reads a unit's report, and it is not a
+   model. Put the arithmetic in `lib/` as a pure function with a test. Then a small
+   suite under `evals/` pre-registers the metric beside the built-ins. A metric that
+   needs a model's judgment names an instrument and waits for the instrument record.
+   *Proof:* `regulator check` passes with the declaration (it refuses a name the
+   workload does not own, a grader naming no file, a second optimisation target), and
+   `regulator eval evals/<suite>.json --behaviour <name>` prints the metric per arm
+   with its interval.
+
+10. **Give the fixture a flag.** `regulator fixture <dest> --<name>` in `src/cli.ts`
    (the usage line is the CLI reference page), and the directory in `package.json`'s
    `files`, or the published package ships without it.
    *Proof:* `regulator fixture /tmp/x --<name>` and `regulator init` there, then
    `regulator doctor`.
 
-10. **Write the worked example** to the shape of the ledger's: the six questions and
+11. **Write the worked example** to the shape of the ledger's: the six questions and
     the level of every answer, the declaration file by file, how to run it, what it does
     not do. Link it from the docs navigation.
     *Proof:* `pnpm --filter regulator-docs build` passes its dead-link check.
 
-11. **Track it.** The roadmap row, the design note's status line, and a debt row for
+12. **Track it.** The roadmap row, the design note's status line, and a debt row for
     any limitation that names later work.
 
 ## What the portfolio had to decide, and what it was given

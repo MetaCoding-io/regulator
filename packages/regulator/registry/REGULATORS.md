@@ -665,13 +665,13 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.assurance.eval-harness.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Evidence about the regulators: host-run verification one recursion level up. A suite declares the fixture, the tasks in order, the arms (which host extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose) and trajectory graders (the records: refusals, retries, escalations, invariant violations), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.
+**Purpose.** Evidence about the regulators: host-run verification one recursion level up. A suite declares the fixture, the tasks in order, the arms (which host extensions a live session loads, which host checks the implement unit type runs, which regulator an ablation arm switches off), the repetitions and the pre-registered metrics. The harness runs one fresh instance per arm and repetition through the real loop, grades each unit with outcome graders (the resulting environment: boundary violations, signature drift, vocabulary drift, rules written into prose), trajectory graders (the records: refusals, retries, escalations, invariant violations) and the graders a workload declares beside its own metrics (a command run in the instance, reading the tree and emitting a value with its observation), summarizes per arm with Student's t intervals, screens lifts by interval overlap, stamps the environment it ran in, and refuses to be a report without a person's interpretation.
 
 **Absorbs.** `regulation-without-evidence` — Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves.
 
-**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch)
+**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: the fifteen built-in outcome and trajectory graders and the declared graders a suite pre-registers, run after each unit; no judge model; the fingerprint hashes each declared grader's file), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch; a suite pre-registers only built-in metrics or ones a workload declares with a grader file under the definition, with at most one optimisation target, and a judged metric is refused until its instrument record carries a held-out score)
 
-**Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
+**Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `the declared graders of the workloads the tasks name`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
 
 **Scope.** subjects evidence, regulators · resources temporary instances under the OS temp directory, evals/reports/
 
@@ -688,13 +688,14 @@ does not do. `since` is the package version that first shipped the record.
 - conclude: the interpretation is a person's
 - grade with a model
 
-**Evidence.** `src/evals.test.ts`, `../core/src/evals.test.ts`
+**Evidence.** `src/evals.test.ts`, `../core/src/evals.test.ts`, `src/portfolio.test.ts`
 
 **Limitations.**
 - A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement. The live path itself is covered headlessly (the dispatcher opens and binds a session with no model, ../regulator-pi/src/dispatcher.test.ts); what a model does under the gates is not.
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
 - Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
+- A declared grader is run as the workload declared it, and that is all the harness checks: that its command names a file under the definition (hashed into the fingerprint), that it exits clean, and that its lines name the metric it was declared for. Whether the number it emits measures what the declaration says is the workload's correctness, evidenced by the workload's own tests (the portfolio's turnover by its fixture's), not by this record. A judged metric — one that names an instrument — is refused until the instrument record exists with its held-out score, so no declared metric is a model's judgment yet.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 

@@ -153,7 +153,7 @@ Not covered:
 
 ## Eval harness and graders (`reg.assurance.eval-harness.v1`)
 
-Enforced at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch) in `src/evals.ts`; S3*, deterministic-gate.
+Enforced at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: the fifteen built-in outcome and trajectory graders and the declared graders a suite pre-registers, run after each unit; no judge model; the fingerprint hashes each declared grader's file), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch; a suite pre-registers only built-in metrics or ones a workload declares with a grader file under the definition, with at most one optimisation target, and a judged metric is refused until its instrument record carries a held-out score) in `src/evals.ts`; S3*, deterministic-gate.
 
 Not covered:
 
@@ -161,6 +161,7 @@ Not covered:
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
 - Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
+- A declared grader is run as the workload declared it, and that is all the harness checks: that its command names a file under the definition (hashed into the fingerprint), that it exits clean, and that its lines name the metric it was declared for. Whether the number it emits measures what the declaration says is the workload's correctness, evidenced by the workload's own tests (the portfolio's turnover by its fixture's), not by this record. A judged metric — one that names an instrument — is refused until the instrument record exists with its held-out score, so no declared metric is a model's judgment yet.
 
 ## Evidence preflight (`reg.control.evidence-preflight.v1`)
 
