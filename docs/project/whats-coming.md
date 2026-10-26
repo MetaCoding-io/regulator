@@ -540,15 +540,16 @@ report, since a calibration report needs live numbers to calibrate against. The 
 
 ## About these figures
 
-They are drawn by hand, which the project otherwise avoids: the docs never carry a
-second copy of what the code states, and the [figures
+They are drawn by a hand-written script,
+[`2026-10-18-reflector-figures.py`](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/figures/2026-10-18-reflector-figures.py),
+not generated from the definition, which the project otherwise avoids: the docs never
+carry a second copy of what the code states, and the [figures
 thread](../research/2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects)
 decided that a generator over the definition is the only author of a figure. The
 "before" figure is the first one that generator must reproduce, from the registry's
 channels, enforcement points and stores. When it does, this page shows the generated
-figure and the hand-drawn one becomes history in the research note.
+figure and the script's output becomes history in the research note.
 
 Every box and edge in both figures is a hotspot. Hover, focus or tap one for what it
-is, in a sentence or two, and a link to the page that states the mechanism. The card
-text is drawn into the figure by the same script as the labels, so the two cannot drift
-apart.
+is, in a sentence or two, and a link to the page that states the mechanism. The same
+script writes the card text and the labels, so the two cannot drift apart.
