@@ -17,7 +17,7 @@
 import { mkdir, readdir, readFile, appendFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UnitRecordSchema, WorkContractSchema, assertValid,
+  AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UNIT_TRANSITIONS, UnitRecordSchema, WorkContractSchema, assertValid, unitTransitions,
   type AttemptRecord, type BudgetLedger, type FailureObservation, type RecoveryDecision, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
 } from "@metacoding.io/regulator-protocol";
 import { UNITS_RELATIVE_DIR } from "./paths.js";
@@ -96,9 +96,18 @@ export class ExecutionStore {
     return units;
   }
 
+  /**
+   * Move the unit along the lifecycle. The change must be a row of `UNIT_TRANSITIONS`: the table is the loop's
+   * declaration of every path a unit can take, and a status written around it would make the unit's history
+   * something the table does not draw. The gate is on the pair; which trigger took it is the loop's record to keep.
+   */
   async setStatus(unitId: string, status: UnitStatus, reason?: string): Promise<UnitRecord> {
     const unit = await this.getUnit(unitId);
     if (!unit) throw new Error(`no unit "${unitId}"`);
+    if (!unitTransitions(unit.status, status).length) {
+      const from = UNIT_TRANSITIONS.filter((t) => t.from === unit.status).map((t) => t.to);
+      throw new Error(`unit "${unitId}" is ${unit.status}; ${unit.status} → ${status} is not a transition the loop declares (UNIT_TRANSITIONS); from ${unit.status} it declares ${from.length ? [...new Set(from)].join(", ") : "nothing: the status is terminal"}`);
+    }
     const { reason: _dropped, ...rest } = unit;
     const next: UnitRecord = { ...rest, status, updatedAt: this.#stamp(), ...(reason === undefined ? {} : { reason }) };
     await writeFile(path.join(this.#unitDir(unitId), "unit.json"), `${JSON.stringify(next, null, 2)}\n`, "utf8");

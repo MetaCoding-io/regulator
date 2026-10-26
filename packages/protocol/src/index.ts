@@ -349,9 +349,9 @@ export {
 } from "./contracts.js";
 export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isWorkloadDefinition, type CheckEntry, type CheckOptions, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
-  AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema,
-  isAttemptRecord, isLease, isUnitRecord,
-  type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus,
+  AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
+  isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
+  type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {

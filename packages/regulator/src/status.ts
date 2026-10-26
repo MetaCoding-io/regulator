@@ -13,8 +13,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import {
-  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor,
-  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit,
+  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
+  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
@@ -75,6 +75,8 @@ export interface UnitView {
   obligations: ObligationState[];
   /** The replay (lesson 15): every record about the unit in time order, from the span projection. */
   timeline: TimelineEntry[];
+  /** The unit's path through `UNIT_TRANSITIONS`, folded from its records, each step with its why as the records state it; `problem` when the fold and the record disagree. */
+  trajectory: UnitTrajectory;
 }
 
 export interface InstanceView {
@@ -237,16 +239,22 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   const spans = await projectSpans(dir);
   const units: UnitView[] = [];
   for (const unit of await store.listUnits()) {
+    const attemptRecords = await store.listAttempts(unit.unitId);
+    const decisions = await store.listDecisions(unit.unitId);
+    const audit = await auditLog.forUnit(unit.unitId);
+    const owed = obligations.filter((o) => o.unit === unit.unitId);
+    const budgets = (await Promise.all(attemptRecords.map((a) => store.getBudget(unit.unitId, a.attempt)))).filter((b) => b !== undefined);
     units.push({
       unit,
       contract: await store.getContract(unit.unitId, unit.contract.version),
       report: await store.getReport(unit.unitId, unit.contract.version),
-      attemptRecords: await store.listAttempts(unit.unitId),
+      attemptRecords,
       budget: unit.attempts > 0 ? await store.getBudget(unit.unitId, unit.attempts) : await store.getBudget(unit.unitId, 1),
-      decisions: await store.listDecisions(unit.unitId),
-      audit: await auditLog.forUnit(unit.unitId),
-      obligations: obligations.filter((o) => o.unit === unit.unitId),
+      decisions,
+      audit,
+      obligations: owed,
       timeline: timelineFor(spans, unit.unitId),
+      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets }),
     });
   }
   let manifest: InstanceManifest | undefined;
@@ -310,12 +318,13 @@ export function renderStatusText(view: StatusView): string {
     lines.push(`instance ${i.dir}`);
     lines.push(`  manifest: ${i.manifest ? `definition ${i.manifest.definition.name} at ${i.manifest.definition.harnessRevision.slice(0, 7)} (${i.manifest.definition.registry} regulators, pi ${i.manifest.definition.pi}), initialized ${i.manifest.initializedAt.slice(0, 10)} by ${i.manifest.initializedBy}${i.manifest.writablePaths ? `; writable ${i.manifest.writablePaths.join(", ")}` : ""}${i.manifest.protectedPaths ? `; protected ${i.manifest.protectedPaths.join(", ")}` : ""}` : i.manifestProblem ? `! ${i.manifestProblem}` : "none (not initialized with `regulator init`)"}`);
     lines.push(`  units: ${i.units.length}`);
-    for (const { unit, report, attemptRecords, budget, decisions, audit, obligations } of i.units) {
+    for (const { unit, report, attemptRecords, budget, decisions, audit, obligations, trajectory } of i.units) {
       const last = attemptRecords.at(-1);
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
       const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
       lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      if (trajectory.problem) lines.push(`      ! replay: ${trajectory.problem}`);
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);

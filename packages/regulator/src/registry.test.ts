@@ -49,6 +49,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.control.progression-veto.v1",
     "reg.control.recovery-router.v1",
     "reg.control.result-report-gate.v1",
+    "reg.control.unit-lifecycle.v1",
     "reg.control.work-contract-gate.v1",
     "reg.coordination.effect-journal.v1",
     "reg.coordination.reintegration.v1",
