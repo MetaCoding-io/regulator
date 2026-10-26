@@ -120,6 +120,45 @@ history — is DEBT row 47; the website's hand-drawn six states is still hand-dr
 `regulator docs --write` renders this figure and the website copies it, which is the
 thread's next step.
 
+**Refined (2026-10-26).** The rule as decided binds a figure of what exists: one whose
+every box and edge is a record, an enforcement point, a transition row or a store. Such a
+figure the generator draws from the definition and a hand never does, because a drawn
+copy of what the code states is a second copy and drifts. The reflector pair (the
+[Harness² note §7](2026-10-18-harness2-recursive-harnessing.md#the-two-levels-drawn),
+the docs' [What's coming](../project/whats-coming.md) page) showed two cases the rule did
+not name, and the question came from the maintainer: some figures are not going to be
+generated from a real harness, because they are a level above it.
+
+- *A figure of what is designed and not built.* The "after" figure draws a reflector, an
+  advice seed and a probe arm the definition does not have. No generator can draw it, and
+  it would be wrong for one to: a generated figure asserts that the thing exists. It is a
+  drawing, kept with its research note, shown only on a page that says it is a design,
+  and replaced by the generated figure when the mechanism lands; the drawing becomes
+  history in the note.
+- *A figure that spans more than the definition describes.* The "before" figure's
+  instance box is the one-level map the generator will draw. The frame around it (the
+  definition band and its files, a person as S5, `identity promote`, the eval harness as
+  S3\* one level up, the records column and what reads it) is a claim about the project's
+  shape that no record states. For that part the figure is a drawing; for the part the
+  definition describes it embeds the generated figure once that exists, and draws it by
+  hand until then.
+
+So the rule has three clauses. (1) A figure of what exists is generated from the
+definition, never drawn. (2) A figure of what is designed is a drawing, labelled as a
+design where it is shown, and replaced by the generated figure when the design lands.
+(3) A figure that spans more than the definition describes embeds the generated figure
+for the part it does describe and draws the rest. Clause 3 is what keeps the rule
+honest at the seams: the drift protection sits exactly where drift can happen, and no
+further. Its consequence for the generator is that it emits fragments with stable ids
+(the one-level map as a `<g>` a frame can place, its hotspots carrying their cards) and
+not only whole figures, so an embedding is a composition and not a copy. The
+hand-written script that draws the reflector pair
+([`figures/2026-10-18-reflector-figures.py`](figures/2026-10-18-reflector-figures.py))
+is the first consumer: its instance box becomes the generated fragment when that exists.
+The website copies a composed figure the way it copies a generated one. "Only author of a
+figure" in the decision above reads, from here, as "only author of a figure of what
+exists".
+
 ## 2. A person should be able to create S4 intelligence
 
 **Today.** Intelligence enters the instance one way: a `research` unit under the
