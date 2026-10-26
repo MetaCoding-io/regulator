@@ -7,11 +7,15 @@
  * have refused, and a clean trajectory can leave drift no gate measures.
  *
  * Every grader returns a number and the observation behind it. None of them
- * is a judge model.
+ * is a judge model. These are the built-in set, the fifteen metrics of
+ * `EVAL_METRICS`; a *declared* grader (#129, at the end of this file) is a
+ * workload's or an instrument's own command, run the same way after a unit.
  */
+import path from "node:path";
 import { countTestLines, runHostChecks } from "@metacoding.io/regulator-checks";
 import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, readSignals } from "@metacoding.io/regulator-core";
-import type { AuditFinding, EvidenceExpectation, GraderVerdict } from "@metacoding.io/regulator-protocol";
+import { GraderOutputSchema, type AuditFinding, type EvidenceExpectation, type GraderVerdict, type MetricDeclaration } from "@metacoding.io/regulator-protocol";
+import { Value } from "typebox/value";
 import type { Exec } from "./exec.js";
 
 export interface GraderContext {
@@ -130,3 +134,61 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
 
 /** The vocabulary the lab's glossary reserves: a unit is a unit. */
 export const GLOSSARY_DRIFT = /\b(tasks?|jobs?|tickets?)\b/gi;
+
+/**
+ * A declared grader (#129): a workload's or an instrument's own measure, run as the command its declaration names, with
+ * the instance as the working directory and the grader's file resolved under the definition. It reads the instance's
+ * outputs and the fixture's ground truth and writes one JSON object per line, `{ metric, value, observation? }`. Its
+ * exit code and its output are the only things read: it never sees a unit's report, and it is never a model.
+ */
+export interface DeclaredGrader {
+  declaration: MetricDeclaration;
+  /** The grader's file, relative to the definition root: the argv entry the fingerprint hashes. */
+  file: string;
+}
+
+const DEFAULT_GRADER_TIMEOUT_MS = 120_000;
+
+/** The argv as the host runs it: the declared file entry made absolute under the definition, everything else as declared. */
+export function graderArgv(root: string, grader: DeclaredGrader): string[] {
+  let replaced = false;
+  return grader.declaration.grader.argv.map((entry) => {
+    if (replaced || path.isAbsolute(entry) || path.relative(root, path.resolve(root, entry)) !== grader.file.split("/").join(path.sep)) return entry;
+    replaced = true;
+    return path.resolve(root, grader.file);
+  });
+}
+
+/**
+ * Run every declared grader the suite pre-registered, once per distinct command, and return one verdict per declared
+ * metric. A grader that exits non-zero, writes a line that is not a grader output, measures a metric it was not declared
+ * for, or emits nothing for a metric it was declared for, fails the run loudly: a declared measurement that could not be
+ * taken is not a zero.
+ */
+export async function runDeclaredGraders(exec: Exec, options: { root: string; instance: string; graders: readonly DeclaredGrader[] }): Promise<GraderVerdict[]> {
+  const byCommand = new Map<string, DeclaredGrader[]>();
+  for (const g of options.graders) {
+    const key = JSON.stringify(graderArgv(options.root, g));
+    byCommand.set(key, [...(byCommand.get(key) ?? []), g]);
+  }
+  const verdicts = new Map<string, GraderVerdict>();
+  for (const group of byCommand.values()) {
+    const first = group[0]!;
+    const argv = graderArgv(options.root, first);
+    const label = `declared grader \`${first.declaration.grader.argv.join(" ")}\` (${first.file})`;
+    const timeout = Math.max(...group.map((g) => g.declaration.grader.timeoutMs ?? DEFAULT_GRADER_TIMEOUT_MS));
+    const result = await exec(argv[0]!, argv.slice(1), { cwd: options.instance, timeout });
+    if (result.code !== 0) throw new Error(`${label} exited ${result.code}: ${result.stderr.trim().split("\n").slice(-5).join("\n") || "(no stderr)"}`);
+    const expected = new Set(group.map((g) => g.declaration.name));
+    for (const line of result.stdout.split("\n").map((l) => l.trim()).filter(Boolean)) {
+      let parsed: unknown;
+      try { parsed = JSON.parse(line); } catch { throw new Error(`${label} wrote a line that is not JSON: ${line.slice(0, 200)}`); }
+      if (!Value.Check(GraderOutputSchema, parsed)) throw new Error(`${label} wrote a line that is not a grader output ({ metric, value, observation? }): ${line.slice(0, 200)}`);
+      if (!expected.has(parsed.metric)) throw new Error(`${label} measured "${parsed.metric}", which it was not declared for (declared: ${[...expected].join(", ")})`);
+      if (verdicts.has(parsed.metric)) throw new Error(`${label} measured "${parsed.metric}" twice`);
+      verdicts.set(parsed.metric, { grader: parsed.metric, kind: "declared", value: parsed.value, observation: parsed.observation ?? `${path.basename(first.file)} emitted ${parsed.value} with no observation` });
+    }
+    for (const g of group) if (!verdicts.has(g.declaration.name)) throw new Error(`${label} emitted no value for "${g.declaration.name}", which it was declared to measure`);
+  }
+  return options.graders.map((g) => verdicts.get(g.declaration.name)!);
+}

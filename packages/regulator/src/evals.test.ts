@@ -3,7 +3,7 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isUninterpreted, metricNames, type EvalRun } from "@metacoding.io/regulator-protocol";
+import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, declaredMetrics, isEvalReport, isUninterpreted, metricNames, type EvalReport, type EvalRun } from "@metacoding.io/regulator-protocol";
 import { checkDefinition, loadRegistry } from "@metacoding.io/regulator-core";
 import { EVALS_DIR, ablationCoverage, loadSuite, runSuite, workloadForArm } from "./evals.js";
 import { BEHAVIOURS, scriptedDispatchers } from "./evals-scripted.js";
@@ -142,6 +142,53 @@ test("the committed reports validate, report on the committed suite, and carry a
     assert.ok(!isUninterpreted(report), `${file}: not the placeholder regulator eval writes without --interpretation`);
     assert.match(report.fingerprint.harnessRevision, /^[0-9a-f]{40}$/);
   }
+});
+
+test("the fifteen built-ins are unchanged: every committed drift report re-summarizes byte-identical from its own runs under the new code, and re-serializes to the bytes on disk", async () => {
+  const { readdir } = await import("node:fs/promises");
+  const { lifts, summarizeArms } = await import("@metacoding.io/regulator-core");
+  const suite = await suiteP;
+  assert.deepEqual(declaredMetrics(suite.metrics), [], "the drift suite declares nothing new; its fifteen are the built-in set");
+  const dir = path.join(EVALS_DIR, "reports");
+  for (const file of (await readdir(dir)).filter((f) => f.endsWith(".json")).sort()) {
+    const bytes = await readFile(path.join(dir, file), "utf8");
+    const report = JSON.parse(bytes) as EvalReport;
+    assert.ok(isEvalReport(report), `${file} validates under the schema that now carries declared metrics`);
+    const arms = summarizeArms(report.runs, metricNames(suite.metrics));
+    assert.deepEqual(arms, report.arms, `${file}: the per-arm summaries regenerate from the committed runs`);
+    assert.deepEqual(lifts(arms, suite.baseline), report.lifts, `${file}: the lifts regenerate`);
+    assert.equal(`${JSON.stringify({ ...report, arms, lifts: lifts(arms, suite.baseline) }, null, 2)}\n`, bytes, `${file}: byte-identical`);
+    assert.ok(report.runs.every((r) => r.graders.every((g) => g.kind !== "declared")), `${file}: no declared grader ran`);
+    assert.equal(report.fingerprint.graders, undefined, `${file}: the fingerprint names no declared grader`);
+  }
+});
+
+test("a declared grader is a command the host runs in the instance after a unit: its file is resolved under the definition, its lines are read as { metric, value, observation? } and nothing else, and a grader that fails, measures what it was not declared for or emits nothing for what it was is refused, not zeroed", async (t) => {
+  const { runDeclaredGraders, graderArgv } = await import("./graders.js");
+  const root = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  const instance = await mkdtemp(path.join(tmpdir(), "regulator-instance-"));
+  t.after(() => Promise.all([rm(root, { recursive: true, force: true }), rm(instance, { recursive: true, force: true })]));
+  await mkdir(path.join(root, "workload", "pf"), { recursive: true });
+  await writeFile(path.join(instance, "size.txt"), "four\n", "utf8");
+  // The grader reads the instance (its working directory) and the file under the definition it ran from; the argument after the file is the metric it serves.
+  await writeFile(path.join(root, "workload", "pf", "size.mjs"), `import { readFileSync } from "node:fs";\nconst text = readFileSync("size.txt", "utf8").trim();\nfor (const metric of process.argv.slice(2)) process.stdout.write(JSON.stringify({ metric, value: text.length, ...(metric.endsWith("/chars") ? { observation: \`"\${text}" is \${text.length} characters\` } : {}) }) + "\\n");\n`, "utf8");
+  await writeFile(path.join(root, "workload", "pf", "broken.mjs"), "process.stderr.write('no ground truth here\\n'); process.exit(3);\n", "utf8");
+  await writeFile(path.join(root, "workload", "pf", "prose.mjs"), "process.stdout.write('the size is four\\n');\n", "utf8");
+  const declare = (name: string, argv: string[]) => ({ declaration: { name, description: "d", kind: "count" as const, direction: "none" as const, grader: { argv } }, file: argv.find((a) => a.endsWith(".mjs"))! });
+  const chars = declare("workload:pf/chars", ["node", "workload/pf/size.mjs", "workload:pf/chars"]);
+  assert.deepEqual(graderArgv(root, chars), ["node", path.join(root, "workload", "pf", "size.mjs"), "workload:pf/chars"], "the file entry is made absolute under the definition; the rest is as declared");
+  assert.deepEqual(await runDeclaredGraders(gitExec, { root, instance, graders: [chars] }), [{ grader: "workload:pf/chars", kind: "declared", value: 4, observation: '"four" is 4 characters' }]);
+  const bytes = declare("workload:pf/bytes", ["node", "workload/pf/size.mjs", "workload:pf/bytes"]);
+  assert.deepEqual((await runDeclaredGraders(gitExec, { root, instance, graders: [bytes] }))[0]!.observation, "size.mjs emitted 4 with no observation", "an observation is optional in the output and never empty in the verdict");
+  // One command declared for two metrics runs once and serves both; the verdicts come back in declaration order.
+  const both = declare("workload:pf/both", ["node", "workload/pf/size.mjs", "workload:pf/chars", "workload:pf/both"]);
+  const charsViaBoth = { ...chars, declaration: { ...chars.declaration, grader: both.declaration.grader } };
+  assert.deepEqual((await runDeclaredGraders(gitExec, { root, instance, graders: [both, charsViaBoth] })).map((v) => [v.grader, v.value]), [["workload:pf/both", 4], ["workload:pf/chars", 4]]);
+  await assert.rejects(runDeclaredGraders(gitExec, { root, instance, graders: [declare("workload:pf/chars", ["node", "workload/pf/broken.mjs"])] }), /declared grader `node workload\/pf\/broken.mjs` \(workload\/pf\/broken.mjs\) exited 3: no ground truth here/);
+  await assert.rejects(runDeclaredGraders(gitExec, { root, instance, graders: [declare("workload:pf/chars", ["node", "workload/pf/prose.mjs"])] }), /wrote a line that is not JSON: the size is four/);
+  await assert.rejects(runDeclaredGraders(gitExec, { root, instance, graders: [declare("workload:pf/chars", ["node", "workload/pf/size.mjs", "workload:pf/other"])] }), /measured "workload:pf\/other", which it was not declared for \(declared: workload:pf\/chars\)/);
+  await assert.rejects(runDeclaredGraders(gitExec, { root, instance, graders: [declare("workload:pf/chars", ["node", "workload/pf/size.mjs"])] }), /emitted no value for "workload:pf\/chars", which it was declared to measure/);
+  await assert.rejects(runDeclaredGraders(gitExec, { root, instance, graders: [declare("workload:pf/chars", ["node", "workload/pf/size.mjs", "closed"])] }), /not a grader output/, "a built-in name is never a grader's to emit");
 });
 
 test("regulator check refuses a committed report that still carries the placeholder interpretation", async (t) => {
