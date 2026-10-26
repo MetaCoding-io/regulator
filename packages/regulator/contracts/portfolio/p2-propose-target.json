@@ -1,0 +1,69 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p2-propose-target",
+  "unitId": "p2-propose-target",
+  "unitType": "propose-target",
+  "objective": "Propose September's target: write targets/2026-09-30.json in the shape of targets/2026-08-31.json — the weight of each ETF the portfolio holds — feasible under benchmark.json's subsets and tolerances.",
+  "contribution": "The one judgment of the close, bounded: the target the rebalance is planned against. Its feasibility is the host's run of the portfolio's checks, not the unit's claim.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-universe",
+      "subject": "the universe",
+      "decision": "A target names only tickers universe.json names; the universe and its exchangeable sets are not extended by a unit.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-benchmark",
+      "subject": "the benchmark subsets",
+      "decision": "Each subset of benchmark.json stays within its tolerance of the benchmark's weight for it; benchmark.json is not edited.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-feasible",
+      "subject": "the constraint classes",
+      "decision": "The target is long-only and its weights sum to one.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-band",
+      "subject": "the band",
+      "decision": "The band is benchmark.json's 0.02, the maximum deviation from the target any position lands at after a rebalance, as a fraction of the portfolio's value. The target carries weights only; a unit does not write the band it is checked against.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-inputs",
+      "subject": "the expected-return inputs",
+      "bounds": "No view has been raised this period, so the inputs are the benchmark's own weights read as the equilibrium; a tilt from them stays inside every subset's tolerance. Report the inputs used and the reason for any tilt."
+    }
+  ],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the target is long-only, sums to one, names only the universe, and holds each benchmark subset within its tolerance",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

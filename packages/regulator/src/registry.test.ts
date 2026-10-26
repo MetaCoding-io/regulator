@@ -119,8 +119,8 @@ test("the committed definition passes the definition check: profiles, workload, 
   const { checkDefinition } = await import("@metacoding.io/regulator-core");
   const definition = await checkDefinition(labRoot);
   assert.deepEqual(definition.problems, []);
-  assert.deepEqual(definition.profiles.map((p) => p.name), ["auditor", "bookkeeper", "implement", "intelligence", "research"]);
-  assert.deepEqual(definition.workloads.map((w) => w.name), ["personal-finance", "software-development"], "two workloads; the loop is generic over them");
+  assert.deepEqual(definition.profiles.map((p) => p.name), ["auditor", "bookkeeper", "implement", "intelligence", "manager", "research"]);
+  assert.deepEqual(definition.workloads.map((w) => w.name), ["personal-finance", "portfolio", "software-development"], "three workloads; the loop is generic over them");
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
   assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);

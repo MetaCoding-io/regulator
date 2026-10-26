@@ -1,0 +1,45 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p4-review",
+  "unitId": "p4-review",
+  "unitType": "review",
+  "objective": "Review September 2026: read lots/, targets/2026-09-30.json, trades/pending/2026-09-30.json and reports/2026-09.md against positions/2026-09-30 and prices/2026-09-30, and report every number that does not agree and every open item the period carries.",
+  "contribution": "An independent reading before the period closes. The host runs the portfolio's checks at closeout; this unit's report is the human-readable account of the same arithmetic.",
+  "constraintRefs": [
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-custodian",
+      "subject": "the custodian's exports",
+      "decision": "positions/ and prices/ are the custodian's record and are not edited; when the lots and the positions disagree, the lots change.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [],
+  "unresolved": [
+    {
+      "id": "u-vnq",
+      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
+      "reason": "Nobody has said what it is or what it cost; the review carries it, it does not settle it.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — every target feasible, every pending list inside its band with no wash sale, the lots reconciled, the report's return the positions' own",
+      "class": "test",
+      "required": true
+    }
+  ]
+}

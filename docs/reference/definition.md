@@ -26,8 +26,10 @@ behaviour lives.
 
 The shipped `software-development` workload declares the unit types `plan`, `research`,
 `implement`, `verify`, `integrate` and `close`. The `personal-finance` workload declares
-the monthly close over a ledger. A contract is loaded together with the workload it
-names, so one instance may run several workloads.
+the monthly close over a ledger, and the `portfolio` workload the period close of a
+portfolio under management. A contract is loaded together with the workload it names,
+so one instance may run several workloads. [Authoring a workload](/guide/authoring-a-workload)
+says what a new one declares.
 
 A unit type and the profile it runs under are named separately on purpose, and the
 names do not line up one to one. In the shipped workload, `implement` and `integrate`

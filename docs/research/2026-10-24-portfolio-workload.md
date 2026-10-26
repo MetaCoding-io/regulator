@@ -1,8 +1,12 @@
 # A portfolio under management as the third workload
 
-- **Status:** graduated: Phase 1 is [#120](https://github.com/MetaCoding-io/regulator/issues/120) (`roadmap:0.3`, under
-  [#61](https://github.com/MetaCoding-io/regulator/issues/61)); Phase 2's four items are filed as [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#122](https://github.com/MetaCoding-io/regulator/issues/122),
-  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), waiting on #120; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
+- **Status:** Phase 1 landed ([#120](https://github.com/MetaCoding-io/regulator/issues/120), `roadmap:0.3`, under
+  [#61](https://github.com/MetaCoding-io/regulator/issues/61)): the fixture, its six checks, the workload, the `manager` profile, the four
+  contracts, the scripted close and the worked example ([`docs/examples/portfolio.md`](../examples/portfolio.md)),
+  with the authoring guide ([`docs/guide/authoring-a-workload.md`](../guide/authoring-a-workload.md)). What it found is in the
+  example's §5: the band lives in `benchmark.json` (a first draft had it in the target file, a unit's file), the harvest checks and the risk-tolerance check wait for their inputs, and
+  `plan-rebalance` runs as a session until #122. Phase 2's four items are filed as [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#122](https://github.com/MetaCoding-io/regulator/issues/122),
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
   blocked on the open-metric row and the prediction record. All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
   the designed slices are not lost.

@@ -50,7 +50,7 @@ async function close(repo: string, behaviour: FinanceBehaviour, unitIds: string[
 test("the definition declares the second workload: personal-finance runs under the bookkeeper and auditor profiles, the finance policy budgets its unit types, and the check passes with both workloads", async () => {
   const checked = await checkDefinition(LAB_ROOT);
   assert.deepEqual(checked.problems, []);
-  assert.deepEqual(checked.workloads.map((w) => w.name).sort(), ["personal-finance", "software-development"]);
+  assert.deepEqual(checked.workloads.map((w) => w.name).sort(), ["personal-finance", "portfolio", "software-development"]);
   const finance = checked.workloads.find((w) => w.name === "personal-finance")!;
   assert.deepEqual(finance.unitTypes.map((u) => [u.name, u.profile]), [["ingest", "bookkeeper"], ["categorize", "bookkeeper"], ["reconcile", "auditor"], ["report", "bookkeeper"], ["prepare-payment", "bookkeeper"], ["close", "auditor"]]);
   assert.equal(isReadOnlyProfile(PROFILES.auditor!), true, "the auditor grants nothing with a write, execution or side effect");
