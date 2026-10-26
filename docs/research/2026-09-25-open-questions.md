@@ -155,7 +155,9 @@ not only whole figures, so an embedding is a composition and not a copy. The
 hand-written script that draws the reflector pair
 ([`figures/2026-10-18-reflector-figures.py`](figures/2026-10-18-reflector-figures.py))
 is the first consumer: its instance box becomes the generated fragment when that exists.
-The website copies a composed figure the way it copies a generated one. "Only author of a
+The website copies a composed figure the way it copies a generated one. The fragment
+contract, the cards on generated figures and `docs --write` for the SVGs are
+[#147](https://github.com/MetaCoding-io/regulator/issues/147). "Only author of a
 figure" in the decision above reads, from here, as "only author of a figure of what
 exists".
 
