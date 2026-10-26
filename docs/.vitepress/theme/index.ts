@@ -1,12 +1,14 @@
 /**
- * The default theme plus one control: a button at the left edge that folds the
- * sidebar away and gives the page its width. The choice is remembered per browser.
- * Nothing else about the default theme changes; the button renders only where a
- * sidebar exists and only at widths where the sidebar is shown.
+ * The default theme plus two things: a button at the left edge that folds the
+ * sidebar away and gives the page its width (remembered per browser), and cards on a
+ * figure's hotspots (see figure-tooltips.ts). Nothing else about the default theme
+ * changes; the button renders only where a sidebar exists and only at widths where
+ * the sidebar is shown.
  */
 import DefaultTheme from "vitepress/theme";
 import { useSidebar } from "vitepress/theme";
 import { defineComponent, h, onMounted, ref } from "vue";
+import { installFigureTooltips } from "./figure-tooltips";
 import "./custom.css";
 
 const STORAGE_KEY = "regulator-docs:sidebar-hidden";
@@ -41,4 +43,7 @@ const SidebarToggle = defineComponent({
 export default {
   extends: DefaultTheme,
   Layout: () => h(DefaultTheme.Layout, null, { "layout-bottom": () => h(SidebarToggle) }),
+  setup() {
+    onMounted(installFigureTooltips);
+  },
 };

@@ -55,3 +55,37 @@
 @media (min-width: 1600px) {
   html:root { --vp-layout-max-width: 1760px; }
 }
+
+/*
+ * Figure hotspots and their cards. A generated figure marks each component and edge as
+ * a `.fig-hot` group carrying its own card; figure-tooltips.ts opens the card on hover,
+ * focus or tap. The highlight recolours the group's own shapes, not the hit path.
+ */
+.fig-hot { cursor: help; outline: none; }
+.fig-hot:hover > rect,
+.fig-hot:focus-visible > rect,
+.fig-hot[aria-expanded="true"] > rect { stroke: var(--vp-c-brand-1); stroke-width: 2; }
+.fig-hot:hover > text,
+.fig-hot:focus-visible > text,
+.fig-hot[aria-expanded="true"] > text { fill: var(--vp-c-brand-1); }
+.fig-hot:hover > line, .fig-hot:hover > path:not([stroke="transparent"]),
+.fig-hot:focus-visible > line, .fig-hot:focus-visible > path:not([stroke="transparent"]),
+.fig-hot[aria-expanded="true"] > line, .fig-hot[aria-expanded="true"] > path:not([stroke="transparent"]) { stroke: var(--vp-c-brand-1); }
+
+.fig-pop {
+  position: absolute;
+  z-index: 60;
+  background: var(--vp-c-bg-elv);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  box-shadow: var(--vp-shadow-3);
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--vp-c-text-2);
+}
+.fig-pop .fig-pop-term { font-weight: 600; font-size: 13px; color: var(--vp-c-text-1); margin-bottom: 5px; }
+.fig-pop .fig-pop-def { margin-bottom: 8px; }
+.fig-pop code { font-family: var(--vp-font-family-mono); font-size: 0.9em; color: var(--vp-c-text-1); }
+.fig-pop .fig-pop-more { font-size: 12px; color: var(--vp-c-brand-1); text-decoration: none; }
+.fig-pop .fig-pop-more:hover { text-decoration: underline; }
