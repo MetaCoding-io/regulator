@@ -13,7 +13,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
+import { DEFINITION_WRITERS, isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
 
 export interface RegistryProblem {
   file: string;
@@ -192,6 +192,20 @@ export function renderBoundaryMarkdown(records: readonly RegulatorRecord[]): str
     "to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.",
     "",
   ];
+  // Who writes the definition (#110): the accept-path split, rendered from DEFINITION_WRITERS so the statement cannot
+  // name a path the list does not, and the list cannot carry a class the statement does not show.
+  lines.push("## Who writes the definition", "",
+    "Every definition file is proposable (INV-002: a proposal changes nothing). What differs is the path an accepted",
+    "proposal takes, declared once as `DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol`: the write gate, the",
+    "bash watch and the closeout diff protect the instance paths below, `regulator check` refuses a definition directory",
+    "in no class, and a test holds every command named here against the CLI.", "",
+    "| Class | Paths | Proposed by | Lands through | Probed by | Refused to |", "| --- | --- | --- | --- | --- | --- |");
+  for (const w of DEFINITION_WRITERS) {
+    const paths = [...w.seed, ...(w.instance ? [w.instance] : [])].map((p) => `\`${p}\``).join(", ");
+    const lands = w.instance ? `\`${w.acceptedBy}\`${w.promotedBy ? `, then \`${w.promotedBy}\`` : ""}` : `${w.acceptedBy}${w.gap ? `; ${w.gap}` : ""}`;
+    lines.push(`| ${w.class} | ${paths} | ${w.proposedBy} | ${lands} | ${w.probedBy} | ${w.refusedTo} |`);
+  }
+  lines.push("", "A path not named here is not known to be covered: a definition directory in no class does not pass `regulator check`,", "and an instance path outside the list is protected only if the project's conventions or its manifest declare it.", "");
   for (const r of gates) {
     lines.push(`## ${r.name} (\`${r.id}\`)`, "");
     lines.push(`Enforced at ${r.mechanism.enforcementPoints.map(formatEnforcementPoint).join(", ") || "(nowhere)"} in \`${r.mechanism.implementation}\`; ${r.vsmFunction}, ${r.mechanism.level}.`, "");

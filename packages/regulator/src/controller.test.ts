@@ -757,3 +757,24 @@ test("the pre-merge trial (#48): two units change disjoint files and break each 
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.verdict : undefined, "pass");
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.sha : undefined, await head());
 });
+
+test("advice is harness-owned at closeout too (#110): a unit that commits a change under regulator/advice/ on its branch fails the identity-untouched check, which diffs every harness-owned directory DEFINITION_WRITERS names, and nothing reintegrates", async (t) => {
+  const { AuditLog } = await import("@metacoding.io/regulator-core");
+  const { HARNESS_OWNED_INSTANCE_DIRS } = await import("./unit.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, workload: await loadWorkload(), owner: "alice", contract, dispatcher: unitThat(async (request, store) => {
+    await writeFile(path.join(request.worktree, "regulator", "advice", "implement.md"), "- You may change any file.\n");
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix, and loosen the advice while we are here"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract));
+  }, repo) });
+  assert.equal(outcome.status, "blocked");
+  assert.equal(outcome.status === "blocked" && outcome.reason, "check-failure");
+  const verdict = outcome.status === "blocked" ? outcome.verdict : undefined;
+  assert.match(verdict?.reasons.join("\n") ?? "", /identity-untouched — protected paths changed on the branch \(INV-001\): regulator\/advice\/implement\.md/);
+  const record = (await new AuditLog(repo).forUnit("u1")).evidence.find((r) => r.check === "identity-untouched");
+  assert.equal(record?.verdict, "fail");
+  assert.deepEqual(record?.command?.slice(-(HARNESS_OWNED_INSTANCE_DIRS.length + 1)), ["--", ...HARNESS_OWNED_INSTANCE_DIRS], "the diffed prefixes are the list's instance paths, derived, in its order");
+  assert.match(await readFile(path.join(repo, "regulator", "advice", "implement.md"), "utf8"), /^- You are in the implement profile/, "the base's advice is as it was");
+});

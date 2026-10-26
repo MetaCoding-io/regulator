@@ -48,11 +48,13 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
 `init` does five things and commits them on your branch:
 
 1. It seeds the identity under `regulator/identity/`: `IDENTITY.md`, `INVARIANTS.md`,
-   `GLOSSARY.md` and `BOUNDARIES.md`, the files no unit may write.
+   `GLOSSARY.md` and `BOUNDARIES.md`, the files no unit may write; and beside it the
+   profiles' advice under `regulator/advice/`, one file per profile, protected the same
+   way.
 2. It adds `.regulator/` to `.gitignore`, because that directory holds the instance's
    state and is never source.
-3. It records any credential-looking value found in a committed `.env` as a *canary*,
-   and every tool result is then watched for that value.
+3. It records any credential-looking value found in a committed `.env` as a *credential
+   canary*, and every tool result is then watched for that value.
 4. It writes the instance manifest, `.regulator/instance.json`. The manifest records
    which definition the instance runs, at which revision, under which Pi, when it was
    initialized and by whom (`--by`, or else your user and host), and the layout you
@@ -62,8 +64,8 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
 
 `--writable` names the paths where the implement profile may write directly; the
 profile's own default is `src/` and `test/`. `--protected` adds to the set of paths under
-which the closeout refuses to accept a change. `regulator/identity/` is always protected,
-and so is `vendor/` whenever it exists.
+which the closeout refuses to accept a change. `regulator/identity/` and
+`regulator/advice/` are always protected, and so is `vendor/` whenever it exists.
 
 ## Declare who may answer
 

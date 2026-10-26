@@ -1,0 +1,38 @@
+{
+  "id": "reg.identity.definition-writers.v1",
+  "name": "Definition writers (the accept-path split)",
+  "status": "active",
+  "vsmFunction": "S5",
+  "purpose": "Declare once which definition files land through which accept path, and refuse a definition that has a directory in no class. `DEFINITION_WRITERS` in protocol names three classes — identity (`identity/`, `regulator/identity/`, `identity accept | promote`), advice (`advice/`, `regulator/advice/`, `advice accept | promote`) and the declaration (profiles, workloads, policies, evals, contracts, the registry and the fixtures, a merged change) — with what proposes, probes and is refused for each. `checkDefinition` refuses a directory under the definition root in no class, so a new kind of file is declared before anything reads it; the write gate, the bash watch and the closeout's diffed prefixes derive their protected set from the list's instance paths instead of restating them; `regulator docs` renders the list into BOUNDARY.md as \"Who writes the definition\"; and a test holds every command the list names against `ENFORCEMENT_POINTS.cli`. Mirrors definition-check for the question the definition check did not ask: not whether the parts resolve, but who may write each one.",
+  "absorbs": {
+    "failureClass": "assembled-not-declared",
+    "description": "A new directory appears under the definition — skills, prompts, a second advice set — and is read by an extension, with nobody having said whether a unit may propose against it, which command lands an accepted proposal, or whether the instance protects a copy; the accept paths are whatever each command happens to write."
+  },
+  "mechanism": {
+    "level": "deterministic-gate",
+    "implementation": "../protocol/src/definition-writers.ts",
+    "enforcementPoints": [
+      {"where": "check", "point": "checkDefinition", "note": "a definition directory in no class of DEFINITION_WRITERS is refused (src/, dist/ and node_modules/ are the package's, not the definition's)"},
+      {"where": "cli", "point": "check", "note": "under pnpm check and regulator check"},
+      {"where": "cli", "point": "docs", "note": "renderBoundaryMarkdown: the \"Who writes the definition\" section from the list"}
+    ]
+  },
+  "channels": { "consumes": ["the definition root's directories", "DEFINITION_WRITERS"], "emits": ["definition problems (exit 1)", "BOUNDARY.md § Who writes the definition"] },
+  "scope": { "subjects": ["definition"], "resources": ["packages/regulator", "regulator/identity/", "regulator/advice/"] },
+  "cost": { "description": "One readdir of the definition root in CI; no model calls." },
+  "authority": {
+    "may": ["refuse a definition directory in no class", "be the one source the gate, the bash watch and the closeout derive their protected set from", "render the split into BOUNDARY.md"],
+    "mayNot": ["change a file", "accept or promote anything (the classes' commands do)", "judge whether a path is a good one"]
+  },
+  "evidence": { "tests": ["../protocol/src/definition-writers.test.ts", "../core/src/definition.test.ts", "../regulator-pi/src/authority.test.ts", "src/controller.test.ts", "src/registry.test.ts"] },
+  "limitations": [
+    "The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).",
+    "Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.",
+    "It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.",
+    "A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split."
+  ],
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-10-25", "reviewBy": "2026-12-01" },
+  "ablation": {"switch": "none", "note": "A check on the definition and a constant the gates derive from, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against."},
+  "retirement": {"condition": "Never: a definition whose writers are not declared is assembled. The declaration row's gap retires when the definition's repository runs under the loop."},
+  "introducedIn": "unreleased"
+}

@@ -2,16 +2,19 @@
 
 `regulator init` creates the layout below in a repository, and the loop writes into it
 as units run. The repository itself is the domain. `.regulator/` holds the instance's
-state and is ignored by git. `regulator/identity/` is the one harness-owned directory
-that is committed.
+state and is ignored by git. `regulator/identity/` and `regulator/advice/` are the two
+harness-owned directories that are committed; they are the instance paths of the two
+seeded classes of `DEFINITION_WRITERS`, and every gate that protects them derives its
+list from there.
 
 ## In the repository
 
 | Path | Owner | What |
 | --- | --- | --- |
 | `regulator/identity/IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md`, `BOUNDARIES.md` | S5 | the instance's identity, seeded from the definition and committed on the base branch. It is protected by the write gate, by the bash snapshot-and-restore and by the `identity-untouched` check, and only `identity accept` writes it |
+| `regulator/advice/<profile>.md`, one per declared profile | S5 | what every unit of the profile is told beyond its grant, seeded from the definition's `advice/` and committed with the identity. Protected by the same three mechanisms, rendered into the session by the profiles extension and cut at the policy's `advice.maxChars`, and only `advice accept` writes it |
 | `.gitignore` | `init` | gains the `.regulator/` line |
-| `.env` (if committed) | the project | any credential-looking value in it is recorded as a canary and watched for in every tool result |
+| `.env` (if committed) | the project | any credential-looking value in it is recorded as a credential canary and watched for in every tool result |
 
 ## Under `.regulator/`
 
@@ -29,7 +32,7 @@ that is committed.
 | `memory.ndjson` | regulatory | operational memory: facts with provenance and expiry, and their retractions, scoped by unit type |
 | `outbox` | delivery | one line per delivery of an obligation owed to a person. `watch` forwards new lines to a channel command, and `REGULATOR_OUTBOX` moves the file |
 | `outbox.cursor` | delivery | how far `watch` has forwarded, so that a restart forwards nothing twice |
-| `canaries` | manifest | the credential-looking values `init` found in a committed `.env`, one per line. They are watched for in every tool result and redacted from spans |
+| `canaries` | manifest | the credential canaries: the credential-looking values `init` found in a committed `.env`, one per line. They are watched for in every tool result and redacted from spans |
 
 Execution state and regulatory state live in different stores on purpose. The loop
 decides what a unit may do next by reading the regulatory log, and the regulators never
@@ -53,7 +56,7 @@ one recorded shows as `definition-drift` in `doctor` until a person upgrades.
 | `definition.harnessRevision` | the definition's git revision at init. A later revision shows as `definition-drift` in `doctor` |
 | `definition.pi` | the Pi version the definition pins |
 | `writablePaths[]` | optional. Where the implement profile may write in this repository, in place of its own default |
-| `protectedPaths[]` | optional. Prefixes the closeout refuses a change under, in addition to `regulator/identity/` and the discovered conventions |
+| `protectedPaths[]` | optional. Prefixes the closeout refuses a change under, in addition to the harness-owned directories (`regulator/identity/`, `regulator/advice/`) and the discovered conventions |
 | `initializedAt`, `initializedBy` | when the instance was initialized and by whom: the `--by` given, or else the user and host. This is recorded as provenance and is not checked against the interaction policy |
 
 ## Environment

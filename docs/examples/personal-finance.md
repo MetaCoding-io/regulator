@@ -376,7 +376,7 @@ show the following.
   → closeout refused by the ledger's checks and by `identity-untouched` → the finding
   owed to S3 → the router's repair → attempt 2 → verified → reintegrated, each step with
   its why from the records and the regulator that produced them.
-- The instances view has the ledger's manifest line (`definition regulator at <rev> · 45
+- The instances view has the ledger's manifest line (`definition regulator at <rev> · 49
   regulators · pi 0.87.0 · initialized by alice · writable ledger/, reports/,
   payments/pending/ · protected statements/, payments/executed/`), then six units with
   their status, attempts, budget, verdict and what is owed, the consent obligation with

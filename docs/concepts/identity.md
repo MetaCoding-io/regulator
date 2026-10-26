@@ -10,6 +10,14 @@ under `regulator/identity/`:
 | `BOUNDARIES.md` | what the system does not do |
 | `GLOSSARY.md` | what its words mean, and the words it does not use |
 
+Beside the identity sits a second seeded file set, the profiles' advice: one committed
+file per profile under `regulator/advice/`, what every unit of that profile is told
+beyond its grant. It is not identity, but it is held by the same layers, written only by
+its own accept command, and declared in the same place: `DEFINITION_WRITERS` names the
+two seeded classes, identity and advice, and the declaration class that is the rest of
+the definition. Where this page says "the identity" of a layer, read the harness-owned
+directories, both of them.
+
 The shipped seed declares four invariants, and the first two are about identity itself.
 INV-001 says that identity is write-protected. INV-002 says that a proposal is not
 policy. INV-003 says that audit is independent of self-report, and INV-004 says that
@@ -29,8 +37,8 @@ gets past a layer, which is why the next one exists.
 | Layer | When | What it does | What gets past it |
 | --- | --- | --- | --- |
 | **Trust rule** | building the session | loads only the extensions the definition declares. A project's own `.pi/` extensions, skills, prompt templates and context files (`AGENTS.md`) never reach a unit's session | instructions inside the project's ordinary files, which the unit reads with its tools |
-| **Identity in context** | every run (`before_agent_start`) | renders the identity from the files into the system prompt | everything, because the rendered identity is advice (level 5) |
-| **Write gate** | every `write` and `edit` | refuses the identity, the committed S5 artifacts, the project's protected paths and their parents, through any spelling, traversal or filesystem alias (symbolic link, hard link, non-directory parent). The tool writes exactly the normalized path it checked, and the gate fails closed | the shell, which no hook can sandbox |
+| **Identity in context** | every run (`before_agent_start`) | renders the identity from the files into the system prompt; the profiles extension renders the profile's advice file the same way, beside the grant | everything, because the rendered identity and advice are advice (level 5) |
+| **Write gate** | every `write` and `edit` | refuses the harness-owned directories (`regulator/identity/`, `regulator/advice/`), the committed S5 artifacts, the project's protected paths and their parents, through any spelling, traversal or filesystem alias (symbolic link, hard link, non-directory parent). The tool writes exactly the normalized path it checked, and the gate fails closed | the shell, which no hook can sandbox |
 | **Bash watch** | around every `bash` call | snapshots the protected files before the command and compares them after. A change is restored from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001 | a commit the command made, a copy of the repository elsewhere, and a link swapped in between the check and the write |
 | **`identity-untouched`** | closeout, before reintegration | the host diffs the unit's branch against its base under every protected prefix. Any change, by any route, is failing evidence, and the unit does not close | nothing on the branch. This layer detects a change after the attempt; it prevents none |
 
@@ -64,6 +72,7 @@ declares as well:
 | Path | Write gate and bash watch | `identity-untouched` at closeout |
 | --- | --- | --- |
 | `regulator/identity/` | yes | yes |
+| `regulator/advice/` | yes | yes |
 | committed S5 artifacts under `vsm/` | yes | not unless the manifest lists them |
 | `vendor/`, when the project has one | yes | yes |
 | further prefixes the [instance manifest](/reference/instance#the-manifest) declares as protected | no | yes |
@@ -100,15 +109,59 @@ The [CLI reference](/reference/cli) has the exact arguments. Decisions flow from
 instance to definition, by a person, on the record. Nothing flows the other way by
 itself.
 
-## Protected values: the canary watch
+Advice takes the same three steps through its own commands. A proposal names the file
+by path (`regulator/advice/<profile>.md`); `regulator advice accept` writes the
+instance's copy under S5 authority and refuses, in order, a proposal not owed to S5, a
+person who may not act as S5, a dirty checkout, a `--file` that is not a declared
+profile's advice file or not the one the proposal named, and content that is empty or
+over the policy's `advice.maxChars`; `advice reject` changes nothing; `advice promote`
+carries the file to the seed. The two paths are separate on purpose: `identity accept`
+takes its file from a closed list of four, `advice accept` from the declared profiles,
+and neither can write the other's directory or a profile's grant. A grant, a unit type,
+a check or a policy changes only by a merged change to the definition's repository, and
+the [enforcement boundary](/reference/boundary) renders the three classes as *Who writes
+the definition*.
 
-The same checkpoint protects one other kind of state. `regulator init` records canary
-values, which are credential-looking values taken from a committed `.env`. The canary
-watch then looks for them in every tool result and in the model's own text. A canary
-found in a tool result is redacted before the model sees it and recorded as a critical
-audit finding. A canary the model itself writes cannot be unsaid, so it is recorded.
-This measures whether an exposure path exists. It does not guarantee that every secret
-is safe.
+## Protected values: the credential canary watch
+
+The same checkpoint protects one other kind of state. `regulator init` records
+*credential canaries*, which are credential-looking values taken from a committed `.env`.
+The credential canary watch then looks for them in every tool result and in the model's
+own text. A canary found in a tool result is redacted before the model sees it and
+recorded as a critical audit finding. A canary the model itself writes cannot be unsaid,
+so it is recorded. This measures whether an exposure path exists. It does not guarantee
+that every secret is safe.
+
+A credential canary is a *presence* canary: a known value that must never appear, and
+its appearance is the alarm. The next section is the other polarity.
+
+## The behavioral canary
+
+Identity rendered from the files answers "has the model lost the rules?" with "it cannot:
+they are in every prompt". It does not answer "is the model still following them?", and
+that is a different question, because attention decays before competence does. A long
+session keeps answering fluently after it has stopped doing the small things it was asked
+to do, and the next thing it drops is a fixed decision or an invariant. The closeout
+catches that, at the cost of the attempt.
+
+The **behavioral canary** is an *absence* canary, the warrant canary's shape: a statement
+re-asserted every period, whose silence says that something upstream has changed. The
+budget policy declares it (`identity.canary`): a marker every reply must begin with, with
+`{unit}` standing for the unit id so the marker is the instance's and not one a model has
+seen, and the number of consecutive replies without it that count. The identity extension
+renders the rule as a prompt section of its own, outside the identity's character limit,
+and reads every assistant reply for the marker. A reply that begins with it is a hit. A
+reply with no text, tool calls only, is not a reply. A run of misses is recorded as an
+advisory `audit-finding` of class `context-degradation`, from the host to S3, and the
+session's status line says how long the silence is. The shipped `default` policy declares
+`[{unit}]` with two misses.
+
+The canary decides nothing. Under the shipped routing policy an advisory finding is noted
+as trace, and no recovery cause names a degraded session yet, so the fresh session the
+signal argues for is a person's call after reading the unit's record
+([`docs/DEBT.md`](../DEBT.md) row 42). The marker is a proxy: a model that keeps it and
+still hallucinates is not seen, and one that drops it for a harmless reason is. That is
+why the finding is advisory and why the registry record states what it does not catch.
 
 ## What is not there yet
 
@@ -135,11 +188,18 @@ ones that matter most:
   `operational-signal` per session records on the unit that it ran with part of its
   identity unseen. A deployment with a longer identity raises the limit in its policy
   instead of shortening the set.
-- The person deciding supplies the file. `identity accept` writes the file the person
-  points to. Nothing derives it from the proposal's requested change or diffs it against
-  the request.
+- The person deciding supplies the file. `identity accept` and `advice accept` write
+  the file the person points to. Nothing derives it from the proposal's requested change
+  or diffs it against the request.
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a
+  rule in disguise; the person's reading is the only pressure, and the file is cut at
+  `advice.maxChars` (4000 characters unless the policy says otherwise) with the cut
+  reported, never refused (`docs/DEBT.md` rows 43 and 46).
 - Names are asserted only. `--by` is checked against the interaction policy's grants,
   never against who is typing (`docs/DEBT.md` row 28).
-- Canaries are known values only. A secret the harness was not told about is not
-  watched, an encoded or paraphrased canary is not redacted, and network egress is not
-  watched at all.
+- Credential canaries are known values only. A secret the harness was not told about is
+  not watched, an encoded or paraphrased canary is not redacted, and network egress is
+  not watched at all.
+- The behavioral canary reads a prefix and records. A marker inside a code fence or after
+  a heading is a miss, a kept marker says nothing about the rest of the reply, and S3
+  does not act on the finding yet.

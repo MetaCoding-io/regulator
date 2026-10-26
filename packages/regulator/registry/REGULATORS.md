@@ -14,14 +14,18 @@ does not do. `since` is the package version that first shipped the record.
 
 | ID | Name | Function | Level | Status | Review by |
 | --- | --- | --- | --- | --- | --- |
+| `reg.identity.advice-context.v1` | Advice context | S5 | prompt | active | 2026-12-01 |
+| `reg.authority.advice-decision.v1` | Advice decision path | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.algedonic.delivery.v1` | Algedonic delivery | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.behavioral-canary.v1` | Behavioral canary | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.behaviour-check.v1` | Behaviour check (export-signature) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.canary-watch.v1` | Canary watch | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.canary-watch.v1` | Credential canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
 | `reg.identity.definition-check.v1` | Definition check | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.identity.definition-writers.v1` | Definition writers (the accept-path split) | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.disposition-authority.v1` | Disposition authority | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.doctor.v1` | Doctor (the operating check) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.effect-journal.v1` | Effect journal | S2 | deterministic-gate | active | 2026-12-01 |
@@ -30,8 +34,8 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.control.failure-observer.v1` | Failure observer | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.glossary-lint.v1` | Glossary lint | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.identity.identity-context.v1` | Identity context | S5 | prompt | active | 2026-12-01 |
-| `reg.authority.identity-promotion.v1` | Identity promotion (the release path) | S5 | deterministic-gate | active | 2026-12-01 |
-| `reg.audit.identity-untouched-check.v1` | Identity-untouched check | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.authority.identity-promotion.v1` | Identity and advice promotion (the release path) | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.audit.identity-untouched-check.v1` | Identity-untouched check (the instance's harness-owned files) | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.identity-write-gate.v1` | Identity write gate | S5 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.inherited-tests-check.v1` | Inherited tests check | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.identity.instance-manifest.v1` | Instance manifest (regulator init) | S5 | deterministic-gate | active | 2026-12-01 |
@@ -59,6 +63,90 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.control.unit-lifecycle.v1` | Unit lifecycle | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | retired | 2026-12-01 |
 | `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
+
+## Advice context
+
+`reg.identity.advice-context.v1` · S5 · prompt · active · unreleased
+
+**Purpose.** Render the active profile's advice — the instance's regulator/advice/<profile>.md — into the unit's system prompt from the file on each session, as the profiles extension's section beside the grant, byte for byte as the profile's inline advice[] rendered before the advice became a file. The advice a unit is told is a file a person can read, a proposal can target by path, and `advice accept` can write; it is not a field inside the grant and it never lives in the transcript. Mirrors identity-context for the second seeded file set.
+
+**Absorbs.** `uninformed-unit` — What a unit of a profile is told lives inside the same JSON file as the profile's tools and writable paths, so nobody can change the advice without being able to change the grant, a proposal against the advice has no file to name, and a reader cannot see what a unit was told without reading the grant.
+
+**Mechanism.** `../regulator-pi/src/profiles.ts` at `host:session_start` (read regulator/advice/<profile>.md from the working tree the unit sees, and the budget policy's advice.maxChars; the status line says what is cut), `host:before_agent_start` (section regulator_profile: the grant, then the advice file cut at advice.maxChars; one warning per session when it is cut)
+
+**Channels.** consumes `regulator/advice/<profile>.md (worktree)`, `the budget policy's advice.maxChars` · emits `system-prompt section`
+
+**Scope.** subjects advice, profile · resources regulator/advice/
+
+**Cost.** The advice file's length in every prompt of the profile, capped at the budget policy's `advice.maxChars` (4000 characters by default, about 1000 tokens); Pi diffs sections, so unchanged advice is a cache hit.
+
+**May.**
+- render the profile's advice as a prompt section
+- say in the status line and once per session that the advice was cut
+
+**May not.**
+- change advice
+- make advice binding (the gate, the bash watch and the closeout check do)
+- render a grant the profile does not declare
+
+**Evidence.** `../regulator-pi/src/profiles.test.ts`, `src/profiles.test.ts`, `../core/src/advice.test.ts`
+
+**Limitations.**
+- Level 5 by design: what is rendered is advice. A model can ignore it; what keeps the file what a person decided is the write gate (identity-write-gate), the bash watch and the identity-untouched check.
+- The advice rendered is the worktree's copy, which a unit's shell can change before the session reads it; the closeout check compares the branch to the base, so a changed copy is a failing check, not changed advice.
+- Rendering is cut at the budget policy's `advice.maxChars` (4000 characters unless the policy says otherwise); a file longer than that is partly advice the model never sees. The cut is reported — `regulator check` and `regulator doctor` warn with the size, the limit and the file, the session's status line says so and the session warns once — and refuses nothing: shortening the file is a person's decision (docs/DEBT.md row 46).
+- Outside an instance that carries the file (a session run by hand in a plain checkout, or an instance initialized before advice was a file set) the grant alone renders, or the inline advice a profile still carries during the one release of overlap; nothing says the unit was told less than the definition intends.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
+
+**Ablation.** `extension:profiles` — Shares the profiles extension with the profile write grant: an arm without it renders no advice and grants nothing by profile either. The drift suite's control arm runs without identity and the host checks, not without profiles; a per-profile advice override on an arm is slice 3 of the accept-path split.
+
+**Retirement condition.** Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the gates on: the grant and the contract carry the unit alone.
+
+
+## Advice decision path
+
+`reg.authority.advice-decision.v1` · S5 · deterministic-gate · active · unreleased
+
+**Purpose.** The one path that changes an advice file: `regulator advice accept`, run by a named person, on an obligation owed to S5 that a proposal opened against `advice/<profile>.md`. It writes the proposed file into the instance's regulator/advice/ under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a file that is not the one the proposal's subject names or that no declared profile owns, refuses content that is empty or over the budget policy's `advice.maxChars`, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `advice reject` resolves it as rejected and changes nothing. Mirrors the S5 decision path (s5-decision) for the second accept path of the split (DEFINITION_WRITERS, class `advice`): advice is what every unit of a profile is told, which is policy, not operations, so the grant is `actAsS5`.
+
+**Absorbs.** `proposal-with-no-decider` — A proposal against a profile's advice is recorded and owed to S5, and then a person edits the advice file by hand with no link to what was asked, or edits the profile's grant while they are at it, or never does, and the obligation sits open with no way to close it honestly.
+
+**Mechanism.** `src/cli.ts` at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted), `cli:advice reject` (ledger.resolve rejected)
+
+**Channels.** consumes `obligation (policy-proposal, owed to S5, subject naming advice/<profile>.md)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
+
+**Scope.** subjects advice, obligation · resources regulator/advice/, base branch
+
+**Cost.** One commit per accepted proposal; no model calls.
+
+**May.**
+- write one advice file under S5 authority
+- commit it citing the obligation
+- resolve the proposal's obligation
+
+**May not.**
+- accept a proposal a unit made for itself (a unit has no S5 authority)
+- write outside regulator/advice/
+- write a profile's grant (tools, writable paths): that is the declaration's path, a merged change
+- write a file other than the one the proposal names
+- be called by a tool
+
+**Evidence.** `src/cli.test.ts`, `../core/src/advice.test.ts`
+
+**Limitations.**
+- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
+- The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
+- Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
+
+**Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
+
+**Ablation.** `none` — A CLI command a person runs; there is no arm in which a person changes advice without it, only the drill that edits a file by hand (which the gate, the bash watch and the closeout refuse for a unit).
+
+**Retirement condition.** Never while advice is a file the instance carries: INV-002 names an accept path as the only writer of a protected file. Retire with the proposal path, not before.
+
 
 ## Algedonic delivery
 
@@ -98,6 +186,46 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `loop:deliver-pending` — Delivery is a step of the loop, not an extension: the harness cannot throw this switch without a code change. An arm without it leaves obligations owed to a person in the read model only.
 
 **Retirement condition.** Never while a person is a declared consumer: delivery is the channel to that consumer, not a workaround for a model's behaviour. Retire with the human consumer, not before.
+
+
+## Behavioral canary
+
+`reg.audit.behavioral-canary.v1` · S3* · deterministic-gate · active · unreleased
+
+**Purpose.** Ask, in a rule rendered beside the identity on every run, that each reply begin with a marker the budget policy declares (`identity.canary`: the marker, with `{unit}` for the unit id, and the number of misses), and read every assistant reply for it. A run of replies without the marker is recorded as an advisory audit finding to S3. A behavioral canary is an absence canary, the warrant canary's shape: the marker is re-asserted every reply while the model still follows the small rules it is shown each turn, and its silence says that attention has gone before the large rules go with it. The credential canary (`reg.audit.canary-watch.v1`) is the other polarity: a value whose presence is the alarm.
+
+**Absorbs.** `context-degradation` — Forty turns in, the unit still answers fluently, but it has stopped doing the small things the prompt asks for; the next thing it drops is a fixed decision or an invariant, and nothing in the loop sees the slide until the closeout refuses the result.
+
+**Mechanism.** `../regulator-pi/src/identity.ts` at `host:before_agent_start` (render the rule), `host:message_end` (read the reply)
+
+**Channels.** consumes `the budget policy's `identity.canary``, `message_end (assistant)` · emits `audit-finding → S3 (context-degradation, advisory)`
+
+**Scope.** subjects assistant reply · resources the session's marker
+
+**Cost.** One short system-prompt section per run and one prefix comparison per assistant reply; a few output tokens per reply for the marker; no model calls.
+
+**May.**
+- render the rule as a prompt section of its own, outside the identity's character limit
+- record an advisory finding and set the status line
+
+**May not.**
+- block a tool call or stop the model
+- end the attempt or open a fresh session (S3 decides: the recovery router under its policy)
+- infer anything from a single miss
+
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`
+
+**Limitations.**
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-22 · review by 2026-12-01
+
+**Ablation.** `extension:identity` — Shares the identity extension with identity in context and the memory store; the control arm, which renders no identity, has no canary by construction. A treatment arm without the extension loses all three. The live drift runs (#46) are the first place the canary's firing can be read against what the closeout later found.
+
+**Retirement condition.** Across three model versions in the live drift runs, the canary never falls silent before an attempt that the closeout then refuses, or falls silent only after the budget guard or the closeout has already caught the failure: the signal adds no lead time.
 
 
 ## Behaviour check (export-signature)
@@ -181,11 +309,11 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** No attempt in three model versions and the drift suite crosses a ceiling the loop's wall-clock limit would not have caught first, across two supported models.
 
 
-## Canary watch
+## Credential canary watch
 
 `reg.audit.canary-watch.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
+**Purpose.** Watch for the instance's credential canaries — credential-looking values recorded at init or fixture time from a committed .env — in every tool result and in the model's own text. A credential canary is a presence canary: the value must never appear, and its appearance is the alarm (the behavioral canary, `reg.audit.behavioral-canary.v1`, is the other polarity). A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.
 
 **Absorbs.** `secret-exposure` — A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out.
 
@@ -339,13 +467,13 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.identity.definition-check.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.
+**Purpose.** Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression, every profile has its advice file and no file names a profile nobody declared and no profile carries advice both inline and in a file, and every directory of the definition falls in a class of DEFINITION_WRITERS. A control plane is declared, not assembled; this is what makes the declaration checkable.
 
 **Absorbs.** `assembled-not-declared` — A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do.
 
-**Mechanism.** `src/registry-cli.ts` at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close)
+**Mechanism.** `src/registry-cli.ts` at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close), `check:checkDefinition` (advice: a file per declared profile, no file for an undeclared profile, no profile with both inline advice and a file; an advice file over the policy's advice.maxChars is a warning), `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (definition-writers))
 
-**Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md` · emits `definition problems (exit 1)`
+**Channels.** consumes `profiles/*.json`, `workload/*.json`, `policies/*.json`, `identity/*.md`, `advice/*.md` · emits `definition problems (exit 1)`
 
 **Scope.** subjects definition · resources packages/regulator
 
@@ -365,13 +493,55 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
-- The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+- The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.
+- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `none` — A check on the definition, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against.
 
 **Retirement condition.** Never: a declared control plane is checked as a whole or it is assembled.
+
+
+## Definition writers (the accept-path split)
+
+`reg.identity.definition-writers.v1` · S5 · deterministic-gate · active · unreleased
+
+**Purpose.** Declare once which definition files land through which accept path, and refuse a definition that has a directory in no class. `DEFINITION_WRITERS` in protocol names three classes — identity (`identity/`, `regulator/identity/`, `identity accept | promote`), advice (`advice/`, `regulator/advice/`, `advice accept | promote`) and the declaration (profiles, workloads, policies, evals, contracts, the registry and the fixtures, a merged change) — with what proposes, probes and is refused for each. `checkDefinition` refuses a directory under the definition root in no class, so a new kind of file is declared before anything reads it; the write gate, the bash watch and the closeout's diffed prefixes derive their protected set from the list's instance paths instead of restating them; `regulator docs` renders the list into BOUNDARY.md as "Who writes the definition"; and a test holds every command the list names against `ENFORCEMENT_POINTS.cli`. Mirrors definition-check for the question the definition check did not ask: not whether the parts resolve, but who may write each one.
+
+**Absorbs.** `assembled-not-declared` — A new directory appears under the definition — skills, prompts, a second advice set — and is read by an extension, with nobody having said whether a unit may propose against it, which command lands an accepted proposal, or whether the instance protects a copy; the accept paths are whatever each command happens to write.
+
+**Mechanism.** `../protocol/src/definition-writers.ts` at `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (src/, dist/ and node_modules/ are the package's, not the definition's)), `cli:check` (under pnpm check and regulator check), `cli:docs` (renderBoundaryMarkdown: the "Who writes the definition" section from the list)
+
+**Channels.** consumes `the definition root's directories`, `DEFINITION_WRITERS` · emits `definition problems (exit 1)`, `BOUNDARY.md § Who writes the definition`
+
+**Scope.** subjects definition · resources packages/regulator, regulator/identity/, regulator/advice/
+
+**Cost.** One readdir of the definition root in CI; no model calls.
+
+**May.**
+- refuse a definition directory in no class
+- be the one source the gate, the bash watch and the closeout derive their protected set from
+- render the split into BOUNDARY.md
+
+**May not.**
+- change a file
+- accept or promote anything (the classes' commands do)
+- judge whether a path is a good one
+
+**Evidence.** `../protocol/src/definition-writers.test.ts`, `../core/src/definition.test.ts`, `../regulator-pi/src/authority.test.ts`, `src/controller.test.ts`, `src/registry.test.ts`
+
+**Limitations.**
+- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
+- Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
+- It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
+- A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
+
+**Ablation.** `none` — A check on the definition and a constant the gates derive from, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against.
+
+**Retirement condition.** Never: a definition whose writers are not declared is assembled. The declaration row's gap retires when the definition's repository runs under the loop.
 
 
 ## Disposition authority
@@ -688,19 +858,19 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** Retire the rendered section when the drift suite shows no conformance loss across three model versions with the section off and the checks on: the gates carry the identity alone.
 
 
-## Identity promotion (the release path)
+## Identity and advice promotion (the release path)
 
 `reg.authority.identity-promotion.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** An identity decision accepted in an instance (`regulator identity accept`) changes that instance's copy; the definition's seed, which every later `init` starts from, is a file in the definition's repository. `regulator identity promote <file>.md` is the release path: run by a person the interaction policy lets act as S5, it copies the instance's identity file into the definition's seed, refuses a promotion that would leave the seed's identity set invalid or that changes nothing or that lands on a dirty definition, and commits in the definition's repository citing the instance and its revision. The S5 decision path (s5-decision) decides for an instance; this carries the decision to the definition, once, on the record.
+**Purpose.** A decision accepted in an instance (`regulator identity accept`, `regulator advice accept`) changes that instance's copy; the definition's seed, which every later `init` starts from, is a file in the definition's repository. `regulator identity promote <file>.md` and `regulator advice promote <profile>.md` are the release path, one card for the two seeded file sets DEFINITION_WRITERS names: run by a person the interaction policy lets act as S5, each copies the instance's file into the definition's seed, refuses a promotion that would leave the seed's set invalid (the identity set, or the advice set against the declared profiles) or that changes nothing or that lands on a dirty definition, and commits in the definition's repository citing the instance and its revision. The decision paths (s5-decision, advice-decision) decide for an instance; this carries the decision to the definition, once, on the record.
 
 **Absorbs.** `decision-stays-in-one-instance` — INV-005 was proposed, decided and committed in one instance; the next fixture started from the seed without it, and the decision had to be made again — or was forgotten.
 
-**Mechanism.** `src/cli.ts` at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition)
+**Mechanism.** `src/cli.ts` at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition), `cli:advice promote` (the same, for advice/<profile>.md: a declared profile, identical-content and dirty-definition refusals, trial validation of the advice set against the declared profiles)
 
-**Channels.** consumes `the instance's regulator/identity/<file>`, `the definition's identity/ seed`, `the interaction policy's people` · emits `a commit in the definition's repository`
+**Channels.** consumes `the instance's regulator/identity/<file> or regulator/advice/<profile>.md`, `the definition's identity/ and advice/ seeds`, `the interaction policy's people` · emits `a commit in the definition's repository`
 
-**Scope.** subjects identity · resources <definition>/identity/
+**Scope.** subjects identity, advice · resources <definition>/identity/, <definition>/advice/
 
 **Cost.** One commit in the definition per promotion; no model calls.
 
@@ -710,7 +880,8 @@ does not do. `since` is the package version that first shipped the record.
 
 **May not.**
 - promote without an S5-capable person
-- leave the seed's identity set invalid
+- leave the seed's identity or advice set invalid
+- promote an advice file for a profile the definition does not declare
 - promote into a dirty definition
 - be called by a tool
 
@@ -719,7 +890,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -728,19 +899,19 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** Retire when the definition is versioned and released (a package version per promotion) and the promotion is a pull request the release path already requires.
 
 
-## Identity-untouched check
+## Identity-untouched check (the instance's harness-owned files)
 
 `reg.audit.identity-untouched-check.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the identity and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
+**Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the instance's harness-owned directories (regulator/identity/ and regulator/advice/, derived from DEFINITION_WRITERS' instance paths, so the set is the gate's), the manifest's protected prefixes and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
 
 **Absorbs.** `committed-around-the-gate` — A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base.
 
 **Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration)
 
-**Channels.** consumes `worktree branch vs base`, `protected prefixes (identity + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
+**Channels.** consumes `worktree branch vs base`, `protected prefixes (DEFINITION_WRITERS' instance paths + manifest + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
 
-**Scope.** subjects unit, revision · resources regulator/identity/, vendor/, worktree
+**Scope.** subjects unit, revision · resources regulator/identity/, regulator/advice/, vendor/, worktree
 
 **Cost.** One `git diff --name-only` per closeout; no model calls.
 
@@ -750,11 +921,12 @@ does not do. `since` is the package version that first shipped the record.
 **May not.**
 - revert the change (a person or a repair attempt does)
 - decide what the unit does next (the recovery router does)
-- check a prefix the identity or conventions do not declare
+- check a prefix DEFINITION_WRITERS, the manifest or the conventions do not declare
 
 **Evidence.** `../checks/src/verify.test.ts`, `src/controller.test.ts`
 
 **Limitations.**
+- Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
 - It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
@@ -770,15 +942,15 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.authority.identity-write-gate.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Refuse every write or edit that would touch the instance's identity (regulator/identity/), the committed S5 artifacts, the project's protected paths, or any of their parents — through any spelling Pi expands, any traversal, and any filesystem alias (symbolic link, hard link, non-directory parent) — and execute exactly the normalized path that was checked. For bash, which no hook can sandbox, snapshot the protected files before the command and restore them after: a change is reverted from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001.
+**Purpose.** Refuse every write or edit that would touch the instance's harness-owned directories (regulator/identity/ and regulator/advice/, derived from DEFINITION_WRITERS' instance paths), the committed S5 artifacts, the project's protected paths, or any of their parents — through any spelling Pi expands, any traversal, and any filesystem alias (symbolic link, hard link, non-directory parent) — and execute exactly the normalized path that was checked. For bash, which no hook can sandbox, snapshot the protected files before the command and restore them after: a change is reverted from the snapshot, reported in the tool result, and recorded as an audit finding under INV-001.
 
 **Absorbs.** `identity-mutation` — The unit edits the invariant that forbids editing invariants — directly, through a symlink named notes.md, or with a heredoc in bash — and the harness's own definition of itself is now whatever the last unit wanted.
 
 **Mechanism.** `../regulator-pi/src/authority.ts` at `host:tool_call` (write, edit: prepareWritePath), `host:tool_call` (bash: snapshot), `host:tool_result` (bash: restore and report)
 
-**Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
+**Channels.** consumes `tool_call`, `tool_result`, `project conventions (protected paths)`, `regulator/identity/`, `regulator/advice/` · emits `audit-finding → S3 (INV-001, bash restored a protected path)`
 
-**Scope.** subjects path, tool call · resources regulator/identity/, vsm/*, vendor/
+**Scope.** subjects path, tool call · resources regulator/identity/, regulator/advice/, vsm/*, vendor/
 
 **Cost.** One filesystem walk of the target path per write or edit; one read of every protected file before and after each bash call. No model calls.
 
@@ -799,7 +971,7 @@ does not do. `since` is the package version that first shipped the record.
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
-- Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -1263,7 +1435,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.profile-write-grant.v1` · S3 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools.
+**Purpose.** Limit direct write and edit calls to the paths the active capability profile grants, and limit the active tool surface to the profile's tools. The grant only: what a unit of the profile is told is the advice file's, rendered by advice-context from the instance's copy, not this card's.
 
 **Absorbs.** `ungranted-capability-use` — Work of one kind (research, implementation) reaching tools or paths it was never granted, because a persona prompt is the only thing saying otherwise.
 
@@ -1759,7 +1931,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - The gate is on the pair (from, to), not on the trigger: which row the loop took is read back from the records, not written down with the status. Three rows share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) and are told apart by the record beside them.
-- The store keeps only the current status, so the history is a reconstruction. Three moves leave no record of their own — reintegrated, reintegration refused, and a dispatch refused before any attempt — and the fold places them at the record that follows (the decision, or the unit record's last write). A status history in the store, one line per transition with its trigger, would make the fold a read; not yet (DEBT row 42).
+- The store keeps only the current status, so the history is a reconstruction. Three moves leave no record of their own — reintegrated, reintegration refused, and a dispatch refused before any attempt — and the fold places them at the record that follows (the decision, or the unit record's last write). A status history in the store, one line per transition with its trigger, would make the fold a read; not yet (DEBT row 47).
 - The why is what the records say. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the fold does not read the transcript to improve on it.
 - A status written around the loop is caught only where the fold and the record disagree; a forged history that happens to be a path through the table is not.
 

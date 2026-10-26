@@ -3,7 +3,7 @@
   "name": "Definition check",
   "status": "active",
   "vsmFunction": "S5",
-  "purpose": "Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression. A control plane is declared, not assembled; this is what makes the declaration checkable.",
+  "purpose": "Check the declaration as a whole under `regulator check`: every profile, workload, policy and identity file validates against its closed schema, and the references between them resolve — a unit type's profile is declared, a policy names only declared unit types, a check name is one the host runs, a profile that says read-only grants only read-only effects, a contracted unit type's profile grants the report tool, the identity set is complete with well-formed, unique invariants, a routing floor is a regular expression, every profile has its advice file and no file names a profile nobody declared and no profile carries advice both inline and in a file, and every directory of the definition falls in a class of DEFINITION_WRITERS. A control plane is declared, not assembled; this is what makes the declaration checkable.",
   "absorbs": {
     "failureClass": "assembled-not-declared",
     "description": "A unit type names a profile that lives only in code, a policy budgets a unit type nobody declared, the identity is a file someone forgot to seed, and the instance runs anyway on whatever the code happened to do."
@@ -14,7 +14,9 @@
     "enforcementPoints": [
       {"where": "cli", "point": "check", "note": "checkDefinition, under pnpm check"},
       {"where": "check", "point": "checkDefinition", "note": "a unit type declared contract-less must run under a profile that is read-only by declared effect"},
-      {"where": "check", "point": "checkDefinition", "note": "a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close"}
+      {"where": "check", "point": "checkDefinition", "note": "a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close"},
+      {"where": "check", "point": "checkDefinition", "note": "advice: a file per declared profile, no file for an undeclared profile, no profile with both inline advice and a file; an advice file over the policy's advice.maxChars is a warning"},
+      {"where": "check", "point": "checkDefinition", "note": "a definition directory in no class of DEFINITION_WRITERS is refused (definition-writers)"}
     ]
   },
   "channels": {
@@ -22,7 +24,8 @@
       "profiles/*.json",
       "workload/*.json",
       "policies/*.json",
-      "identity/*.md"
+      "identity/*.md",
+      "advice/*.md"
     ],
     "emits": [
       "definition problems (exit 1)"
@@ -59,7 +62,8 @@
   "limitations": [
     "Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.",
     "It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.",
-    "The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here."
+    "The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.",
+    "An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43)."
   ],
   "ownership": {
     "owner": "regulator-maintainers",

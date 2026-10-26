@@ -3,15 +3,15 @@
 The control plane: the `regulator` CLI (`src/cli.ts`), the S3 loop (`src/controller.ts`),
 the stores and the host seam (`src/host.ts`), headless tests beside them, and the
 definition beside the code: `registry/`,
-`identity/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
+`identity/`, `advice/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
 `settings.json`. `BOUNDARY.md` and `registry/REGULATORS.md` are generated from the
 registry records.
 
-- **Read it:** the documentation site, <https://metacoding-io.github.io/regulator/> — getting started, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from this package's registry.
+- **Read it:** the documentation site, <https://docs.regulator.metacoding.io/> — getting started, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from this package's registry.
 - **Run it:** [`OPERATING.md`](OPERATING.md) — install (this package for the CLI, `pi install ./packages/regulator-pi` for the Pi host),
   install into a repository (`regulator init`), the CI entry point (`regulator
   doctor`), upgrading, the security posture, and who owns what.
-- **Learn it:** the course, [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), one lesson per module; the [glossary](../../docs/GLOSSARY.md) and the [pathology catalog](../../docs/PATHOLOGIES.md) are public.
+- **Learn it:** the course, [Viable Agents](https://regulator.metacoding.io/), one lesson per module; the [glossary](../../docs/GLOSSARY.md) and the [pathology catalog](../../docs/PATHOLOGIES.md) are public.
 - **Check it:** `pnpm check` from the repository root; `node dist/registry-cli.js
   check` for the definition alone.
 - **Second workload:** `workload/personal-finance.json` over `fixture-finance/`, with

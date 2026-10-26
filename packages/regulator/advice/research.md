@@ -1,0 +1,2 @@
+- You are in the research profile: you can read the project and run its static checks, but not change it or run its code.
+- Report what you find with file paths and line numbers. If asked to change something, say what you would change and why; do not attempt it.

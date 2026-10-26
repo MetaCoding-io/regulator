@@ -1,0 +1,131 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="640" color="#1c1b19" font-family="ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif" viewBox="0 0 1040 640" role="img" aria-labelledby="title">
+<title id="title">The instance is regulated: S3 loop dispatches units, host checks produce evidence, a research unit reports intelligence into an obligation, a person is the only writer of identity, and a person promotes decisions back into the definition. The definition above it is changed only by people, and nothing reads the instance's records back into it except an eval report a person interprets.</title>
+<rect fill="#fbfaf6" x="0" y="0" width="1040" height="640"/>
+  <defs>
+    <marker id="before-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
+  </defs>
+  <g font-size="12" fill="currentColor" stroke="currentColor">
+    <!-- DEFINITION band -->
+    <rect x="30" y="20" width="980" height="96" rx="6" fill="none" stroke-width="1.5"/>
+    <text x="46" y="42" font-weight="600" stroke="none">DEFINITION</text>
+    <text x="140" y="42" stroke="none" fill="#5c574f">versioned, checked by <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator check</tspan>, changed by people, shipped as a package</text>
+    <g stroke-width="1.2">
+      <rect x="46" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+      <rect x="186" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+      <rect x="326" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+      <rect x="466" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+      <rect x="606" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+      <rect x="746" y="58" width="128" height="34" rx="3" fill="#f0ede6"/>
+    </g>
+    <g stroke="none" text-anchor="middle">
+      <text x="110" y="79">registry (43 cards)</text>
+      <text x="250" y="79">identity seed</text>
+      <text x="390" y="79">profiles</text>
+      <text x="530" y="79">policies</text>
+      <text x="670" y="79">workloads</text>
+      <text x="810" y="79">evals</text>
+    </g>
+    <text x="878" y="72" stroke="none" font-size="11" fill="#5c574f">its own S4 today:</text>
+    <text x="878" y="86" stroke="none" font-size="11" fill="#5c574f">a person's checklist</text>
+
+    <!-- init arrow -->
+    <line x1="110" y1="116" x2="110" y2="176" stroke-width="1.5" marker-end="url(#before-arrow)"/>
+    <text x="118" y="150" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">regulator init</tspan> seeds</text>
+    <!-- promote arrow -->
+    <line x1="250" y1="212" x2="250" y2="94" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#before-arrow)"/>
+    <text x="258" y="150" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">identity promote</tspan> (a person)</text>
+
+    <!-- INSTANCE box -->
+    <rect x="30" y="176" width="730" height="444" rx="6" fill="none" stroke-width="1.5"/>
+    <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>
+    <text x="126" y="198" stroke="none" fill="#5c574f">one repository under the control plane</text>
+
+    <!-- S5 -->
+    <rect x="46" y="212" width="330" height="40" rx="3" fill="#f0ede6" stroke-width="1.2"/>
+    <text x="56" y="229" stroke="none" font-weight="600">S5</text>
+    <text x="80" y="229" stroke="none">identity files, write-protected</text>
+    <text x="80" y="244" stroke="none" font-size="11" fill="#5c574f">write gate · bash watch · identity-untouched at closeout</text>
+    <!-- person -->
+    <rect x="430" y="212" width="190" height="40" rx="20" fill="none" stroke-width="1.5"/>
+    <text x="525" y="236" stroke="none" text-anchor="middle">a person (<tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">actAsS5</tspan>)</text>
+    <line x1="430" y1="232" x2="378" y2="232" stroke-width="1.5" marker-end="url(#before-arrow)"/>
+    <text x="404" y="226" stroke="none" font-size="10" text-anchor="middle" fill="#5c574f">accept</text>
+    <text x="404" y="262" stroke="none" font-size="10" text-anchor="middle" fill="#5c574f">the only writer</text>
+
+    <!-- S3 loop -->
+    <rect x="46" y="290" width="574" height="40" rx="3" fill="none" stroke-width="1.5"/>
+    <text x="56" y="314" stroke="none" font-weight="600">S3</text>
+    <text x="80" y="314" stroke="none">the loop: contract → dispatch → verify → route → close; budgets; recovery policy</text>
+
+    <!-- S1 units -->
+    <g stroke-width="1.2">
+      <rect x="46" y="372" width="130" height="44" rx="3" fill="#f0ede6"/>
+      <rect x="190" y="372" width="130" height="44" rx="3" fill="#f0ede6"/>
+      <rect x="334" y="372" width="160" height="44" rx="3" fill="#f0ede6" stroke-dasharray="4 3"/>
+    </g>
+    <g stroke="none">
+      <text x="56" y="389" font-weight="600">S1</text><text x="78" y="389">unit u1</text>
+      <text x="56" y="405" font-size="11" fill="#5c574f">implement · worktree</text>
+      <text x="200" y="389" font-weight="600">S1</text><text x="222" y="389">unit u2</text>
+      <text x="200" y="405" font-size="11" fill="#5c574f">implement · worktree</text>
+      <text x="344" y="389" font-weight="600">S4</text><text x="366" y="389">research unit</text>
+      <text x="344" y="405" font-size="11" fill="#5c574f">read-only · one question</text>
+    </g>
+    <text x="46" y="440" stroke="none" font-size="11" fill="#5c574f">S2: leases, worktree isolation, reintegration, thrash detector</text>
+    <!-- dispatch arrows -->
+    <line x1="111" y1="330" x2="111" y2="370" stroke-width="1.2" marker-end="url(#before-arrow)"/>
+    <line x1="255" y1="330" x2="255" y2="370" stroke-width="1.2" marker-end="url(#before-arrow)"/>
+    <line x1="409" y1="330" x2="409" y2="370" stroke-width="1.2" marker-end="url(#before-arrow)"/>
+    <text x="118" y="352" stroke="none" font-size="10" fill="#5c574f">dispatch</text>
+
+    <!-- router -->
+    <rect x="520" y="372" width="200" height="44" rx="3" fill="none" stroke-width="1.5"/>
+    <text x="620" y="389" stroke="none" text-anchor="middle">router → obligations</text>
+    <text x="620" y="405" stroke="none" text-anchor="middle" font-size="11" fill="#5c574f">routing policy · floors · veto</text>
+    <line x1="494" y1="394" x2="518" y2="394" stroke-width="1.5" marker-end="url(#before-arrow)"/>
+    <text x="506" y="366" stroke="none" font-size="10" text-anchor="middle" fill="#5c574f">report_intelligence</text>
+    <path d="M 620 372 L 620 330" stroke-width="1.5" marker-end="url(#before-arrow)"/>
+    <text x="628" y="352" stroke="none" font-size="10" fill="#5c574f">obligation holds the unit</text>
+    <!-- proposal -->
+    <path d="M 255 416 L 255 470 L 740 470 L 740 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#before-arrow)"/>
+    <text x="262" y="462" stroke="none" font-size="10" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">propose_policy_change</tspan> → obligation owed to S5; changes nothing</text>
+
+    <!-- S3* -->
+    <rect x="46" y="500" width="450" height="40" rx="3" fill="none" stroke-width="1.5"/>
+    <text x="56" y="517" stroke="none" font-weight="600">S3*</text>
+    <text x="84" y="517" stroke="none">host checks at the revision → evidence → closeout gate</text>
+    <text x="84" y="532" stroke="none" font-size="11" fill="#5c574f">inherited-tests · identity-untouched · export-signature · glossary-lint</text>
+    <line x1="111" y1="416" x2="111" y2="498" stroke-width="1.2" marker-end="url(#before-arrow)"/>
+    <text x="118" y="482" stroke="none" font-size="10" fill="#5c574f">branch at HEAD</text>
+    <!-- memory -->
+    <rect x="520" y="500" width="200" height="40" rx="3" fill="#f0ede6" stroke-width="1.2"/>
+    <text x="620" y="517" stroke="none" text-anchor="middle">operational memory</text>
+    <text x="620" y="532" stroke="none" text-anchor="middle" font-size="11" fill="#5c574f">facts, provenance, expiry ≤ 90 d</text>
+    <path d="M 300 416 L 300 448 L 600 448 L 600 498" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#before-arrow)"/>
+    <text x="606" y="444" stroke="none" font-size="10" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">remember</tspan></text>
+    <text x="46" y="600" stroke="none" font-size="11" fill="#5c574f">Every edge inside the instance is typed, stamped by the host, and recorded on a card with its limitations.</text>
+
+    <!-- RECORDS column -->
+    <rect x="790" y="176" width="220" height="300" rx="6" fill="none" stroke-width="1.5" stroke-dasharray="1 4" stroke-linecap="round"/>
+    <text x="806" y="198" font-weight="600" stroke="none">RECORDS</text>
+    <text x="806" y="214" stroke="none" font-size="11" fill="#5c574f"><tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">.regulator/</tspan>, append-only</text>
+    <g stroke="none" font-size="12">
+      <text x="806" y="246">execution store</text>
+      <text x="806" y="268">regulatory log (signals)</text>
+      <text x="806" y="290">audit log (evidence)</text>
+      <text x="806" y="312">memory · outbox</text>
+      <text x="806" y="334">effect journal</text>
+      <text x="806" y="356">spans (OpenTelemetry)</text>
+      <text x="806" y="378">eval reports + interpretation</text>
+    </g>
+    <line x1="760" y1="300" x2="788" y2="300" stroke-width="1.5" marker-end="url(#before-arrow)"/>
+    <text x="774" y="292" stroke="none" font-size="10" text-anchor="middle" fill="#5c574f">writes</text>
+    <text x="806" y="420" stroke="none" font-size="11" fill="#5c574f">read by <tspan font-family="ui-monospace,SFMono-Regular,Menlo,Consolas,monospace">status</tspan>, the control room,</text>
+    <text x="806" y="435" stroke="none" font-size="11" fill="#5c574f">the eval harness, a person.</text>
+    <text x="806" y="458" stroke="none" font-size="11" fill="#b4532a">Nothing reads them to change</text>
+    <text x="806" y="472" stroke="none" font-size="11" fill="#b4532a">the definition.</text>
+    <!-- report to definition by hand -->
+    <path d="M 900 176 L 900 118" stroke-width="1.2" stroke-dasharray="2 4" marker-end="url(#before-arrow)"/>
+    <text x="906" y="150" stroke="none" font-size="10" fill="#5c574f">a person edits a card</text>
+  </g>
+</svg>

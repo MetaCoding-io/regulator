@@ -60,7 +60,7 @@ backstop, so a session that loads a contract can always report.
 | `tools[]` | tool names | the active tool set of the session. Every tool declares its effect: filesystem, execution, network or side effects |
 | `writablePaths[]` | path prefixes | where `write` and `edit` may land. The manifest's `--writable` overrides it for an instance, but never for a read-only profile |
 | `thinkingLevel` | optional | the host's thinking setting for the session |
-| `advice[]` | strings | rendered into the session's context. It is advice and carries no authority |
+| `advice[]` | strings, optional for one release | the profile's advice, inline. It has moved to the [advice file](#advice) beside the profile; the field stays optional for one release so a definition migrates by moving the text, and `regulator check` refuses a profile that carries both the field and a file |
 
 The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper` and
 `auditor`. `implement` may write and edit under `src/` and `test/`, and its `bash` is
@@ -68,6 +68,33 @@ not gated by path. `research` is read-only, and `intelligence` is read-only plus
 `report_intelligence`. `bookkeeper` and `auditor` are the profiles for the ledger.
 [Coordination](/concepts/coordination#profiles-grant-tools-by-effect) explains the
 effect axes and what counts as read-only.
+
+## Advice
+
+`advice/<profile>.md` is what every unit of a profile is told beyond its grant, one
+Markdown file per profile, with one `- ` bullet per line. It is advice: a model may
+ignore it, and nothing a gate enforces lives here. It is a file of its own, and not a
+field of the profile, so that a proposal can name it by path and a command can write it
+without being able to write a grant. That is the accept-path split, and
+`DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol` declares it: identity lands
+through `identity accept`, advice through `advice accept`, and everything that executes
+or grants (a profile's tools and writable paths, a unit type, a check, a policy, a
+suite) only through a merged change to the definition's repository. The
+[enforcement boundary](/reference/boundary) renders the three classes as *Who writes the
+definition*.
+
+`regulator check` refuses an advice file that names no declared profile, a profile with
+no advice file and no inline `advice[]`, a profile that carries both, and a definition
+directory in none of the three classes. A profile may have an empty file: it says the
+profile is told nothing beyond its grant. A file longer than the budget policy's
+`advice.maxChars` is a warning, not a problem.
+
+`init` copies the seed into an instance as `regulator/advice/<profile>.md`, beside
+`regulator/identity/`, and from then on the instance's copy is what the profiles
+extension renders into the session and what `advice accept` writes. `advice promote`
+carries an accepted file back from the instance to the definition. The shipped
+definition has one file per shipped profile, with the text the profiles carried inline
+before the move; the rendered section is byte-identical.
 
 ## Budget and model policy
 
@@ -83,6 +110,8 @@ attempts per unit, and the models each unit type may use.
 | `models.byUnitType.<type>` | route | |
 | `coordination.oscillationThreshold` | integer | the number of reversals of the same file within one unit before the thrash detector raises `oscillation` |
 | `identity.maxChars` | integer, optional | the number of characters of rendered identity a unit's prompt carries before the rendering is cut; 12000 unless set. `check`, `doctor` and the session all measure against it and warn once it is passed, and nothing is refused |
+| `identity.canary` | `{ marker, misses }`, optional | the behavioral canary: `marker` is what every reply must begin with (`{unit}` stands for the unit id), `misses` the consecutive replies without it before the host records an advisory `audit-finding`. Unset, nothing is rendered and nothing is read. The shipped `default` declares `[{unit}]` with 2 |
+| `advice.maxChars` | integer, optional | the same for a profile's advice file; 4000 unless set. `check`, `doctor` and the session's status line warn with the size, the limit and the cut, and `advice accept` refuses a file over it rather than accept advice a unit would not see |
 
 A ceiling is made of `tokens`, `cost` (which is optional), `wallClockMs`, `turns` and
 `attempts`. The budget meter counts as the session runs and ends the attempt at the
@@ -237,7 +266,9 @@ The four S5 files are `identity/IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and
 `BOUNDARIES.md`. A person writes them and the parser reads them. `init` copies the seed
 into an instance, and from then on the instance's copy is what units see and what
 `identity accept` writes. `identity promote` carries an accepted file back from the
-instance to the definition.
+instance to the definition. The [advice files](#advice) are the second seed, with the
+same shape: seeded by `init`, protected in the instance, written by `advice accept`,
+promoted by `advice promote`.
 
 `INVARIANTS.md` declares one invariant per section. The parser refuses a file that
 declares none, and it refuses a malformed heading. A section looks like this:
