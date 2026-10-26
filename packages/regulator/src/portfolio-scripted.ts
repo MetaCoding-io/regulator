@@ -29,6 +29,7 @@ import path from "node:path";
 import { ExecutionStore, MemoryStore, ObligationLedger, severityForKind } from "@metacoding.io/regulator-core";
 import type { InteractionPolicy, ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
 import type { DispatchRequest, Dispatcher } from "./controller.js";
+import type { DispatcherFactory } from "./evals.js";
 import type { Exec } from "./exec.js";
 
 export const PORTFOLIO_BEHAVIOURS = ["manager", "careless"] as const;
@@ -276,5 +277,18 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
     const { summary, extra } = await step(r);
     await store.writeReport(reportFor(r.contract, r.attempt, summary, stamp(), extra));
     return {};
+  };
+}
+
+/** The portfolio behaviours as the eval harness dispatches them: one scripted close per instance, keyed by the unit each task names. */
+export function portfolioDispatchers(exec: Exec, behaviour: PortfolioBehaviour, now: () => number = Date.now): DispatcherFactory {
+  const byInstance = new Map<string, Dispatcher>();
+  return (_arm, _task, instance): Dispatcher => {
+    let dispatcher = byInstance.get(instance);
+    if (!dispatcher) {
+      dispatcher = portfolioDispatcher(exec, { behaviour, repo: instance, now });
+      byInstance.set(instance, dispatcher);
+    }
+    return dispatcher;
   };
 }

@@ -1,0 +1,63 @@
+{
+  "name": "portfolio-turnover",
+  "version": 1,
+  "description": "The first declared metric (#129): the portfolio workload's turnover, measured by its own grader command after each unit, over the first two units of the September close — the lots brought up to date and the review written, then the target proposed. The trade list (p3) waits on a person's consent, which a headless run cannot give, so it is not in this suite; the turnover graded is the one the latest target implies against the custodian's latest positions. The control arm runs the loop with the portfolio's own tests only; the treatment arm runs every check the workload declares for a writing unit. Two repetitions, so each arm carries an interval. Metrics are pre-registered here; turnover is the one metric an optimiser could select on, and every other is reported only.",
+  "fixture": "fixture-portfolio",
+  "tasks": [
+    "contracts/portfolio/p1-ingest-positions.json",
+    "contracts/portfolio/p2-propose-target.json"
+  ],
+  "arms": [
+    {
+      "name": "control",
+      "description": "The loop with the portfolio's own test suite as the only closeout evidence; no identity, no protected-path check, no glossary.",
+      "extensions": [
+        "tools",
+        "profiles",
+        "coordination",
+        "contract",
+        "budget",
+        "recovery",
+        "evidence",
+        "authority"
+      ],
+      "checks": [
+        "run_tests"
+      ],
+      "identity": false
+    },
+    {
+      "name": "treatment",
+      "description": "Every check the workload declares for a writing unit type: the static checks, the suite, the inherited suite, the protected prefixes and the glossary.",
+      "extensions": [
+        "tools",
+        "profiles",
+        "coordination",
+        "contract",
+        "budget",
+        "recovery",
+        "evidence",
+        "authority",
+        "intelligence",
+        "identity",
+        "algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "identity": true
+    }
+  ],
+  "repetitions": 2,
+  "metrics": [
+    "closed",
+    "attempts",
+    "refusals",
+    { "name": "workload:portfolio/turnover", "optimise": true }
+  ],
+  "baseline": "control"
+}
