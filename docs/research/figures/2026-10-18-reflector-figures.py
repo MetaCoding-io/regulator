@@ -344,10 +344,11 @@ def figure(after: bool) -> str:
         f'    <text x="765" y="292" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">writes</text>',
         hit="M 734 300 L 796 300")
     if after:
+        # the crossed edge runs from the reflector to the definition band's edge, where the cross sits
         hot("never",
-            f'    <path d="M 796 68 L 776 68" stroke="{alarm}" stroke-width="1.5" fill="none" marker-end="{X}"/>',
+            f'    <path d="M 796 68 L 741 68" stroke="{alarm}" stroke-width="1.5" fill="none" marker-end="{X}"/>',
             f'    <text x="736" y="138" stroke="none" font-size="10" text-anchor="end" fill="{alarm}">never writes a definition file · never dispatches a unit</text>',
-            hit="M 798 68 L 770 68")
+            hit="M 798 68 L 736 68")
 
     # ---- right half: the S4 slot, the records and the eval harness, shifted 16 right ----
     add(f'    <g transform="translate(16 0)">')

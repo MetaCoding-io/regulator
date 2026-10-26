@@ -161,9 +161,9 @@
       <path d="M 734 300 L 796 300" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-never" aria-label="What the reflector cannot do" data-label="What the reflector cannot do" data-def="It has no tool that writes under &lt;code&gt;regulator/&lt;/code&gt; or the definition, none that dispatches a unit and none that dispositions an obligation. The crossed edge is refused by mechanism, not by instruction." data-href="https://docs.regulator.metacoding.io/project/whats-coming#what-changes-at-what-level">
-      <path d="M 796 68 L 776 68" stroke="#b4532a" stroke-width="1.5" fill="none" marker-end="url(#a-x)"/>
+      <path d="M 796 68 L 741 68" stroke="#b4532a" stroke-width="1.5" fill="none" marker-end="url(#a-x)"/>
       <text x="736" y="138" stroke="none" font-size="10" text-anchor="end" fill="#b4532a">never writes a definition file · never dispatches a unit</text>
-      <path d="M 798 68 L 770 68" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
+      <path d="M 798 68 L 736 68" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <g transform="translate(16 0)">
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-reflector" aria-label="The reflector" data-label="The reflector" data-def="The definition's S4: a package that reads every instance's records and emits three record kinds that already exist, a memory fact, an intelligence signal and a proposal owed to S5. Registered as an instrument, graded on whether the proposals a person accepted moved the metric they named." data-href="https://docs.regulator.metacoding.io/project/whats-coming#the-reflector-the-definitions-s4">
