@@ -371,7 +371,12 @@ show the following.
 - The definition view has two workloads now, `software-development` and
   `personal-finance`, with each unit type's profile and checks; five profiles; and the
   finance budget policy beside the default one.
-- The instances view has the ledger's manifest line (`definition regulator at <rev> · 43
+- The lifecycle view places the units on the state machine by status and, with
+  `f1-ingest` selected, steps through its nine-step trajectory: contracted → attempt 1
+  → closeout refused by the ledger's checks and by `identity-untouched` → the finding
+  owed to S3 → the router's repair → attempt 2 → verified → reintegrated, each step with
+  its why from the records and the regulator that produced them.
+- The instances view has the ledger's manifest line (`definition regulator at <rev> · 49
   regulators · pi 0.87.0 · initialized by alice · writable ledger/, reports/,
   payments/pending/ · protected statements/, payments/executed/`), then six units with
   their status, attempts, budget, verdict and what is owed, the consent obligation with
@@ -390,6 +395,8 @@ first attempt and the repair, and `f5-prepare-payment` was left waiting on conse
 ![The unit inspector for f5-prepare-payment: the contract, the paused attempt, the consent obligation owed to a person, and the replay in time order](img/inspector-unit-f5.webp)
 
 ![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, attempt 2 closed on four passing checks and the post-merge check on the base](img/inspector-unit-f1.webp)
+
+![The lifecycle view held at step 3 of f1-ingest: the attempt-failed transition lit on the figure, and the why panel with the verdict's failed criteria and the identity-untouched finding on the edited statement](img/lifecycle-f1.webp)
 
 ---
 

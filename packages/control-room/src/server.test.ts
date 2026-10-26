@@ -41,6 +41,9 @@ async function fixture(t: TestContext) {
   const b = path.join(root, "instance-b");
   const store = new ExecutionStore(a, () => clock);
   await store.createUnit(contract);
+  // The lifecycle is a closed table: a unit reaches closed only through dispatched and reported, so the fixture walks the path.
+  await store.setStatus("u1", "dispatched");
+  await store.setStatus("u1", "reported");
   await store.setStatus("u1", "closed");
   await new LeaseStore(path.join(b, ".regulator", "leases"), () => clock).acquire({ unitId: "u2", owner: "bob", resource: "/w/u2", branch: "unit/u2", ttlMs: 1000 });
   await appendSignal(b, {
@@ -58,6 +61,9 @@ test("readControlRoom projects one definition and any number of instances, from 
   assert.equal(view.definition?.registry.records[0]?.id, "reg.test.gate.v1");
   assert.equal(view.instances.length, 2);
   assert.deepEqual(view.instances[0]?.units.map((u) => [u.unit.unitId, u.unit.status]), [["u1", "closed"]]);
+  // The trajectory is folded from the records; a status with no attempt behind it is a disagreement the view states, not a path it invents.
+  assert.equal(view.instances[0]?.units[0]?.trajectory.final, "contracted");
+  assert.match(view.instances[0]?.units[0]?.trajectory.problem ?? "", /^the replay ends contracted but the record says closed/);
   assert.deepEqual(view.instances[1]?.leases.map((l) => [l.lease.unitId, l.live]), [["u2", true]]);
   assert.equal(view.instances[1]?.signals[0]?.kind, "coordination-signal");
   assert.deepEqual(view.instances[1]?.obligations.map((o) => [o.consumer, o.status, o.blocks]), [["human", "open", true]]);
@@ -85,6 +91,10 @@ test("the server serves the page and the JSON view, refuses writes, and knows no
   assert.doesNotMatch(html, /method:\s*"POST"/, "the page never writes");
   assert.match(html, /Interaction policy[\s\S]*Interactions — what units asked a person, and what came back/, "the algedonic view (lesson 13)");
   assert.match(html, /Assurance — what the evals say[\s\S]*Lifecycle — review, ablation, retirement/, "the assurance and lifecycle views (lesson 14)");
+  assert.match(html, /<section id="lifecycle">[\s\S]*<svg class="lifecycle"[\s\S]*data-state="blocked"[\s\S]*data-count="units:closed"/, "the unit lifecycle figure, drawn from UNIT_TRANSITIONS, with a place for the live counts");
+  assert.match(html, /data-from="blocked" data-to="aborted" data-on="abort"/, "an edge per row of the table");
+  assert.match(html, /copy as a question/, "a step's why can be taken to an agent; the page itself asks nothing");
+  assert.match(html, /const LIFECYCLE_EDGES = \[\{"number":1,"transition":\{"from":"contracted","to":"dispatched","on":"dispatch"/, "the legend is the table, inlined");
 
   const status = await fetch(`${base}/api/status`);
   assert.equal(status.status, 200);

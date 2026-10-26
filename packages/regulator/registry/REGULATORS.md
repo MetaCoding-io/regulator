@@ -60,6 +60,7 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.assurance.span-projection.v1` | Span projection (OpenTelemetry GenAI) | S3* | type | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.unit-lifecycle.v1` | Unit lifecycle | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | retired | 2026-12-01 |
 | `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
 
@@ -1898,6 +1899,47 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `loop:lease` — Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm.
 
 **Retirement condition.** Never while two sessions can target one worktree.
+
+
+## Unit lifecycle
+
+`reg.control.unit-lifecycle.v1` · S3 · deterministic-gate · active · unreleased
+
+**Purpose.** The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, and the execution store refuses a status change that is not a row of it. The table is what the figure of the lifecycle is drawn from and what a unit's history is replayed through: `unitTrajectory` (core) folds the attempt records, the verdicts, the recovery decisions and the obligations through the table in time order, gives each step its why as the records state it — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the fold and the record disagree. The control room's Lifecycle view steps through it.
+
+**Absorbs.** `status-written-around-the-loop` — A unit marked closed by a hand edit, a test fixture or a branch of the loop nobody drew; a 'why did this unit stop?' answered by reading six logs by hand; a state diagram on the website the code had already outgrown.
+
+**Mechanism.** `../core/src/execution-store.ts` at `loop:runUnit` (ExecutionStore.setStatus: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts), `loop:closeUnit` (re-verified, re-audit-refused), `loop:routeUnit` (routed-waiting, abort), `loop:finishUnit` (reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)), `cli:status` (unitTrajectory (../core/src/trajectory.ts): the fold on every unit view, which the control room steps through)
+
+**Channels.** consumes `.regulator/units/<id>/unit.json`, `attempts.ndjson`, `decisions.ndjson`, `audit.ndjson (verdicts)`, `signals.ndjson (obligations)` · emits `a refusal on an undeclared status change`, `the unit's trajectory, in the status read model`
+
+**Scope.** subjects execution · resources .regulator/units/
+
+**Cost.** One table lookup per status change; one read of the unit's records per status view, which the read model makes anyway.
+
+**May.**
+- refuse a status change the table does not declare
+- replay the records through the table
+- say that the replay and the record disagree
+
+**May not.**
+- write a status
+- infer a status from the repository or the transcript
+- state a why the records do not carry
+
+**Evidence.** `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts`
+
+**Limitations.**
+- The gate is on the pair (from, to), not on the trigger: which row the loop took is read back from the records, not written down with the status. Three rows share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) and are told apart by the record beside them.
+- The store keeps only the current status, so the history is a reconstruction. Three moves leave no record of their own — reintegrated, reintegration refused, and a dispatch refused before any attempt — and the fold places them at the record that follows (the decision, or the unit record's last write). A status history in the store, one line per transition with its trigger, would make the fold a read; not yet (DEBT row 47).
+- The why is what the records say. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the fold does not read the transcript to improve on it.
+- A status written around the loop is caught only where the fold and the record disagree; a forged history that happens to be a path through the table is not.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-13 · review by 2026-12-01
+
+**Ablation.** `none` — A type and a store gate over the loop's own writes; switching it off changes no run the loop performs, only what a hand edit can do.
+
+**Retirement condition.** Retire when the store writes the transition, with its trigger, instead of the status — the table as the store's own schema, with nothing left to replay.
 
 
 ## Vendor write gate

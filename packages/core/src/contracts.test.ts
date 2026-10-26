@@ -117,11 +117,18 @@ test("execution store: contract and report versions are immutable; attempts appe
   assert.equal((await store.getReport("u1", 1, 1))?.summary, sampleReport().summary);
   assert.equal(await store.getReport("u1", 2), undefined);
 
-  const blocked = await store.setStatus("u1", "blocked", "reintegration conflict");
-  assert.equal(blocked.reason, "reintegration conflict");
+  await store.setStatus("u1", "reported");
+  const blocked = await store.setStatus("u1", "blocked", "reintegration: conflict");
+  assert.equal(blocked.reason, "reintegration: conflict");
+  // The lifecycle is a closed table: a status the loop never writes from here is refused by name, and the record is untouched.
+  await assert.rejects(store.setStatus("u1", "closed"), /unit "u1" is blocked; blocked → closed is not a transition the loop declares \(UNIT_TRANSITIONS\); from blocked it declares dispatched, blocked, reported, aborted/);
+  await assert.rejects(store.setStatus("u1", "contracted"), /blocked → contracted is not a transition/);
+  assert.equal((await store.getUnit("u1"))?.reason, "reintegration: conflict", "a refused change writes nothing");
+  await store.setStatus("u1", "reported");
   const closed = await store.setStatus("u1", "closed");
   assert.equal(closed.reason, undefined, "a reason does not outlive the status it explained");
   assert.deepEqual((await store.listUnits()).map((u) => [u.unitId, u.status]), [["u1", "closed"]]);
+  await assert.rejects(store.setStatus("u1", "dispatched"), /from closed it declares nothing: the status is terminal/);
 
   const onDisk = JSON.parse(await readFile(path.join(root, ".regulator", "units", "u1", "contract.v1.json"), "utf8"));
   assert.deepEqual(onDisk, contract);
