@@ -2,8 +2,10 @@
 
 - **Status:** graduated; slice 1 landed ([#110](https://github.com/MetaCoding-io/regulator/issues/110),
   `roadmap:0.2`: advice as a seeded file set, `DEFINITION_WRITERS`, `advice accept | reject |
-  promote`, the three cards, DEBT rows 43 to 46). Slices 2 to 4 of §8 stay designed here until
-  each becomes an issue; slice 2 is next.
+  promote`, the three cards, DEBT rows 43 to 46); slice 2 landed ([#138](https://github.com/MetaCoding-io/regulator/issues/138):
+  the prediction record, its resolution from the stores, the typed `harness-edit` payload, the
+  `prediction-resolution` card). Slices 3 and 4 of §8 stay designed here until each becomes an
+  issue; slice 3 is next, after #46.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the
   split has to sit on, cited by file below.
@@ -176,7 +178,11 @@ Two rules that are not in `identity accept`:
   `harness-edit` whose prediction has no probe-horizon resolution, and records the
   prediction's live horizon as open at acceptance. A plain proposal against an advice
   file has no prediction and is accepted on the person's judgment, as identity is. Until
-  slice 2 lands, every advice proposal is plain.
+  slice 2 lands, every advice proposal is plain. *Slice 2 landed the second half (#138):
+  `advice accept` reads a `harness-edit` against the stores, refuses one whose parts do not
+  resolve, cites the prediction in the disposition, and the live horizon is open from the
+  decision. The first half, refusing an unprobed `harness-edit`, waits for the probe arm
+  (slice 3), since nothing produces a probe report yet.*
 - **The file must be the one proposed against.** `identity accept` lets the person point
   at any of the four files (`s5-decision` card, limitation 2). `advice accept` requires
   `--file` to equal the profile the proposal's `subject` names, because a `harness-edit`
@@ -256,7 +262,16 @@ Limitations that become `DEBT.md` rows:
    placed in a class.
 2. **The prediction record** (Harness² note §8), its own issue: the record, its
    resolution from the stores, and the `harness-edit` payload that carries it. **Filed**
-   2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138) (0.2).
+   2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138) (0.2) and
+   **landed** the same day: the `prediction` block on the signal, `prediction-resolution`
+   in the regulatory log (three-valued; resolved by the loop at close and abort from the
+   harness's graders, or from a committed report by fingerprint), the S5 obligation on a
+   disconfirmed live horizon routed under the shipped policy, `HarnessEditSchema`, the
+   host's reading of it at `advice accept` (target from the payload, prediction cited,
+   live horizon open from the decision), the `prediction-resolution` card, and
+   `regulator status` listing predictions with a precision that counts inconclusive
+   against. The committed reports are byte-unchanged. No DEBT row was opened: the count
+   of the next N units is the fold over the log, not a scan of the execution store.
 3. **The probe arm and the probe rule.** `EvalArmSchema` gains an optional `advice`
    override (a map from profile to file); `advice accept` refuses an unprobed
    `harness-edit`. Waits on the live report (#46), since a probe with no live baseline
@@ -288,7 +303,10 @@ Slice 1 is one issue in 0.2 and pays nothing in `DEBT.md`; it opens the four row
   names a profile when it contains `advice/<profile>.md`, under the seed or as the
   instance path, and `advice accept` refuses a `--file` that is not that file or a
   subject that names none (`adviceProfileNamed` in core). The typed payload should
-  replace the reading, not sit beside it.
+  replace the reading, not sit beside it. *Slice 2 (#138): the payload names the target
+  for a `harness-edit` and the subject reading stays for a plain proposal, as the issue
+  specified; the two do not overlap, since a payload that claims the kind is either
+  well-formed or refused by the schema.*
 - Whether the fixtures (`fixture*/`, `drift/`) belong in the declaration class by name,
   as slice 1 lists them in `DEFINITION_WRITERS`, or should be derived from the eval suites
   and the `fixture` command that read them. Listing them keeps the class check one closed

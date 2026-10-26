@@ -499,6 +499,28 @@ field of its own. The change table in §7 says so. The prediction record therefo
 ahead of the reflector in the build order: it is the second slice after the accept-path
 split, since the probe arm (§4 item 2) has nothing to resolve without it. Filed 2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138).
 
+**Landed (2026-10-26, #138).** Slice 2 as designed here. `IntelligenceSignalSchema`
+carries an optional `prediction` block (`metric`, `baseline` as a committed report's arm by
+the SHA-256 of its file or an arm by name, `direction`, `magnitude`, `probability` in [0, 1]
+beside the three-valued `confidence`, `horizons[]` of kind `probe` or `live` each with
+`disconfirmedBy`); `prediction-resolution` is a line of the regulatory log, three-valued,
+appended by the loop at a unit's close or abort from the eval harness's graders over the
+stores and never from the unit's report, or from the committed report a probe horizon
+names; a disconfirmed live horizon is a proposal from S3 to S5 to revert or re-decide,
+routed under the routing policy, and no file is reverted. `HarnessEditSchema` types the
+three parts, the schema refuses a payload that claims the kind and lacks one, and
+`advice accept` refuses one whose diagnosis references do not resolve in the stores or
+whose prediction carries no block, takes the target from the payload, cites the
+prediction's id in the disposition, and the live horizon opens from that acceptance (read
+structurally from the obligation, so units that closed before the edit took effect are not
+readings). The card is `prediction-resolution`. Two readings this section left open were
+taken there and recorded on the card: a report's fingerprint is the SHA-256 of its
+committed file, and "the next N units" is counted by the fold over the log, not a scan.
+The candidate invariant stays a schema rule and a host check; it is written beside INV-003
+in [evidence about the regulators](../concepts/evidence-about-the-regulators.md) as a
+candidate, not in `INVARIANTS.md`, and promoting it is a person's decision. The probe rule
+(refusing an unprobed `harness-edit`) and the probe arm are slice 3, after #46.
+
 **Added 2026-10-25.** Lanham §8.3.5 promotes a release through offline tests, shadow traffic, a canary and a full rollout "with auto-rollback if SLOs degrade". The first three are the gates a definition change already passes here (`regulator check`, a scripted eval report, a live report), and #53's migration note should say which. The fourth is the step this design leaves to a person on purpose: a disconfirmed live horizon opens an obligation to S5 (above), it does not revert the advice file, because a revert is a change to a definition file and those land through an accept path. Recorded so that automatic rollback is not re-proposed as an omission; shadow traffic and canaries across instances are the deployment's and belong in the roadmap's not-planned table if anyone asks.
 
 ## 9. Implementation reference: the DSPy book (added 2026-10-25)
