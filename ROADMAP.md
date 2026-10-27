@@ -36,7 +36,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | `inherited-tests`: per-assertion diff, a test-layout convention, a cached base run | row 41 | [#50](https://github.com/MetaCoding-io/regulator/issues/50) |
 | Behaviour checks beyond `Function.length`: a probe a contract can carry | row 35 | [#54](https://github.com/MetaCoding-io/regulator/issues/54) |
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
-| The viability case rendered from the registry (`VIABILITY.md`), the capstone's artifact | — | [#57](https://github.com/MetaCoding-io/regulator/issues/57) |
 | Drift suite: a `confident` behaviour (self-report as control variety) and a poisoned-memory fixture (data absorbed as control), after #46 | — | [#130](https://github.com/MetaCoding-io/regulator/issues/130) |
 
 0.2 is done when the live report is committed, every row above is struck or moved to

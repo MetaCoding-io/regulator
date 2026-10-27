@@ -5,6 +5,7 @@
  *   cli.md         the usage table at the top of `packages/regulator/src/cli.ts`
  *   regulators.md  `packages/regulator/registry/REGULATORS.md` (rendered from the registry by `regulator docs`)
  *   boundary.md    `packages/regulator/BOUNDARY.md`
+ *   viability.md   `packages/regulator/VIABILITY.md` (the viability case, rendered from the registry by `regulator docs`)
  *   operating.md   `packages/regulator/OPERATING.md`
  *   changelog.md   `packages/regulator/CHANGELOG.md`
  *   roadmap.md     `ROADMAP.md`
@@ -34,6 +35,7 @@ const PLACEMENT = {
   "cli.md": "reference/cli.md",
   "regulators.md": "reference/regulators.md",
   "boundary.md": "reference/boundary.md",
+  "viability.md": "reference/viability.md",
   "operating.md": "guide/operating.md",
   "changelog.md": "project/changelog.md",
   "roadmap.md": "project/roadmap.md",
@@ -118,7 +120,7 @@ function renderCli(source) {
     }
   }
   if (trailing.length) out.push("## Authority", "", trailing.join(" "), "");
-  out.push("## The definition's own commands", "", "The definition check and the generated registry documents are a second entry point, `registry-cli.js` in the same package, run from the workspace:", "", "```sh", "pnpm --filter @metacoding.io/regulator registry:check   # validate the registry and the definition; exit 1 on a problem", "pnpm --filter @metacoding.io/regulator registry:docs    # rewrite registry/REGULATORS.md and BOUNDARY.md", "```", "", "`registry:check` runs under `pnpm check`, so a record whose review date has passed fails the build.", "");
+  out.push("## The definition's own commands", "", "The definition check and the generated registry documents are a second entry point, `registry-cli.js` in the same package, run from the workspace:", "", "```sh", "pnpm --filter @metacoding.io/regulator registry:check   # validate the registry and the definition; exit 1 on a problem", "pnpm --filter @metacoding.io/regulator registry:docs    # rewrite registry/REGULATORS.md, BOUNDARY.md, VIABILITY.md and the tables of docs/PATHOLOGIES.md", "```", "", "`registry:check` runs under `pnpm check`, so a record whose review date has passed fails the build, and so does a rendered document that is out of date.", "");
   return out.join("\n");
 }
 
@@ -131,11 +133,12 @@ async function copy(source, name, title) {
 }
 
 await mkdir(OUT, { recursive: true });
-for (const [source, name] of [[path.join(PRODUCT, "registry", "REGULATORS.md"), "regulators.md"], [path.join(PRODUCT, "BOUNDARY.md"), "boundary.md"], [path.join(PRODUCT, "OPERATING.md"), "operating.md"], [path.join(PRODUCT, "CHANGELOG.md"), "changelog.md"], [path.join(ROOT, "ROADMAP.md"), "roadmap.md"], [path.join(ROOT, "CONTRIBUTING.md"), "contributing.md"]]) COPIED.set(source, path.join(DOCS, PLACEMENT[name]));
+for (const [source, name] of [[path.join(PRODUCT, "registry", "REGULATORS.md"), "regulators.md"], [path.join(PRODUCT, "BOUNDARY.md"), "boundary.md"], [path.join(PRODUCT, "VIABILITY.md"), "viability.md"], [path.join(PRODUCT, "OPERATING.md"), "operating.md"], [path.join(PRODUCT, "CHANGELOG.md"), "changelog.md"], [path.join(ROOT, "ROADMAP.md"), "roadmap.md"], [path.join(ROOT, "CONTRIBUTING.md"), "contributing.md"]]) COPIED.set(source, path.join(DOCS, PLACEMENT[name]));
 const cliSource = await readFile(path.join(PRODUCT, "src", "cli.ts"), "utf8");
 await writeFile(path.join(OUT, "cli.md"), banner("packages/regulator/src/cli.ts") + renderCli(cliSource));
 await copy(path.join(PRODUCT, "registry", "REGULATORS.md"), "regulators.md");
 await copy(path.join(PRODUCT, "BOUNDARY.md"), "boundary.md");
+await copy(path.join(PRODUCT, "VIABILITY.md"), "viability.md");
 await copy(path.join(PRODUCT, "OPERATING.md"), "operating.md", "Operating");
 await copy(path.join(PRODUCT, "CHANGELOG.md"), "changelog.md");
 await copy(path.join(ROOT, "ROADMAP.md"), "roadmap.md");

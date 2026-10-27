@@ -144,3 +144,100 @@ test("REGULATORS.md is generated from the records and has not drifted", async ()
   assert.equal(boundary, renderBoundaryMarkdown(records), "BOUNDARY.md is generated from the same records");
   assert.match(boundary, /## Identity write gate[\s\S]*Not covered:[\s\S]*- /, "every gate states what it does not cover");
 });
+
+test("the viability case (#57) is rendered from the records and the pathology rows, deterministically, with every active record in the ledger exactly once", async () => {
+  const { renderViabilityMarkdown, checkDefinition } = await import("@metacoding.io/regulator-core");
+  const registry = await checkRegistry(registryDir, labRoot);
+  assert.deepEqual(registry.problems, []);
+  assert.ok(registry.pathologies.length >= 30, "the catalog's rows are loaded beside the records");
+  const arms = (await checkDefinition(labRoot)).evals.flatMap((suite) => suite.arms.map((arm) => ({ suite: suite.name, arm: arm.name, ...(arm.ablates ? { ablates: arm.ablates } : {}), ...(arm.switch ? { switch: arm.switch } : {}) })));
+  const options = { pathologies: registry.pathologies, shortNames: registry.shortNames, arms };
+  const rendered = renderViabilityMarkdown(registry.records, options);
+  assert.equal(rendered, renderViabilityMarkdown(registry.records, options), "two renders of the same inputs are byte-identical");
+  const committed = await readFile(path.join(labRoot, "VIABILITY.md"), "utf8");
+  assert.equal(committed, rendered, "run `pnpm --filter @metacoding.io/regulator registry:docs`");
+  // The seven sections, in the capstone's order; two are a team's own.
+  assert.deepEqual([...rendered.matchAll(/^## (\d)\. (.+)$/gm)].map((m) => `${m[1]} ${m[2]}`), [
+    "1 System map", "2 Channel table", "3 Mechanism ledger", "4 Enforcement boundary", "5 Evidence", "6 Residual uncertainty", "7 Boundary critique",
+  ]);
+  assert.match(rendered, /## 2\. Channel table\n\n\*A team's own; not rendered\.\*/);
+  assert.match(rendered, /## 7\. Boundary critique\n\n\*A team's own; not rendered\.\*/);
+  // Every active record is one ledger row and one evidence row; no retired record is anywhere below the map's count line.
+  const ledger = rendered.slice(rendered.indexOf("## 3. Mechanism ledger"), rendered.indexOf("### What switches"));
+  const evidence = rendered.slice(rendered.indexOf("## 5. Evidence"), rendered.indexOf("## 6. Residual uncertainty"));
+  for (const r of registry.records) {
+    const short = registry.shortNames.get(r.id)!;
+    const rows = ledger.split("\n").filter((line) => line.startsWith(`| \`${short}\` |`)).length;
+    assert.equal(rows, r.status === "active" ? 1 : 0, `${short} (${r.status}) appears ${rows} time(s) in the ledger`);
+    assert.equal(evidence.split("\n").filter((line) => line.startsWith(`| \`${short}\` |`)).length, r.status === "active" ? 1 : 0, `${short} in the evidence table`);
+  }
+  assert.equal(registry.records.filter((r) => r.status === "retired").length, 2, "the two retired records are history");
+  assert.match(rendered, /2 retired records stay in the registry as history and appear nowhere below/);
+  // The evidence says plainly that no ablation result exists yet, and names the arm that would produce one.
+  assert.match(rendered, /\*\*No ablation result is reported here\.\*\* The live report over the drift scenario is \[#46\]/);
+  assert.match(rendered, /\| `inherited-tests-check` \| [^|]+ \| not stated \| `no-inherited-tests` \(drift\) \|/);
+  assert.match(rendered, /\| `closeout-gate` \| [^|]+ \| not stated \| none \|/);
+  // The residual uncertainty is the catalog's "not absorbed" column, and the uncatalogued records are named.
+  for (const row of registry.pathologies.filter((r) => r.notAbsorbed)) assert.ok(rendered.includes(`| **${row.name}** (`), `${row.id} is in the residual uncertainty`);
+  assert.match(rendered, /active regulators absorb a failure class no pathology row names[^\n]*`advice-context` \(`uninformed-unit`\)/);
+  assert.match(rendered, /A gate with no stated limitation does not pass `regulator check`/);
+});
+
+test("the pathology catalog (#57) is a source file whose rows name active records: a row naming an unknown or retired regulator is refused, an unnamed active record is a warning, and the rendered tables round-trip the source", async (t) => {
+  const { mkdtemp, mkdir, rm, writeFile, cp } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { PATHOLOGY_END_MARKER, pathologyMarker, renderAbsorbedBy, renderPathologyTable, splicePathologyTables } = await import("@metacoding.io/regulator-core");
+  const { PATHOLOGY_SECTIONS } = await import("@metacoding.io/regulator-protocol");
+  const registry = await checkRegistry(registryDir, labRoot);
+  assert.deepEqual(registry.problems, []);
+  assert.equal(registry.warnings.length, 1, "one warning: the active records no row names, in one line");
+  assert.match(registry.warnings[0]!.message, /^\d+ active regulator\(s\) absorb a failure class no pathology row names: reg\./);
+  for (const row of registry.pathologies) for (const { id } of row.absorbedBy.regulators) assert.equal(registry.records.find((r) => r.id === id)?.status, "active", `${row.id} names ${id}`);
+  assert.equal(new Set(registry.pathologies.map((r) => r.id)).size, registry.pathologies.length, "row ids are unique");
+
+  // A copy of the registry with a row that names a retired record, one that names no record, and a duplicate id.
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-pathologies-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(path.join(dir, "regulators"));
+  await cp(path.join(registryDir, "regulators"), path.join(dir, "regulators"), { recursive: true });
+  const first = registry.pathologies[0]!;
+  const bad = { rows: [first, { ...first, id: "names-retired", absorbedBy: { ...first.absorbedBy, regulators: [{ id: "reg.audit.post-merge-check.v1" }] } }, { ...first, id: "names-nothing", absorbedBy: { ...first.absorbedBy, regulators: [{ id: "reg.audit.no-such-gate.v1" }] } }, { ...first, absorbedBy: { ...first.absorbedBy, regulators: [] } }] };
+  await writeFile(path.join(dir, "pathologies.json"), JSON.stringify(bad));
+  const refused = await checkRegistry(dir, labRoot, { verifyFiles: false });
+  assert.deepEqual(refused.problems.map((p) => `${p.file}: ${p.message}`), [
+    "pathologies.json: row `names-retired` names `reg.audit.post-merge-check.v1`, which is retired: a pathology is absorbed by an active regulator or by nothing",
+    "pathologies.json: row `names-nothing` names `reg.audit.no-such-gate.v1`, which is not a registry record",
+    `pathologies.json: duplicate row id \`${first.id}\``,
+  ]);
+  await writeFile(path.join(dir, "pathologies.json"), JSON.stringify({ rows: [first, { id: "Bad Id", section: "structural", name: "x", absorbedBy: first.absorbedBy }] }));
+  assert.deepEqual((await checkRegistry(dir, labRoot, { verifyFiles: false })).problems.map((p) => p.message), ["does not match the pathology row schema (row 2, `Bad Id`)"]);
+  await writeFile(path.join(dir, "pathologies.json"), "{nope");
+  assert.match((await checkRegistry(dir, labRoot, { verifyFiles: false })).problems[0]!.message, /^not valid JSON/);
+  await rm(path.join(dir, "pathologies.json"));
+  const without = await checkRegistry(dir, labRoot, { verifyFiles: false });
+  assert.deepEqual([without.problems, without.warnings, without.pathologies], [[], [], []], "a registry without the file carries no rows, no problem and no warning");
+
+  // The committed page carries every section's tables between its markers, rendered from the rows; the cells say what the rows say.
+  const page = await readFile(path.join(labRoot, "../../docs/PATHOLOGIES.md"), "utf8");
+  assert.equal(page, splicePathologyTables(page, registry.pathologies, registry.shortNames), "docs/PATHOLOGIES.md's tables are current; run `pnpm --filter @metacoding.io/regulator registry:docs`");
+  for (const section of Object.keys(PATHOLOGY_SECTIONS) as Array<keyof typeof PATHOLOGY_SECTIONS>) {
+    const table = renderPathologyTable(section, registry.pathologies, registry.shortNames);
+    const start = page.indexOf(pathologyMarker(section)) + pathologyMarker(section).length;
+    assert.equal(page.slice(start, page.indexOf(PATHOLOGY_END_MARKER, start)), `\n${table}\n`, `the ${section} table is between its markers`);
+    const rows = registry.pathologies.filter((r) => r.section === section);
+    assert.equal(table.split("\n").length, rows.length + 2, `one line per ${section} row, plus the header and the rule`);
+    for (const row of rows) {
+      const line = table.split("\n").find((l) => l.includes(`| ${section === "agent" ? row.name : `**${row.name}**`}`))!;
+      assert.ok(line, `${row.id} is a line of the ${section} table`);
+      for (const text of [row.looksLike, row.reproducedBy, row.notAbsorbed, ...row.absorbedBy.notes, ...row.absorbedBy.regulators.map((g) => `\`${registry.shortNames.get(g.id)}\``)].filter((x): x is string => x !== undefined)) {
+        assert.ok(line.includes(text.replaceAll("|", "\\|")), `${row.id}: ${JSON.stringify(text.slice(0, 40))} is in its line`);
+      }
+      assert.ok(line.includes(renderAbsorbedBy(row.absorbedBy, registry.shortNames)), `${row.id}: the absorbed-by cell`);
+    }
+  }
+  assert.throws(() => splicePathologyTables("# a page with no markers\n", registry.pathologies), /no <!-- pathologies:structural --> marker/);
+  // The absorbed-by cell: regulators (with notes) and modules, then invariants, then each free note as a clause.
+  assert.equal(renderAbsorbedBy({ regulators: [{ id: "reg.a.b.v1" }, { id: "reg.a.c.v1", note: "n" }, { id: "reg.a.d.v1" }], invariants: ["INV-001", "INV-002"], modules: ["M01", "M02"], notes: ["a note", "another"] }), "`b`, `c` (n) and `d` (M01, M02), and INV-001 and INV-002; a note; another");
+  assert.equal(renderAbsorbedBy({ regulators: [], invariants: [], modules: [], notes: [] }), "—");
+  assert.equal(renderAbsorbedBy({ regulators: [], invariants: [], modules: [], notes: ["nothing yet"] }), "nothing yet");
+});
