@@ -380,9 +380,9 @@ export {
   type RoutingPolicy, type RoutingRule, type WaitingAction,
 } from "./obligations.js";
 export {
-  CONTINUES_WITHOUT_ANSWER, InteractionChannelSchema, InteractionEventSchema, InteractionKindSchema, InteractionOutcomeSchema, InteractionPolicySchema, InteractionRequestSchema, PersonSchema,
+  CONTINUES_WITHOUT_ANSWER, ConsentCallSchema, InteractionChannelSchema, InteractionEventSchema, InteractionKindSchema, InteractionOutcomeSchema, InteractionPolicySchema, InteractionRequestSchema, PersonSchema,
   isInteractionEvent, isInteractionPolicy,
-  type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
+  type ConsentCall, type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
 } from "./interaction.js";
 export {
   ArmSummarySchema, AblationSwitchSchema, BuiltInMetricSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,

@@ -9,13 +9,25 @@
  *                        expression, are refused; a guarded write beside an
  *                        arbitrary-execution tool with no pattern covering the
  *                        path is the sandbox bypass, and a warning
+ *   consentGrantFor      the grant a call falls under, if any
+ *   consentFor           the lookup over the ledger: the consent obligation
+ *                        on the unit whose recorded call matches this one,
+ *                        and what it says — accepted (with any amendment),
+ *                        pending, rejected, or absent. The action the
+ *                        request recorded is what is matched: not the hint
+ *                        the next attempt was given, not the attempt number,
+ *                        so a yes on attempt 1 holds on attempt 3 for the
+ *                        same call and a different call asks again
  *
- * Pi-free. Nothing here reads a tool's effects to decide that a call needs
- * consent: the grant is written, and `effectOf` is read only to find the
- * tools a path cannot gate (`execution: "arbitrary"`).
+ * Pi-free and pure. Nothing here reads a tool's effects to decide that a call
+ * needs consent: the grant is written, and `effectOf` is read only to find
+ * the tools a path cannot gate (`execution: "arbitrary"`).
  */
-import type { CapabilityProfile, ConsentGrant } from "@metacoding.io/regulator-protocol";
+import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
+import type { CapabilityProfile, ConsentCall, ConsentGrant, InteractionRequest, ObligationState } from "@metacoding.io/regulator-protocol";
 import { effectOf } from "./effects.js";
+import type { InteractionState } from "./obligations.js";
 
 /** The tools a `paths` grant narrows: the two whose argument the profile grant already gates by prefix. */
 export const PATH_GUARDED_TOOLS: ReadonlySet<string> = new Set(["write", "edit"]);
@@ -75,4 +87,67 @@ export function consentBypassWarnings(profile: CapabilityProfile): ConsentGrantP
     }
   }
   return warnings;
+}
+
+/** A path as the grant and the record compare it: Pi's `@` spelling, backslashes and `./` removed, lexically normalized. */
+export function normalizeConsentPath(input: string): string {
+  const cleaned = (input.startsWith("@") ? input.slice(1) : input).replaceAll("\\", "/");
+  return path.posix.normalize(cleaned).replace(/^\.\//, "");
+}
+
+/** The call with its `path` argument normalized, so the record and the gate spell it one way. */
+export function normalizeConsentCall(call: ConsentCall): ConsentCall {
+  const p = call.arguments.path;
+  return typeof p === "string" ? { tool: call.tool, arguments: { ...call.arguments, path: normalizeConsentPath(p) } } : { tool: call.tool, arguments: { ...call.arguments } };
+}
+
+/** The grant this call falls under, or undefined when the profile needs no consent for it. */
+export function consentGrantFor(profile: CapabilityProfile, call: ConsentCall): ConsentGrant | undefined {
+  const normalized = normalizeConsentCall(call);
+  return (profile.consent ?? []).find((grant) => {
+    if (grant.tool !== call.tool) return false;
+    if (grant.paths) {
+      const p = normalized.arguments.path;
+      return typeof p === "string" && grant.paths.some((prefix) => p.startsWith(prefix));
+    }
+    if (grant.pattern !== undefined) {
+      const command = normalized.arguments.command;
+      return typeof command === "string" && (regExpOf(grant.pattern)?.test(command) ?? false);
+    }
+    return true;
+  });
+}
+
+/** The call a consent recorded covers this one: the same tool, and every argument the record names equal in the call. */
+export function matchesConsentedCall(recorded: ConsentCall, call: ConsentCall): boolean {
+  if (recorded.tool !== call.tool) return false;
+  const a = normalizeConsentCall(recorded).arguments;
+  const b = normalizeConsentCall(call).arguments;
+  return Object.entries(a).every(([key, value]) => key in b && isDeepStrictEqual(value, b[key]));
+}
+
+export type ConsentVerdict =
+  | { status: "accepted"; obligation: ObligationState; request: InteractionRequest; by: string; amendedArguments?: Record<string, unknown> }
+  | { status: "pending" | "rejected"; obligation: ObligationState; request: InteractionRequest }
+  | { status: "absent" };
+
+/**
+ * What the ledger says about consent for this call on this unit. The latest consent request on the unit whose
+ * recorded call matches decides: resolved as accepted is a yes (with the arguments a person amended, if any),
+ * resolved otherwise is a no, still owed is pending, and no matching request at all is absent. A request that
+ * recorded no call matches nothing: a consent the gate can check names the call it is for.
+ */
+export function consentFor(obligations: readonly ObligationState[], interactions: readonly InteractionState[], unit: string | undefined, call: ConsentCall): ConsentVerdict {
+  const matching = interactions
+    .filter((i) => i.request.kind === "consent" && i.request.unit === unit && i.request.call !== undefined && matchesConsentedCall(i.request.call, call))
+    .sort((x, y) => x.request.raisedAt.localeCompare(y.request.raisedAt));
+  for (const state of [...matching].reverse()) {
+    const obligation = obligations.find((o) => o.id === state.request.obligationId);
+    if (!obligation) continue;
+    if (obligation.status !== "resolved") return { status: "pending", obligation, request: state.request };
+    if (obligation.disposition !== "accepted") return { status: "rejected", obligation, request: state.request };
+    const answered = [...state.answers].reverse().find((a) => a.outcome === "answered");
+    return { status: "accepted", obligation, request: state.request, by: obligation.closedBy ?? answered?.by ?? "unknown", ...(answered?.amendedArguments === undefined ? {} : { amendedArguments: answered.amendedArguments }) };
+  }
+  return { status: "absent" };
 }
