@@ -48,6 +48,7 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.algedonic.pause-gate.v1` | Pause gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.post-merge-check.v1` | Post-merge check | S3* | deterministic-gate | retired | 2026-12-01 |
 | `reg.audit.pre-merge-trial.v1` | Pre-merge trial | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.assurance.prediction-resolution.v1` | Prediction resolution | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.control.profile-write-grant.v1` | Profile write grant | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.progression-veto.v1` | Progression veto | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.project-trust-rule.v1` | Project trust rule | S5 | deterministic-gate | active | 2026-12-01 |
@@ -108,13 +109,13 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.authority.advice-decision.v1` · S5 · deterministic-gate · active · unreleased
 
-**Purpose.** The one path that changes an advice file: `regulator advice accept`, run by a named person, on an obligation owed to S5 that a proposal opened against `advice/<profile>.md`. It writes the proposed file into the instance's regulator/advice/ under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a file that is not the one the proposal's subject names or that no declared profile owns, refuses content that is empty or over the budget policy's `advice.maxChars`, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `advice reject` resolves it as rejected and changes nothing. Mirrors the S5 decision path (s5-decision) for the second accept path of the split (DEFINITION_WRITERS, class `advice`): advice is what every unit of a profile is told, which is policy, not operations, so the grant is `actAsS5`.
+**Purpose.** The one path that changes an advice file: `regulator advice accept`, run by a named person, on an obligation owed to S5 that a proposal opened against `advice/<profile>.md`. It writes the proposed file into the instance's regulator/advice/ under S5 authority (the same authorizeWrite the gate refuses operational callers), refuses a file that is not the one the proposal names — in its typed `harness-edit` payload (#138; the host first checks the payload against the stores, prediction-resolution) or, for a plain proposal, in its subject — or that no declared profile owns, refuses content that is empty or over the budget policy's `advice.maxChars`, commits on the base branch citing the obligation, and resolves the obligation as accepted with the commit. `advice reject` resolves it as rejected and changes nothing. Mirrors the S5 decision path (s5-decision) for the second accept path of the split (DEFINITION_WRITERS, class `advice`): advice is what every unit of a profile is told, which is policy, not operations, so the grant is `actAsS5`.
 
 **Absorbs.** `proposal-with-no-decider` — A proposal against a profile's advice is recorded and owed to S5, and then a person edits the advice file by hand with no link to what was asked, or edits the profile's grant while they are at it, or never does, and the obligation sits open with no way to close it honestly.
 
-**Mechanism.** `src/cli.ts` at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted), `cli:advice reject` (ledger.resolve rejected)
+**Mechanism.** `src/cli.ts` at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the harness-edit payload (checked against the stores first) or by a plain proposal's subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted citing the prediction when there is one), `cli:advice reject` (ledger.resolve rejected)
 
-**Channels.** consumes `obligation (policy-proposal, owed to S5, subject naming advice/<profile>.md)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
+**Channels.** consumes `obligation (policy-proposal, owed to S5: a harness-edit naming its profile, or a plain proposal whose subject names advice/<profile>.md)`, `a proposed file` · emits `commit on the base branch`, `obligation-resolved (accepted | rejected)`
 
 **Scope.** subjects advice, obligation · resources regulator/advice/, base branch
 
@@ -132,13 +133,13 @@ does not do. `since` is the package version that first shipped the record.
 - write a file other than the one the proposal names
 - be called by a tool
 
-**Evidence.** `src/cli.test.ts`, `../core/src/advice.test.ts`
+**Evidence.** `src/cli.test.ts`, `../core/src/advice.test.ts`, `../core/src/predictions.test.ts`
 
 **Limitations.**
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
-- Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
+- The probe rule — accept a `harness-edit` only after its probe horizon resolves — is not here. The prediction record and the typed payload landed (#138, prediction-resolution), so a `harness-edit` is checked against the stores and its live horizon opens at acceptance; refusing one that was never probed waits for the probe arm (accept-path note §8, slice 3, after #46).
 - It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
 
 **Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
@@ -535,7 +536,7 @@ does not do. `since` is the package version that first shipped the record.
 - The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
 - Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
 - It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
-- A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
+- A plain proposal's class is read off its subject (the path it names); only a `harness-edit` names its target in a typed payload (`HarnessEditSchema`, #138), and only for the advice class. A typed payload for the identity and declaration classes is not designed.
 
 **Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
 
@@ -1430,6 +1431,53 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `loop:pre-merge` — A step of the close; not ablatable by the harness. The drift suite's sequential tasks share one base; without the trial a semantic conflict would land and show as later units' check failures.
 
 **Retirement condition.** Never while two units can share a base: the trial is what makes a clean merge mean something.
+
+
+## Prediction resolution
+
+`reg.assurance.prediction-resolution.v1` · S3* · deterministic-gate · active · unreleased
+
+**Purpose.** Keep what is expected apart from what was seen and what was decided, and make the expectation resolve. An intelligence signal may carry a `prediction` block (the metric it stakes, built-in or declared; a baseline, a committed report's arm; a direction and a size; a probability in [0, 1] beside the three-valued confidence; the horizons it resolves at, each with the grader value that counts against it). It is routed exactly as any intelligence is and moves nothing. When a unit a live horizon names closes or aborts, the loop reads the named metric with the graders the eval harness uses — over the unit's records, the instance's tree and the workload's declared grader command, never the unit's report — compares it with the baseline and the disconfirming value, and appends a `prediction-resolution` to the regulatory log: confirmed, disconfirmed or inconclusive. A probe horizon resolves from the committed report it names by fingerprint, against the arm's interval. Inconclusive counts against the prediction's precision and never for the edit. A disconfirmed live horizon is a proposal from S3 to S5 to revert or re-decide the advice, routed under the routing policy into an obligation with the prediction's id in its subject; the advice file is not touched. The `harness-edit` proposal is the first thing that bets on a prediction: a typed `requestedChange` with a diagnosis (references to evidence records and signals, with the unit, attempt, revision and trajectory moment they were read at), a change (the diff against one advice file, by profile) and the prediction's id — three records, each a different kind. The schema refuses a payload that claims the kind and lacks a part; `advice accept` refuses one whose diagnosis references do not resolve in the stores or whose prediction names no signal with the block, takes the target from the payload, refuses a --file that disagrees, cites the prediction's id in the disposition, and the live horizon is open from that decision — read from the obligation, never from the rationale.
+
+**Absorbs.** `remedy-adopted-on-its-diagnosis` — A trace that justified a diagnosis is read as evidence that the remedy works: the advice is edited, the edit is adopted on the strength of what was observed before it, and nothing afterwards says whether the metric it was meant to move moved, so a false premise propagates into every later edit (Harness²'s worst regression).
+
+**Mechanism.** `../core/src/predictions.ts` at `loop:resolvePredictions` (after a unit's status becomes closed (closeVerifiedUnit) or aborted (routeUnit): every open live horizon naming the unit's type gets one reading from unitGrader (src/predictions.ts, the eval harness's graders over one unit); probe horizons from committedReports by SHA-256; a disconfirmed live horizon appends a policy-proposal to S5 and routes it), `cli:advice accept` (a harness-edit is read against the stores first (checkHarnessEdit: units, attempts, trajectory moments, evidence at the revision, signals; the prediction carries the block; the profile is declared); the target is the payload's, a disagreeing --file is refused, the disposition cites the prediction)
+
+**Channels.** consumes `intelligence-signal with a prediction block (regulatory log)`, `policy-proposal whose requestedChange is a harness-edit`, `the unit's records, the instance's tree, the workload's declared graders (through graders.ts)`, `committed eval reports (evals/reports/, by fingerprint)`, `the proposal's obligation and its disposition` · emits `prediction-resolution (regulatory log)`, `policy-proposal S3 → S5 on a disconfirmed live horizon, routed into an obligation`, `the prediction's id in an accepted proposal's disposition`
+
+**Scope.** subjects prediction, proposal, advice, unit · resources .regulator/signals.ndjson, .regulator/units/, .regulator/audit.ndjson, evals/reports/
+
+**Cost.** At each close or abort, one fold over the regulatory log and, per open live horizon naming the unit's type, one grader run — a trajectory count is a read of the unit's records, an outcome grader a git diff over the instance, a declared grader the workload's own command. Nothing when no prediction is open. No model calls.
+
+**May.**
+- append a prediction-resolution for a unit the horizon names, once per unit
+- read a metric with the harness's graders over the stores
+- propose to S5 that a disconfirmed advice edit be reverted or re-decided, and route the proposal
+- refuse a harness-edit whose parts do not resolve, before anything is written
+
+**May not.**
+- read a unit's report as the value of any metric
+- revert, write or edit an advice file (an accept path does, after a person decides)
+- resolve the obligation it raised
+- change a prediction, a horizon or a threshold
+- refuse a plain policy-proposal, which carries no prediction and is decided on the person's judgment
+- refuse an unprobed harness-edit (the probe rule is slice 3's)
+
+**Evidence.** `../protocol/src/prediction.test.ts`, `../core/src/predictions.test.ts`, `src/controller.test.ts`, `src/cli.test.ts`, `src/status.test.ts`
+
+**Limitations.**
+- The probe rule is not here: `advice accept` does not refuse a `harness-edit` whose probe horizon has not resolved, because nothing produces a probe report yet. The probe arm (`EvalArmSchema`'s `advice` override) and the refusal are slice 3 of the accept-path split, after the live report (#46); until then a probe horizon resolves only against a report a person committed and named by its fingerprint.
+- A live horizon reads one unit's grader value against a committed report's arm mean, with no interval on the unit's side: one value either reaches the baseline moved by the magnitude or it does not. The probe horizon uses the arm's 95% interval. At three repetitions few intervals separate, so a probe resolves inconclusive more often than a live horizon; inconclusive counts against the prediction either way.
+- The next N units are counted by the fold over the regulatory log — the resolutions recorded against the horizon — not by a scan of the execution store or an index, so the log is re-read at every close and abort, linear in its length, as the obligation ledger already is. A unit of a named type that closed before the horizon opened (before the harness-edit was accepted) is not a reading, by design: the edit was not in effect.
+- A report's fingerprint is the SHA-256 of its committed file, so an interpretation edited after the fact is a different report and a prediction naming the old fingerprint resolves against nothing; `regulator check` does not warn about a prediction whose named report is absent, the resolution's reason does.
+- The outcome graders run over the instance from its first commit, as the eval harness runs them from the fixture commit, so on a long-lived instance `boundaryViolations`, `vocabularyDrift` and `memoryRules` are cumulative, not the closing unit's alone; the trajectory counts and a declared grader are per unit or per run as their graders define them. A metric no grader observes here — another workload's declared metric, a name that is neither — is an inconclusive reading with that reason, never a zero.
+- Nothing in this slice produces a prediction: a person appends the signal, or the reflector will. `report_intelligence` does not take the block, and no `regulator intelligence report` command exists (open questions §2). A signal's three-valued `confidence` is still recorded and never calibrated; the instrument record kind that would grade it waits on resolved predictions and a live report.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-26 · review by 2026-12-01
+
+**Ablation.** `loop:resolve-predictions` — A step of the loop after a unit's status is written; not ablatable by the harness. An arm without it leaves every prediction open forever and no decision ever learns whether the metric it staked moved.
+
+**Retirement condition.** Never while a proposal may carry a prediction: a bet nothing resolves is a sentence in a rationale, which is the failure this record exists to make unrepresentable. The three-valued rule may change when a live report says how often a probe at the shipped repetitions resolves inconclusive.
 
 
 ## Profile write grant

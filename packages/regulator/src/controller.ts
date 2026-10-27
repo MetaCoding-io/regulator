@@ -41,8 +41,8 @@ import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from 
 import { discoverConventions } from "@metacoding.io/regulator-checks";
 import {
   ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
-  dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
-  type ContractProblem, type ReportProblem,
+  dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
+  type ContractProblem, type ReportProblem, type Resolved,
 } from "@metacoding.io/regulator-core";
 import { checkNames, checkOptions } from "@metacoding.io/regulator-protocol";
 import type {
@@ -52,8 +52,9 @@ import type {
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
+import { committedReports, unitGrader } from "./predictions.js";
 import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
-import { unitTypeOf } from "./workload.js";
+import { LAB_ROOT, loadWorkloadFor, unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
 export interface DispatchRequest {
@@ -239,10 +240,10 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; workload: WorkloadDefinition; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
   const { contract, report, now } = options;
   const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
@@ -265,8 +266,43 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
     return { status: "blocked", reason, ...(detail ? { detail } : {}) };
   }
   await store.setStatus(contract.unitId, "closed");
+  // A closed unit is a reading for every open live horizon that names its type (#138): what the prediction was about has now happened once more.
+  await resolvePredictions(exec, { repo: options.repo, unit: { unitId: contract.unitId, unitType: contract.unitType, status: "closed", workload: contract.workload.name }, workload: options.workload, contract, routing: options.routing, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
   return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
+}
+
+export interface ResolvePredictionsOptions {
+  repo: string;
+  /** The unit that just closed or aborted, as the store records it. */
+  unit: { unitId: string; unitType: string; status: "closed" | "aborted"; workload: string };
+  /** The workload, when the caller has it loaded; otherwise it is loaded from the definition by the unit's record, for the metrics it declares. */
+  workload?: WorkloadDefinition;
+  /** The unit's contract, when the caller has it: its signature expectation is what `signatureDrift` observes. */
+  contract?: WorkContract;
+  routing: RoutingPolicy;
+  now?: () => number;
+}
+
+/**
+ * resolve — a unit's close or abort resolves every open live horizon that names its type (#138), one reading per
+ * unit, with the graders the eval harness uses over the stores; a probe horizon resolves from the committed report it
+ * names. Nothing here reads the unit's report, and nothing here changes an advice file: a disconfirmed live horizon is
+ * a proposal to S5, routed under the routing policy, for a person to revert or re-decide. The step runs after the
+ * status is written and never undoes it; a grader that fails is an inconclusive reading, not a failed close.
+ */
+export async function resolvePredictions(exec: Exec, options: ResolvePredictionsOptions): Promise<Resolved> {
+  const now = options.now ?? Date.now;
+  const { unitId, unitType, status } = options.unit;
+  const manifest = await readManifest(options.repo);
+  const definitionRoot = manifest?.definition.root ?? LAB_ROOT;
+  const workload = options.workload ?? (await loadWorkloadFor(options.unit.workload, definitionRoot).catch(() => undefined));
+  const signature = options.contract?.expectedEvidence.find((e) => e.check?.kind === "export-signature");
+  return resolveFromStores(options.repo, {
+    unit: { unitId, unitType, status },
+    measure: unitGrader(exec, { repo: options.repo, unitId, definitionRoot, ...(workload ? { workload } : {}), ...(signature ? { signature } : {}) }),
+    reports: await committedReports(definitionRoot), routing: options.routing, now,
+  });
 }
 
 export interface PreMergeOutcome {
@@ -401,7 +437,7 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
     await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload: options.workload, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
 }
 
 const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;
@@ -488,6 +524,8 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
   if (decision.action === "abort") {
     await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
     await store.setStatus(options.unitId, "aborted", `aborted under ${decision.policy.name} v${decision.policy.version}: ${decision.cause}`);
+    // An aborted unit is a reading too (#138): a prediction about the next N units is about the ones that failed as much as the ones that closed.
+    await resolvePredictions(exec, { repo: options.repo, unit: { unitId: options.unitId, unitType: unit.unitType, status: "aborted", workload: unit.workload.name }, routing: options.routing, now });
   } else if (decision.action === "escalate") {
     const signal: AlgedonicSignal = {
       id: decision.id, timestamp: decision.decidedAt, source: "S3", kind: "algedonic-signal", channel: "algedonic", destination: "S5",

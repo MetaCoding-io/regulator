@@ -29,7 +29,7 @@
     "The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).",
     "Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.",
     "It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.",
-    "A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split."
+    "A plain proposal's class is read off its subject (the path it names); only a `harness-edit` names its target in a typed payload (`HarnessEditSchema`, #138), and only for the advice class. A typed payload for the identity and declaration classes is not designed."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-10-25", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "none", "note": "A check on the definition and a constant the gates derive from, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against."},

@@ -778,3 +778,56 @@ test("advice is harness-owned at closeout too (#110): a unit that commits a chan
   assert.deepEqual(record?.command?.slice(-(HARNESS_OWNED_INSTANCE_DIRS.length + 1)), ["--", ...HARNESS_OWNED_INSTANCE_DIRS], "the diffed prefixes are the list's instance paths, derived, in its order");
   assert.match(await readFile(path.join(repo, "regulator", "advice", "implement.md"), "utf8"), /^- You are in the implement profile/, "the base's advice is as it was");
 });
+
+test("predictions resolve from the stores at close and abort (#138): a unit named by a live horizon closes under the scripted dispatcher and each open prediction gets one three-valued reading from the harness's graders — confirmed, disconfirmed, inconclusive — never from its report; a disconfirmed live horizon is an obligation owed to S5 under the shipped routing policy with the prediction's id in its subject; an aborted unit is a reading too, and the count is met by the fold", async (t) => {
+  const { ObligationLedger, appendSignal, readPredictions } = await import("@metacoding.io/regulator-core");
+  const { committedReports } = await import("./predictions.js");
+  const { driveUnit } = await import("./controller.js");
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const base = await withPolicy();
+  const reference = (await committedReports(LAB_ROOT)).find((r) => r.file === "evals/reports/drift-scripted-reference.json");
+  assert.ok(reference, "the committed reference report, by fingerprint");
+  const bet = (id: string, prediction: object) => appendSignal(repo, { id, timestamp: "2026-10-26T00:00:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: `advice/implement.md: ${id}`, observation: "o", claim: "c", confidence: "medium", evidence: [], prediction } as never);
+  // The reference report's control arm closed every unit in one attempt: closed 1, attempts 1.
+  await bet("p-confirm", { metric: "closed", baseline: { report: reference.fingerprint, arm: "control" }, direction: "higher", magnitude: 0, probability: 0.8, horizons: [{ kind: "live", unitTypes: ["implement"], count: 2, disconfirmedBy: 0 }] });
+  await bet("p-disconfirm", { metric: "attempts", baseline: { report: reference.fingerprint, arm: "control" }, direction: "lower", magnitude: 1, probability: 0.6, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 1 }] });
+  await bet("p-inconclusive", { metric: "workload:portfolio/turnover", baseline: { arm: "control" }, direction: "lower", magnitude: 1, probability: 0.5, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 5 }] });
+
+  const closed = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", dispatcher: unitThat(async (request, store) => {
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract));
+  }, repo) });
+  assert.equal(closed.status, "closed");
+  let states = await readPredictions(repo);
+  assert.deepEqual(states.map((s) => [s.signal.id, s.status, s.horizons[0]!.resolutions.map((r) => [r.outcome, r.observed, r.baseline, r.resolvedBy])]), [
+    ["p-confirm", "open", [["confirmed", 1, 1, { unit: "u1", unitType: "implement", status: "closed" }]]],
+    ["p-disconfirm", "resolved", [["disconfirmed", 1, 1, { unit: "u1", unitType: "implement", status: "closed" }]]],
+    ["p-inconclusive", "resolved", [["inconclusive", undefined, undefined, { unit: "u1", unitType: "implement", status: "closed" }]]],
+  ], "one reading per open horizon: closed 1 reaches the baseline; one attempt is the disconfirming value; another workload's declared metric has no grader here");
+  const [confirmed, disconfirmed, inconclusive] = states.map((s) => s.horizons[0]!.resolutions[0]!);
+  assert.deepEqual([confirmed!.grader?.kind, confirmed!.evidence[0]?.ref, confirmed!.evidence[1]?.ref], ["trajectory", ".regulator/units/u1", "evals/reports/drift-scripted-reference.json"], "read from the unit's records and the committed report, never the unit's report");
+  assert.match(disconfirmed!.reason, /observed 1 is at or past the disconfirming value 1 \(predicted lower\)/);
+  assert.match(inconclusive!.reason, /no grader observes "workload:portfolio\/turnover" for unit u1/);
+  assert.deepEqual(states.map((s) => s.summary.precision), [1, 0, 0], "inconclusive counts against precision");
+  const ledger = new ObligationLedger(repo);
+  let owedS5 = (await ledger.open()).filter((o) => o.consumer === "S5");
+  assert.deepEqual(owedS5.map((o) => [o.concern, o.severity, o.blocks, o.unit]), [["policy-proposal", "advisory", false, undefined]], "the disconfirmation is a proposal to S5, routed under the shipped policy, on the instance and not on the unit");
+  assert.match(owedS5[0]!.subject, /^prediction p-disconfirm disconfirmed at its live horizon: revert or re-decide advice\/implement\.md: p-disconfirm$/);
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice", "implement.md"), "utf8"), "nothing reverted the advice: that is an accept path's, after a person decides");
+
+  // u2 aborts without a report: closed reads 0, at the disconfirming value, and p-confirm's second unit meets its count.
+  const abortive = { ...(await loadRecoveryPolicy()), version: 2, rules: [{ cause: "no-report" as const, actions: ["abort" as const] }] };
+  const gone = await driveUnit(gitExec, { ...base, repo, contract: { ...contract, unitId: "u2" }, workload, recovery: abortive, owner: "alice", dispatcher: async () => ({}) });
+  assert.deepEqual(gone.decisions.map((d) => d.action), ["abort"]);
+  assert.equal((await new ExecutionStore(repo).getUnit("u2"))?.status, "aborted");
+  states = await readPredictions(repo);
+  assert.deepEqual(states[0]!.horizons[0]!.resolutions.map((r) => [r.outcome, r.observed, r.resolvedBy]), [["confirmed", 1, { unit: "u1", unitType: "implement", status: "closed" }], ["disconfirmed", 0, { unit: "u2", unitType: "implement", status: "aborted" }]]);
+  assert.deepEqual([states[0]!.status, states[0]!.horizons[0]!.status, states[0]!.summary], ["resolved", "met", { confirmed: 1, disconfirmed: 1, inconclusive: 0, resolved: 2, precision: 0.5 }], "the next 2 implement units: met by the fold over the log, no scan");
+  owedS5 = (await ledger.open()).filter((o) => o.consumer === "S5");
+  assert.deepEqual(owedS5.map((o) => o.subject.split(" ")[1]), ["p-disconfirm", "p-confirm"], "each disconfirmed live horizon is owed to S5 once");
+  assert.equal((await new ExecutionStore(repo).listAttempts("u2")).length, 1, "the resolution changed nothing about the unit");
+});

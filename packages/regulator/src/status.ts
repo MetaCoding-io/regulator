@@ -13,8 +13,8 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import {
-  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
-  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
+  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, foldPredictions, formatSummary, precisionOf, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
+  type IdentitySet, type InteractionState, type MemoryState, type PredictionState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
   CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
@@ -91,6 +91,8 @@ export interface InstanceView {
   memory: MemoryState[];
   /** What units asked a person and what came back (lesson 13), oldest first. */
   interactions: InteractionState[];
+  /** Every prediction the log holds (#138), folded: its horizons, what bet on it and how that was decided, its resolutions, and a precision that counts inconclusive against. */
+  predictions: PredictionState[];
   /** What `regulator init` wrote (lesson 15), when it did; the problem when the file is there and invalid. */
   manifest: InstanceManifest | undefined;
   manifestProblem?: string;
@@ -268,7 +270,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions(), manifest, ...(manifestProblem ? { manifestProblem } : {}) };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions(), predictions: foldPredictions(await ledger.entries()), manifest, ...(manifestProblem ? { manifestProblem } : {}) };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -340,6 +342,16 @@ export function renderStatusText(view: StatusView): string {
     const current = i.memory.filter((m) => m.status === "current");
     lines.push(`  memory: ${current.length} current of ${i.memory.length}`);
     for (const m of current) lines.push(`    ${m.id.slice(0, 8)}  ${m.subject}: ${m.note}  (by ${m.recordedBy}${m.unit ? ` in ${m.unit}` : ""}; review by ${m.reviewBy.slice(0, 10)})`);
+    const openPredictions = i.predictions.filter((p) => p.status === "open");
+    const precision = precisionOf(i.predictions.flatMap((p) => p.horizons.flatMap((h) => h.resolutions)));
+    lines.push(`  predictions: ${openPredictions.length} open of ${i.predictions.length}${precision.resolved ? `; ${precision.confirmed} confirmed, ${precision.disconfirmed} disconfirmed, ${precision.inconclusive} inconclusive of ${precision.resolved} resolved (precision ${precision.precision!.toFixed(2)}; inconclusive counts against)` : ""}`);
+    for (const p of i.predictions) {
+      const horizons = p.horizons.map((h) => h.horizon.kind === "live"
+        ? `live ${h.status}: ${h.resolutions.length}/${h.horizon.count} ${h.horizon.unitTypes.join("|")} unit(s)${h.resolutions.length ? ` (${h.resolutions.map((r) => `${"unit" in r.resolvedBy ? r.resolvedBy.unit : "report"} ${r.outcome}`).join(", ")})` : ""}`
+        : `probe ${h.status}${h.resolutions.length ? ` (${h.resolutions[0]!.outcome})` : ""}`).join("; ");
+      const decided = p.proposals.map((x) => `${x.messageId.slice(0, 8)} ${x.disposition ?? x.status ?? "unrouted"}`).join(", ");
+      lines.push(`    ${p.status.padEnd(17)} ${p.signal.id.slice(0, 8)}  ${p.prediction.metric} ${p.prediction.direction} by ${p.prediction.magnitude} (p=${p.prediction.probability})  ${horizons}${decided ? `  bet on by ${decided}` : ""}  ${p.signal.subject}`);
+    }
     lines.push(`  unrouted signals: ${i.signals.length}`);
     for (const signal of i.signals) lines.push(`    ${signal.kind}  ${signal.source}→${signal.destination}  ${signal.subject}${"unit" in signal && signal.unit ? `  (unit ${signal.unit})` : ""}`);
   }

@@ -24,6 +24,8 @@ export { SEVERITY_ORDER, SeveritySchema, severityAtLeast, type Severity } from "
 import { EvidenceClassSchema, EvidenceRefSchema } from "./evidence.js";
 export { EvidenceClassSchema, EvidenceRefSchema, type EvidenceClass, type EvidenceRef } from "./evidence.js";
 
+import { PredictionResolutionSchema, PredictionSchema, RequestedChangeSchema } from "./prediction.js";
+
 const EnvelopeFields = {
   id: Type.String({ minLength: 1 }),
   timestamp: Type.String({ minLength: 1 }),
@@ -63,7 +65,8 @@ export const PolicyProposalSchema = Type.Object({
   destination: Type.Literal("S5"),
   severity: SeveritySchema,
   rationale: Type.String({ minLength: 1 }),
-  requestedChange: Type.Unknown(),
+  /** Free for a plain proposal; a `harness-edit` (#138) is the typed payload `HarnessEditSchema`, and one that claims the kind and lacks a part is refused here. */
+  requestedChange: RequestedChangeSchema,
   evidence: Type.Array(EvidenceRefSchema),
 }, { additionalProperties: false });
 export type PolicyProposal = Static<typeof PolicyProposalSchema>;
@@ -151,6 +154,12 @@ export const IntelligenceSignalSchema = Type.Object({
   observedAt: Type.Optional(Type.String({ minLength: 1 })),
   /** Units whose progression the intelligence bears on. */
   affectedUnits: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+  /**
+   * A claim about the future that resolves (#138): the metric it stakes, the baseline, the direction and size, a
+   * probability beside `confidence`, and the horizons at which the loop reads the outcome. Routed exactly as a signal
+   * without it; a block missing any part is refused.
+   */
+  prediction: Type.Optional(PredictionSchema),
 }, { additionalProperties: false });
 export type IntelligenceSignal = Static<typeof IntelligenceSignalSchema>;
 
@@ -249,8 +258,8 @@ export type VsmMessage = Static<typeof VsmMessageSchema>;
 
 import { ObligationEventSchema } from "./obligations.js";
 import { InteractionEventSchema } from "./interaction.js";
-/** One line of the regulatory log (lesson 11): a typed message, an event about its routing, or (lesson 13) an interaction with a person. */
-export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema, InteractionEventSchema]);
+/** One line of the regulatory log (lesson 11): a typed message, an event about its routing, (lesson 13) an interaction with a person, or (#138) a prediction's resolution. */
+export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema, InteractionEventSchema, PredictionResolutionSchema]);
 export type RegulatoryEntry = Static<typeof RegulatoryEntrySchema>;
 
 /**
@@ -389,4 +398,10 @@ export {
 } from "./metrics.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
 export { InstanceManifestSchema, isInstanceManifest, type InstanceManifest } from "./instance.js";
+export {
+  DiagnosisRefSchema, HARNESS_EDIT_KIND, HarnessEditSchema, LiveHorizonSchema, PredictionBaselineSchema, PredictionDirectionSchema, PredictionHorizonSchema, PredictionOutcomeSchema,
+  PredictionResolutionSchema, PredictionSchema, ProbeHorizonSchema, ReportFingerprintSchema, RequestedChangeSchema, TrajectoryMomentSchema, claimsHarnessEdit, isHarnessEdit, isPredictionResolution,
+  type DiagnosisRef, type HarnessEdit, type LiveHorizon, type Prediction, type PredictionBaseline, type PredictionDirection, type PredictionHorizon, type PredictionOutcome, type PredictionResolution,
+  type ProbeHorizon, type ReportFingerprint, type TrajectoryMoment,
+} from "./prediction.js";
 export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";

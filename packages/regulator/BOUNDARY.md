@@ -16,7 +16,7 @@ in no class, and a test holds every command named here against the CLI.
 | Class | Paths | Proposed by | Lands through | Probed by | Refused to |
 | --- | --- | --- | --- | --- | --- |
 | identity | `identity/`, `regulator/identity/` | `propose_policy_change` | `identity accept`, then `identity promote` | an eval arm's `identity` switch toggles the whole set; no per-file probe | every tool; `advice accept` (closed file list) |
-| advice | `advice/`, `regulator/advice/` | a `harness-edit` (diagnosis, change, prediction) or a plain proposal | `advice accept`, then `advice promote` | an eval arm's `advice` field, once the prediction record exists (accept-path note §8, slice 3) | every tool; `identity accept` (closed file list) |
+| advice | `advice/`, `regulator/advice/` | a typed `harness-edit` (`HarnessEditSchema`: diagnosis references, a diff by profile, the id of a signal with a `prediction` block; checked against the stores at `advice accept`) or a plain proposal | `advice accept`, then `advice promote` | the prediction's horizons: a probe horizon resolves from a committed report by fingerprint, a live horizon from the next N units after acceptance (#138); an eval arm's `advice` override is slice 3 (accept-path note §8, after #46) | every tool; `identity accept` (closed file list) |
 | declaration | `profiles/`, `workload/`, `policies/`, `evals/`, `contracts/`, `registry/`, `drift/`, `fixture/`, `fixture-finance/`, `fixture-injection/`, `fixture-oscillation/`, `fixture-portfolio/` | a plain proposal, `requestedChange` as text | a merged change to the definition's repository; a unit of work against the definition's repository under a contract, with `regulator check` and the tests at closeout and a merge by a person, waits for the definition's repository to run under the loop (accept-path note §6); until then the path is a pull request a person writes | the definition's own CI | `identity accept` and `advice accept`, by construction |
 
 A path not named here is not known to be covered: a definition directory in no class does not pass `regulator check`,
@@ -24,14 +24,14 @@ and an instance path outside the list is protected only if the project's convent
 
 ## Advice decision path (`reg.authority.advice-decision.v1`)
 
-Enforced at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted), `cli:advice reject` (ledger.resolve rejected) in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the harness-edit payload (checked against the stores first) or by a plain proposal's subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted citing the prediction when there is one), `cli:advice reject` (ledger.resolve rejected) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
-- Every advice proposal is plain: the probe rule — accept a `harness-edit` only after its probe horizon resolves — waits for the prediction record (accept-path note §8, slice 2) and is not here.
+- The probe rule — accept a `harness-edit` only after its probe horizon resolves — is not here. The prediction record and the typed payload landed (#138, prediction-resolution), so a `harness-edit` is checked against the stores and its live horizon opens at acceptance; refusing one that was never probed waits for the probe arm (accept-path note §8, slice 3, after #46).
 - It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
 
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
@@ -118,7 +118,7 @@ Not covered:
 - The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
 - Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
 - It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
-- A proposal's class is read off its subject (the path it names), not off a typed payload; the `harness-edit` payload that names its target by type is slice 2 of the accept-path split.
+- A plain proposal's class is read off its subject (the path it names); only a `harness-edit` names its target in a typed payload (`HarnessEditSchema`, #138), and only for the advice class. A typed payload for the identity and declaration classes is not designed.
 
 ## Disposition authority (`reg.authority.disposition-authority.v1`)
 
@@ -338,6 +338,19 @@ Not covered:
 - The trial worktree is the merged tree and nothing else: a project whose checks need installed dependencies has the same gap a unit's worktree has, and the conventions' discovery decides what runs there.
 - A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
 - An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
+
+## Prediction resolution (`reg.assurance.prediction-resolution.v1`)
+
+Enforced at `loop:resolvePredictions` (after a unit's status becomes closed (closeVerifiedUnit) or aborted (routeUnit): every open live horizon naming the unit's type gets one reading from unitGrader (src/predictions.ts, the eval harness's graders over one unit); probe horizons from committedReports by SHA-256; a disconfirmed live horizon appends a policy-proposal to S5 and routes it), `cli:advice accept` (a harness-edit is read against the stores first (checkHarnessEdit: units, attempts, trajectory moments, evidence at the revision, signals; the prediction carries the block; the profile is declared); the target is the payload's, a disagreeing --file is refused, the disposition cites the prediction) in `../core/src/predictions.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The probe rule is not here: `advice accept` does not refuse a `harness-edit` whose probe horizon has not resolved, because nothing produces a probe report yet. The probe arm (`EvalArmSchema`'s `advice` override) and the refusal are slice 3 of the accept-path split, after the live report (#46); until then a probe horizon resolves only against a report a person committed and named by its fingerprint.
+- A live horizon reads one unit's grader value against a committed report's arm mean, with no interval on the unit's side: one value either reaches the baseline moved by the magnitude or it does not. The probe horizon uses the arm's 95% interval. At three repetitions few intervals separate, so a probe resolves inconclusive more often than a live horizon; inconclusive counts against the prediction either way.
+- The next N units are counted by the fold over the regulatory log — the resolutions recorded against the horizon — not by a scan of the execution store or an index, so the log is re-read at every close and abort, linear in its length, as the obligation ledger already is. A unit of a named type that closed before the horizon opened (before the harness-edit was accepted) is not a reading, by design: the edit was not in effect.
+- A report's fingerprint is the SHA-256 of its committed file, so an interpretation edited after the fact is a different report and a prediction naming the old fingerprint resolves against nothing; `regulator check` does not warn about a prediction whose named report is absent, the resolution's reason does.
+- The outcome graders run over the instance from its first commit, as the eval harness runs them from the fixture commit, so on a long-lived instance `boundaryViolations`, `vocabularyDrift` and `memoryRules` are cumulative, not the closing unit's alone; the trajectory counts and a declared grader are per unit or per run as their graders define them. A metric no grader observes here — another workload's declared metric, a name that is neither — is an inconclusive reading with that reason, never a zero.
+- Nothing in this slice produces a prediction: a person appends the signal, or the reflector will. `report_intelligence` does not take the block, and no `regulator intelligence report` command exists (open questions §2). A signal's three-valued `confidence` is still recorded and never calibrated; the instrument record kind that would grade it waits on resolved predictions and a live report.
 
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
