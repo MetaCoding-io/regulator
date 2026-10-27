@@ -67,7 +67,7 @@ test("parseChangelog (#53): every version heading, newest first, with its migrat
 test("parseChangelog refuses what it cannot read by name: a bullet outside the shape, a class not in the list, a gate not in the vocabulary or without its fingerprint, a heading that is neither Unreleased nor semver, two Migration sections", () => {
   const under = (body: string) => `## [0.2.0] — 2026-12-01\n\n### Migration\n\n${body}\n`;
   assert.throws(() => parseChangelog(under("- advice: the files moved")), /\[0\.2\.0\] § Migration: a bullet does not fit the shape/);
-  assert.throws(() => parseChangelog(under("- fixture `fixture/` — gate: check. Moved.")), /"fixture" is not a class a migration bullet describes \(identity, policy, workload, profile, advice, registry\)/);
+  assert.throws(() => parseChangelog(under("- fixture `fixture/` — gate: check. Moved.")), /"fixture" is not a class a migration bullet describes \(identity, policy, workload, profile, advice, registry, contract\)/);
   assert.throws(() => parseChangelog(under("- advice `advice/x.md` — gate: eval. Moved.")), /does not fit the shape/);
   assert.throws(() => parseChangelog(under("- advice `advice/x.md` — gate: scripted. Moved.")), /does not fit the shape/, "scripted and live name the report");
   assert.throws(() => parseChangelog(under("- advice `advice/x.md` — gate: scripted abc. Moved.")), /does not fit the shape/);

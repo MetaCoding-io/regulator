@@ -4,7 +4,7 @@ export {
 } from "./authority.js";
 export { assertRegulatoryEvent, createRegulatoryEvent } from "./reporting.js";
 export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatoryEvent } from "./event-store.js";
-export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
+export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations, withDeclaredEffects } from "./effects.js";
 export { isReadOnlyProfile, isWritableUnder, renderProfileSection, type RenderProfileOptions } from "./profiles.js";
 export { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, profileOfAdviceFile, readAdviceSet, renderAdvice, type AdviceContextBudget, type AdviceProblem, type AdviceSet, type DeclaredProfile } from "./advice.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
@@ -31,11 +31,15 @@ export { IDENTITY_CONTEXT_MAX_CHARS, IDENTITY_FILES, checkAuthorityRefs, identit
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
 export {
-  PATH_GUARDED_TOOLS, checkConsentGrants, consentBypassWarnings, consentFor, consentGrantFor, describeConsentGrant, matchesConsentedCall, normalizeConsentCall, normalizeConsentPath,
-  type ConsentGrantProblem, type ConsentVerdict,
+  PATH_GUARDED_TOOLS, checkConsentGrants, consentBypassWarnings, consentFor, consentGrantFor, consentRequiredFor, describeConsentGrant, describeConsentRequirement, matchesConsentedCall, normalizeConsentCall, normalizeConsentPath,
+  type ConsentGrantProblem, type ConsentRequirement, type ConsentVerdict,
 } from "./consent.js";
+export {
+  checkDeclaredTools, consentDerivedFrom, declaredEffectsOf, declaredEffectsOfWorkloads, declaredToolsOf, derivedConsentGrant, guardedOutputsOf,
+  type CheckDeclaredToolsOptions, type DeclaredToolOf, type DeclaredToolsCheck,
+} from "./declared-tools.js";
 export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
-export { checkCommandRunner, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
+export { checkCommandRunner, checkProgram, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";

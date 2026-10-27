@@ -12,19 +12,23 @@
  * profile's consent grants name tools it grants and paths it may write, with
  * the shell bypass warned about (#60), and a unit type that runs a program
  * names a file under the definition and reaches only where its profile's
- * effect declaration lets a unit write and no yes is required (#122). The
- * registry has its own check; this is the rest.
+ * effect declaration lets a unit write and no yes is required (#122), and a
+ * workload's declared tools carry an effect, a name of their own and a
+ * program under the definition, with a profile judged by the effects it
+ * grants, declared ones included (#121). The registry has its own check;
+ * this is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
-  isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric, isCommandRunner, runnerOf,
+  isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric, isCommandRunner, isWorkloadDefinition, runnerOf,
 } from "@metacoding.io/regulator-protocol";
 import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
 import { checkConsentGrants, consentBypassWarnings } from "./consent.js";
+import { checkDeclaredTools, declaredEffectsOfWorkloads, declaredToolsOf } from "./declared-tools.js";
 import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
-import { readOnlyViolations } from "./effects.js";
+import { readOnlyViolations, withDeclaredEffects } from "./effects.js";
 import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
 import { isReadOnlyProfile } from "./profiles.js";
 import { checkCommandRunner, commandRunnerShapeHints } from "./runners.js";
@@ -79,6 +83,19 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, seedDirFor("identity"))), advice: { dir: path.join(dir, seedDirFor("advice")), files: {}, problems: [] }, evals: [], reports: [], problems: [], warnings: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
+  // The workloads are read before the profiles for the one thing a profile check needs from them (#121): the tools they
+  // declare, whose effects a profile is judged by beside the built-ins. Their own problems are reported in their turn below.
+  const workloadFiles: Array<{ file: string; value: unknown; error?: Error }> = [];
+  for (const file of await jsonFiles(path.join(dir, "workload"))) {
+    try {
+      workloadFiles.push({ file, value: JSON.parse(await readFile(path.join(dir, "workload", file), "utf8")) });
+    } catch (error) {
+      workloadFiles.push({ file, value: undefined, error: error as Error });
+    }
+  }
+  const declaredWorkloads = workloadFiles.map((w) => w.value).filter(isWorkloadDefinition);
+  const effects = withDeclaredEffects(declaredEffectsOfWorkloads(declaredWorkloads));
+
   const profileFiles = await jsonFiles(path.join(dir, "profiles"));
   if (!profileFiles.length) problem("profiles/", "no profiles declared: the definition grants no capabilities");
   for (const file of profileFiles) {
@@ -87,7 +104,7 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       assertValid(CapabilityProfileSchema, value, `profile ${file}`);
       if (value.name !== path.basename(file, ".json")) problem(`profiles/${file}`, `declares profile "${value.name}"; the file name must match`);
       if (value.description.toLowerCase().includes("read-only") && value.writablePaths.length === 0) {
-        const violations = readOnlyViolations(value.tools);
+        const violations = readOnlyViolations(value.tools, effects);
         if (violations.length && !/not read-only by declared effect/i.test(value.description)) problem(`profiles/${file}`, `says read-only but grants ${violations.join(", ")}, whose effects are not read-only`);
       }
       // Consent grants (#60): a declaration over the profile's own grant, so a guarded tool must be granted and a guarded
@@ -100,10 +117,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
     }
   }
 
-  for (const file of await jsonFiles(path.join(dir, "workload"))) {
-    let value: unknown;
+  for (const { file, value, error: parseError } of workloadFiles) {
     try {
-      value = JSON.parse(await readFile(path.join(dir, "workload", file), "utf8"));
+      if (parseError) throw parseError;
       assertValid(WorkloadDefinitionSchema, value, `workload ${file}`);
       out.workloads.push(value);
       for (const type of value.unitTypes) {
@@ -115,8 +131,8 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         if (!profile) problem(`workload/${file}`, `unit type "${type.name}" runs under profile "${type.profile}", which is not declared under profiles/`);
         // A unit nothing bounds may not change anything: a unit type that runs without a contract must run under a
         // profile whose every tool is read-only by declared effect. The flag is a grant, and this is where it is checked.
-        else if (!type.requiresContract && !isReadOnlyProfile(profile)) {
-          problem(`workload/${file}`, `unit type "${type.name}" runs without a contract but its profile "${type.profile}" grants ${readOnlyViolations(profile.tools).join(", ")}, whose effects are not read-only: a unit no contract bounds may not write`);
+        else if (!type.requiresContract && !isReadOnlyProfile(profile, effects)) {
+          problem(`workload/${file}`, `unit type "${type.name}" runs without a contract but its profile "${type.profile}" grants ${readOnlyViolations(profile.tools, effects).join(", ")}, whose effects are not read-only: a unit no contract bounds may not write`);
         }
         // A contracted unit closes only by reporting: a profile that does not grant the report tool makes every unit of
         // the type end as no-report (found by the first live drift run, 0.1.2). The grant is the profile's to declare.
@@ -142,6 +158,13 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         if (!(await graderFile(dir, metric.grader.argv))) problem(`workload/${file}`, `metric "${metric.name}" declares the grader \`${metric.grader.argv.join(" ")}\`, and no argument of it is a file under the definition: the grader's file is what the report fingerprints, and it is missing`);
         if (metric.instrument !== undefined && (await instrumentHeldOutScore(dir, metric.instrument)) === undefined) problem(`workload/${file}`, `metric "${metric.name}" is judged by instrument "${metric.instrument}", and no instrument record carries its held-out score: a judged metric waits on the record (open questions §4, #49)`);
       }
+      // Declared tools (#121): a name of the tool's own, an object schema, an effect that agrees with its outputs and never
+      // says arbitrary execution, a program under the definition; and, where consent is derived from the effect, no profile
+      // that grants the tool and reaches its outputs by a plain write (refused) or a shell (warned).
+      const elsewhere = new Map([...declaredToolsOf(declaredWorkloads.filter((w) => w.name !== value.name))].map(([name, d]) => [name, d.workload]));
+      const declared = await checkDeclaredTools({ root: dir, workload: value, profiles: out.profiles, elsewhere });
+      for (const message of declared.problems) problem(`workload/${file}`, message);
+      for (const message of declared.warnings) out.warnings.push({ file: `workload/${file}`, message });
     } catch (error) {
       // The schema refuses a command runner without an argv as it refuses any shape fault; the fault is named when it is that one.
       const hints = commandRunnerShapeHints(value);

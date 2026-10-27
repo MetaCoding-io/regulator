@@ -238,3 +238,69 @@ test("refused: a command runner whose outputs lie outside the profile's writable
     'unit type "plan" declares output "trades/proposed/", which is outside profile "manager"\'s writable paths (none): a program writes only where its effect declaration says a unit of the profile may',
   ], "a read-only effect declaration admits no output");
 });
+
+/**
+ * Declared tools (#121). A definition with one workload, `pf`, declaring the tools the options give under the profile
+ * the options describe, so the problems about `workload/pf.json` and `profiles/` are the ones the declaration earns.
+ */
+const placeTrade = {
+  name: "place_trade", description: "Place the proposed list.", parameters: { type: "object", properties: { proposed: { type: "string" } }, required: ["proposed"], additionalProperties: false },
+  effect: { filesystem: "write", execution: "project-code", network: "none", sideEffects: "irreversible" },
+  program: { argv: ["node", "workload/pf/place-trade.mjs"], outputs: ["trades/pending/"] },
+};
+async function toolsDefinition(t: { after(fn: () => Promise<void>): void }, options: { tools?: unknown[]; profile?: Record<string, unknown>; programFile?: boolean; otherWorkload?: boolean; auditor?: Record<string, unknown> } = {}): Promise<{ problems: string[]; warnings: string[] }> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-tools-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "place_trade", "report_result"], writablePaths: ["lots/", "trades/proposed/"], ...options.profile });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.auditor) {
+    await write(dir, "profiles/auditor.json", { name: "auditor", description: "Read-only.", tools: ["read"], writablePaths: [], ...options.auditor });
+    await write(dir, "advice/auditor.md", "");
+  }
+  if (options.programFile !== false) await write(dir, "workload/pf/place-trade.mjs", "process.stdout.write('{\"summary\":\"placed\"}\\n');\n");
+  const unitTypes = [{ name: "confirm", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true }];
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes, tools: options.tools ?? [placeTrade] });
+  if (options.otherWorkload) await write(dir, "workload/other.json", { name: "other", version: 1, description: "d", unitTypes, tools: [placeTrade] });
+  const checked = await checkDefinition(dir);
+  const of = (p: { file: string; message: string }) => `${p.file}: ${p.message}`;
+  return { problems: checked.problems.filter((p) => p.file.startsWith("workload/") || p.file.startsWith("profiles/")).map(of), warnings: checked.warnings.filter((w) => w.file.startsWith("workload/") || w.file.startsWith("profiles/")).map(of) };
+}
+
+test("a declared tool (#121) with a name of its own, an object schema, an effect that agrees with its outputs, a program under the definition, and a granting profile that reaches its outputs no other way passes the definition check; its outputs need not lie inside the profile's writable paths, since the tool is the one way a unit of the profile writes there", async (t) => {
+  assert.deepEqual(await toolsDefinition(t), { problems: [], warnings: [] });
+  assert.deepEqual(await toolsDefinition(t, { tools: [] }), { problems: [], warnings: [] }, "a workload that declares no tool is what it was");
+  assert.deepEqual(await toolsDefinition(t, { tools: [{ ...placeTrade, name: "lookup", effect: { filesystem: "read", execution: "none", network: "none", sideEffects: "none" }, program: { ...placeTrade.program, outputs: [] } }] }), { problems: [], warnings: [] }, "a read-only declared tool writes nothing and derives no consent");
+  assert.deepEqual(await toolsDefinition(t, { auditor: { tools: ["read", "lookup"] }, tools: [placeTrade, { ...placeTrade, name: "lookup", effect: { filesystem: "read", execution: "none", network: "none", sideEffects: "none" }, program: { ...placeTrade.program, outputs: [] } }] }), { problems: [], warnings: [] }, "a read-only profile may be granted a declared tool whose declared effect is read-only");
+});
+
+test("refused: a declared tool that takes a built-in's name, is declared twice or by two workloads, whose parameters are not an object schema, whose effect says arbitrary execution or disagrees with its outputs, or whose program names no file under the definition or an output outside the project or under a harness-owned prefix", async (t) => {
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, name: "write" }] })).problems, [
+    'workload/pf.json: declares tool "write", which is a built-in the host registers (read, grep, find, ls, write, edit, bash, read_conventions, run_checks, run_tests, notify_owner, propose_policy_change, report_result, report_intelligence, remember, ask_human): a declared tool\'s name is its own',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { tools: [placeTrade, { ...placeTrade, description: "again" }] })).problems, ['workload/pf.json: declares tool "place_trade" twice']);
+  assert.deepEqual((await toolsDefinition(t, { otherWorkload: true })).problems, [
+    'workload/other.json: declares tool "place_trade", which workload "pf" also declares: the host registers a declared tool by name, so one workload declares it',
+    'workload/pf.json: declares tool "place_trade", which workload "other" also declares: the host registers a declared tool by name, so one workload declares it',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, parameters: { type: "string" } }] })).problems, ['workload/pf.json: tool "place_trade" declares a parameters schema whose type is "string"; a tool\'s parameters are an object schema ("type": "object"), as every built-in\'s are']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, effect: { ...placeTrade.effect, execution: "arbitrary" } }] })).problems, ['workload/pf.json: tool "place_trade" declares execution "arbitrary"; a declared tool is a program whose reach is its declared outputs, nothing wider, and arbitrary execution is the shell\'s alone']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, effect: { ...placeTrade.effect, filesystem: "read" } }] })).problems, ['workload/pf.json: tool "place_trade" declares outputs (trades/pending/) and an effect whose filesystem is "read": a program that writes under the project declares filesystem "write"']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: [] } }] })).problems, ['workload/pf.json: tool "place_trade" declares filesystem "write" and no outputs: a program\'s reach is its declared outputs, so what it writes is a prefix there']);
+  assert.deepEqual((await toolsDefinition(t, { programFile: false })).problems, ['workload/pf.json: tool "place_trade" runs the program `node workload/pf/place-trade.mjs`, and no argument of it is a file under the definition: the program\'s file is what the call\'s record hashes, and it is missing']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: ["trades/../../etc/"] } }] })).problems, ['workload/pf.json: tool "place_trade" declares output "trades/../../etc/", which is not inside the project']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: ["regulator/advice/"] } }] })).problems, ['workload/pf.json: tool "place_trade" declares output "regulator/advice/", which is the identity\'s, the advice\'s or S5\'s: those change through their accept paths, never through a program']);
+});
+
+test("the declared effect reaches the profile checks: a read-only profile granted a declared tool whose effect is irreversible is refused by that effect, not as an unknown name; a profile that grants an irreversible declared tool beside a plain write under its outputs is refused, since a write there would need no yes, and one that grants a shell beside it is warned about unless a pattern covers the outputs", async (t) => {
+  assert.deepEqual((await toolsDefinition(t, { auditor: { tools: ["read", "place_trade"] } })).problems, ["profiles/auditor.json: says read-only but grants place_trade, whose effects are not read-only"]);
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["lots/", "trades/pending/"] } })).problems, [
+    'workload/pf.json: tool "place_trade" needs consent, derived from its irreversible effect, and profile "manager" grants it beside write under "trades/pending/", which reaches its output "trades/pending/" with no yes asked: drop the prefix from the profile\'s writable paths, or guard it with a consent grant on write',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["trades/"] } })).problems.length, 1, "a prefix above the output reaches it");
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["lots/", "trades/pending/"], consent: [{ tool: "write", paths: ["trades/pending/"] }] } })).problems, [], "a consent grant on the write guards the prefix, and the two declarations stand together");
+  const shell = await toolsDefinition(t, { profile: { tools: ["read", "write", "bash", "place_trade", "report_result"] } });
+  assert.deepEqual(shell.problems, []);
+  assert.deepEqual(shell.warnings, ['workload/pf.json: tool "place_trade" needs consent, derived from its irreversible effect, and profile "manager" grants bash, which is not path-gated: a shell command can write under "trades/pending/" with no consent asked. Declare {"tool":"bash","pattern":"trades\\/pending\\/"} beside it, or the derived consent is enforced on place_trade calls only']);
+  assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "bash", "place_trade", "report_result"], consent: [{ tool: "bash", pattern: "trades/pending/" }] } })).warnings, [], "a bash pattern covering the output closes the hole");
+  assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "report_result"] } })), { problems: [], warnings: [] }, "a profile that does not grant the tool is not judged by it");
+});

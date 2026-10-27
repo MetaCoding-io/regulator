@@ -11,6 +11,8 @@ export interface ExecOptions {
   cwd?: string;
   timeout?: number;
   env?: NodeJS.ProcessEnv;
+  /** Written to the child's stdin, then closed: a declared tool's arguments as JSON (#121). Absent: stdin is closed at once. */
+  input?: string;
 }
 
 export type Exec = (command: string, args: string[], options?: ExecOptions) => Promise<ExecResult>;
@@ -21,9 +23,12 @@ export const realExec: Exec = (command, args, options = {}) => {
   const env = { ...process.env, ...options.env };
   delete env.NODE_TEST_CONTEXT;
   return new Promise((resolve) => {
-    execFile(command, args, { cwd: options.cwd, timeout: options.timeout, env }, (error, stdout, stderr) => {
+    const child = execFile(command, args, { cwd: options.cwd, timeout: options.timeout, env }, (error, stdout, stderr) => {
       const code = error && typeof (error as { code?: unknown }).code === "number" ? (error as { code: number }).code : error ? 127 : 0;
       resolve({ stdout: String(stdout), stderr: String(stderr), code });
     });
+    // A program that never reads stdin must not hang on it: what the caller hands over is written and the stream closed.
+    child.stdin?.on("error", () => undefined);
+    child.stdin?.end(options.input ?? "");
   });
 };
