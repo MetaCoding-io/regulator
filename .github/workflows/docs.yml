@@ -7,6 +7,7 @@ on:
       - "packages/regulator/src/cli.ts"
       - "packages/regulator/registry/REGULATORS.md"
       - "packages/regulator/BOUNDARY.md"
+      - "packages/regulator/VIABILITY.md"
       - "packages/regulator/OPERATING.md"
       - "packages/regulator/CHANGELOG.md"
       - "ROADMAP.md"

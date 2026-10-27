@@ -405,3 +405,4 @@ export {
   type ProbeHorizon, type ReportFingerprint, type TrajectoryMoment,
 } from "./prediction.js";
 export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";
+export { AbsorbedBySchema, CourseModuleSchema, InvariantIdSchema, PATHOLOGY_SECTIONS, PathologiesFileSchema, PathologyRowSchema, PathologySectionSchema, isPathologiesFile, isPathologyRow, type AbsorbedBy, type PathologiesFile, type PathologyRow, type PathologySection } from "./pathologies.js";
