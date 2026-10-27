@@ -10,6 +10,12 @@ tooltip shows (label, one or two sentences, a link into the docs), so each copy 
 figure carries its own explanations the way it carries its labels. Output: the master
 HTML's two SVGs (CSS-variable colours), and variants for the research directory (literal
 colours), the docs site (VitePress tokens) and the website (the site's tokens).
+
+    python3 <this file> <out-dir> [--embed instance=<path to a generated figure .svg>]
+
+`--embed` places a generated fragment (`regulator docs --write`, `packages/regulator/figures/`)
+in the instance box in place of the drawn one: the thread's third clause, a drawn frame
+around a generated part, with the fragment's ids and cards kept as they came.
 """
 import html, re, pathlib, sys
 
@@ -189,69 +195,22 @@ def card_html(s):
     s = re.sub(r"`([^`]+)`", r"&lt;code&gt;\1&lt;/code&gt;", s)
     return s.replace('"', "&quot;")
 
-def figure(after: bool) -> str:
-    p = "a" if after else "b"            # marker id prefix per figure
-    acc = "var(--accent)"; alarm = "var(--alarm)"; muted = "var(--muted)"; soft = "var(--soft)"
-    o = []
-    add = o.append
-    label = ("A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; a person accepts advice as they accept identity; the eval harness probes a proposed edit; crossed marks show what the reflector can never write or schedule."
-             if after else
-             "One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.")
-
+def hotspot_writer(add):
+    """`hot(card-id, *lines, hit=…)`: wraps lines in a hotspot group carrying its card; `hit` adds a wide invisible stroke for an edge."""
     def hot(cid, *lines, hit=None):
-        """Wrap lines in a hotspot group carrying its card; `hit` adds a wide invisible stroke for an edge."""
         lab, d, path = CARDS[cid]
         add(f'    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-{cid}" aria-label="{card_html(lab.replace("`", ""))}" data-label="{card_html(lab)}" data-def="{card_html(d)}" data-href="{DOCS_URL}/{path}">')
         for l in lines: add("  " + l)
         if hit: add(f'      <path d="{hit}" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>')
         add('    </g>')
+    return hot
 
-    add(f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{label}" style="max-width:100%;height:auto;font-family:inherit">')
-    add(f'  <defs>')
-    add(f'    <marker id="{p}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>')
-    if after:
-        add(f'    <marker id="{p}-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{acc}"/></marker>')
-        add(f'    <marker id="{p}-x" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" orient="auto"><path d="M2 2L8 8M8 2L2 8" stroke="{alarm}" stroke-width="1.8" fill="none"/></marker>')
-    add(f'  </defs>')
-    add(f'  <g font-size="12" fill="currentColor" stroke="currentColor">')
-    AR = f"url(#{p}-arrow)"; AA = f"url(#{p}-arrow-accent)"; X = f"url(#{p}-x)"
 
-    # ---- left half: the definition band and the instance, shifted 16 left to widen the gutter ----
-    add(f'    <g transform="translate(-16 0)">')
-    add(f'    <rect x="30" y="20" width="722" height="96" rx="6" fill="none" stroke-width="1.5"/>')
-    hot("definition",
-        f'    <text x="46" y="42" font-weight="600" stroke="none">DEFINITION</text>',
-        f'    <text x="140" y="42" stroke="none" fill="{muted}">versioned, checked by {mono("regulator check")}, changed by people</text>')
-    chips = [("registry", "registry (43)"), ("identity-seed", "identity seed"), ("profiles", "profiles"), ("policies", "policies"), ("workloads", "workloads"), ("evals", "evals")]
-    for i, (cid, c) in enumerate(chips):
-        x = 46 + i * 116
-        hot(cid,
-            f'    <rect x="{x}" y="58" width="108" height="34" rx="3" fill="{soft}" stroke-width="1.2"/>',
-            f'    <text x="{x+54}" y="79" stroke="none" text-anchor="middle" font-size="11.5">{c}</text>')
-    if after:
-        hot("advice-seed",
-            f'    <text x="278" y="109" stroke="none" font-size="10" fill="{acc}">+ {mono("advice/&lt;profile&gt;.md")}, the seed of the instance\'s advice files</text>')
-
-    # ---- definition <-> instance edges ----
-    hot("init",
-        f'    <line x1="80" y1="116" x2="80" y2="176" stroke-width="1.5" marker-end="{AR}"/>',
-        f'    <text x="86" y="150" stroke="none" font-size="10" fill="{muted}">{mono("regulator init")} seeds</text>',
-        hit="M 80 116 L 80 176")
-    hot("identity-promote",
-        f'    <line x1="236" y1="212" x2="236" y2="94" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AR}"/>',
-        f'    <text x="242" y="150" stroke="none" font-size="10" fill="{muted}">{mono("identity promote")}</text>',
-        hit="M 236 212 L 236 94")
-    if after:
-        hot("advice-promote",
-            f'    <line x1="356" y1="212" x2="356" y2="118" stroke="{acc}" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AA}"/>',
-            f'    <text x="362" y="150" stroke="none" font-size="10" fill="{acc}">{mono("advice promote")}</text>',
-            hit="M 356 212 L 356 118")
-
-    # ---- INSTANCE ----
-    add(f'    <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>')
-    hot("instance",
-        f'    <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>',
-        f'    <text x="126" y="198" stroke="none" fill="{muted}">one repository under the control plane</text>')
+def instance_interior(after, mono, muted, soft, acc, AR) -> str:
+    """What the instance box holds when it is drawn: every hotspot of the one-level map."""
+    o = []
+    add = o.append
+    hot = hotspot_writer(add)
     # S5
     hot("s5-after" if after else "s5",
         f'    <rect x="46" y="212" width="330" height="40" rx="3" fill="{soft}" stroke-width="1.2"/>',
@@ -336,6 +295,92 @@ def figure(after: bool) -> str:
     hot("typed",
         f'    <text x="46" y="584" stroke="none" font-size="11" fill="{muted}">Every edge inside the instance is typed, stamped by the host, and recorded on a card with its limitations.</text>')
 
+    return "\n".join(o)
+
+
+def load_fragment(path: str) -> dict:
+    """A generated figure file (`regulator docs --write`): its one fragment and the space it is drawn in."""
+    text = pathlib.Path(path).read_text()
+    m = re.search(r'<g id="([^"]+)" class="[^"]*" data-viewbox="0 0 (\d+) (\d+)">', text)
+    if not m: raise SystemExit(f"{path}: no fragment group with a data-viewbox")
+    markup = text[m.start():text.rindex("</g>") + len("</g>")]
+    return {"id": m.group(1), "markup": markup, "width": int(m.group(2)), "height": int(m.group(3)),
+            "ids": re.findall(r' id="([^"]+)"', markup), "cards": markup.count(' data-def="')}
+
+
+def place_fragment(frag: dict, x: float, y: float, w: float, h: float) -> str:
+    """The fragment scaled to fit a box and centred in it; nothing inside it is rewritten."""
+    s = min(w / frag["width"], h / frag["height"])
+    dx = x + (w - frag["width"] * s) / 2
+    dy = y + (h - frag["height"] * s) / 2
+    return f'    <g class="embedded" data-embeds="{frag["id"]}" transform="translate({dx:.2f} {dy:.2f}) scale({s:.4f})">\n{frag["markup"]}\n    </g>'
+
+def figure(after: bool, embed: dict | None = None) -> str:
+    """One figure. `embed` maps a slot name to a generated fragment (see `load_fragment`): the
+    slot's drawn content is replaced by the fragment, scaled into the slot's box, with the
+    fragment's ids and cards intact. The one slot today is "instance", the one-level map."""
+    embed = embed or {}
+    p = "a" if after else "b"            # marker id prefix per figure
+    acc = "var(--accent)"; alarm = "var(--alarm)"; muted = "var(--muted)"; soft = "var(--soft)"
+    o = []
+    add = o.append
+    label = ("A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; a person accepts advice as they accept identity; the eval harness probes a proposed edit; crossed marks show what the reflector can never write or schedule."
+             if after else
+             "One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.")
+
+    hot = hotspot_writer(add)
+
+    add(f'<svg viewBox="0 0 {W} {H}" role="img" aria-label="{label}" style="max-width:100%;height:auto;font-family:inherit">')
+    add(f'  <defs>')
+    add(f'    <marker id="{p}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>')
+    if after:
+        add(f'    <marker id="{p}-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="{acc}"/></marker>')
+        add(f'    <marker id="{p}-x" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="10" markerHeight="10" orient="auto"><path d="M2 2L8 8M8 2L2 8" stroke="{alarm}" stroke-width="1.8" fill="none"/></marker>')
+    add(f'  </defs>')
+    add(f'  <g font-size="12" fill="currentColor" stroke="currentColor">')
+    AR = f"url(#{p}-arrow)"; AA = f"url(#{p}-arrow-accent)"; X = f"url(#{p}-x)"
+
+    # ---- left half: the definition band and the instance, shifted 16 left to widen the gutter ----
+    add(f'    <g transform="translate(-16 0)">')
+    add(f'    <rect x="30" y="20" width="722" height="96" rx="6" fill="none" stroke-width="1.5"/>')
+    hot("definition",
+        f'    <text x="46" y="42" font-weight="600" stroke="none">DEFINITION</text>',
+        f'    <text x="140" y="42" stroke="none" fill="{muted}">versioned, checked by {mono("regulator check")}, changed by people</text>')
+    chips = [("registry", "registry (43)"), ("identity-seed", "identity seed"), ("profiles", "profiles"), ("policies", "policies"), ("workloads", "workloads"), ("evals", "evals")]
+    for i, (cid, c) in enumerate(chips):
+        x = 46 + i * 116
+        hot(cid,
+            f'    <rect x="{x}" y="58" width="108" height="34" rx="3" fill="{soft}" stroke-width="1.2"/>',
+            f'    <text x="{x+54}" y="79" stroke="none" text-anchor="middle" font-size="11.5">{c}</text>')
+    if after:
+        hot("advice-seed",
+            f'    <text x="278" y="109" stroke="none" font-size="10" fill="{acc}">+ {mono("advice/&lt;profile&gt;.md")}, the seed of the instance\'s advice files</text>')
+
+    # ---- definition <-> instance edges ----
+    hot("init",
+        f'    <line x1="80" y1="116" x2="80" y2="176" stroke-width="1.5" marker-end="{AR}"/>',
+        f'    <text x="86" y="150" stroke="none" font-size="10" fill="{muted}">{mono("regulator init")} seeds</text>',
+        hit="M 80 116 L 80 176")
+    hot("identity-promote",
+        f'    <line x1="236" y1="212" x2="236" y2="94" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AR}"/>',
+        f'    <text x="242" y="150" stroke="none" font-size="10" fill="{muted}">{mono("identity promote")}</text>',
+        hit="M 236 212 L 236 94")
+    if after:
+        hot("advice-promote",
+            f'    <line x1="356" y1="212" x2="356" y2="118" stroke="{acc}" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AA}"/>',
+            f'    <text x="362" y="150" stroke="none" font-size="10" fill="{acc}">{mono("advice promote")}</text>',
+            hit="M 356 212 L 356 118")
+
+    # ---- INSTANCE ----
+    add(f'    <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>')
+    hot("instance",
+        f'    <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>',
+        f'    <text x="126" y="198" stroke="none" fill="{muted}">one repository under the control plane</text>')
+    if "instance" in embed:
+        # the generated part in place of the drawn one: scaled into the box under the heading, centred
+        add(place_fragment(embed["instance"], x=46, y=212, w=690, h=378))
+    else:
+        add(instance_interior(after, mono, muted, soft, acc, AR))
     add(f'    </g>')
 
     # ---- the gutter: edges that cross between the two halves, in final coordinates ----
@@ -446,7 +491,18 @@ def research_file(svg):
     return s + "\n"
 
 if __name__ == "__main__":
-    before, after = figure(False), figure(True)
-    out = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else pathlib.Path(".")
+    args = sys.argv[1:]
+    embed = {}
+    while "--embed" in args:
+        i = args.index("--embed"); slot, _, file = args[i + 1].partition("=")
+        embed[slot] = load_fragment(file); del args[i:i + 2]
+    out = pathlib.Path(args[0]) if args else pathlib.Path(".")
+    out.mkdir(parents=True, exist_ok=True)
+    before, after = figure(False, embed), figure(True, embed)
+    for frag in embed.values():
+        # the composition keeps every id and every card the fragment came with
+        for svg in (before, after):
+            missing = [i for i in frag["ids"] if f'id="{i}"' not in svg]
+            if missing or svg.count(' data-def="') < frag["cards"]: raise SystemExit(f"embedding {frag['id']} lost ids or cards: {missing[:3]}")
     (out / "before.svg").write_text(before); (out / "after.svg").write_text(after)
-    print("generated", len(before), len(after))
+    print("generated", len(before), len(after), "embedded:", ", ".join(f'{k}={v["id"]} ({len(v["ids"])} ids, {v["cards"]} cards)' for k, v in embed.items()) or "nothing")

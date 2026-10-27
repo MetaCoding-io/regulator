@@ -88,3 +88,15 @@
 .fig-pop code { font-family: var(--vp-font-family-mono); font-size: 0.9em; color: var(--vp-c-text-1); }
 .fig-pop .fig-pop-more { font-size: 12px; color: var(--vp-c-brand-1); text-decoration: none; }
 .fig-pop .fig-pop-more:hover { text-decoration: underline; }
+
+/*
+ * A generated figure (`docs/generated/figures/*.svg`, from `regulator docs --write`) draws
+ * with `--fig-*` variables and falls back to currentColor; the theme supplies them.
+ */
+.generated-figure { margin: 24px 0; }
+.generated-figure svg {
+  display: block; width: 100%; height: auto; color: var(--vp-c-text-2);
+  --fig-bg: var(--vp-c-bg-soft); --fig-line: var(--vp-c-divider); --fig-ink: var(--vp-c-text-1);
+  --fig-muted: var(--vp-c-text-2); --fig-accent: var(--vp-c-brand-1); --fig-mono: var(--vp-font-family-mono);
+}
+.generated-figure figcaption { font-size: 13px; color: var(--vp-c-text-2); margin-top: 8px; }
