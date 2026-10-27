@@ -3,17 +3,21 @@
  *
  *   node dist/registry-cli.js check [--today <date>]   validate the registry records and the rest of the definition (profiles, workload,
  *                                            policies, identity, evals; lesson 12), exit 1 on problems — an overdue review date is one (lesson 15)
- *   node dist/registry-cli.js docs [--write]  render REGULATORS.md and BOUNDARY.md (to stdout, or in place)
+ *   node dist/registry-cli.js docs [--write]  render REGULATORS.md, BOUNDARY.md and the figures under figures/ (to stdout, or in place)
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding.io/regulator-core";
+import { FIGURES } from "./figures.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
 const docsPath = path.join(registryDir, "REGULATORS.md");
 const boundaryPath = path.join(labRoot, "BOUNDARY.md");
+const figuresDir = path.join(labRoot, "figures");
+/** The figures' hotspot links point at the docs site, since the files are copied by the website as well as the docs. */
+const DOCS_ORIGIN = "https://docs.regulator.metacoding.io";
 
 const [command, ...flags] = process.argv.slice(2);
 const todayAt = flags.indexOf("--today");
@@ -29,8 +33,13 @@ if (command === "check") {
   console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)${definition.warnings.length ? `, ${definition.warnings.length} warning(s)` : ""}`);
   process.exit(registry.problems.length + definition.problems.length === 0 ? 0 : 1);
 } else if (command === "docs") {
-  const outputs: Array<[string, string]> = [[docsPath, renderRegistryMarkdown(registry.records)], [boundaryPath, renderBoundaryMarkdown(registry.records)]];
+  const outputs: Array<[string, string]> = [
+    [docsPath, renderRegistryMarkdown(registry.records)],
+    [boundaryPath, renderBoundaryMarkdown(registry.records)],
+    ...FIGURES.map(({ name, render }): [string, string] => [path.join(figuresDir, `${name}.svg`), `${render({ docsBase: DOCS_ORIGIN })}\n`]),
+  ];
   if (flags.includes("--write")) {
+    await mkdir(figuresDir, { recursive: true });
     for (const [file, rendered] of outputs) {
       await writeFile(file, rendered, "utf8");
       console.log(`wrote ${path.relative(process.cwd(), file)}`);
