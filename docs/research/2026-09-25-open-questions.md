@@ -174,8 +174,8 @@ a card cannot say what the table does not. `regulator docs --write` files the fi
 `packages/regulator/figures/unit-lifecycle.svg` and `docs --check` holds it current under
 `pnpm check`; the definition check knows `figures/` as derived output, beside `dist/`.
 The docs copy the figure into `docs/generated/figures/` with site-relative links and the
-control-room guide embeds it; the website copies it in place of its hand-drawn six
-states, which closes the note above. The reflector pair's script takes `--embed
+control-room guide embeds it; the website copied it in place of its hand-drawn six
+states for a day and then put the drawing back (below). The reflector pair's script takes `--embed
 instance=<figure.svg>` and places the fragment in the instance box, scaled and centred,
 and refuses a composition that loses an id or a card: the third clause as a mechanism,
 proven with the lifecycle fragment. Next: the one-level map over `ENFORCEMENT_POINTS`,
@@ -206,9 +206,13 @@ emphasis ("the only writer" beside the person, the proposal's path around the ed
 no equivalent. The maintainer's call, 2026-10-27: a design figure may stay drawn as a
 whole where a composed version loses the composition, labelled as drawn; the generated
 figure lives where a literal figure earns its place, beside the text that states the
-mechanism and in the control room, where it carries live records. Clause 3 stands as a
-mechanism (`--embed` works and is tested) and is not an obligation. Next: the sequence
-view, the gates placed on the unit's path.
+mechanism and in the control room, where it carries live records. The same call put the
+website's hand-drawn six states back the same day: the generated lifecycle says the same
+twelve transitions, and reads worse on that page. So the thread's "only author" rule
+holds for the docs and the control room, and the website may keep a drawing of a
+generated figure when the drawing reads better, checked against the table when the table
+changes. Clause 3 stands as a mechanism (`--embed` works and is tested) and is not an
+obligation. Next: the sequence view, the gates placed on the unit's path.
 
 ## 2. A person should be able to create S4 intelligence
 
