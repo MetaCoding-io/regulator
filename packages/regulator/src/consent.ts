@@ -15,8 +15,8 @@
  * was for that call.
  */
 import { randomUUID } from "node:crypto";
-import { ObligationLedger, appendSignal, consentFor, consentGrantFor, normalizeConsentCall, type ConsentVerdict } from "@metacoding.io/regulator-core";
-import type { CapabilityProfile, ConsentCall, OperationalSignal } from "@metacoding.io/regulator-protocol";
+import { ObligationLedger, appendSignal, consentFor, consentGrantFor, normalizeConsentCall, severityForKind, type ConsentVerdict } from "@metacoding.io/regulator-core";
+import type { CapabilityProfile, ConsentCall, InteractionRequest, OperationalSignal } from "@metacoding.io/regulator-protocol";
 
 export interface ConsentGateOptions {
   /** The instance (the base checkout): where the ledger and the regulatory log live. */
@@ -93,4 +93,35 @@ export async function consentGate(options: ConsentGateOptions): Promise<ConsentG
   const why = options.validate ? options.validate(args) : "the tool's schema is not known here, so the amended call cannot be checked";
   if (why !== undefined) return refuse("amendment-refused", `${who}, and the tool's schema refuses the result (${why}). The amendment counts as a rejection; ask again if the work still needs the call`, verdict.obligation.id);
   return { allowed: true, guarded: true, obligationId: verdict.obligation.id, by: verdict.by, arguments: args, amended };
+}
+
+export interface HeadlessConsentAsk {
+  unitId: string;
+  attempt: number;
+  subject: string;
+  question: string;
+  action: string;
+  call: ConsentCall;
+  evidence: InteractionRequest["evidence"];
+  timeoutMs?: number;
+  now?: () => number;
+}
+
+/**
+ * What `ask_human` kind=consent does with nobody to ask (the scripted units' stand-in for the session): the obligation
+ * is owed before anyone could answer it, the request records the call a yes would authorize, and the answer is
+ * recorded as unavailable. The loop then records the attempt as paused and holds the unit until a person answers.
+ */
+export async function askConsentHeadless(repo: string, ask: HeadlessConsentAsk): Promise<{ obligationId: string; requestId: string }> {
+  const now = ask.now ?? Date.now;
+  const ledger = new ObligationLedger(repo, now);
+  const severity = severityForKind("consent");
+  const obligation = await ledger.openObligation({ subject: `consent: ${ask.subject}`, unit: ask.unitId, concern: "interaction", sources: [`ask:${randomUUID()}`], severity, consumer: "human", blocks: true, question: ask.question, openedBy: "S1" });
+  const request: InteractionRequest = {
+    id: randomUUID(), kind: "consent", subject: ask.subject, question: ask.question, action: ask.action, call: normalizeConsentCall(ask.call), severity, unit: ask.unitId, attempt: ask.attempt, obligationId: obligation.id,
+    evidence: ask.evidence, raisedBy: "S1", raisedAt: new Date(now()).toISOString(), timeoutMs: ask.timeoutMs ?? 0, channel: "none",
+  };
+  await ledger.requestInteraction(request, "S1");
+  await ledger.answerInteraction({ requestId: request.id, outcome: "unavailable", by: "S1", channel: "none" });
+  return { obligationId: obligation.id, requestId: request.id };
 }
