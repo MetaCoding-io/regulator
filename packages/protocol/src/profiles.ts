@@ -16,6 +16,22 @@ import { Value } from "typebox/value";
 export const ReasoningLevelSchema = Type.Union([Type.Literal("minimal"), Type.Literal("low"), Type.Literal("medium"), Type.Literal("high")]);
 export type ReasoningLevel = Static<typeof ReasoningLevelSchema>;
 
+/**
+ * A consent grant (#60): a call of the named tool must be preceded by an answered `ask_human` of kind `consent`
+ * whose recorded call matches it, or the host's interception refuses the call. A declaration, not an inference:
+ * nothing derives "needs consent" from a tool's effects. A bare entry guards every call of the tool; `paths`
+ * narrows `write` and `edit` to project-relative prefixes; `pattern` is a regular expression over the `command`
+ * of an arbitrary-execution tool (`bash`), which no path gates.
+ */
+export const ConsentGrantSchema = Type.Object({
+  tool: Type.String({ minLength: 1 }),
+  /** For write and edit: the prefixes under which a call needs consent. */
+  paths: Type.Optional(Type.Array(Type.String({ minLength: 1 }), { minItems: 1 })),
+  /** For bash: a regular expression; a command it matches needs consent. */
+  pattern: Type.Optional(Type.String({ minLength: 1 })),
+}, { additionalProperties: false });
+export type ConsentGrant = Static<typeof ConsentGrantSchema>;
+
 export const CapabilityProfileSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: Type.String({ minLength: 1 }),
@@ -29,6 +45,8 @@ export const CapabilityProfileSchema = Type.Object({
    * `advice/<profile>.md`, and the definition check refuses a profile that carries both the field and the file.
    */
   advice: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+  /** The calls that need a person's recorded yes before they run (#60). Absent or empty: none. */
+  consent: Type.Optional(Type.Array(ConsentGrantSchema)),
 }, { additionalProperties: false });
 export type CapabilityProfile = Static<typeof CapabilityProfileSchema>;
 

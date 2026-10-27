@@ -34,7 +34,7 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI, ToolCallEventResult } from "@earendil-works/pi-coding-agent";
 import { InteractionKindSchema, InteractionPolicySchema, ReportedEvidenceSchema, assertValid, type InteractionKind, type InteractionOutcome, type InteractionPolicy } from "@metacoding.io/regulator-protocol";
-import { ExecutionStore, ObligationLedger, TOOL_EFFECTS, continuesWithoutAnswer, dispositionForAnswer, isEffectFree, severityForKind } from "@metacoding.io/regulator-core";
+import { ExecutionStore, ObligationLedger, TOOL_EFFECTS, continuesWithoutAnswer, dispositionForAnswer, isEffectFree, normalizeConsentCall, severityForKind } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
 import { INTERACTION_POLICY_PATH } from "@metacoding.io/regulator";
 import { leaseStoreFor } from "@metacoding.io/regulator";
@@ -57,6 +57,10 @@ export const AskHumanInputSchema = Type.Object({
   question: Type.String({ minLength: 1, maxLength: 1000, description: "The question, with what you would do under each answer" }),
   options: Type.Optional(Type.Array(Type.String({ minLength: 1, maxLength: 120 }), { minItems: 2, maxItems: 6, description: "For a choice: the options to pick from" })),
   action: Type.Optional(Type.String({ minLength: 1, maxLength: 300, description: "For consent: the irreversible action a yes authorizes, concretely" })),
+  call: Type.Optional(Type.Object({
+    tool: Type.String({ minLength: 1, description: "The tool the yes authorizes a call of" }),
+    arguments: Type.Record(Type.String(), Type.Unknown(), { description: "The arguments the grant matches: for write and edit, the path; for bash, the command. An argument named here binds; one left out is free" }),
+  }, { additionalProperties: false, description: "For consent under the profile's consent grant: the call a yes authorizes, as you will make it. The harness matches it against the call, holds the yes across attempts, and refuses a call it does not cover" })),
   evidence: Type.Array(ReportedEvidenceSchema, { description: "What the person needs to decide: files, output, versions" }),
 }, { additionalProperties: false });
 
@@ -126,7 +130,8 @@ export function createAlgedonicExtension(options: AlgedonicExtensionOptions = {}
       label: "Ask a person",
       description:
         "Interrupt a person under an interaction contract. kind=recap offers decisions for correction and does not wait; choice, clarification and uat wait for an answer; " +
-        "consent asks authorization for an irreversible action and nothing but a yes is a yes. If no person is present, or no answer comes in time, the question is recorded as an " +
+        "consent asks authorization for an irreversible action and nothing but a yes is a yes. Where the profile's consent grant guards a call, name it in `call` (tool and the matched arguments): " +
+        "the yes is recorded for that call, holds across attempts, and the harness refuses the call without it. If no person is present, or no answer comes in time, the question is recorded as an " +
         "obligation owed to a person and the unit pauses: every tool with an effect is refused until someone answers. Attention is a budget: the policy caps how many blocking " +
         "questions an attempt may ask. Prefer a recap; ask consent only for what cannot be undone.",
       promptSnippet: "Ask a person under a contract: recap (no wait), choice / clarification / uat (wait), consent (wait; only a yes is a yes)",
@@ -156,6 +161,7 @@ export function createAlgedonicExtension(options: AlgedonicExtensionOptions = {}
         });
         const request = {
           id: randomUUID(), kind, subject: params.subject, question: params.question, ...(params.options ? { options: params.options } : {}), ...(params.action ? { action: params.action } : {}),
+          ...(params.call && kind === "consent" ? { call: normalizeConsentCall(params.call) } : {}),
           severity, ...(unitId ? { unit: unitId } : {}), attempt, obligationId: obligation.id, evidence, raisedBy: "S1" as const, raisedAt: new Date(now()).toISOString(), timeoutMs, channel: channel as "tui" | "rpc" | "none",
         };
         await ledger.requestInteraction(request, "S1");

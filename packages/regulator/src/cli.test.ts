@@ -166,6 +166,42 @@ test("the algedonic path from the outside (lesson 13): `answer` records a person
   assert.equal(r.code, 0, r.stderr);
 });
 
+test("a consent answered with amended arguments (#60): `answer --amend <json>` rides a yes on a consent that recorded its call, the answer and the disposition both carry the amendment, and anything else — a no, another kind, no recorded call, bad JSON — is refused before anything is written", async (t) => {
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  const open = (subject: string) => ledger.openObligation({ subject, unit: "f5", concern: "interaction", sources: [`ask:${subject}`], severity: "blocking", consumer: "human", blocks: true, question: "May I?", openedBy: "S1" });
+  const withCall = await open("consent: rent");
+  const withoutCall = await open("consent: force-push");
+  const choice = await open("choice: database");
+  await ledger.requestInteraction({ id: "r1", kind: "consent", subject: "rent", question: "May I?", action: "write the payment", call: { tool: "write", arguments: { path: "payments/pending/2026-09-rent.json" } }, severity: "blocking", unit: "f5", attempt: 1, obligationId: withCall.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await ledger.requestInteraction({ id: "r2", kind: "consent", subject: "force-push", question: "May I?", action: "git push --force", severity: "blocking", unit: "f5", attempt: 1, obligationId: withoutCall.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await ledger.requestInteraction({ id: "r3", kind: "choice", subject: "database", question: "Which?", options: ["sqlite", "postgres"], severity: "blocking", unit: "f5", attempt: 1, obligationId: choice.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  const amend = '{"content":"{ \\"amount\\": \\"1400.00\\" }"}';
+
+  for (const [args, refused] of [
+    [[choice.id.slice(0, 8), "--by", "alice", "--answer", "postgres", "--amend", amend], /--amend amends the arguments of a call a consent authorizes; this question is a choice/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "no", "--amend", amend], /--amend rides a yes: "no" is not one, so there is no call to amend/],
+    [[withoutCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", amend], /the consent question recorded no call \(the unit asked without `call`\), so there are no arguments to amend/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", "not json"], /--amend takes a JSON object of the arguments to change/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", "[1]"], /--amend takes a JSON object of the arguments to change/],
+    [[withCall.id.slice(0, 8), "--by", "mallory", "--answer", "yes", "--amend", amend], /"mallory" is not a person the interaction policy/],
+  ] as const) {
+    const r = await regulator(repo, "answer", ...args);
+    assert.equal(r.code, 1, args.join(" "));
+    assert.match(r.stderr, refused);
+  }
+  assert.deepEqual((await ledger.obligations()).map((o) => o.status), ["open", "open", "open"], "nothing was written");
+  assert.deepEqual((await ledger.interactions()).map((i) => i.answers), [[], [], []]);
+
+  const r = await regulator(repo, "answer", withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", amend);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.stdout, "consent answered by alice (accepted): yes with content amended; unit f5 may proceed if nothing else is owed on it, and the next attempt carries the answer\n");
+  const [rent] = await ledger.interactions();
+  assert.deepEqual(rent!.answers.map((a) => [a.by, a.outcome, a.channel, a.answer, a.amendedArguments]), [["alice", "answered", "cli", "yes", { content: '{ "amount": "1400.00" }' }]], "the answer carries the amendment");
+  const state = (await ledger.obligations()).find((o) => o.id === withCall.id)!;
+  assert.deepEqual([state.status, state.disposition, state.closedBy, state.rationale], ["resolved", "accepted", "alice", 'yes (arguments amended: {"content":"{ \\"amount\\": \\"1400.00\\" }"})'], "the disposition records it, so the next attempt's hint says what was changed");
+});
+
 test("assurance from the outside (lesson 14): `spans` projects the instance's records as redacted GenAI spans, `review --due` lists what the registry owes a review, and `eval` runs a suite headlessly with a scripted unit and writes a report a person still has to interpret", async (t) => {
   const repo = await initRepo(t);
   await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n").catch(async () => { const { mkdir } = await import("node:fs/promises"); await mkdir(path.join(repo, ".regulator"), { recursive: true }); await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n"); });

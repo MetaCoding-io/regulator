@@ -40,7 +40,7 @@ test("headless consent: no person, no answer, no action — the question is an o
   await assert.rejects(s.ask({ kind: "consent", subject: "x", question: "q", evidence: [] }), /consent needs `action`/);
   await assert.rejects(s.ask({ kind: "choice", subject: "x", question: "q", evidence: [] }), /choice needs `options`/);
 
-  const out = await s.ask({ kind: "consent", subject: "force-push main", question: "The branch diverged; may I force-push?", action: "git push --force origin main", evidence: [{ class: "command", ref: "git status" }] });
+  const out = await s.ask({ kind: "consent", subject: "force-push main", question: "The branch diverged; may I force-push?", action: "git push --force origin main", call: { tool: "bash", arguments: { command: "git push --force origin main" } }, evidence: [{ class: "command", ref: "git status" }] });
   assert.match(out.content[0]!.text, /^No answer \(no person is present\)\. Silence is not consent: do NOT perform the action\. The unit is paused: tools with an effect are refused from now on, the question is recorded as obligation [0-9a-f]{8} owed to a person, and the orchestrator will hold the unit until someone answers with `regulator answer`\. Call report_result with what you have so far and stop\.$/);
   assert.equal(out.details.paused, true);
   assert.equal(out.details.outcome, "unavailable");
@@ -50,7 +50,7 @@ test("headless consent: no person, no answer, no action — the question is an o
   assert.deepEqual([o.concern, o.consumer, o.severity, o.blocks, o.status, o.unit, o.subject, o.question, o.openedBy], ["interaction", "human", "blocking", true, "open", "u1", "consent: force-push main", "The branch diverged; may I force-push?", "S1"]);
   const [i] = await s.ledger.interactions();
   const head = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: s.worktree })).stdout.trim();
-  assert.deepEqual({ ...i!.request, id: "-" }, { id: "-", kind: "consent", subject: "force-push main", question: "The branch diverged; may I force-push?", action: "git push --force origin main", severity: "blocking", unit: "u1", attempt: 1, obligationId: o.id, evidence: [{ class: "command", ref: "git status", sourceRevision: head }], raisedBy: "S1", raisedAt: "2026-09-22T12:00:00.000Z", timeoutMs: 4000, channel: "none" });
+  assert.deepEqual({ ...i!.request, id: "-" }, { id: "-", kind: "consent", subject: "force-push main", question: "The branch diverged; may I force-push?", action: "git push --force origin main", call: { tool: "bash", arguments: { command: "git push --force origin main" } }, severity: "blocking", unit: "u1", attempt: 1, obligationId: o.id, evidence: [{ class: "command", ref: "git status", sourceRevision: head }], raisedBy: "S1", raisedAt: "2026-09-22T12:00:00.000Z", timeoutMs: 4000, channel: "none" }, "the call a yes would authorize is on the record (#60): what the consent gate matches");
   assert.deepEqual(i!.answers, [{ at: "2026-09-22T12:00:00.000Z", by: "S1", outcome: "unavailable", channel: "none" }]);
   assert.equal(s.entries[0]?.customType, INTERACTION_ENTRY_TYPE);
   assert.equal(s.statuses.algedonic, `algedonic: PAUSED — consent unanswered (${o.id.slice(0, 8)})`);

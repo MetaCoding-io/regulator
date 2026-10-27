@@ -92,6 +92,26 @@ async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, op
 
 const turnover = { name: "workload:pf/turnover", description: "the turnover the latest target implies", kind: "rate", direction: "lower", grader: { argv: ["node", "workload/pf/turnover.mjs"] } };
 
+test("consent grants (#60) are part of the declaration: a grant naming an ungranted tool, a path outside the writable paths or a bash pattern that is not one is refused; a guarded write beside bash with no pattern covering the path warns, naming the profile and the path", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/teller.json", { name: "teller", description: "d", tools: ["read", "write", "edit", "bash", "report_result"], writablePaths: ["ledger/", "payments/pending/"], consent: [{ tool: "pay" }, { tool: "write", paths: ["payments/executed/"] }, { tool: "bash", pattern: "(" }] });
+  await write(dir, "profiles/clerk.json", { name: "clerk", description: "d", tools: ["read", "write", "bash", "report_result"], writablePaths: ["payments/pending/"], consent: [{ tool: "write", paths: ["payments/pending/"] }] });
+  await write(dir, "profiles/cashier.json", { name: "cashier", description: "d", tools: ["read", "write", "bash", "report_result"], writablePaths: ["payments/pending/"], consent: [{ tool: "write", paths: ["payments/pending/"] }, { tool: "bash", pattern: "payments/pending/" }] });
+  for (const name of ["teller", "clerk", "cashier"]) await write(dir, `advice/${name}.md`, "");
+  const checked = await checkDefinition(dir);
+  assert.deepEqual(checked.problems.filter((p) => p.file.startsWith("profiles/")).map((p) => `${p.file}: ${p.message}`), [
+    'profiles/teller.json: consent[0] needs consent for "pay", which the profile does not grant: a grant guards calls the profile can make',
+    'profiles/teller.json: consent[1] needs consent for write under "payments/executed/", which is outside the profile\'s writable paths (ledger/, payments/pending/): a write there is refused before consent could be asked',
+    'profiles/teller.json: consent[2] pattern "(" is not a regular expression',
+  ]);
+  assert.deepEqual(checked.warnings.filter((w) => w.file.startsWith("profiles/")).map((w) => `${w.file}: ${w.message}`), [
+    'profiles/clerk.json: profile "clerk" needs consent for write under "payments/pending/" and grants bash, which is not path-gated: a shell command can write there with no consent asked. Declare {"tool":"bash","pattern":"payments\\/pending\\/"} beside it, or the grant is enforced on write calls only',
+    'profiles/teller.json: profile "teller" needs consent for write under "payments/executed/" and grants bash, which is not path-gated: a shell command can write there with no consent asked. Declare {"tool":"bash","pattern":"payments\\/executed\\/"} beside it, or the grant is enforced on write calls only',
+  ], "the cashier's bash pattern covers the path; the clerk's grant is warned about and nothing refused; the teller's shell is warned about beside the path it is refused for");
+  assert.deepEqual(checked.profiles.find((p) => p.name === "cashier")?.consent, [{ tool: "write", paths: ["payments/pending/"] }, { tool: "bash", pattern: "payments/pending/" }]);
+});
+
 test("declared metrics: a workload's declaration with a grader file under the definition, pre-registered by a suite with one optimisation target, passes the definition check", async (t) => {
   assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", { name: "workload:pf/turnover", optimise: true }] }), []);
   assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", "workload:pf/turnover"] }), [], "nothing marked: everything is reported only");

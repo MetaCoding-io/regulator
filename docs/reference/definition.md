@@ -68,11 +68,22 @@ backstop, so a session that loads a contract can always report.
 | `writablePaths[]` | path prefixes | where `write` and `edit` may land. The manifest's `--writable` overrides it for an instance, but never for a read-only profile |
 | `thinkingLevel` | optional | the host's thinking setting for the session |
 | `advice[]` | strings, optional for one release | the profile's advice, inline. It has moved to the [advice file](#advice) beside the profile; the field stays optional for one release so a definition migrates by moving the text, and `regulator check` refuses a profile that carries both the field and a file |
+| `consent[]` | grants, optional | the calls that need a person's recorded yes before they run. Each entry names a `tool`; `paths[]` narrows `write` and `edit` to project-relative prefixes, `pattern` is a regular expression over a `bash` command, and an entry with neither guards every call of the tool. The host's interception refuses a guarded call until the ledger holds an accepted consent for the unit whose recorded call covers it ([Asking a person](/concepts/asking-a-person#the-consent-grant)) |
 
-The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper` and
-`auditor`. `implement` may write and edit under `src/` and `test/`, and its `bash` is
-not gated by path. `research` is read-only, and `intelligence` is read-only plus
-`report_intelligence`. `bookkeeper` and `auditor` are the profiles for the ledger.
+`regulator check` reads a consent grant against the profile's own grant: the guarded
+tool must be one the profile grants, a guarded path must start with one of its writable
+paths, a pattern must be a regular expression on a tool with arbitrary execution, and
+one entry guards one way. A profile that guards a write and also grants `bash` is warned
+about, naming the profile and the path, unless a `bash` entry's pattern covers that
+path: the shell is not path-gated, so without one the grant is enforced on the named
+tool's calls only. A grant is a declaration; nothing is derived from a tool's effects.
+
+The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
+`manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
+its `bash` is not gated by path. `research` is read-only, and `intelligence` is
+read-only plus `report_intelligence`. `bookkeeper` and `auditor` are the profiles for
+the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
+`manager` is the portfolio's, guarding the same under `trades/pending/`.
 [Coordination](/concepts/coordination#profiles-grant-tools-by-effect) explains the
 effect axes and what counts as read-only.
 

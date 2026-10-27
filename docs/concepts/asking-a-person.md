@@ -91,12 +91,49 @@ and nothing answers on anyone's behalf.
 A person answers from the CLI:
 
 ```sh
-regulator answer <obligation> --by <who> --answer <text>
+regulator answer <obligation> --by <who> --answer <text> [--amend <json>]
 ```
 
 The name is checked against the interaction policy's people before anything is written.
 The answer resolves the obligation, and the next attempt starts with the answer as its
 hint: the question, who answered, and what they decided.
+
+### The consent grant
+
+Whether an action needs consent is not left to the model to notice. A capability
+profile declares it, as `consent[]`: a tool, with the path prefixes under which `write`
+and `edit` need a yes, or the command pattern under which `bash` does, or a bare tool
+name for a tool whose every call does. The shipped `bookkeeper` guards `write` and
+`edit` under `payments/pending/`, the `manager` the same under `trades/pending/`, and
+every other profile guards nothing. The [definition reference](/reference/definition#capability-profiles)
+has the field.
+
+The grant is enforced by the host's tool-call interception, before the tool runs. A
+guarded call runs only when the obligation ledger holds a consent obligation for the
+unit, resolved as accepted, whose recorded call covers it: a consent question names the
+call a yes authorizes (`call`: the tool and the arguments the grant matches, the path
+for a write), and the interception matches that record, not the hint the next attempt
+was given and not the attempt number. So a yes on attempt 1 holds on attempt 3 for the
+same path after a check failure sent the unit back to repair, and a different path, or
+a different tool on the same path, asks again. Silence, a question still owed, and a no
+each refuse the call; the refusal is recorded as an `operational-signal` with the unit,
+the tool, the path and the reason, and the unit is told to ask with `ask_human`
+`kind=consent`.
+
+A yes may change one thing. `--amend <json>` on the answer carries the arguments the
+person wants the call to run with, recorded on the answer and in the disposition; the
+interception runs the amended call in place of the one the unit proposed, and the tool
+result names the fields that changed. An amendment the tool's schema refuses, or one
+that would move a write to another path, is a rejection. The dialog in an interactive
+session stays yes or no.
+
+What the grant does not do is reach past the named tool. A profile that grants `bash`
+beside a guarded write leaves the path reachable through the shell, which no path
+gates; `regulator check` warns about that profile and that path unless a `bash` pattern
+entry covers it. And nothing is derived from a tool's declared effects: a tool with an
+irreversible effect needs consent only where a profile names it, until
+[#121](https://github.com/MetaCoding-io/regulator/issues/121) derives the grant from the
+effect on top of this declaration.
 
 ## Attention is a budget
 
@@ -130,13 +167,6 @@ only the fact that it did.
 The [registry records](/reference/regulators) for the interaction contract, delivery,
 the outbox watcher and disposition authority state their limitations. In short:
 
-- Whether an action needs consent is the model's to notice. The tool defines what
-  consent means once it is asked for; nothing yet derives "this needs consent" from a
-  tool's declared effects.
-- Consent is yes or no. A person who would approve the action with one argument
-  changed can only reject it, which costs the unit a second attempt and a second
-  consent question against a cap of two. An answer that carries amended arguments is
-  part of [#60](https://github.com/MetaCoding-io/regulator/issues/60).
 - A dialog answer is trusted to the terminal. An answer typed into a session's dialog
   is attributed to the session's user and is not checked against the interaction
   policy, whereas the CLI path does check. Neither path authenticates the name

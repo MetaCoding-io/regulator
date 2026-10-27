@@ -23,5 +23,9 @@
     "trades/pending/",
     "reports/"
   ],
+  "consent": [
+    { "tool": "write", "paths": ["trades/pending/"] },
+    { "tool": "edit", "paths": ["trades/pending/"] }
+  ],
   "thinkingLevel": "medium"
 }

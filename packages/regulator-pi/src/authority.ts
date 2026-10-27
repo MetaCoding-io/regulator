@@ -21,6 +21,17 @@
  *    its own extensions or skills into the harness (`project_trust` → no); and
  *    any canary value the instance declares (`.regulator/canaries`) is redacted
  *    from every tool result and reported when it appears in the model's text.
+ * 5. The consent gate (#60). A call that falls under the profile's consent
+ *    grant — a write or edit under a guarded prefix, a shell command the
+ *    grant's pattern matches, any call of a bare-granted tool — runs only
+ *    when the ledger holds a consent obligation for this unit, resolved as
+ *    accepted, whose recorded call covers it. Otherwise the call is refused
+ *    before it runs, the refusal is an operational-signal to S3, and the
+ *    unit is told to ask with ask_human kind=consent naming the call. A yes
+ *    that carries amended arguments runs the amended call in place of the
+ *    proposed one, and the tool result names what changed. The profile is
+ *    the one the dispatcher names in the `profile` flag, as the profile
+ *    grant reads it.
  *
  * Load with checkpoints 2–8; this checkpoint supersedes the lexical vendor
  * gate of checkpoint 1 and the profile grant's path check of checkpoint 3.
@@ -29,18 +40,21 @@ import { randomUUID } from "node:crypto";
 import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { Type } from "typebox";
+import { Value } from "typebox/value";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { SeveritySchema, type AuditFinding, type PolicyProposal } from "@metacoding.io/regulator-protocol";
+import { SeveritySchema, type AuditFinding, type CapabilityProfile, type PolicyProposal } from "@metacoding.io/regulator-protocol";
 import { discoverConventions } from "@metacoding.io/regulator-checks";
-import { PROTECTED_S5_PATHS, appendSignal, prepareWritePath } from "@metacoding.io/regulator-core";
+import { PROTECTED_S5_PATHS, appendSignal, consentGrantFor, prepareWritePath } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
-import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, leaseStoreFor } from "@metacoding.io/regulator";
+import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, PROFILES, consentGate, isProfileName, leaseStoreFor } from "@metacoding.io/regulator";
 import { baseRoot } from "@metacoding.io/regulator";
 
 export interface AuthorityExtensionOptions {
   now?: () => number;
   /** Values that must never appear in a tool result or the model's text, besides the instance's `.regulator/canaries`. */
   canaries?: readonly string[];
+  /** The profile whose consent grant the gate enforces; by default the one the `profile` flag names, as the profile grant reads it. */
+  profile?: CapabilityProfile;
 }
 
 export const REDACTION = "[REDACTED: canary]";
@@ -106,6 +120,9 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
     let protectedPaths: string[] = [...HARNESS_OWNED_INSTANCE_DIRS];
     let canaries: string[] = [...(options.canaries ?? [])];
     const snapshots = new Map<string, Map<string, Buffer>>();
+    let profile: CapabilityProfile = options.profile ?? PROFILES.implement;
+    /** Calls the consent gate ran with a person's amendment, by tool call id: the result names the fields that changed. */
+    const amendments = new Map<string, { by: string; fields: string[] }>();
 
     const finding = async (severity: AuditFinding["severity"], subject: string, observation: string, invariant: string, evidence: AuditFinding["evidence"] = []): Promise<void> => {
       if (!base) return;
@@ -131,6 +148,11 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
       // The harness-owned directories come from DEFINITION_WRITERS (identity, advice), never restated here; the conventions add the project's.
       protectedPaths = [...HARNESS_OWNED_INSTANCE_DIRS, ...conventions.protectedPaths.filter((p) => !HARNESS_OWNED_INSTANCE_DIRS.includes(p))];
       unitId = "";
+      amendments.clear();
+      if (!options.profile) {
+        const flag = pi.getFlag("profile");
+        profile = typeof flag === "string" && isProfileName(flag) ? PROFILES[flag] : PROFILES.implement;
+      }
       if (base) {
         for (const lease of await leaseStoreFor(base, now).list()) {
           if (path.resolve(lease.resource) === path.resolve(ctx.cwd)) unitId = lease.unitId;
@@ -142,12 +164,37 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
         }
       }
       const trusted = typeof ctx.isProjectTrusted === "function" ? ctx.isProjectTrusted() : false;
-      ctx.ui.setStatus("authority", `authority: protecting ${protectedPaths.join(", ")}; project ${trusted ? "TRUSTED (unexpected)" : "untrusted"}; ${canaries.length} canar${canaries.length === 1 ? "y" : "ies"}`);
+      const grants = profile.consent?.length ?? 0;
+      ctx.ui.setStatus("authority", `authority: protecting ${protectedPaths.join(", ")}; project ${trusted ? "TRUSTED (unexpected)" : "untrusted"}; ${canaries.length} canar${canaries.length === 1 ? "y" : "ies"}${grants ? `; ${grants} consent grant${grants === 1 ? "" : "s"} (${profile.name})` : ""}`);
       if (trusted) ctx.ui.notify("regulator: this project is trusted — its own extensions and skills may have loaded into the harness. A unit's project should never be.", "warning");
     });
 
+    // 5. The consent gate: a guarded call runs only on a person's recorded yes for it. Not the model's decision, and not the hint's.
+    const consent = async (toolName: string, toolCallId: string, input: Record<string, unknown>, notify: (message: string) => void): Promise<ToolCallEventResult | undefined> => {
+      if (!consentGrantFor(profile, { tool: toolName, arguments: input })) return undefined;
+      if (!base) return { block: true, reason: `regulator: ${toolName} falls under profile "${profile.name}"'s consent grant, and this session is not inside a repository the orchestrator knows: no consent can be on the record here.` };
+      const decision = await consentGate({
+        repo: base, ...(unitId ? { unitId } : {}), profile, call: { tool: toolName, arguments: input }, now,
+        validate: (args) => {
+          const schema = pi.getAllTools().find((t) => t.name === toolName)?.parameters;
+          if (!schema) return "the tool's schema is not known to this session";
+          return Value.Check(schema, args) ? undefined : [...Value.Errors(schema, args)].map((e) => `${e.instancePath || "/"}: ${e.message}`).join("; ");
+        },
+      });
+      if (!decision.allowed) {
+        notify(`regulator: ${toolName} refused — ${decision.reason}`);
+        return { block: true, reason: `regulator: ${toolName} refused: ${decision.reason}. ${decision.instruction}` };
+      }
+      if (decision.guarded && decision.amended.length) {
+        for (const key of decision.amended) input[key] = decision.arguments[key];
+        amendments.set(toolCallId, { by: decision.by, fields: decision.amended });
+      }
+      return undefined;
+    };
+
     // 1. The identity write gate.
     pi.on("tool_call", async (event, ctx): Promise<ToolCallEventResult | undefined> => {
+      const notify = (message: string) => ctx.ui.notify(message, "warning");
       if (isToolCallEventType("write", event) || isToolCallEventType("edit", event)) {
         const prepared = await prepareWritePath(ctx.cwd, event.input.path, { authority: "operational", protectedPaths });
         if (!prepared.allowed) {
@@ -155,16 +202,24 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
           return { block: true, reason: `regulator: ${prepared.reason}${hint}` };
         }
         event.input.path = prepared.path;
-        return undefined;
+        // 5. On the path that was checked: an amendment never moves it, so what runs is what the gate saw.
+        return consent(event.toolName, event.toolCallId, event.input, notify);
       }
       // 2. Before a shell command: remember what the protected files hold.
       if (event.toolName === "bash") snapshots.set(event.toolCallId, await snapshotProtected(ctx.cwd, protectedPaths));
-      return undefined;
+      return consent(event.toolName, event.toolCallId, event.input as Record<string, unknown>, notify);
     });
 
     pi.on("tool_result", async (event, ctx) => {
       let content = event.content;
       let changed = false;
+      // 5. A call that ran with a person's amendment says so: the unit proposed something else.
+      const amended = amendments.get(event.toolCallId);
+      if (amended) {
+        amendments.delete(event.toolCallId);
+        content = [...content, { type: "text", text: `[regulator: this ${event.toolName} ran with ${amended.fields.join(", ")} as ${amended.by}'s consent amended ${amended.fields.length === 1 ? "it" : "them"}, not as you proposed. The record of the consent holds the amended value.]` }];
+        changed = true;
+      }
       // 2. After a shell command: anything protected that changed is put back and reported.
       const before = snapshots.get(event.toolCallId);
       if (event.toolName === "bash" && before) {

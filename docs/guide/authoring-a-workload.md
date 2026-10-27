@@ -63,10 +63,16 @@ Each step names the check that proves it before the next step starts.
    writable prefixes, and `advice/<name>.md` beside it — the definition check refuses a
    profile with no advice file. Reuse a shipped profile where the grant is the same
    (the portfolio reuses the `auditor`). No shell for a profile whose grant must be
-   complete at the tool boundary.
-   *Proof:* `regulator check`; the tests that enumerate the shipped profiles and advice
-   files (`profiles.test.ts`, `instance.test.ts`, `cli.test.ts`, `registry.test.ts`)
-   updated to include the new one.
+   complete at the tool boundary. Declare which writes need consent: `consent[]` on the
+   profile names the tool and the prefix (the payment under `payments/pending/`, the
+   trade list under `trades/pending/`), and the host's interception refuses the write
+   until a person's yes for it is on the record. The advice may describe the grant; it
+   is never what enforces it.
+   *Proof:* `regulator check`, which refuses a grant naming a tool the profile does not
+   grant or a path outside its writable paths and warns about `bash` beside a guarded
+   write; the tests that enumerate the shipped profiles and advice files
+   (`profiles.test.ts`, `instance.test.ts`, `cli.test.ts`, `registry.test.ts`) updated
+   to include the new one.
 
 6. **Set budgets and routes.** `policies/<name>.json`, per unit type. A unit that asks
    for consent spends its first attempt on the question, so give it one more than the
