@@ -13,7 +13,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { DEFINITION_WRITERS, isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
+import { DEFINITION_WRITERS, INSTANCE_STORES, instanceStoreFor, isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
 
 export interface RegistryProblem {
   file: string;
@@ -107,6 +107,10 @@ export async function checkRegistry(registryDir: string, root: string, options: 
     // Lesson 14: a regulator that cannot be switched off cannot be shown to help, and one with no retirement condition only grows.
     if (record.status === "active" && !record.ablation) loaded.problems.push({ file, message: "active regulator names no ablation switch (`none` is allowed, with a note saying why)" });
     if (record.status === "active" && !record.retirement) loaded.problems.push({ file, message: "active regulator states no retirement condition" });
+    // A resource under `.regulator/` is a store the instance keeps (#153): the list is closed, so a figure can draw who writes where.
+    for (const resource of record.scope?.resources ?? []) {
+      if (resource.startsWith(".regulator/") && !instanceStoreFor(resource)) loaded.problems.push({ file, message: `scope.resources names "${resource}", which is no store of INSTANCE_STORES; the instance keeps ${INSTANCE_STORES.map((s) => s.path).join(", ")}` });
+    }
     if (options.today && record.status === "active" && record.ownership.reviewBy < options.today) {
       loaded.problems.push({ file, message: `review overdue since ${record.ownership.reviewBy}: review the record, then move ownership.reviewBy or retire it` });
     }

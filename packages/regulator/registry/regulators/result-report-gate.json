@@ -18,7 +18,7 @@
     ]
   },
   "channels": { "consumes": ["result report (S1, via report_result)"], "emits": ["operational-signal → S3 (high-consequence emergent decisions, deviations)"] },
-  "scope": { "subjects": ["unit", "contract"], "resources": ["execution store"] },
+  "scope": { "subjects": ["unit", "contract"], "resources": [".regulator/units/"] },
   "authority": {
     "may": ["refuse a report with reasons", "block a unit that ends without a valid report", "record emergent decisions and deviations as typed signals for S3"],
     "mayNot": ["certify that the work is correct (verification and audit do that)", "resolve an unresolved decision", "decide what to do about a blocked unit (the recovery router does)"]

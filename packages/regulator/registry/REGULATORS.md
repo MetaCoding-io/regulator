@@ -596,7 +596,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Channels.** consumes `the runtime`, `the definition`, `the instance's manifest, base and ledger` · emits `doctor report (JSON or text)`
 
-**Scope.** subjects registry, identity, execution, obligation · resources the definition, .regulator/
+**Scope.** subjects registry, identity, execution, obligation · resources the definition, .regulator/instance.json, .regulator/units/
 
 **Cost.** A registry and definition check plus a few reads; seconds.
 
@@ -634,7 +634,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Channels.** consumes `tool call (notify_owner)`, `outbox (the world)` · emits `effect journal (.regulator/effects.ndjson)`
 
-**Scope.** subjects unit, effect · resources outbox
+**Scope.** subjects unit, effect · resources .regulator/effects.ndjson, .regulator/outbox
 
 **Cost.** Two journal appends per effect and one outbox read per pending intention at start; no model calls.
 
@@ -1767,7 +1767,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Channels.** consumes `result report (S1, via report_result)` · emits `operational-signal → S3 (high-consequence emergent decisions, deviations)`
 
-**Scope.** subjects unit, contract · resources execution store
+**Scope.** subjects unit, contract · resources .regulator/units/
 
 **May.**
 - refuse a report with reasons
@@ -2035,7 +2035,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Channels.** consumes `work contract (S3)`, `workload definition` · emits nothing
 
-**Scope.** subjects unit, contract · resources execution store
+**Scope.** subjects unit, contract · resources .regulator/units/
 
 **May.**
 - refuse dispatch

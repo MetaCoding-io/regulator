@@ -17,7 +17,7 @@
     ]
   },
   "channels": { "consumes": ["tool call (notify_owner)", "outbox (the world)"], "emits": ["effect journal (.regulator/effects.ndjson)"] },
-  "scope": { "subjects": ["unit", "effect"], "resources": ["outbox"] },
+  "scope": { "subjects": ["unit", "effect"], "resources": [".regulator/effects.ndjson", ".regulator/outbox"] },
   "cost": { "description": "Two journal appends per effect and one outbox read per pending intention at start; no model calls." },
   "authority": {
     "may": ["refuse a duplicate effect and return the recorded result", "mark a pending intention confirmed or absent from what the world shows"],

@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { UNIT_TRANSITIONS, UnitStatusSchema } from "@metacoding.io/regulator-protocol";
-import { FIGURES, lifecycleEdges, lifecycleFragment, renderLifecycleFigure } from "./figures.js";
+import { DEFINITION_WRITERS, ENFORCEMENT_POINTS, INSTANCE_STORES, UNIT_TRANSITIONS, UnitStatusSchema } from "@metacoding.io/regulator-protocol";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { FIGURES, instanceMapFragment, lifecycleEdges, lifecycleFragment, renderInstanceMapFigure, renderLifecycleFigure } from "./figures.js";
+import { readDefinition } from "./status.js";
+
+/** The lab's own definition: this package's directory. */
+const LAB = fileURLToPath(new URL("../", import.meta.url));
 
 const statuses = UnitStatusSchema.anyOf.map((s) => s.const as string);
 
@@ -82,7 +88,61 @@ test("every node and edge is a hotspot whose card is the table's own words", () 
   assert.match(lifecycleFragment().markup, /data-href="\/guide\/control-room#views"/, "with no base the link is site-relative");
 });
 
-test("docs --write files every figure under the name the FIGURES list gives it", () => {
-  assert.deepEqual(FIGURES.map((f) => f.name), ["unit-lifecycle"]);
-  assert.equal(FIGURES[0]!.render(), renderLifecycleFigure());
+test("docs --write files every figure under the name the FIGURES list gives it", async () => {
+  assert.deepEqual(FIGURES.map((f) => f.name), ["unit-lifecycle", "instance-map"]);
+  const definition = await readDefinition(LAB);
+  assert.equal(FIGURES[0]!.render(definition), renderLifecycleFigure());
+  assert.equal(FIGURES[1]!.render(definition), renderInstanceMapFigure(definition));
+});
+
+test("the one-level map is drawn from the definition: a node per unit type of the workload, the carried files, the loop's steps, the checks the workload names, every store, and nothing hand-placed but the grid", async () => {
+  const definition = await readDefinition(LAB);
+  const fragment = instanceMapFragment(definition);
+  const workload = definition.workloads.find((w) => w.name === "software-development")!;
+  assert.match(fragment.markup, /^<g id="instance-map" class="instance-map-fragment" data-viewbox="0 0 720 400" data-workload="software-development">/);
+  for (const u of workload.unitTypes) {
+    assert.ok(fragment.ids.includes(`instance-map-unit-${u.name}`), `a node for ${u.name}`);
+    const profile = definition.profiles.find((p) => p.name === u.profile)!;
+    const node = new RegExp(`<g class="unit-type (s1|s4) gl fig-hot" id="instance-map-unit-${u.name}"[^>]*data-unit-type="${u.name}"`).exec(fragment.markup);
+    assert.ok(node, `${u.name} is drawn`);
+    assert.equal(node![1], profile.tools.includes("report_intelligence") ? "s4" : "s1", `${u.name} is S4 iff its profile reports intelligence`);
+    assert.match(fragment.markup, new RegExp(`data-count="units:${u.name}"`), `a count line for ${u.name}, for the control room`);
+  }
+  for (const store of INSTANCE_STORES) assert.ok(fragment.ids.some((id) => id.startsWith("instance-map-store-") && fragment.markup.includes(`>${store.name}<`)), `a hotspot for ${store.name}`);
+  assert.equal(fragment.ids.filter((id) => id.startsWith("instance-map-store-")).length, INSTANCE_STORES.length, "one store hotspot per entry of the closed list");
+  const s3 = /<g class="s3 gl fig-hot" id="instance-map-s3"[^>]*data-def="([^"]*)"/.exec(fragment.markup)!;
+  for (const step of ENFORCEMENT_POINTS.loop) assert.ok(s3[1]!.includes(step), `the loop's card names ${step}`);
+  const checks = new Set(workload.unitTypes.flatMap((u) => u.checks.map((c) => (typeof c === "string" ? c : c.name))));
+  const s3star = /<g class="s3star gl fig-hot" id="instance-map-s3star"[^>]*data-def="([^"]*)"/.exec(fragment.markup)!;
+  for (const c of checks) assert.ok(s3star[1]!.includes(c), `S3*'s card names ${c}`);
+  const s5 = /<g class="s5 gl fig-hot" id="instance-map-s5"[^>]*data-def="([^"]*)"/.exec(fragment.markup)!;
+  for (const w of DEFINITION_WRITERS.filter((w) => w.instance)) assert.ok(s5[1]!.includes(w.instance!), `S5's card names ${w.instance}`);
+  assert.match(fragment.markup, /id="instance-map-edge-report-intelligence"/, "the research unit's signal edge");
+  assert.match(fragment.markup, /id="instance-map-edge-remember"/, "the remember edge");
+  assert.doesNotMatch(fragment.markup, /<script/);
+});
+
+test("the map's ids are stable and from the definition, every node and edge carries its card, and a workload the definition does not declare is refused", async () => {
+  const definition = await readDefinition(LAB);
+  const a = instanceMapFragment(definition);
+  const b = instanceMapFragment(definition);
+  assert.deepEqual(a.ids, b.ids);
+  assert.equal(new Set(a.ids).size, a.ids.length);
+  assert.doesNotMatch(a.markup, /id="[^"]*\d{2,}[^"]*"/, "no id carries a coordinate or a counter");
+  const hotspots = a.markup.match(/<g class="[^"]*\bfig-hot\b[^"]*"[^>]*>/g) ?? [];
+  assert.equal(hotspots.length, a.ids.length, "every id is a hotspot");
+  for (const h of hotspots) {
+    assert.match(h, /tabindex="0" role="button"/);
+    assert.match(h, /data-label="[^"]+"/);
+    assert.match(h, /data-def="[^"]+"/);
+    assert.match(h, /data-href="\/[a-z]/, "a site-relative link by default");
+  }
+  const other = instanceMapFragment(definition, { id: "frame-instance", docsBase: "https://docs.example", workload: "personal-finance" });
+  assert.match(other.markup, /^<g id="frame-instance"[^>]*data-workload="personal-finance"/);
+  assert.doesNotMatch(other.markup, /id="instance-map|url\(#instance-map/, "every id and reference follows the frame's prefix");
+  assert.match(other.markup, /data-href="https:\/\/docs\.example\/concepts\/identity"/);
+  assert.throws(() => instanceMapFragment(definition, { workload: "no-such-workload" }), /declares no workload "no-such-workload"/);
+  const svg = renderInstanceMapFigure(definition);
+  assert.ok(svg.startsWith(`<svg class="instance-map" viewBox="0 0 720 400" role="img"`));
+  assert.ok(svg.includes(a.markup), "the figure is the fragment, wrapped");
 });
