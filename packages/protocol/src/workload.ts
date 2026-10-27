@@ -36,11 +36,46 @@ export function checkOptions(entries: readonly CheckEntry[]): Record<string, Che
   return Object.fromEntries(entries.flatMap((e) => (typeof e === "string" ? [] : [[e.name, e.options] as const])));
 }
 
+/** A project-relative prefix a program may write under: never absolute, never `..` at the root; compared by prefix as a profile's writable paths are. */
+const OutputPrefix = Type.String({ minLength: 1, pattern: "^(?!\\.\\.(/|$))[^/\\\\][^\\\\]*$" });
+
+/**
+ * How a unit of the type runs (#122). A `session` is a model under the profile's grant, opened by the host; the
+ * default when the field is absent, and the only kind before #122. A `command` is a program the control plane runs
+ * itself, with its own process runner, in the unit's worktree: no host, no model, no tools. Its argv is in the shape a
+ * declared grader has — the first entry naming a file under the definition is the program's file, and its hash goes into
+ * the attempt record so a report can say what produced it; the program is run with the contract path and the attempt
+ * in its environment, under the policy's wall-clock ceiling for the unit type as its one budget (tokens and turns are
+ * zero by construction), and `outputs` are the prefixes it may write under — its whole reach. Its exit and its last
+ * stdout line are the report. The profile stays on the unit type for both kinds: for a command runner it is the effect
+ * declaration the read-only check and the consent refusal read, not a tool grant, and the definition check refuses a
+ * command runner whose profile grants arbitrary execution or whose outputs fall under a consent grant (a program cannot
+ * ask, so it may not write where a yes is required) or outside the profile's writable paths.
+ */
+export const SessionRunnerSchema = Type.Object({ kind: Type.Literal("session") }, { additionalProperties: false });
+export const CommandRunnerSchema = Type.Object({
+  kind: Type.Literal("command"),
+  /** The program, as the host runs it: an argv whose first entry naming a file under the definition is the program's file. */
+  argv: Type.Array(NonEmpty, { minItems: 1 }),
+  /** The program's own limit, when it declares one below the policy's wall-clock ceiling; the lesser of the two applies. */
+  timeoutMs: Type.Optional(Type.Integer({ minimum: 1 })),
+  /** The prefixes the program may write under. A write anywhere else is a dispatch error; empty means the program writes nothing. */
+  outputs: Type.Array(OutputPrefix),
+}, { additionalProperties: false });
+export const RunnerSchema = Type.Union([SessionRunnerSchema, CommandRunnerSchema]);
+export type SessionRunner = Static<typeof SessionRunnerSchema>;
+export type CommandRunner = Static<typeof CommandRunnerSchema>;
+export type Runner = Static<typeof RunnerSchema>;
+
+export const SESSION_RUNNER: SessionRunner = { kind: "session" };
+
 export const UnitTypeSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: NonEmpty,
-  /** The capability profile a unit of this type is dispatched under (lesson 04). */
+  /** The capability profile a unit of this type is dispatched under (lesson 04); for a command runner, its effect declaration. */
   profile: NonEmpty,
+  /** How a unit of this type runs (#122): a session under the profile's grant (the default), or a declared program. */
+  runner: Type.Optional(RunnerSchema),
   /** The harness-run checks that verify a unit of this type (consumed from lesson 09): a name, or a name with options. */
   checks: Type.Array(CheckEntrySchema),
   /** Whether a unit of this type may be dispatched without a work contract. */
@@ -48,6 +83,15 @@ export const UnitTypeSchema = Type.Object({
   requiresContract: Type.Boolean(),
 }, { additionalProperties: false });
 export type UnitType = Static<typeof UnitTypeSchema>;
+
+/** The runner a unit type declares, with `session` as the default when the field is absent. */
+export function runnerOf(type: Pick<UnitType, "runner">): Runner {
+  return type.runner ?? SESSION_RUNNER;
+}
+
+export function isCommandRunner(runner: Runner): runner is CommandRunner {
+  return runner.kind === "command";
+}
 
 export const WorkloadDefinitionSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
