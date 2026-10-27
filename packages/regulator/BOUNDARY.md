@@ -32,7 +32,7 @@ Not covered:
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
 - The probe rule — accept a `harness-edit` only after its probe horizon resolves — is not here. The prediction record and the typed payload landed (#138, prediction-resolution), so a `harness-edit` is checked against the stores and its live horizon opens at acceptance; refusing one that was never probed waits for the probe arm (accept-path note §8, slice 3, after #46).
-- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy, and `regulator upgrade` (#53) seeds only a file an instance lacks, never one it has (docs/DEBT.md row 44).
 
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
 
@@ -137,7 +137,7 @@ Enforced at `cli:doctor` (every check, ok or not, with its detail; the exit code
 Not covered:
 
 - It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.
-- Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
+- Definition drift is detected by revision, registry count, Pi pin and package version, and doctor says to run `regulator upgrade` when the package is newer; it upgrades nothing, and after an upgrade it reports what the manifest's history says, not what the person did with the note's non-mechanical bullets. A definition changed without a commit (a dirty working tree) reads as unchanged, and a head the version number does not distinguish (the unreleased head) reads as drift by revision alone.
 - Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
@@ -201,7 +201,7 @@ Not covered:
 
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). `regulator upgrade` (#53) seeds a file the instance lacks — the advice set of an instance initialized before #110, a profile's file added since — and never overwrites one that exists, so a promotion reaches an older instance only as a bullet of the migration note a person reads (docs/DEBT.md row 44).
 
 ## Identity-untouched check (the instance's harness-owned files) (`reg.audit.identity-untouched-check.v1`)
 
@@ -238,12 +238,12 @@ Not covered:
 
 ## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
 
-Enforced at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint) in `src/instance.ts`; S5, deterministic-gate.
+Enforced at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:upgrade` (upgradeInstance: the definition check, the clean base, the plan from the changelog's migration notes, the seed and ignore steps, the report fingerprint read from evals/reports/, the manifest rewritten, one commit; --check applies nothing; --by checked as S5), `cli:doctor` (readManifest, schema-validated; drift from the definition revision and the package version; the upgrade history), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint) in `src/instance.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
-- The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
+- `regulator upgrade` applies two mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 ## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)

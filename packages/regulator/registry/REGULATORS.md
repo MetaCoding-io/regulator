@@ -140,7 +140,7 @@ does not do. `since` is the package version that first shipped the record.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
 - The probe rule — accept a `harness-edit` only after its probe horizon resolves — is not here. The prediction record and the typed payload landed (#138, prediction-resolution), so a `harness-edit` is checked against the stores and its live horizon opens at acceptance; refusing one that was never probed waits for the probe arm (accept-path note §8, slice 3, after #46).
-- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy (docs/DEBT.md row 44, with #53).
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy, and `regulator upgrade` (#53) seeds only a file an instance lacks, never one it has (docs/DEBT.md row 44).
 
 **Ownership.** regulator-maintainers · introduced 2026-10-25 · review by 2026-12-01
 
@@ -588,7 +588,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.audit.doctor.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** One headless pass over everything a person would check before trusting an installation, machine-readable, exit 1 on any problem: the Node floor, git, the Pi pin against what is installed, the registry check (with review dates) and the definition check, reviews due within thirty days, and — in an instance — the manifest, whether the instance was initialized under this definition revision, the identity's presence, the base's cleanliness, and what is owed, undelivered or holding the whole instance. The CI entry point, and the first command of the day.
+**Purpose.** One headless pass over everything a person would check before trusting an installation, machine-readable, exit 1 on any problem: the Node floor, git, the Pi pin against what is installed, the registry check (with review dates) and the definition check, reviews due within thirty days, and — in an instance — the manifest with its package version and its upgrade history (which report the instance's definition was last checked against), whether the instance was initialized under this definition revision and whether the installed package is newer than the manifest's (then: run `regulator upgrade`), the identity's and the advice set's presence, the base's cleanliness, and what is owed, undelivered or holding the whole instance. The CI entry point, and the first command of the day.
 
 **Absorbs.** `works-on-my-laptop` — The definition was upgraded, a card's review date passed, the base had a stray file and an obligation nobody delivered was holding every unit — four things four people knew, none of them written where the next run would read them.
 
@@ -612,7 +612,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.
-- Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
+- Definition drift is detected by revision, registry count, Pi pin and package version, and doctor says to run `regulator upgrade` when the package is newer; it upgrades nothing, and after an upgrade it reports what the manifest's history says, not what the person did with the note's non-mechanical bullets. A definition changed without a commit (a dirty working tree) reads as unchanged, and a head the version number does not distinguish (the unreleased head) reads as drift by revision alone.
 - Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
@@ -892,7 +892,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). `regulator upgrade` (#53) seeds a file the instance lacks — the advice set of an instance initialized before #110, a profile's file added since — and never overwrites one that exists, so a promotion reaches an older instance only as a bullet of the migration note a person reads (docs/DEBT.md row 44).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -1028,26 +1028,30 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Install the definition into a repository as a declaration. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity, ignores `.regulator/`, records canaries from a committed `.env`, commits the identity on the base branch, and writes `.regulator/instance.json`: which definition, at which harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
+**Purpose.** Install the definition into a repository as a declaration, and carry the instance forward when the definition moves. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity and the advice, ignores `.regulator/`, records canaries from a committed `.env`, commits the seeds on the base branch, and writes `.regulator/instance.json`: which definition, at which package version and harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. `regulator upgrade` (#53) is the manifest's only other writer: it plans under `planUpgrade` (core) from the manifest, the installed version and the changelog's typed migration notes, refuses a definition that fails its check, a dirty base and an instance ahead of the package, applies a closed list of mechanical steps — seed a harness-owned file the instance lacks, never one that exists; the ignore line — prints the note of every version crossed for the person, records the committed report whose fingerprint names the target revision (or `none`, with a warning), rewrites the manifest with the version and one history entry, and commits on the base branch citing from and to. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
-**Mechanism.** `src/instance.ts` at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)
+**Mechanism.** `src/instance.ts` at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:upgrade` (upgradeInstance: the definition check, the clean base, the plan from the changelog's migration notes, the seed and ignore steps, the report fingerprint read from evals/reports/, the manifest rewritten, one commit; --check applies nothing; --by checked as S5), `cli:doctor` (readManifest, schema-validated; drift from the definition revision and the package version; the upgrade history), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint)
 
-**Channels.** consumes `a git repository`, `the definition (registry, identity seed, package pin)`, `a person's declaration` · emits `.regulator/instance.json`, `a commit on the base branch (identity, .gitignore)`, `.regulator/canaries`
+**Channels.** consumes `a git repository`, `the definition (registry, identity and advice seeds, package version and pin, CHANGELOG.md)`, `a person's declaration`, `the committed eval reports, by fingerprint` · emits `.regulator/instance.json`, `a commit on the base branch (identity and advice seeds, .gitignore)`, `.regulator/canaries`, `the migration notes, printed`
 
-**Scope.** subjects identity, execution · resources .regulator/instance.json, regulator/identity/, .gitignore
+**Scope.** subjects identity, execution · resources .regulator/instance.json, regulator/identity/, regulator/advice/, .gitignore
 
-**Cost.** One commit at init; one file read per session start and per closeout.
+**Cost.** One commit at init and one per upgrade that seeds something; one file read per session start and per closeout. An upgrade runs the definition check and reads every committed report once.
 
 **May.**
-- seed the identity and commit it
+- seed the identity and the advice and commit them
 - record what a person declared about the layout
 - refuse an init the definition or the tree does not allow
+- seed a harness-owned file the instance lacks at upgrade, add the ignore line, and rewrite the manifest citing who ran it and against which report
 
 **May not.**
 - create a repository
-- re-init an instance (an upgrade is a person's, per OPERATING.md)
+- re-init an instance
+- overwrite a file that exists under regulator/identity/ or regulator/advice/, however it differs from the seed
+- apply anything a migration note says beyond the two mechanical steps
+- run an eval to produce the fingerprint it records
 - read project settings, context files or extensions
 - widen a read-only profile
 
@@ -1055,7 +1059,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
-- The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
+- `regulator upgrade` applies two mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
