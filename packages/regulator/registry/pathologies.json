@@ -371,6 +371,30 @@
       "notAbsorbed": "a level-2 count over recovery decisions that opens an obligation on the instance when N units hit one cause in a window (the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §4 item 8, after Lanham §8.3.7's circuit breaker); recorded as a backlog row, not debt, because the card names the per-unit count as a limit"
     },
     {
+      "id": "undeclared-action",
+      "section": "functional",
+      "name": "The undeclared action",
+      "summary": "the domain's irreversible act reaches the harness as a write prefix and an advice line, so whether it needs a yes is the model's to notice",
+      "looksLike": "A trade list, a payment or a publish is a file the unit writes under a prefix the profile allows; the advice says to ask first, and a hurried unit writes without asking, or asks once per item until the person stops reading",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.declared-tool.v1",
+            "note": "the action is a tool the workload declares with its effect, and the consent is derived from `sideEffects: \"irreversible\"` before the call runs"
+          },
+          {
+            "id": "reg.algedonic.interaction-contract.v1",
+            "note": "a consent grant on a path prefix where no tool is declared"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the portfolio's careless close (`portfolio.test.ts`): `place_trade` called without asking is refused by the derived consent, the tree unchanged",
+      "notAbsorbed": "the derivation reads one value of one axis, and an irreversibility outside the tree (a network call the program makes) is declared, not observed (`declared-tool` limitations 2 and 4)"
+    },
+    {
       "id": "channel-without-transduction",
       "section": "channel",
       "name": "Channel without transduction",
