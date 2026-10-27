@@ -27,7 +27,7 @@
   "limitations": [
     "It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.",
     "The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.",
-    "Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). An instance initialized before advice was a file set carries no regulator/advice/ at all, and `doctor` says so; seeding it is a person's step (docs/DEBT.md row 44, with #53)."
+    "Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). `regulator upgrade` (#53) seeds a file the instance lacks — the advice set of an instance initialized before #110, a profile's file added since — and never overwrites one that exists, so a promotion reaches an older instance only as a bullet of the migration note a person reads (docs/DEBT.md row 44)."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": { "switch": "none", "note": "A CLI command a person runs; the arm without it is a person copying a file by hand, which was docs/DEBT.md row 24." },

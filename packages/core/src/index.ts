@@ -44,3 +44,4 @@ export {
   type ResolvePredictionsOptions, type Resolved,
 } from "./predictions.js";
 export { unitTrajectory, type TrajectoryEvent, type TrajectoryInput, type TrajectoryStep, type UnitTrajectory } from "./trajectory.js";
+export { compareVersions, parseChangelog, planUpgrade, renderMigrationNotes, type ChangelogVersion, type InstanceSnapshot, type PlanUpgradeOptions, type UpgradePlan, type UpgradeStep } from "./upgrade.js";

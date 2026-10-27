@@ -42,11 +42,13 @@ recorded and what is still owed.
 
 ## The manifest
 
-`.regulator/instance.json` is written once, by `init`, and read by the profile grant, the
-closeout and `doctor`. It is the only file under `.regulator/` that carries a person's
-declaration, and even so it is not edited by hand. `init` refuses to run twice, so
-changing the declared layout means creating a new instance. A definition newer than the
-one recorded shows as `definition-drift` in `doctor` until a person upgrades.
+`.regulator/instance.json` is written by `init`, rewritten by `upgrade`, and read by the
+profile grant, the closeout and `doctor`. It is the only file under `.regulator/` that
+carries a person's declaration, and even so it is not edited by hand. `init` refuses to
+run twice, so changing the declared layout means creating a new instance. A definition
+newer than the one recorded shows as `definition-drift` in `doctor` until a person runs
+`regulator upgrade`, which rewrites the manifest with the new version and revision and
+appends one entry to its history.
 
 | Field | Meaning |
 | --- | --- |
@@ -55,9 +57,11 @@ one recorded shows as `definition-drift` in `doctor` until a person upgrades.
 | `definition.registry` | how many regulators the definition declared at init |
 | `definition.harnessRevision` | the definition's git revision at init. A later revision shows as `definition-drift` in `doctor` |
 | `definition.pi` | the Pi version the definition pins |
+| `definition.packageVersion` | the definition's package version at init or at the last upgrade. Absent on a manifest written before `upgrade` existed; `upgrade` reads such a manifest as the changelog's migration floor (0.1.3) and writes the field |
 | `writablePaths[]` | optional. Where the implement profile may write in this repository, in place of its own default |
 | `protectedPaths[]` | optional. Prefixes the closeout refuses a change under, in addition to the harness-owned directories (`regulator/identity/`, `regulator/advice/`) and the discovered conventions |
 | `initializedAt`, `initializedBy` | when the instance was initialized and by whom: the `--by` given, or else the user and host. This is recorded as provenance and is not checked against the interaction policy |
+| `upgrades[]` | optional, oldest first: one entry per `regulator upgrade`. Each records `from` and `to` (package version and harness revision), `report` (the SHA-256 of the committed report under the definition's `evals/reports/` whose fingerprint names the target revision, or `none`), `reportFile` when there is one, `by` (checked against the interaction policy as S5) and `at`. `doctor` reports the last entry: which evidence the instance's definition rests on |
 
 ## Environment
 

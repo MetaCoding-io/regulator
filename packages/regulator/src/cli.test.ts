@@ -583,3 +583,61 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   r = await regulator(repo, "status", "--instance", repo);
   assert.match(r.stdout, /predictions: 1 open of 1\n {4}open {14}i1 {2}refusals lower by 1 \(p=0\.7\) {2}live open: 0\/3 implement unit\(s\) {2}bet on by he-ok accepted, he-unres open, he-undec open {2}advice\/implement\.md: units told to run the inherited suite are refused less\n/);
 });
+
+test("`regulator upgrade` from the outside (#53): --check prints the plan and changes nothing, applying is checked against the interaction policy as S5 before anything is written, the migration notes are printed under a heading per version crossed, the commit cites from and to, doctor reports the version and the history, and a second run says there is nothing to do", async (t) => {
+  const { mkdtemp, rm, mkdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-upgrade-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(path.join(dir, "lib"));
+  await writeFile(path.join(dir, "lib", "a.js"), "export const a = 1;\n");
+  await writeFile(path.join(dir, "package.json"), JSON.stringify({ name: "third", private: true, type: "module" }));
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) await gitExec("git", args, { cwd: dir });
+  let r = await regulator(dir, "upgrade", "--check");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is not an instance \(no \.regulator\/instance\.json\); run `regulator init` first/);
+  r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  // As 0.1.3 left it: no advice directory, a manifest with no package version at an older revision.
+  await gitExec("git", ["rm", "-rq", "regulator/advice"], { cwd: dir });
+  await gitExec("git", ["commit", "-qm", "as 0.1.3 left it"], { cwd: dir });
+  const manifestPath = path.join(dir, ".regulator", "instance.json");
+  const m = JSON.parse(await readFile(manifestPath, "utf8")) as { definition: Record<string, unknown> };
+  delete m.definition.packageVersion;
+  m.definition.harnessRevision = "5115ea2144b89d07a3b943ab2e2f247ea8f896eb";
+  await writeFile(manifestPath, `${JSON.stringify(m, null, 2)}\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim();
+
+  r = await regulator(dir, "doctor");
+  assert.equal(r.code, 1, "drift and the missing advice are problems");
+  assert.match(r.stdout, /^PROBLEM {2}definition-drift {2}initialized under 5115ea2 .* — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/m);
+  r = await regulator(dir, "upgrade", "--check");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^upgrade would carry this instance 0\.1\.3@5115ea2 \(the manifest recorded no package version; read as the migration floor\) → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n {2}nothing to do {2}seed regulator\/identity\/ from the definition's identity seed: every seed file is present; none is overwritten\n {2}would apply {2}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n {2}nothing to do {2}add the \.regulator\/ line to \.gitignore: present\n {2}the migration notes, for a person to read; nothing below is applied by upgrade:\n {2}## unreleased \(head [0-9a-f]{7}\)\n {4}- advice advice\/<profile>\.md \[gate: regulator check only\]\n/);
+  assert.match(r.stdout, /\n {2}WARNING: no committed report under evals\/reports\/ ran at [0-9a-f]{7}; the manifest records "none" as the evidence this upgrade was checked against\n {2}--check: nothing changed; run without it, with --by <who>, to apply\n$/);
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim(), before);
+  assert.equal(await readFile(manifestPath, "utf8"), `${JSON.stringify(m, null, 2)}\n`, "a dry run writes nothing");
+
+  r = await regulator(dir, "upgrade");
+  assert.equal(r.code, 2, "applying needs --by");
+  r = await regulator(dir, "upgrade", "--by", "bob");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await regulator(dir, "upgrade", "--by", "carol");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /"carol" is not a person the interaction policy/);
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim(), before, "a refused upgrade writes nothing");
+  r = await regulator(dir, "upgrade", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^upgraded this instance 0\.1\.3@5115ea2 .* → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n/);
+  assert.match(r.stdout, /\n {2}applied {5}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n/);
+  assert.match(r.stdout, /\n {2}committed [0-9a-f]{7} on the base branch by alice; the manifest records the upgrade\n$/);
+  assert.match((await gitExec("git", ["log", "-1", "--format=%s"], { cwd: dir })).stdout, /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n$/);
+  r = await regulator(dir, "doctor");
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 50 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\/; package 0\.1\.3; upgraded 1× — last \d{4}-\d{2}-\d{2} by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/m);
+  assert.match(r.stdout, /^ok {6} definition-drift {2}the instance was initialized under this definition revision$/m);
+  r = await regulator(dir, "upgrade", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^nothing to upgrade: the instance is at 0\.1\.3 \([0-9a-f]{7}\), which is the installed definition; nothing to do\n$/);
+});

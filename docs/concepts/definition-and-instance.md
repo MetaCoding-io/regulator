@@ -132,9 +132,10 @@ regulators write it, and the loop reads it to decide what a unit may do next.
 Nothing in `.regulator/` is configuration, and a person edits none of it by hand. What a
 person *declares* about an instance (the writable and protected prefixes, and who
 initialized it) lives in the manifest, which `init` writes and which the profile grant
-and the closeout read. The manifest also pins the definition's revision. An instance
-initialized under an older revision shows `definition-drift` in `doctor` until a person
-reads the upgrade note and runs the next unit.
+and the closeout read. The manifest also pins the definition's package version and revision. An instance
+initialized under an older one shows `definition-drift` in `doctor` until a person runs
+`regulator upgrade`, which seeds what the instance lacks, prints the release's migration
+note for the rest, and rewrites the manifest citing who ran it and against which report.
 
 The repository's own files say nothing to the harness. Its `.pi/` directory, its
 `AGENTS.md`, its extensions and its skills never configure a unit's session. That is the
