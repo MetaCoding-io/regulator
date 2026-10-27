@@ -78,7 +78,7 @@ export function isInstanceManifest(value: unknown): value is InstanceManifest {
  */
 
 /** What kind of definition file a bullet describes. */
-export const MIGRATION_CLASSES = ["identity", "policy", "workload", "profile", "advice", "registry"] as const;
+export const MIGRATION_CLASSES = ["identity", "policy", "workload", "profile", "advice", "registry", "contract"] as const;
 export type MigrationClass = (typeof MIGRATION_CLASSES)[number];
 
 /**
