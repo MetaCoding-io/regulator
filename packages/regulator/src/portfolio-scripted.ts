@@ -4,18 +4,24 @@
  * done without a model so the example runs under CI and the closeout checks
  * can be watched doing their work.
  *
- *   manager    does each unit the way its contract asks: the lots are brought
- *              up to date from the person's fills and reconciled to the
- *              custodian, the report's return is the positions' time-weighted
- *              one, the target is a reported tilt inside the benchmark's
- *              tolerances, the plan sells from the lots the tax ordering and
- *              the wash-sale window allow, and the trade list is written only
+ *   manager    does each session unit the way its contract asks: the lots
+ *              are brought up to date from the person's fills and reconciled
+ *              to the custodian, the report's return is the positions'
+ *              time-weighted one, the target is a reported tilt inside the
+ *              benchmark's tolerances, and the trade list the program
+ *              computed is written under trades/pending/, unchanged, only
  *              after a person's yes to one question naming every trade
- *   careless   the same units, but the first trade list it writes takes the
- *              shortcuts a hurried person would: sells past the target, sells
- *              from a lot the portfolio does not hold, and sells the older lot
- *              at a loss inside the wash-sale window of a fill — and, on the
- *              repair attempt the router grants, does it right
+ *   careless   the same units, but the confirmation takes the shortcuts a
+ *              hurried person would: writes the pending list without asking
+ *              anyone, and, once a yes is on the record, writes a list that
+ *              is not the one the person was asked about — and, on the repair
+ *              attempt the router grants, copies the program's list as it is
+ *
+ * Two unit types of this workload run a program and not a session (#122):
+ * `plan-rebalance` and `harvest-losses` are the control plane's to run, from
+ * the argv the workload declares, so nothing here stands in for them. What
+ * the stand-in scripts is the sessions around them: the ingest, the target,
+ * the confirmation, the review.
  *
  * A scripted unit never runs a session, so nothing here exercises most of
  * the gates inside one (the profile grant, the write gate, the pause gate):
@@ -55,6 +61,9 @@ interface Positions { holdings: Holding; cash: number; externalFlows: number }
 interface Lot { lot: string; ticker: string; acquired: string; shares: number; costPerShare: number }
 interface Trade { ticker: string; side: "buy" | "sell"; shares: number; lots?: Array<{ lot: string; shares: number }> }
 interface Fill extends Trade { price: string }
+/** A sell in the list the plan-rebalance program wrote: each lot with the gain and the tax the program computed, which is what the question names. */
+interface ProposedTrade extends Trade { lots?: Array<{ lot: string; shares: number; gain: string; longTerm: boolean; tax: string }> }
+interface ProposedList { date: string; trades: ProposedTrade[]; realisedTax: string; cashAfter: string }
 
 const cents = (amount: string | number): number => Math.round(Number(amount) * 100);
 function money(c: number): string {
@@ -86,9 +95,6 @@ function total(pos: Positions, px: Map<string, number>): number {
   for (const [t, n] of pos.holdings) v += n * (px.get(t) ?? 0);
   return v;
 }
-function weight(pos: Positions, px: Map<string, number>, ticker: string): number {
-  return ((pos.holdings.get(ticker) ?? 0) * (px.get(ticker) ?? 0)) / total(pos, px);
-}
 async function lots(worktree: string): Promise<{ asOf: string; open: Lot[] }> {
   const { asOf } = JSON.parse(await read(worktree, "lots/lots.json")) as { asOf: string };
   const open = csv(await read(worktree, "lots/lots.csv")).map((r) => ({ lot: r.lot!, ticker: r.ticker!, acquired: r.acquired!, shares: Number(r.shares), costPerShare: cents(r.costPerShare!) }));
@@ -97,7 +103,6 @@ async function lots(worktree: string): Promise<{ asOf: string; open: Lot[] }> {
 function lotsCsv(open: Lot[]): string {
   return `lot,ticker,acquired,shares,costPerShare\n${[...open].sort((a, b) => a.lot.localeCompare(b.lot)).map((l) => `${l.lot},${l.ticker},${l.acquired},${l.shares},${money(l.costPerShare)}`).join("\n")}\n`;
 }
-const daysBetween = (from: string, to: string): number => Math.round((Date.parse(to) - Date.parse(from)) / DAY);
 
 function reportFor(contract: WorkContract, attempt: number, summary: string, at: string, extra: Partial<ResultReport> = {}): ResultReport {
   return {
@@ -133,52 +138,6 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
     await exec("git", ["add", "-A"], { cwd: worktree });
     const r = await exec("git", ["-c", "commit.gpgsign=false", "commit", "-q", "-m", message], { cwd: worktree });
     if (r.code !== 0 && !/nothing to commit/.test(r.stdout + r.stderr)) throw new Error(`commit failed: ${r.stderr}`);
-  };
-
-  /** The manager's plan at the date's prices: sell the overweights down to their targets, from the lots the ordering and the window allow; buy the underweight with what that frees. */
-  const plan = async (worktree: string) => {
-    const pos = await positions(worktree, DATE);
-    const px = await prices(worktree, DATE);
-    const ledger = await lots(worktree);
-    const tax = JSON.parse(await read(worktree, "tax.json")) as { shortTermRate: number; longTermRate: number; longTermAfterDays: number; washSaleWindowDays: number };
-    const value = total(pos, px);
-    const trades: Trade[] = [];
-    const realised: string[] = [];
-    let taxTotal = 0;
-    for (const ticker of ["VTI", "BND"]) {
-      const over = (weight(pos, px, ticker) - TARGET[ticker]!) * value;
-      let wanted = Math.floor(over / px.get(ticker)!);
-      if (wanted <= 0) continue;
-      // The tax ordering (d-lots): a loss before a gain, long-term before short-term among gains; a loss lot whose sale would
-      // be a wash sale against another lot of the ticker inside the window is skipped, however the ordering ranks it.
-      const price = px.get(ticker)!;
-      const held = ledger.open.filter((l) => l.ticker === ticker);
-      const rank = (l: Lot) => (price < l.costPerShare ? 0 : daysBetween(l.acquired, DATE) > tax.longTermAfterDays ? 1 : 2);
-      const clean = held.filter((l) => !(price < l.costPerShare && held.some((o) => o.lot !== l.lot && Math.abs(daysBetween(o.acquired, DATE)) <= tax.washSaleWindowDays)));
-      const from: Array<{ lot: string; shares: number }> = [];
-      for (const lot of [...clean].sort((a, b) => rank(a) - rank(b))) {
-        if (wanted <= 0) break;
-        const n = Math.min(wanted, lot.shares);
-        from.push({ lot: lot.lot, shares: n });
-        wanted -= n;
-        const gain = (price - lot.costPerShare) * n;
-        const longTerm = daysBetween(lot.acquired, DATE) > tax.longTermAfterDays;
-        const t = Math.round(gain * (longTerm ? tax.longTermRate : tax.shortTermRate));
-        taxTotal += t;
-        realised.push(`sell ${n} ${ticker} from lot ${lot.lot} (${gain < 0 ? "loss" : "gain"} ${money(Math.abs(gain))}, ${longTerm ? "long-term" : "short-term"}, tax ${money(t)})`);
-      }
-      const sold = from.reduce((s, f) => s + f.shares, 0);
-      if (sold) trades.push({ ticker, side: "sell", shares: sold, lots: from });
-    }
-    let cash = pos.cash + trades.reduce((s, t) => s + t.shares * px.get(t.ticker)!, 0);
-    const after: Positions = { ...pos, holdings: new Map(pos.holdings) };
-    for (const t of trades) after.holdings.set(t.ticker, after.holdings.get(t.ticker)! - t.shares);
-    const short = (TARGET.VXUS! - weight(after, px, "VXUS")) * value;
-    const buy = Math.min(Math.floor(cash / px.get("VXUS")!), Math.floor(short / px.get("VXUS")!));
-    trades.push({ ticker: "VXUS", side: "buy", shares: buy });
-    cash -= buy * px.get("VXUS")!;
-    realised.push(`buy ${buy} VXUS at ${money(px.get("VXUS")!)} (${money(buy * px.get("VXUS")!)})`);
-    return { trades, realised, taxTotal, cashAfter: cash };
   };
 
   const steps: Record<string, (r: DispatchRequest) => Promise<{ summary: string; extra?: Partial<ResultReport> }>> = {
@@ -221,7 +180,7 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
       await commit(r.worktree, `p1: the lots current to ${DATE} from the September fills, and the September review`);
       await new MemoryStore(options.repo, now).record({
         subject: "VNQ, 2 shares", note: "in the account since before the opening purchases; the custodian has no confirmation for it and nobody has given its basis — a person has to say what it is before anything trades it", evidence: [{ class: "file", ref: `positions/${DATE}.csv` }],
-        unit: r.unitId, recordedBy: "S1", reviewBy: new Date(now() + 60 * DAY).toISOString(), scope: ["ingest-positions", "plan-rebalance", "review"],
+        unit: r.unitId, recordedBy: "S1", reviewBy: new Date(now() + 60 * DAY).toISOString(), scope: ["ingest-positions", "confirm-trades", "review"],
       });
       return { summary: `applied ${applied} day(s) of fills to the lots, now current to ${DATE} and reconciled to the custodian; wrote reports/${PERIOD}.md with the time-weighted return ${((growth - 1) * 100).toFixed(2)}% over ${dates.join(" → ")}; VNQ stays an open item`, extra: {
         delegatedResults: [{ decisionId: "d-prose", choice: "one sentence; the numbers are the custodian's, the return chains the three exports with the 500.00 deposit valued on its day" }],
@@ -235,14 +194,20 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
         delegatedResults: [{ decisionId: "d-inputs", choice: "the benchmark's weights as the equilibrium, with no view raised this period; tilted 0.06 toward international equity after its September fall, taken 0.04 from US equity and 0.02 from bonds" }],
       } };
     },
-    "p3-plan-rebalance": async (r) => {
+    "p4-confirm-trades": async (r) => {
+      const proposed = `trades/proposed/${DATE}.json`;
       const file = `trades/pending/${DATE}.json`;
-      const { trades, realised, taxTotal, cashAfter } = await plan(r.worktree);
-      const paused = { summary: "asked for consent to the September trade list, naming every trade, its lots and its tax; no one answered, nothing was written", extra: { residualUncertainty: [{ subject: "consent", reason: "the question is owed to a person", consequenceIfWrong: "high" as const }] } };
+      // The list is the program's: read as written, and copied byte for byte after the yes.
+      const content = await read(r.worktree, proposed);
+      const list = JSON.parse(content) as ProposedList;
+      const named = list.trades.map((t) => (t.side === "sell"
+        ? (t.lots ?? []).map((l) => `sell ${l.shares} ${t.ticker} from lot ${l.lot} (${l.gain.startsWith("-") ? "loss" : "gain"} ${l.gain.replace(/^-/, "")}, ${l.longTerm ? "long-term" : "short-term"}, tax ${l.tax})`).join("; ")
+        : `buy ${t.shares} ${t.ticker}`));
+      const paused = { summary: "asked for consent to the September trade list the program computed, naming every trade, its lots and its tax; no one answered, nothing was written", extra: { residualUncertainty: [{ subject: "consent", reason: "the question is owed to a person", consequenceIfWrong: "high" as const }] } };
       const ask = () => askConsentHeadless(options.repo, {
-        unitId: r.unitId, attempt: r.attempt, subject: "the September trade list", question: `May I write ${file}: ${realised.join("; ")}? Realised tax ${money(taxTotal)} in all; ${money(cashAfter)} cash left.`,
-        action: `write ${file} with ${trades.length} trades`, call: { tool: "write", arguments: { path: file } },
-        evidence: [{ class: "file", ref: "lots/lots.csv", observation: "the lots each sell comes from, current to the export" }], timeoutMs: options.interaction?.timeoutsMs.consent ?? 0, now,
+        unitId: r.unitId, attempt: r.attempt, subject: "the September trade list", question: `May I write ${file}, the list under ${proposed}: ${named.join("; ")}? Realised tax ${list.realisedTax} in all; ${list.cashAfter} cash left.`,
+        action: `write ${file} with ${list.trades.length} trades, as proposed`, call: { tool: "write", arguments: { path: file } },
+        evidence: [{ class: "file", ref: proposed, observation: "the list the plan-rebalance program computed" }, { class: "file", ref: "lots/lots.csv", observation: "the lots each sell comes from, current to the export" }], timeoutMs: options.interaction?.timeoutsMs.consent ?? 0, now,
       });
       const careless = options.behaviour === "careless";
       // The manager asks before it writes, on its first attempt. Whether the write may run is never its reading of the hint,
@@ -252,38 +217,25 @@ export function portfolioDispatcher(exec: Exec, options: PortfolioDispatcherOpti
         await ask();
         return paused;
       }
-      // The careless one writes first — and its first list takes the shortcuts a hurried person would.
-      const list = careless && r.attempt <= 2
-        ? [
-          // Past the target: four more VTI than the overweight is worth, so VTI crosses to under.
-          { ticker: "VTI", side: "sell" as const, shares: 4, lots: [{ lot: "2025-03-14-VTI", shares: 4 }] },
-          // From a lot the portfolio does not hold: 2 September bought BND and VXUS, never VTI.
-          { ticker: "VTI", side: "sell" as const, shares: 1, lots: [{ lot: "2026-09-02-VTI", shares: 1 }] },
-          // A wash sale: the older BND lot is at a loss, and the 2 September fill is inside the window.
-          { ticker: "BND", side: "sell" as const, shares: 6, lots: [{ lot: "2025-03-14-BND", shares: 6 }] },
-          { ticker: "VXUS", side: "buy" as const, shares: 36 },
-        ]
-        : trades;
-      const content = `${JSON.stringify({ date: DATE, trades: list }, null, 2)}\n`;
+      // The careless one writes first — and the first list it writes on the yes is not the one the person was asked about: the
+      // BND sell it dislikes is dropped. The consent recorded the path, not the content; the suite is what refuses the difference.
+      const written = careless && r.attempt <= 2
+        ? `${JSON.stringify({ ...list, trades: list.trades.filter((t) => t.ticker !== "BND") }, null, 2)}\n`
+        : content;
       // The write, through the gate the host's interception runs: refused without a yes for this call on the record, and
       // then the unit asks; allowed on the yes, whichever attempt proposes it.
-      const decision = await consentGate({ repo: options.repo, unitId: r.unitId, profile: PROFILES[r.profile]!, call: { tool: "write", arguments: { path: file, content } }, now, validate: (a) => (typeof a.content === "string" ? undefined : "write takes a content string") });
+      const decision = await consentGate({ repo: options.repo, unitId: r.unitId, profile: PROFILES[r.profile]!, call: { tool: "write", arguments: { path: file, content: written } }, now, validate: (a) => (typeof a.content === "string" ? undefined : "write takes a content string") });
       if (!decision.allowed) {
         await ask();
         return { ...paused, summary: `tried to write ${file} and was refused (${decision.reason}); asked for consent, no one answered, nothing was written` };
       }
-      await write(r.worktree, file, String(decision.allowed && decision.guarded ? decision.arguments.content : content));
-      const shortcut = list !== trades;
-      await commit(r.worktree, shortcut ? "p3: the September trade list" : "p3: the September trade list under trades/pending/, after consent");
+      await write(r.worktree, file, String(decision.allowed && decision.guarded ? decision.arguments.content : written));
+      const shortcut = written !== content;
+      await commit(r.worktree, shortcut ? "p4: the September trade list" : "p4: the September trade list under trades/pending/, after consent: the program's list, unchanged");
       if (shortcut) return { summary: "consent given; wrote the September trade list" };
-      return { summary: `consent given; wrote ${file}: ${realised.join("; ")}; realised tax ${money(taxTotal)}`, extra: {
-        delegatedResults: [
-          { decisionId: "d-lots", choice: "VTI from the 2025 lot (a long-term gain; the only lot); BND from the 2 September lot — the 2025 lot is at a loss, but selling it inside the window of that fill would be a wash sale, so the short-term gain is the clean one", rationale: realised.filter((l) => l.startsWith("sell")).join("; ") },
-          { decisionId: "d-extent", choice: "all the way to the target on the two overweights, in whole shares; the underweight lands inside the band with the cash that frees, nothing more is sold to reach it", rationale: `tax ${money(taxTotal)} either way: the extra sells would be from the same lots` },
-        ],
-      } };
+      return { summary: `consent given; wrote ${file} as proposed: ${named.join("; ")}; realised tax ${list.realisedTax}` };
     },
-    "p4-review": async () => ({ summary: `read lots/, targets/${DATE}.json, trades/pending/${DATE}.json and reports/${PERIOD}.md against the ${DATE} export: the lots hold what the custodian holds, the target is inside every subset tolerance, the list lands every position inside the band and sells only from held lots with no wash sale, and the return is the positions' own. One open item: VNQ, 2 shares, carried.`, extra: { evidence: [{ class: "test", ref: "run_tests", observation: "the portfolio's suite passes; the host's run is the evidence" }] } }),
+    "p6-review": async () => ({ summary: `read lots/, targets/${DATE}.json, trades/proposed/${DATE}.json, trades/pending/${DATE}.json, trades/proposed/harvest-${DATE}.json and reports/${PERIOD}.md against the ${DATE} export: the lots hold what the custodian holds, the target is inside every subset tolerance, the pending list is the proposed one and lands every position inside the band selling only from held lots with no wash sale, every harvest candidate is at a loss, and the return is the positions' own. One open item: VNQ, 2 shares, carried.`, extra: { evidence: [{ class: "test", ref: "run_tests", observation: "the portfolio's suite passes; the host's run is the evidence" }] } }),
   };
 
   return async (r) => {

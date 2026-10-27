@@ -114,8 +114,18 @@ export const AttemptRecordSchema = Type.Object({
   outcome: AttemptOutcomeSchema,
   sessionId: Type.Optional(NonEmpty),
   detail: Type.Optional(NonEmpty),
+  /**
+   * For a command unit (#122): the program that ran, by its file under the definition and that file's SHA-256, and how
+   * it ended — its exit code, or none when it was stopped at the wall-clock ceiling. A session attempt carries none.
+   */
+  program: Type.Optional(Type.Object({
+    file: NonEmpty,
+    sha256: Type.String({ pattern: "^[0-9a-f]{64}$" }),
+    exit: Type.Optional(Type.Integer()),
+  }, { additionalProperties: false })),
 }, { additionalProperties: false });
 export type AttemptRecord = Static<typeof AttemptRecordSchema>;
+export type AttemptProgram = NonNullable<AttemptRecord["program"]>;
 
 export const LeaseSchema = Type.Object({
   unitId: Type.String({ pattern: "^[a-zA-Z0-9._-]+$" }),

@@ -76,6 +76,7 @@ Not covered:
 - The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+- A command unit (a unit type whose runner is a program, reg.control.command-runner.v1) is not metered by this guard: no session opens, so no turn end and no tool call reaches it. The loop's runner meters wall-clock alone — the policy's ceiling for the unit type is the timeout the program runs under — and writes the ledger once at the end with tokens, cost and turns zero by construction; a run past the ceiling is marked exhausted on the wall-clock dimension and refused as a dispatch error. Nothing halts a program before that timeout, and no other ceiling applies to it.
 
 ## Credential canary watch (`reg.audit.canary-watch.v1`)
 
@@ -97,6 +98,18 @@ Not covered:
 - The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
+
+## Command runner (a unit that runs a program) (`reg.control.command-runner.v1`)
+
+Enforced at `loop:runUnit` (the dispatcher is the runner's for a `command` unit type (commandDispatcher), never the host's; a contract delegating a reported choice or leaving a decision unresolved to a command unit is refused before anything is claimed; the attempt record carries the program's file, hash and exit), `check:checkDefinition` (checkCommandRunner in core: no argv, no file under the definition, arbitrary execution granted, an output outside the writable paths, an output under a consent grant), `cli:unit dispatch` (no host is loaded for a unit type that runs a program), `cli:unit drive` (the same) in `src/runner.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- The host trusts the declared command to be the workload's program, as it trusts `npm test` to be the project's suite, and inspects nothing beyond its effect declaration (the profile, read by the definition check) and its outputs: what the program imports, what it reads, and anything it reaches by an absolute path, a network call or a process it spawns are unseen. The diff against the worktree before the run catches what remains in the worktree after it; a write outside the worktree is not caught, and a write under a protected prefix inside it is caught twice, here and by identity-untouched at closeout.
+- A program cannot ask, so its outputs may not sit under a consent grant of its profile; the definition check refuses the declaration. Work whose output needs a person's yes is split: the program proposes under an unguarded prefix, and a session that can ask confirms and writes under the guarded one. Nothing derives the split; the workload declares it.
+- The budget is wall-clock alone: the policy's ceiling for the unit type, and the runner's own timeout below it, as the timeout the program runs under. Tokens, cost and turns are zero by construction. CPU and the size of what a program writes are not metered (open questions §3 named both; docs/DEBT.md row 49).
+- The lease the loop took at start is not renewed while the program runs, so a program that runs longer than the lease's TTL outlives its claim; the wall-clock ceiling, not the lease, bounds it. A session's gates — the profile grant, the write gate, the pause gate, the lease gate on every tool call — are not exercised by a program, which calls no tool; its reach is checked once at the declaration and once after the run.
+- A program's report carries no judgment, so a contract for a command unit fixes what a session's contract would delegate (the portfolio's lot ordering and extent are fixed decisions on the program's contract). A program's stdout is the only channel for a report; a program that writes its summary elsewhere reports `exit 0` and the tail of whatever it printed.
 
 ## Definition check (`reg.identity.definition-check.v1`)
 
@@ -478,6 +491,7 @@ Not covered:
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
 - The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
+- A command unit (reg.control.command-runner.v1) holds the lease the loop took at start and nothing renews it while the program runs: a program that runs longer than the TTL outlives its claim, and the wall-clock ceiling, not the lease, is what bounds it. The tool-call refusal here is not exercised by a program, which calls no tool; what keeps two units off one checkout for a program is the loop taking the lease before the run and the runner writing only in the unit's own worktree.
 
 ## Unit lifecycle (`reg.control.unit-lifecycle.v1`)
 

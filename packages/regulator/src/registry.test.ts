@@ -39,6 +39,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.authority.s5-decision.v1",
     "reg.authority.vendor-write-gate.v1",
     "reg.control.budget-guard.v1",
+    "reg.control.command-runner.v1",
     "reg.control.contract-advice.v1",
     "reg.control.contract-preserving-compaction.v1",
     "reg.control.evidence-preflight.v1",

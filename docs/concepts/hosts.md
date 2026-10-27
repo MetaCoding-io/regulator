@@ -143,8 +143,11 @@ report records the version it ran under. The same extensions are declared under
 - The session-side gates are only exercised live. Scripted runs cover the control
   plane. The dispatcher itself and every host-side gate are covered by their own tests
   and by live drills, and not by the committed eval reports.
-- Every unit runs a session. A unit whose work is a deterministic program (a parser,
-  a normalizer) still needs a session under a profile. A `command` runner per unit type
-  is designed in the
-  [open questions](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-25-open-questions.md)
-  (§3), and the dispatcher seam already allows it.
+- A unit that runs a program needs no host, and no host sees it. A unit type whose
+  work is deterministic declares a `command` runner, and the loop runs the program
+  itself through the same dispatcher seam — lease, worktree, wall-clock budget, the
+  report read from its exit and output, the closeout's checks at the revision — with
+  the control plane's own process runner ([the command runner](/reference/regulators#reg-control-command-runner-v1)).
+  So "host-agnostic" has a second implementation of the seam after all, but not a
+  second host: the program path exercises none of a host's session-side gates, and
+  says nothing about whether another agent runtime could stand where Pi does.

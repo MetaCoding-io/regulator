@@ -95,7 +95,7 @@ with the package, and every part of it is a declared file:
 | Advice seed | `advice/<profile>.md` | what every unit of a profile is told beyond its grant, one file per profile |
 | Profiles | `profiles/*.json` | what a unit type may use and where it may write |
 | Policies | `policies/*.json` | budgets and model routes, recovery, routing, and interaction |
-| Workloads | `workload/*.json` | the unit types, with their profiles and their checks |
+| Workloads | `workload/*.json` | the unit types, with their profiles, their checks and, for a type that runs a program instead of a session, the program and the prefixes it may write under |
 | Evals | `evals/*.json` | suites with declared arms and ablations |
 | Contracts and fixtures | `contracts/`, `fixture*/` | the examples the package runs against itself |
 | Settings | `settings.json` | the Pi settings a unit's session runs under |

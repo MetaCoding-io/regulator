@@ -35,6 +35,7 @@ export {
   type ConsentGrantProblem, type ConsentVerdict,
 } from "./consent.js";
 export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
+export { checkCommandRunner, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";

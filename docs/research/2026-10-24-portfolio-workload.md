@@ -5,8 +5,10 @@
   contracts, the scripted close and the worked example ([`docs/examples/portfolio.md`](../examples/portfolio.md)),
   with the authoring guide ([`docs/guide/authoring-a-workload.md`](../guide/authoring-a-workload.md)). What it found is in the
   example's §5: the band lives in `benchmark.json` (a first draft had it in the target file, a unit's file), the harvest checks and the risk-tolerance check wait for their inputs, and
-  `plan-rebalance` runs as a session until #122. Phase 2's four items are filed as [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#122](https://github.com/MetaCoding-io/regulator/issues/122),
-  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
+  `plan-rebalance` ran as a session until #122. Phase 2b landed ([#122](https://github.com/MetaCoding-io/regulator/issues/122)): the `command`
+  runner, with `plan-rebalance` and `harvest-losses` as programs writing under `trades/proposed/` and a `confirm-trades` session that
+  asks and copies the list under `trades/pending/`; the consent decision is recorded in §3 under the S1 table. Phase 2's other items are
+  [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
   blocked on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)); its other blocker, the
   open-metric row, landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129) with this workload's turnover as the first declared metric. All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
@@ -107,20 +109,42 @@ verified about it is regulatory state.
 | --- | --- | --- | --- | --- |
 | `ingest-positions` | session | manager | `lots/`, `reports/` | `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `glossary-lint` |
 | `propose-target` | session | manager | `targets/`, `reports/` | same |
-| `plan-rebalance` | command (§5) | manager, as an effect declaration | `trades/pending/`, `reports/` | same |
-| `harvest-losses` | command (§5) | manager, as an effect declaration | `trades/pending/`, `reports/` | same |
+| `plan-rebalance` | command (§5): `node workload/portfolio/plan-rebalance.mjs` | manager, as an effect declaration | `trades/proposed/` | same |
+| `confirm-trades` | session | manager | `trades/pending/`, `reports/` | same |
+| `harvest-losses` | command (§5): `node workload/portfolio/harvest-losses.mjs` | manager, as an effect declaration | `trades/proposed/harvest-` | same |
 | `review` | session | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `close-period` | session | auditor | nothing | — |
 
 Three decisions in this table matter. The manager profile gets no shell, as the
-bookkeeper does not, so the write grant is complete at the tool boundary. `lib/` and
-`test/` are under no profile's writable prefixes, so a unit cannot weaken the check that
-judges it. And the two unit types whose work is wholly arithmetic are command runners:
-the plan is produced by the book's program, under a budget of wall-clock and not tokens,
-and the host checks the plan the same way it checks a model's. Until the `command` runner
-exists these two run as sessions whose only tool is a declared one (§5), which is the
-weaker of the two and the reason the runner is the first thing this workload asks the
-control plane for.
+bookkeeper does not, so the write grant is complete at the tool boundary — and a profile
+with a shell could not be a program's effect declaration, since a program's reach is its
+declared outputs and nothing wider. `lib/` and `test/` are under no profile's writable
+prefixes, so a unit cannot weaken the check that judges it. And the two unit types whose
+work is wholly arithmetic are command runners: the plan is produced by a program, under
+a budget of wall-clock and not tokens, and the host checks the plan the same way it
+checks a model's. Until #122 these two ran as sessions, which was the weaker of the two
+and the reason the runner was the first thing this workload asked the control plane for.
+
+**Decided (2026-10-27, consent and a program; #122).** The first draft of this table
+had `plan-rebalance` writing under `trades/pending/`, the prefix the manager's consent
+grant guards. A program cannot call `ask_human`, and #60 made "nothing exists under
+`trades/pending/` before a yes" a gate, not advice; so a command runner declares its
+outputs, and the definition check refuses one whose declared output prefix falls under
+a consent grant of its profile — a program may not write where a yes is required.
+Therefore `plan-rebalance` as a program writes the computed list to
+`trades/proposed/<date>.json`, a manager-writable prefix under no grant, listed in the
+fixture README as "a list a program computed; not yet agreed", and the consent plus the
+write under `trades/pending/` stay with a session unit, `confirm-trades`, until #121's
+`place_trade` takes the execution: the former p3 session, re-objectived to read the
+proposed list, ask once naming every trade, and copy it unchanged after the yes, with
+one assertion more in the suite holding the pending list to the proposed one, since the
+consent records the path and not the content. `harvest-losses` is a command runner on
+the same terms, writing every lot at an unrealised loss to
+`trades/proposed/harvest-<date>.json` with no threshold and no benefit-versus-cost
+check — that arithmetic is #124's, said so in the program's header. The lot choice and
+the extent, delegated to the session before, are fixed decisions on the program's
+contract, because a program has no judgment to report and the loop refuses a contract
+that delegates to one.
 
 ### S2 — What stops units from tripping over each other?
 
@@ -269,7 +293,7 @@ and against its seam, in the order the phases (§6) need it.
 | --- | --- | --- | --- |
 | The domain's checks in Node | 2 | `test/portfolio.test.js` under `npm test`, discovered as the ledger's are (`packages/checks/src/conventions.ts`) | nothing new. **Decided here:** the checks are ported to plain JavaScript. They are arithmetic (sums, bands, date windows, lot reconciliation, a time-weighted return); none needs an optimiser. The alternative, declared checks for a non-Node domain (the ArticleMiner note §4.1), stays the right slice for ArticleMiner and is not forced by this workload |
 | A `place_trade` tool with a declared effect | 3 | a workload-declared tool with `sideEffects: "irreversible"` (`packages/protocol/src/effects.ts`), writing under `trades/pending/` | DEBT row 29, [#60](https://github.com/MetaCoding-io/regulator/issues/60): the per-tool consent grant as a profile field, enforced by interception. This workload is the case that makes #60 concrete without a tool that moves money |
-| The `command` runner for `plan-rebalance` and `harvest-losses` | 2 | the workload definition's unit type gains a `runner` (open questions §3) | designed; no issue. The optimiser is the book's Python; the runner's effect declaration is what the read-only check reads; the host checks the output in Node |
+| The `command` runner for `plan-rebalance` and `harvest-losses` | 2 | the workload definition's unit type gains a `runner` (open questions §3) | landed as [#122](https://github.com/MetaCoding-io/regulator/issues/122): `runner: { kind: "command", argv, timeoutMs?, outputs[] }` on the unit type, the loop running the program itself through the same dispatcher seam under the policy's `wallClockMs`, the program's file hashed into the attempt record, its exit and last stdout line as the report, a write outside `outputs` undone and refused, and the definition check refusing a program without a file under the definition, under a shell-granting profile, or writing outside the writable paths or under a consent grant (`command-runner`). The two programs are plain JavaScript over `lib/portfolio.js`, not the book's Python: the arithmetic needed no optimiser, as §5's first row found for the checks |
 | Sensors declared in the definition | 2 | `policies/intelligence.json` with `sensors[]` (open questions §2) | proposed; no issue. Three sensors here: a path glob over `positions/` and `prices/`, a drift-band command, a harvest-threshold command |
 | Workload-declared metrics and graders | 2 | `workload/<name>.json` gains `metrics[]`, each with its grader argv; `EVAL_METRICS` becomes the built-in set (open questions §6, the ArticleMiner note §4.6) | landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129): `workload:portfolio/turnover`, the one-way turnover the latest target implies against the custodian's positions, by `workload/portfolio/turnover.mjs` over `lib/portfolio.js`, pre-registered by `evals/portfolio-turnover.json`. The book's other summary statistics (13.4.4: tax cost, spread cost, mean and maximum deviation) and the backtester as the grader are #125's to declare the same way |
 | The prediction record | 3 | the intelligence signal with `horizon` and a numeric `confidence` (open questions §4; the Harness² note §8 orders it second after #110) | designed; sequenced behind the accept-path split |
@@ -297,10 +321,11 @@ worked example page, written to the recipe in the finance example §6. This is w
 asks for, with its authoring guide written from the experience of writing it.
 
 **Phase 2 — the mechanisms the workload is the case for.** `place_trade` under #60
-([#121](https://github.com/MetaCoding-io/regulator/issues/121)); the `command` runner with the book's optimiser behind it
-([#122](https://github.com/MetaCoding-io/regulator/issues/122)); the three sensors ([#123](https://github.com/MetaCoding-io/regulator/issues/123)); the harvest contract with the
-exchangeable sets and the wash-sale check live, and the lots adjusted for an executed
-wash sale (14.2.2) ([#124](https://github.com/MetaCoding-io/regulator/issues/124)). Each is its own issue against the seam named in §5.
+([#121](https://github.com/MetaCoding-io/regulator/issues/121)); the `command` runner with the plan and the harvest candidates as programs
+([#122](https://github.com/MetaCoding-io/regulator/issues/122), landed 2026-10-27: §3's decided paragraph says where a program may write and
+where a session still asks); the three sensors ([#123](https://github.com/MetaCoding-io/regulator/issues/123)); the harvest contract with the
+exchangeable sets and the wash-sale check live, the benefit-versus-cost check over the candidates the harvest program now
+lists, and the lots adjusted for an executed wash sale (14.2.2) ([#124](https://github.com/MetaCoding-io/regulator/issues/124)). Each is its own issue against the seam named in §5.
 
 **Phase 3 — evidence.** A suite over the fixture's price history with the book's
 backtester as the grader and its summary statistics as pre-registered metrics; arms with
@@ -327,8 +352,9 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 ## 8. Next step
 
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
-first row as its one recorded decision. Phase 2's four issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
-[#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names.
+first row as its one recorded decision. Phase 2's issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
+[#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names;
+#122 has landed, and #124 now starts from the candidates its program lists.
 Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row after the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138));
 the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) has landed.
 

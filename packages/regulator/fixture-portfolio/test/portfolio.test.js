@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { applyTrades, band, benchmark, executedTrades, lots, pendingLists, percent, periodDates, positionDates, positions, prices, replayLots, reportOpenItems, reportPeriods, reportReturn, target, targetDates, tax, timeWeightedReturn, universe, washSales, weights } from "../lib/portfolio.js";
+import { applyTrades, band, benchmark, cents, executedTrades, harvestCandidates, lots, money, pendingLists, percent, periodDates, positionDates, positions, prices, proposedLists, replayLots, reportOpenItems, reportPeriods, reportReturn, target, targetDates, tax, timeWeightedReturn, tradeLists, universe, unrealised, washSales, weights } from "../lib/portfolio.js";
 
 const EPSILON = 1e-9;
 const u = universe();
@@ -26,10 +26,10 @@ test("every target is feasible under the declared constraints: long-only, summin
   }
 });
 
-test("every pending trade list moves each position toward its target, not past it, and lands every targeted position inside the benchmark's band", () => {
+test("every pending or proposed trade list moves each position toward its target, not past it, and lands every targeted position inside the benchmark's band", () => {
   const bandWidth = band();
   assert.ok(bandWidth > 0 && bandWidth < 1, `benchmark.json: band ${bandWidth} is not a fraction of the portfolio`);
-  for (const list of pendingLists()) {
+  for (const list of tradeLists()) {
     assert.ok(targetDates().includes(list.date), `${list.file}: no targets/${list.date}.json to plan against`);
     const t = target(list.date);
     const before = positions(list.date);
@@ -49,8 +49,8 @@ test("every pending trade list moves each position toward its target, not past i
   }
 });
 
-test("every sell in a pending list names lots the portfolio holds, in the shares it holds", () => {
-  for (const list of pendingLists()) {
+test("every sell in a pending or proposed list names lots the portfolio holds, in the shares it holds", () => {
+  for (const list of tradeLists()) {
     const ledger = lots();
     assert.equal(ledger.asOf, list.date, `${list.file}: the lots are current to ${ledger.asOf}, not to the list's date; what the portfolio holds on ${list.date} is not known`);
     const taken = new Map();
@@ -69,11 +69,40 @@ test("every sell in a pending list names lots the portfolio holds, in the shares
   }
 });
 
-test("no trade in a pending list creates a wash sale against the lot history", () => {
+test("no trade in a pending or proposed list creates a wash sale against the lot history", () => {
   const { washSaleWindowDays } = tax();
-  for (const list of pendingLists()) {
+  for (const list of tradeLists()) {
     const problems = washSales(list, lots().open, executedTrades(), prices(list.date), washSaleWindowDays);
     assert.deepEqual(problems, [], problems.join("; "));
+  }
+});
+
+test("a pending list carries the trades the proposed list of its date computed: what the person agreed to is what is executed", () => {
+  const proposed = new Map(proposedLists().map((l) => [l.date, l]));
+  for (const list of pendingLists()) {
+    const computed = proposed.get(list.date);
+    if (!computed) continue;
+    assert.deepEqual(list.trades, computed.trades, `${list.file}: the trades are not the ones ${computed.file} computed, which is the list the person was asked about`);
+  }
+});
+
+test("every harvest candidate is an open lot the portfolio holds at an unrealised loss at its date's prices, with the loss as the arithmetic says", () => {
+  for (const list of harvestCandidates()) {
+    assert.equal(list.file, `trades/proposed/harvest-${list.date}.json`, `${list.file}: the file is not named for its date ${list.date}`);
+    const ledger = lots();
+    assert.equal(ledger.asOf, list.date, `${list.file}: the lots are current to ${ledger.asOf}, not to the list's date`);
+    const px = prices(list.date);
+    assert.ok(Array.isArray(list.candidates), `${list.file}: no candidates array`);
+    for (const c of list.candidates) {
+      const lot = ledger.open.find((l) => l.lot === c.lot);
+      assert.ok(lot && lot.ticker === c.ticker, `${list.file}: ${c.lot} is not an open lot of ${c.ticker}`);
+      assert.equal(c.shares, lot.shares, `${list.file}: ${c.lot} holds ${lot.shares} shares, not ${c.shares}`);
+      const price = px.get(c.ticker);
+      assert.ok(price !== undefined, `${list.file}: prices/${list.date}.csv carries no price for ${c.ticker}`);
+      const loss = unrealised(lot, price);
+      assert.ok(loss < 0, `${list.file}: ${c.lot} is not at a loss at ${money(price)} (cost ${money(lot.costPerShare)})`);
+      assert.equal(cents(c.unrealised), loss, `${list.file}: ${c.lot} states ${c.unrealised}; the arithmetic says ${money(loss)}`);
+    }
   }
 });
 
