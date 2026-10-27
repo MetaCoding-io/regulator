@@ -10,14 +10,16 @@
  * metrics the definition carries — built in, or declared beside the workload
  * that owns them with a grader file the report can fingerprint (#129), and a
  * profile's consent grants name tools it grants and paths it may write, with
- * the shell bypass warned about (#60). The registry has its own check; this
- * is the rest.
+ * the shell bypass warned about (#60), and a unit type that runs a program
+ * names a file under the definition and reaches only where its profile's
+ * effect declaration lets a unit write and no yes is required (#122). The
+ * registry has its own check; this is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
   CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
-  isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric,
+  isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric, isCommandRunner, runnerOf,
 } from "@metacoding.io/regulator-protocol";
 import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
 import { checkConsentGrants, consentBypassWarnings } from "./consent.js";
@@ -25,6 +27,7 @@ import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet
 import { readOnlyViolations } from "./effects.js";
 import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
 import { isReadOnlyProfile } from "./profiles.js";
+import { checkCommandRunner, commandRunnerShapeHints } from "./runners.js";
 
 export interface DefinitionProblem {
   file: string;
@@ -98,12 +101,17 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
   }
 
   for (const file of await jsonFiles(path.join(dir, "workload"))) {
+    let value: unknown;
     try {
-      const value: unknown = JSON.parse(await readFile(path.join(dir, "workload", file), "utf8"));
+      value = JSON.parse(await readFile(path.join(dir, "workload", file), "utf8"));
       assertValid(WorkloadDefinitionSchema, value, `workload ${file}`);
       out.workloads.push(value);
       for (const type of value.unitTypes) {
         const profile = out.profiles.find((p) => p.name === type.profile);
+        const runner = runnerOf(type);
+        // A command runner (#122): the program's file is under the definition, and its reach is its declared outputs — inside the
+        // profile's writable paths, under no consent grant, with no arbitrary execution granted beside it.
+        if (isCommandRunner(runner)) for (const message of await checkCommandRunner({ root: dir, type, runner, ...(profile ? { profile } : {}) })) problem(`workload/${file}`, message);
         if (!profile) problem(`workload/${file}`, `unit type "${type.name}" runs under profile "${type.profile}", which is not declared under profiles/`);
         // A unit nothing bounds may not change anything: a unit type that runs without a contract must run under a
         // profile whose every tool is read-only by declared effect. The flag is a grant, and this is where it is checked.
@@ -112,7 +120,8 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         }
         // A contracted unit closes only by reporting: a profile that does not grant the report tool makes every unit of
         // the type end as no-report (found by the first live drift run, 0.1.2). The grant is the profile's to declare.
-        else if (type.requiresContract && !profile.tools.includes("report_result")) {
+        // A program's report is its exit and its output, read by the loop; no tool is called, so no grant is needed.
+        else if (type.requiresContract && !isCommandRunner(runner) && !profile.tools.includes("report_result")) {
           problem(`workload/${file}`, `unit type "${type.name}" runs under a contract but its profile "${type.profile}" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)`);
         }
         for (const entry of type.checks) {
@@ -134,7 +143,9 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         if (metric.instrument !== undefined && (await instrumentHeldOutScore(dir, metric.instrument)) === undefined) problem(`workload/${file}`, `metric "${metric.name}" is judged by instrument "${metric.instrument}", and no instrument record carries its held-out score: a judged metric waits on the record (open questions §4, #49)`);
       }
     } catch (error) {
-      problem(`workload/${file}`, (error as Error).message);
+      // The schema refuses a command runner without an argv as it refuses any shape fault; the fault is named when it is that one.
+      const hints = commandRunnerShapeHints(value);
+      problem(`workload/${file}`, hints.length ? `${(error as Error).message} ${hints.join("; ")}` : (error as Error).message);
     }
   }
   if (!out.workloads.length) problem("workload/", "no workload declared");
