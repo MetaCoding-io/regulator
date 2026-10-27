@@ -161,7 +161,7 @@ tone of a prompt.
 | The ledger balances to the statement | 2, a deterministic check | — |
 | The statement is never edited | 2, a gate (the profile grant), plus 2, a check (`identity-untouched`) | — |
 | The report's totals are the ledger's | 2, a deterministic check | — |
-| Consent before a payment | 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | *whether* an action needs consent is still the model's to notice (`docs/DEBT.md` row 29). An effect declaration on a `pay` tool would let a gate derive it instead. |
+| Consent before a payment | 2, a gate (the profile's consent grant, refusing the write under `payments/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived: nothing reads a tool's effects for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
 | Which category a merchant gets | 4, judgment, with the choice reported | it is judgment. The contract bounds it and the report records it. |
 | Don't guess the unknown merchant | 4, judgment, bounded by an *unresolved* decision the report must account for | the check that the report carries every holding-category row is level 2 |
 | Tone, thoroughness, "run the tests first" | 5, advice in the profile | it is advice, which is the bottom of the hierarchy by definition |
@@ -407,10 +407,11 @@ Every registry record states its limitations, and this example does the same:
 - The scripted units never run a session, so the gates *inside* one (the profile grant,
   the identity write gate, the pause gate) are exercised by their own tests and not by
   this close. A live run with a model is the drill.
-- Whether an action needs consent is the model's to notice (`docs/DEBT.md` row 29). A
-  `pay` tool whose declared effect is `irreversible` with a credential would let a gate
-  derive it. The example has no such tool on purpose, because the harness holds nothing
-  that moves money.
+- The consent grant is a declaration on the `bookkeeper` profile: `write` and `edit`
+  under `payments/pending/`. Nothing derives it from a tool's effects, and the example
+  has no tool that moves money on purpose; a `pay` tool with a declared irreversible
+  effect would be [#121](https://github.com/MetaCoding-io/regulator/issues/121)'s case
+  for deriving the grant on top of the declaration.
 - The finance invariants are a person's fixed decisions here; they have not been made
   identity. They belong in the fork described in §2, and the lab's own identity stays
   the software harness's.
