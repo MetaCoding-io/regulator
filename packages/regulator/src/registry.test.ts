@@ -121,6 +121,11 @@ test("the committed definition passes the definition check: profiles, workload, 
   const definition = await checkDefinition(labRoot);
   assert.deepEqual(definition.problems, []);
   assert.deepEqual(definition.profiles.map((p) => p.name), ["auditor", "bookkeeper", "implement", "intelligence", "manager", "research"]);
+  assert.deepEqual(definition.warnings.filter((w) => w.file.startsWith("profiles/")), [], "no shipped profile grants a shell beside a guarded write");
+  assert.deepEqual(definition.profiles.map((p) => [p.name, p.consent ?? []]), [
+    ["auditor", []], ["bookkeeper", [{ tool: "write", paths: ["payments/pending/"] }, { tool: "edit", paths: ["payments/pending/"] }]], ["implement", []], ["intelligence", []],
+    ["manager", [{ tool: "write", paths: ["trades/pending/"] }, { tool: "edit", paths: ["trades/pending/"] }]], ["research", []],
+  ], "the two shipped grants (#60): the payment and the trade list; every other profile grants none");
   assert.deepEqual(definition.workloads.map((w) => w.name), ["personal-finance", "portfolio", "software-development"], "three workloads; the loop is generic over them");
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);

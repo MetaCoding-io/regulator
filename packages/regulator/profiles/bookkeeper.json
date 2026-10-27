@@ -22,5 +22,9 @@
     "reports/",
     "payments/pending/"
   ],
+  "consent": [
+    { "tool": "write", "paths": ["payments/pending/"] },
+    { "tool": "edit", "paths": ["payments/pending/"] }
+  ],
   "thinkingLevel": "medium"
 }

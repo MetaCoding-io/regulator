@@ -30,6 +30,7 @@ export { BehavioralCanary, CANARY_UNIT_PLACEHOLDER, canaryMarker, renderCanarySe
 export { IDENTITY_CONTEXT_MAX_CHARS, IDENTITY_FILES, checkAuthorityRefs, identityContextBudget, identityMaxChars, type IdentityContextBudget, parseForbiddenTerms, parseInvariants, readIdentity, renderIdentitySection, type AuthorityContext, type AuthorityProblem, type ForbiddenTerm, type IdentityFile, type IdentitySet, type Invariant } from "./identity.js";
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
+export { PATH_GUARDED_TOOLS, checkConsentGrants, consentBypassWarnings, describeConsentGrant, type ConsentGrantProblem } from "./consent.js";
 export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";

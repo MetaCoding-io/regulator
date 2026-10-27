@@ -346,7 +346,7 @@ export function assertValid<T extends TSchema>(schema: T, value: unknown, label:
 // Control-plane vocabulary promoted from the course lab (checkpoints 1–3).
 export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
-export { CapabilityProfileSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ReasoningLevel } from "./profiles.js";
+export { CapabilityProfileSchema, ConsentGrantSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ConsentGrant, type ReasoningLevel } from "./profiles.js";
 export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
 export { ENFORCEMENT_POINTS, EnforcementPointSchema, MechanismLevelSchema, RegulatorRecordSchema, enforcementPointName, isRegulatorRecord, unknownEnforcementPoint, type EnforcementPoint, type EnforcementWhere, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {

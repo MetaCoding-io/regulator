@@ -8,8 +8,10 @@
  * profile nobody declared, and every directory of the definition falls in a
  * class of `DEFINITION_WRITERS` (#110), and a suite pre-registers only
  * metrics the definition carries — built in, or declared beside the workload
- * that owns them with a grader file the report can fingerprint (#129). The
- * registry has its own check; this is the rest.
+ * that owns them with a grader file the report can fingerprint (#129), and a
+ * profile's consent grants name tools it grants and paths it may write, with
+ * the shell bypass warned about (#60). The registry has its own check; this
+ * is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -18,6 +20,7 @@ import {
   isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric,
 } from "@metacoding.io/regulator-protocol";
 import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
+import { checkConsentGrants, consentBypassWarnings } from "./consent.js";
 import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations } from "./effects.js";
 import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
@@ -83,6 +86,10 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         const violations = readOnlyViolations(value.tools);
         if (violations.length && !/not read-only by declared effect/i.test(value.description)) problem(`profiles/${file}`, `says read-only but grants ${violations.join(", ")}, whose effects are not read-only`);
       }
+      // Consent grants (#60): a declaration over the profile's own grant, so a guarded tool must be granted and a guarded
+      // path writable; the shell bypass is true and worth knowing, and refuses nothing.
+      for (const p of checkConsentGrants(value)) problem(`profiles/${file}`, p.message);
+      for (const w of consentBypassWarnings(value)) out.warnings.push({ file: `profiles/${file}`, message: w.message });
       out.profiles.push(value);
     } catch (error) {
       problem(`profiles/${file}`, (error as Error).message);
