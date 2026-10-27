@@ -11,7 +11,8 @@
  *                                                         target revision was checked against, rewrite the manifest and commit on the base branch; --check prints the plan
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
- *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
+ *   regulator docs [--write | --check]   render REGULATORS.md, BOUNDARY.md and VIABILITY.md from the registry records, and the
+ *                                        pathology catalog's tables from registry/pathologies.json
  *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
  *   regulator fixture <dest> [--oscillation | --injection | --finance | --portfolio]   copy a fixture into its own git repo (identity and advice seeded, canaries recorded)
  *

@@ -1,0 +1,851 @@
+{
+  "rows": [
+    {
+      "id": "no-s3-star",
+      "section": "structural",
+      "name": "No S3\\*",
+      "summary": "audit has collapsed into operations, so the executor certifies its own work",
+      "looksLike": "Units close on their own reports. `regulator unit evidence` shows no host records, or only records older than the revision",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1"
+          },
+          {
+            "id": "reg.control.evidence-preflight.v1"
+          },
+          {
+            "id": "reg.control.result-report-gate.v1"
+          }
+        ],
+        "invariants": [
+          "INV-003"
+        ],
+        "modules": [
+          "M09"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the drift suite's control arm, where `run_tests` is the only check and the report is believed for everything else"
+    },
+    {
+      "id": "s3-star-reads-s1",
+      "section": "structural",
+      "name": "S3\\* that reads what S1 wrote",
+      "summary": "the auditor runs the suite the unit edited",
+      "looksLike": "`run_tests` passes on a branch that deleted the failing tests, and the defect is closed as fixed",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.inherited-tests-check.v1",
+            "note": "the suite at the branch point judges the unit's tree, and a shrunk inherited file fails; added after M15"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M09"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the self-certifier behaviour; the `no-inherited-tests` arm shows it closing green",
+      "notAbsorbed": "an expectation rewritten to the current output inside an exempt file (`inherited-tests-check` limitation 1)"
+    },
+    {
+      "id": "s5-collapsed-into-s3",
+      "section": "structural",
+      "name": "S5 collapsed into S3",
+      "summary": "identity is whatever the last operator or unit wrote",
+      "looksLike": "A unit edits `regulator/identity/`, or a README rule becomes policy nobody decided",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.authority.identity-write-gate.v1"
+          },
+          {
+            "id": "reg.audit.identity-untouched-check.v1"
+          },
+          {
+            "id": "reg.authority.s5-decision.v1"
+          },
+          {
+            "id": "reg.authority.proposal-intake.v1"
+          }
+        ],
+        "invariants": [
+          "INV-001",
+          "INV-002"
+        ],
+        "modules": [
+          "M10",
+          "M12"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the drifter, which edits the glossary and is refused, and the sloppy unit, which writes rules into the README (DEBT row 34 is paid by `glossary-lint`; the README rule itself is still only measured, by `memoryRules`)",
+      "notAbsorbed": "a rule written in prose outside the writable prefixes shows up as a grader's number; no check refuses it"
+    },
+    {
+      "id": "no-s4",
+      "section": "structural",
+      "name": "No S4",
+      "summary": "nothing watches the environment, so the system learns of change by failing",
+      "looksLike": "A dependency advisory, a platform change or a new statement is found by a unit mid-work, or never",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.intelligence.intelligence-intake.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M11"
+        ],
+        "notes": [
+          "the `research` unit type",
+          "in the finance workload, nothing yet"
+        ]
+      },
+      "reproducedBy": "`contracts/research-vendored-helper.json`",
+      "notAbsorbed": "S4 triggers that would raise a research unit unasked (archived CONTROL-REGISTRY.md §7); in the finance example a statement's arrival is handled by hand"
+    },
+    {
+      "id": "missing-recursion",
+      "section": "structural",
+      "name": "Missing recursion",
+      "summary": "the harness is regulated only as a tool, never as a viable system of its own",
+      "looksLike": "Nobody owns a regulator, review dates pass, and the definition drifts from the instances",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.identity.regulator-lifecycle.v1",
+            "note": "a passed review date fails CI"
+          },
+          {
+            "id": "reg.audit.doctor.v1"
+          },
+          {
+            "id": "reg.identity.instance-manifest.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M14",
+          "M15"
+        ],
+        "notes": [
+          "OPERATING.md's ownership section"
+        ]
+      },
+      "reproducedBy": "`regulator check --today 2027-01-01`, which makes every card overdue",
+      "notAbsorbed": "the definition's own S4 (the Pi upgrade path) is a checklist a person runs"
+    },
+    {
+      "id": "s2-absorbed-by-s3",
+      "section": "structural",
+      "name": "S2 absorbed by S3",
+      "summary": "every coordination is an orchestrator decision",
+      "looksLike": "Units serialize behind the loop, and a conflict becomes a replan instead of a signal",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.coordination.unit-lease.v1"
+          },
+          {
+            "id": "reg.coordination.reintegration.v1"
+          },
+          {
+            "id": "reg.coordination.thrash-detector.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M05"
+        ],
+        "notes": [
+          "leases and worktrees coordinate without S3, and a conflict is a coordination signal"
+        ]
+      },
+      "reproducedBy": "`fixture-oscillation`",
+      "notAbsorbed": "semantic commitments between units (issue #14)"
+    },
+    {
+      "id": "s3-overload",
+      "section": "functional",
+      "name": "S3 overload / micromanagement",
+      "summary": "every local decision becomes S3's",
+      "looksLike": "Attention is spent on questions the contract should have delegated, and `regulator obligations` fills with clarifications",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.work-contract-gate.v1",
+            "note": "fixed / delegated / unresolved"
+          },
+          {
+            "id": "reg.algedonic.interaction-contract.v1",
+            "note": "the attention budget"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M06",
+          "M13"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`contracts/underscore-unresolved.json`, an unresolved decision the unit must surface rather than settle",
+      "notAbsorbed": "the metrics that would show it (undelegated decisions discovered, replans attributable to the contract) are DEBT row 40"
+    },
+    {
+      "id": "s3-s4-disconnection",
+      "section": "functional",
+      "name": "S3/S4 disconnection",
+      "summary": "intelligence never reaches operations",
+      "looksLike": "A research unit's finding sits in the log, and the next unit repeats the mistake",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.intelligence.intelligence-intake.v1",
+            "note": "an obligation that holds the units it names until it is dispositioned"
+          },
+          {
+            "id": "reg.control.progression-veto.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M11"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`research-vendored-helper` followed by a unit it names",
+      "notAbsorbed": "an advisory nobody ever dispositions holds its units forever (a wait ceiling is DEBT row 30's sibling)"
+    },
+    {
+      "id": "s4-acting-as-s3",
+      "section": "functional",
+      "name": "S4 acting as S3",
+      "summary": "intelligence replans on its own",
+      "looksLike": "A finding rewrites a contract or a policy",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.intelligence.intelligence-intake.v1",
+            "note": "`report_intelligence` records the finding and returns, and only S3 dispositions it"
+          },
+          {
+            "id": "reg.authority.proposal-intake.v1",
+            "note": "a proposal never mutates policy"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M10",
+          "M11"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "every proposal path test"
+    },
+    {
+      "id": "weak-s5",
+      "section": "functional",
+      "name": "Weak S5 / no algedonic path",
+      "summary": "nothing can interrupt the loop",
+      "looksLike": "A unit spends its ceiling on a question a person could have answered in a minute, or it asks about everything",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.algedonic.interaction-contract.v1"
+          },
+          {
+            "id": "reg.algedonic.pause-gate.v1"
+          },
+          {
+            "id": "reg.algedonic.delivery.v1"
+          },
+          {
+            "id": "reg.authority.disposition-authority.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M13"
+        ],
+        "notes": [
+          "consent waits, recap does not, and silence is never consent"
+        ]
+      },
+      "reproducedBy": "the headless consent case in `algedonic.test.ts`, the consent gate in `authority.test.ts`, and the finance example's `f5-prepare-payment`",
+      "notAbsorbed": "a consent grant is enforced on the named tool's calls only, and declared, not derived from effects (#121)"
+    },
+    {
+      "id": "oscillation",
+      "section": "functional",
+      "name": "Oscillation",
+      "summary": "S1 units undo each other, and S2 does not see it",
+      "looksLike": "The same file flips between two states across attempts or units",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.coordination.thrash-detector.v1",
+            "note": "the coordination signal"
+          },
+          {
+            "id": "reg.control.recovery-router.v1",
+            "note": "clarify"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M05",
+          "M08"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`fixture-oscillation`",
+      "notAbsorbed": "oscillation across *units* rather than within one (a coordination-oscillation signal is part of #14)"
+    },
+    {
+      "id": "recovery-as-retry",
+      "section": "functional",
+      "name": "Recovery as retry",
+      "summary": "every failure gets the same response",
+      "looksLike": "Six identical attempts at an environment failure",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.failure-observer.v1"
+          },
+          {
+            "id": "reg.control.recovery-router.v1",
+            "note": "under a versioned policy"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M08"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the recovery cases in `controller.test.ts`, and the drifter's `repair → repair → replan`"
+    },
+    {
+      "id": "budget-without-limit-behaviour",
+      "section": "functional",
+      "name": "Budget without a limit behaviour",
+      "summary": "the ceiling is reached and nothing happens",
+      "looksLike": "A unit runs until the provider cuts it off",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.budget-guard.v1"
+          },
+          {
+            "id": "reg.control.model-router.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M07"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`budget.test.ts`",
+      "notAbsorbed": "a reserve for verification and recovery at the instance level is not declared (the viability-theory framing; unscheduled)"
+    },
+    {
+      "id": "recovery-per-unit-hides-shared-cause",
+      "section": "functional",
+      "name": "Recovery per unit hides a shared cause",
+      "summary": "the same failure is recovered once per unit, and the instance never notices",
+      "looksLike": "Six units each take `environment → remediate` for one missing dependency, six decisions and no signal",
+      "absorbedBy": {
+        "regulators": [],
+        "invariants": [],
+        "modules": [],
+        "notes": [
+          "nothing at the instance level: `recovery-router` counts occurrences per cause per unit by design (its limitation 3), and `progression-veto` holds progression only on an obligation something else opened"
+        ]
+      },
+      "reproducedBy": "none; a fixture whose tool fails identically for every unit would show it",
+      "notAbsorbed": "a level-2 count over recovery decisions that opens an obligation on the instance when N units hit one cause in a window (the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §4 item 8, after Lanham §8.3.7's circuit breaker); recorded as a backlog row, not debt, because the card names the per-unit count as a limit"
+    },
+    {
+      "id": "channel-without-transduction",
+      "section": "channel",
+      "name": "Channel without transduction",
+      "summary": "a signal is not an audit, and an audit is not a policy",
+      "looksLike": "A finding is filed as a proposal, or an uncertainty is treated as a decision",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.obligation-router.v1",
+            "note": "the routing floors"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M02",
+          "M10",
+          "M11"
+        ],
+        "notes": [
+          "typed channels with authority per kind (the `reporting` tools)"
+        ]
+      },
+      "reproducedBy": "the smuggled-authority tests in `packages/regulator-pi`"
+    },
+    {
+      "id": "attention-decay",
+      "section": "channel",
+      "name": "Attention decay",
+      "summary": "the unit still speaks fluently, but has stopped keeping the small rules it is shown every turn",
+      "looksLike": "Forty turns in, the marker the prompt asks for on every reply disappears; the next thing dropped is a fixed decision",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.behavioral-canary.v1",
+            "note": "reads every reply and records the silence, advisory"
+          },
+          {
+            "id": "reg.control.budget-guard.v1",
+            "note": "the turn and token ceilings end the attempt eventually"
+          },
+          {
+            "id": "reg.control.contract-preserving-compaction.v1",
+            "note": "what the loop needs survives eviction"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the canary case in `identity.test.ts` (scripted replies; no model)",
+      "notAbsorbed": "what S3 does with the finding: no recovery cause names it (DEBT row 42), and a model that keeps the marker and still drifts is not seen"
+    },
+    {
+      "id": "compaction-discards-constraint",
+      "section": "channel",
+      "name": "Compaction discards the constraint",
+      "looksLike": "After context eviction the unit forgets a fixed decision",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.contract-preserving-compaction.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M07"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the compaction case in `budget.test.ts`",
+      "notAbsorbed": "a model summary can still be wrong, and only the deterministic block is guaranteed (a permanent limit)"
+    },
+    {
+      "id": "summary-discards-uncertainty",
+      "section": "channel",
+      "name": "Summary discards the uncertainty",
+      "looksLike": "The report says \"done\", and the residual uncertainty never reaches the next decision",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.result-report-gate.v1",
+            "note": "residual uncertainty, deviations and emergent decisions are typed fields"
+          },
+          {
+            "id": "reg.control.obligation-router.v1",
+            "note": "`uncertainty` signals routed by their declared impact"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M06",
+          "M11"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`contract.test.ts`",
+      "notAbsorbed": "observation versus inference is not a typed distinction on evidence, and retraction dependencies are not tracked"
+    },
+    {
+      "id": "data-absorbed-as-control",
+      "section": "channel",
+      "name": "Data absorbed as control",
+      "summary": "the environment instructs the regulator",
+      "looksLike": "A comment in the repository redirects a unit, or a tool result carries an instruction",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.authority.project-trust-rule.v1",
+            "note": "nothing from the project is loaded"
+          },
+          {
+            "id": "reg.audit.canary-watch.v1"
+          },
+          {
+            "id": "reg.authority.identity-write-gate.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M10"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`fixture-injection`",
+      "notAbsorbed": "poisoned operational memory driving a later unit is untested. Memory is rendered as facts and never as instructions, and that rendering is the whole defence; the candidate fixture is `fixture-poisoned-memory`, one false environment fact under valid provenance and a near review date ([#130](https://github.com/MetaCoding-io/regulator/issues/130), after #46; the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §6)"
+    },
+    {
+      "id": "vocabulary-drift",
+      "section": "channel",
+      "name": "Vocabulary drift",
+      "summary": "the same word means two things across the log",
+      "looksLike": "Comments say task and the log says ticket, so a reader cannot tell a unit from an obligation",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.identity.identity-context.v1",
+            "note": "the glossary rendered into context"
+          },
+          {
+            "id": "reg.audit.glossary-lint.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M12",
+          "M15"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the sloppy behaviour",
+      "notAbsorbed": "the attenuation of the commit-message half (DEBT row 36)"
+    },
+    {
+      "id": "feedback-delay",
+      "section": "channel",
+      "name": "Feedback delay",
+      "summary": "the signal that a unit went wrong arrives after five more units",
+      "looksLike": "Drift accumulates before anything refuses",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.pre-merge-trial.v1",
+            "note": "runs the checks on the merged tree before anything lands; it replaced `post-merge-check`, which ran on the base after every merge"
+          },
+          {
+            "id": "reg.assurance.eval-harness.v1",
+            "note": "the drift suite measures the accumulation"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M14",
+          "M15"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "the drift scenario under the control arm",
+      "notAbsorbed": "a coupling that `run_tests` and `run_checks` do not exercise lands (`pre-merge-trial` limitation 1); the trial itself was DEBT row 37, paid by #48"
+    },
+    {
+      "id": "self-report-as-control-variety",
+      "section": "channel",
+      "name": "Self-report as control variety",
+      "summary": "the unit's own confidence or relevance score is the signal that routes it",
+      "looksLike": "High reported confidence, failing checks, unit closed; or a \"low consequence\" claim that lowers a severity",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.obligation-router.v1",
+            "note": "reported severity is an input under policy, with floors"
+          },
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "the report satisfies nothing"
+          },
+          {
+            "id": "reg.control.budget-guard.v1",
+            "note": "halts on the ledger, never on the unit's estimate"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "none yet; a fifth scripted behaviour, `confident`, that reports high confidence and low consequence while `run_tests` fails ([#130](https://github.com/MetaCoding-io/regulator/issues/130), after #46; the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §6)",
+      "notAbsorbed": "`confidence` on an intelligence signal is recorded and never calibrated; it is a `model-judgment` instrument once the prediction record exists (open questions §4)"
+    },
+    {
+      "id": "mast-disobey-task-specification",
+      "section": "agent",
+      "name": "Disobey task specification",
+      "summary": "a fixed decision overridden",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.work-contract-gate.v1"
+          },
+          {
+            "id": "reg.audit.behaviour-check.v1",
+            "note": "`export-signature`"
+          },
+          {
+            "id": "reg.control.result-report-gate.v1",
+            "note": "deviations"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the drifter (a two-argument `slugify` against a fixed one-argument signature)"
+    },
+    {
+      "id": "mast-disobey-role-specification",
+      "section": "agent",
+      "name": "Disobey role specification",
+      "summary": "a profile's grant exceeded",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.profile-write-grant.v1"
+          },
+          {
+            "id": "reg.authority.identity-write-gate.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": [
+          "the instance manifest's protected prefixes cover `vendor/`, where `vendor-write-gate`, the course's first gate, is retired"
+        ]
+      },
+      "reproducedBy": "the drifter's vendor edit, and `profiles.test.ts`"
+    },
+    {
+      "id": "mast-loss-of-conversation-history",
+      "section": "agent",
+      "name": "Loss of conversation history",
+      "summary": "a constraint lost to compaction",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.contract-preserving-compaction.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "`budget.test.ts`"
+    },
+    {
+      "id": "mast-unaware-of-termination-conditions",
+      "section": "agent",
+      "name": "Unaware of termination conditions",
+      "summary": "a unit that never reports, or reports twice",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.result-report-gate.v1",
+            "note": "one report per attempt"
+          },
+          {
+            "id": "reg.control.budget-guard.v1"
+          },
+          {
+            "id": "reg.control.recovery-router.v1",
+            "note": "the `no-report` recovery cause"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "`controller.test.ts`"
+    },
+    {
+      "id": "mast-fail-to-ask-for-clarification",
+      "section": "agent",
+      "name": "Fail to ask for clarification",
+      "summary": "an unresolved decision settled silently",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.work-contract-gate.v1",
+            "note": "an unresolved decision must be surfaced"
+          },
+          {
+            "id": "reg.control.result-report-gate.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "`underscore-unresolved`"
+    },
+    {
+      "id": "mast-task-derailment",
+      "section": "agent",
+      "name": "Task derailment",
+      "summary": "a unit outside its contract's scope",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.result-report-gate.v1",
+            "note": "deviations of kind `scope`"
+          },
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "the writable prefixes"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the drifter's root-level config"
+    },
+    {
+      "id": "mast-information-withholding",
+      "section": "agent",
+      "name": "Information withholding",
+      "summary": "a finding not reported",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.intelligence.intelligence-intake.v1",
+            "note": "`report_intelligence` is typed and recorded"
+          },
+          {
+            "id": "reg.control.result-report-gate.v1",
+            "note": "the result report's `residualUncertainty` is typed and recorded"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": [
+          "nothing forces their use"
+        ]
+      },
+      "reproducedBy": "not reproduced: a unit that finds and does not tell has no fixture"
+    },
+    {
+      "id": "mast-ignored-other-agents-input",
+      "section": "agent",
+      "name": "Ignored other agent's input",
+      "summary": "intelligence not consumed",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.intelligence.intelligence-intake.v1",
+            "note": "the obligation"
+          },
+          {
+            "id": "reg.control.progression-veto.v1",
+            "note": "its veto"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "`research-vendored-helper`"
+    },
+    {
+      "id": "mast-reasoning-action-mismatch",
+      "section": "agent",
+      "name": "Reasoning-action mismatch",
+      "summary": "the report claims what the tree does not show",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1"
+          },
+          {
+            "id": "reg.audit.inherited-tests-check.v1"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": [
+          "under either, the report's claims satisfy nothing"
+        ]
+      },
+      "reproducedBy": "the self-certifier"
+    },
+    {
+      "id": "mast-premature-termination",
+      "section": "agent",
+      "name": "Premature termination",
+      "summary": "closed before verification",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "runs before reintegration"
+          },
+          {
+            "id": "reg.audit.pre-merge-trial.v1",
+            "note": "runs before the merge lands"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "every closeout test"
+    },
+    {
+      "id": "mast-no-or-incomplete-verification",
+      "section": "agent",
+      "name": "No or incomplete verification",
+      "summary": "tests not run, or run by the unit only",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "host-run"
+          },
+          {
+            "id": "reg.audit.inherited-tests-check.v1",
+            "note": "the host-owned suite"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the control arm, and the self-certifier"
+    },
+    {
+      "id": "mast-incorrect-verification",
+      "section": "agent",
+      "name": "Incorrect verification",
+      "summary": "the wrong thing verified",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "evidence bound to the criterion"
+          },
+          {
+            "id": "reg.audit.behaviour-check.v1",
+            "note": "`export-signature` observed by content"
+          }
+        ],
+        "invariants": [],
+        "modules": [
+          "M09",
+          "M14"
+        ],
+        "notes": []
+      },
+      "reproducedBy": "`verify.test.ts`"
+    }
+  ]
+}

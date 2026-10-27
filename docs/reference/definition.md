@@ -292,9 +292,11 @@ it too.
 | `ablation.switch`, `ablation.note` | the eval arm that runs with this regulator off |
 | `retirement.condition` | when the regulator may be retired, typically once ablation shows no significant regression across model versions and suites |
 
-The [regulators](/reference/regulators) page and the
-[enforcement boundary](/reference/boundary) are both rendered from these records by
-`regulator docs`.
+The [regulators](/reference/regulators) page, the
+[enforcement boundary](/reference/boundary) and the [viability case](/reference/viability)
+are all rendered from these records by `regulator docs`; the viability case also reads
+`registry/pathologies.json`, the [pathology catalog](/PATHOLOGIES)'s rows, each naming the
+regulators that absorb it by record id.
 
 ## Identity seed
 
