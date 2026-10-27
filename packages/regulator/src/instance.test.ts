@@ -7,7 +7,7 @@ import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger } fro
 import type { WorkContract } from "@metacoding.io/regulator-protocol";
 import { driveUnit } from "./controller.js";
 import { gitExec } from "./git-support.js";
-import { doctor, initInstance, readManifest } from "./instance.js";
+import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { LAB_ROOT } from "./workload.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
@@ -140,4 +140,83 @@ test("one unit end to end in the unfamiliar repository: the unit writes under li
   const advisories = (await readSignals(repo)).filter((s) => s.kind === "audit-finding" && s.severity === "advisory");
   assert.deepEqual(advisories.map((s) => [s.unit, s.subject]), [["g1", "unit g1: glossary-lint saw drift the workload made advisory"]]);
   assert.match((advisories[0] as { observation: string }).observation, /^1 hit\(s\) in commit messages, which this workload made advisory/);
+});
+
+/** The definition's revision at the v0.1.3 tag: what a manifest written by 0.1.3's init recorded. */
+const REV_0_1_3 = "5115ea2144b89d07a3b943ab2e2f247ea8f896eb";
+
+test("the definition upgrade (#53): an instance initialized as 0.1.3 left it — a manifest without a package version, no regulator/advice/ — is carried to the installed definition by `upgrade`: the advice set is seeded and committed, a file that exists is never overwritten, the manifest carries the version and one history entry naming the report it was checked against, doctor is green after, and a second run changes nothing and says so", async (t) => {
+  const repo = await unfamiliarRepo(t);
+  await initInstance(gitExec, { repo, writablePaths: ["lib/", "test/"], by: "alice", now: () => clock });
+  const git = async (...args: string[]) => { const r = await gitExec("git", args, { cwd: repo }); if (r.code !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`); return r.stdout.trim(); };
+  // As 0.1.3 would have left it: identity seeded and committed, the ignore line, and a manifest with no package version at 0.1.3's revision; advice was not a file set yet.
+  // One advice file is kept with a person's edit, to show a file that exists is never touched.
+  await git("rm", "-rq", "--", "regulator/advice/auditor.md", "regulator/advice/bookkeeper.md", "regulator/advice/intelligence.md", "regulator/advice/manager.md", "regulator/advice/research.md");
+  await writeFile(path.join(repo, "regulator/advice/implement.md"), "- Decided here: say so in your summary.\n");
+  await git("commit", "-qam", "as 0.1.3 left it, with one advice file decided locally");
+  const written = (await readManifest(repo))!;
+  const asOf013 = { ...written, definition: { root: written.definition.root, name: written.definition.name, registry: 43, harnessRevision: REV_0_1_3, pi: written.definition.pi } };
+  await writeFile(path.join(repo, INSTANCE_MANIFEST_RELATIVE_PATH), `${JSON.stringify(asOf013, null, 2)}\n`, "utf8");
+  assert.equal((await readManifest(repo))!.definition.packageVersion, undefined, "a 0.1.3 manifest validates and carries no package version");
+  let report = await doctor(gitExec, { repo, now: () => clock });
+  const by = (name: string) => report.checks.find((c) => c.name === name)!;
+  assert.match(by("manifest").detail, /; package version not recorded \(a manifest written before `regulator upgrade` existed\); never upgraded$/);
+  assert.equal(by("definition-drift").ok, false);
+  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(50, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
+  assert.equal(by("advice").ok, false, "doctor sees the missing advice files");
+  const before = await git("rev-parse", "HEAD");
+
+  // A dry run plans and changes nothing; it needs nobody.
+  const dry = await upgradeInstance(gitExec, { repo, check: true, now: () => clock });
+  assert.equal(dry.plan.outcome, "upgrade");
+  if (dry.plan.outcome !== "upgrade") return;
+  assert.deepEqual([dry.plan.from, dry.plan.fromUnversioned, dry.plan.to.packageVersion, dry.plan.crossed.map((n) => n.version)], [{ packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, true, "0.1.3", ["unreleased"]], "read as the floor, crossing the unreleased head's note");
+  assert.deepEqual(dry.plan.steps.map((s) => [s.step, s.apply, s.step === "seed" ? s.files : undefined]), [["seed", false, []], ["seed", true, ["auditor.md", "bookkeeper.md", "intelligence.md", "manager.md", "research.md"]], ["ignore", false, undefined]]);
+  assert.match(dry.notes, /^## unreleased \(head [0-9a-f]{7}\)\n {2}- advice advice\/<profile>\.md \[gate: regulator check only\]\n {4}A profile's advice is a file set seeded like identity \(#110\)/);
+  assert.match(dry.notes, /- workload workload\/software-development\.json \[gate: scripted report 4a7daff51eb1…\]/, "a gate read from the note, never asserted here");
+  assert.deepEqual([dry.applied, dry.committed, dry.evidence], [[], undefined, { report: "none" }], "no committed report ran at this revision, and the dry run says so");
+  assert.equal(await git("rev-parse", "HEAD"), before);
+  assert.deepEqual(await readManifest(repo), asOf013, "the manifest is untouched by a dry run");
+
+  // Applying needs a person and a clean base.
+  await assert.rejects(upgradeInstance(gitExec, { repo, now: () => clock }), /upgrade needs --by <who>/);
+  await writeFile(path.join(repo, "scratch.txt"), "dirty\n");
+  await assert.rejects(upgradeInstance(gitExec, { repo, by: "alice", now: () => clock }), /the base checkout has uncommitted changes; an upgrade is committed on its own/);
+  await rm(path.join(repo, "scratch.txt"));
+
+  const result = await upgradeInstance(gitExec, { repo, by: "alice", now: () => clock });
+  assert.equal(result.plan.outcome, "upgrade");
+  assert.deepEqual(result.applied.map((s) => s.step), ["seed"]);
+  assert.ok(result.committed && result.committed !== before, "the seeded files are one commit on the base branch");
+  assert.equal(await git("rev-parse", "HEAD"), result.committed);
+  assert.equal(await git("status", "--porcelain"), "", "the base is clean after: nothing left unstaged");
+  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(50 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
+  assert.deepEqual((await readdir(path.join(repo, "regulator/advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"]);
+  assert.equal(await readFile(path.join(repo, "regulator/advice/manager.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice/manager.md"), "utf8"), "seeded byte for byte");
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), "- Decided here: say so in your summary.\n", "the file a person decided is exactly as they left it");
+  assert.match(await readFile(path.join(repo, "regulator/identity/INVARIANTS.md"), "utf8"), /INV-001/);
+  const tracked = (await git("ls-files", "regulator/advice")).split("\n");
+  assert.equal(tracked.length, 6, "every advice file is committed");
+  const upgraded = (await readManifest(repo))!;
+  assert.equal(upgraded.definition.packageVersion, "0.1.3");
+  assert.equal(upgraded.definition.registry, 50);
+  assert.match(upgraded.definition.harnessRevision, /^[0-9a-f]{40}$/);
+  assert.notEqual(upgraded.definition.harnessRevision, REV_0_1_3);
+  assert.deepEqual(upgraded.upgrades, [{ from: { packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, to: { packageVersion: "0.1.3", harnessRevision: upgraded.definition.harnessRevision }, report: "none", by: "alice", at: "2026-09-22T12:00:00.000Z" }]);
+  assert.deepEqual([upgraded.initializedAt, upgraded.initializedBy, upgraded.writablePaths], [written.initializedAt, "alice", ["lib/", "test/"]], "what init wrote stays");
+  assert.deepEqual(result.manifest, upgraded);
+
+  report = await doctor(gitExec, { repo, now: () => clock });
+  assert.equal(report.problems, 0, JSON.stringify(report.checks.filter((c) => !c.ok)));
+  assert.match(by("manifest").detail, /; package 0\.1\.3; upgraded 1× — last 2026-09-22 by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/);
+  assert.equal(by("definition-drift").detail, "the instance was initialized under this definition revision");
+  assert.equal(by("advice").ok, true);
+
+  // A second run: nothing crossed, nothing absent, nothing written.
+  const again = await upgradeInstance(gitExec, { repo, by: "alice", now: () => clock });
+  assert.equal(again.plan.outcome, "current");
+  assert.match((again.plan as { detail: string }).detail, /^the instance is at 0\.1\.3 \([0-9a-f]{7}\), which is the installed definition; nothing to do$/);
+  assert.deepEqual([again.applied, again.committed, again.manifest], [[], undefined, upgraded]);
+  assert.equal(await git("rev-parse", "HEAD"), result.committed);
+  assert.deepEqual(await readManifest(repo), upgraded, "the manifest is byte-for-byte what the first run wrote");
 });

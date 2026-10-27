@@ -6,6 +6,9 @@
  *   regulator init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository:
  *                                                         identity and advice seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
  *   regulator doctor [--json] [--today <date>]   the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
+ *   regulator upgrade [--by <who>] [--check] [--definition <dir>]   carry the instance to the installed definition: seed what is absent (never a file that exists),
+ *                                                         add the ignore line, print the migration note of every version crossed, record the committed report the
+ *                                                         target revision was checked against, rewrite the manifest and commit on the base branch; --check prints the plan
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
  *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
@@ -78,7 +81,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
 import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isHarnessEdit, metricNames, type Disposition, type HarnessEdit, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
-import { doctor, initInstance, readManifest } from "./instance.js";
+import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
@@ -103,7 +106,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -171,6 +174,32 @@ try {
       console.log(`${report.problems} problem(s)${report.warnings ? `, ${report.warnings} warning(s)` : ""}`);
     }
     process.exit(report.problems ? 1 : 0);
+  } else if (command === "upgrade") {
+    // The definition upgrade (#53): a closed list of mechanical steps, the migration notes printed for the rest, the manifest rewritten citing who and against what.
+    const args = [sub, ...rest].filter((a): a is string => a !== undefined);
+    const upgradeFlag = (name: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : undefined; };
+    const check = args.includes("--check");
+    // Applying is checked the way the accept commands are checked: the person may act as S5, since the seeds land under the harness-owned directories only S5 writes.
+    const by = check ? upgradeFlag("by") : await authorized(upgradeFlag("by"), { severity: "blocking", s5: true });
+    const result = await upgradeInstance(realExec, { repo: process.cwd(), check, ...(by ? { by } : {}), ...(upgradeFlag("definition") ? { definitionRoot: path.resolve(upgradeFlag("definition")!) } : {}) });
+    const plan = result.plan;
+    if (plan.outcome === "current") {
+      console.log(`nothing to upgrade: ${plan.detail}`);
+    } else if (plan.outcome === "upgrade") {
+      const point = (p: { packageVersion: string; harnessRevision: string }) => `${p.packageVersion}@${p.harnessRevision.slice(0, 7)}`;
+      console.log(`${check ? "upgrade would carry" : "upgraded"} this instance ${point(plan.from)}${plan.fromUnversioned ? " (the manifest recorded no package version; read as the migration floor)" : ""} → ${point(plan.to)}, crossing ${plan.crossed.length ? plan.crossed.map((n) => n.version).join(", ") : "no version"}`);
+      for (const step of plan.steps) {
+        const what = step.step === "seed" ? `seed ${step.instance} from the definition's ${step.class} seed` : "add the .regulator/ line to .gitignore";
+        console.log(`  ${step.apply ? (check ? "would apply" : "applied   ") : "nothing to do"}  ${what}${step.step === "seed" ? step.apply ? `: ${step.files.join(", ")}` : ": every seed file is present; none is overwritten" : step.apply ? "" : ": present"}`);
+      }
+      if (result.notes) {
+        console.log("  the migration notes, for a person to read; nothing below is applied by upgrade:");
+        for (const line of result.notes.split("\n")) console.log(`  ${line}`);
+      }
+      console.log(result.evidence.report === "none" ? `  WARNING: no committed report under evals/reports/ ran at ${plan.to.harnessRevision.slice(0, 7)}; the manifest records "none" as the evidence this upgrade was checked against` : `  checked against the ${result.evidence.kind} report ${result.evidence.file ?? result.evidence.report.slice(0, 12)} (${result.evidence.report.slice(0, 12)}…), which ran at this revision`);
+      if (check) console.log("  --check: nothing changed; run without it, with --by <who>, to apply");
+      else console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch by ${by}; the manifest records the upgrade` : `  nothing to commit: the tree already carried everything; the manifest records the upgrade by ${by}`);
+    }
   } else if (command === "watch") {
     const execAt = rest.indexOf("--exec");
     const execCmd = execAt >= 0 ? rest.slice(execAt + 1) : sub === "--exec" ? rest : undefined;

@@ -38,7 +38,7 @@ export const ENFORCEMENT_POINTS = {
     "status", "fixture", "unit start", "unit finish", "unit status", "contract check", "unit dispatch", "unit drive", "unit route", "unit show", "unit close",
     "unit accept", "unit evidence", "effects", "obligations", "obligation show", "obligation ack", "obligation resolve", "obligation escalate", "signals route",
     "memory", "memory retract", "identity accept", "identity reject", "answer", "remind", "init", "doctor", "watch", "identity promote", "eval", "spans",
-    "review", "check", "docs", "advice accept", "advice reject", "advice promote",
+    "review", "check", "docs", "advice accept", "advice reject", "advice promote", "upgrade",
   ],
   /** The definition check, under `regulator check`, `doctor` and `pnpm check`. */
   check: ["checkRegistry", "checkDefinition"],
