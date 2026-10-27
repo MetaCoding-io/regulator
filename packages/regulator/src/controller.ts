@@ -34,6 +34,9 @@
  *
  * Pi-free. The one Pi-shaped thing, running a session, is injected as a
  * `Dispatcher`, so the loop is tested without a model and driven with one.
+ * A unit type whose runner is a `command` (#122) goes through the same seam
+ * and the same steps with the control plane's own dispatcher (`runner.ts`),
+ * which runs the declared program in the worktree; no host is needed.
  */
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -44,15 +47,16 @@ import {
   dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem, type Resolved,
 } from "@metacoding.io/regulator-core";
-import { checkNames, checkOptions } from "@metacoding.io/regulator-protocol";
+import { checkNames, checkOptions, isCommandRunner, runnerOf } from "@metacoding.io/regulator-protocol";
 import type {
-  AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
+  AlgedonicSignal, AttemptProgram, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
   TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
 } from "@metacoding.io/regulator-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
 import { committedReports, unitGrader } from "./predictions.js";
+import { ProgramError, commandDispatcher } from "./runner.js";
 import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
 import { LAB_ROOT, loadWorkloadFor, unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
@@ -75,7 +79,8 @@ export interface DispatchRequest {
   hint?: string;
 }
 
-export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string }>;
+/** What a dispatch returns: the session it opened, or — for a command unit (#122) — the program it ran, by file, hash and exit. */
+export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string; program?: AttemptProgram }>;
 
 export interface RunUnitOptions {
   repo: string;
@@ -89,7 +94,10 @@ export interface RunUnitOptions {
   interaction: InteractionPolicy;
   /** The regulator ids the definition declares, so a fixed decision's authority reference can be resolved (lesson 12). */
   regulators?: readonly string[];
+  /** The host's dispatcher for a session unit. A command unit (#122) never reaches it: the loop runs the declared program itself. */
   dispatcher: Dispatcher;
+  /** Where a command runner's program is resolved and hashed (#122): the instance manifest's definition root, else the lab's, when unset. */
+  definitionRoot?: string;
   owner: string;
   now?: () => number;
   ttlMs?: number;
@@ -129,6 +137,13 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   const unitType = unitTypeOf(workload, contract.unitType);
   if (!unitType) problems.push({ path: "unitType", message: `"${contract.unitType}" is not a unit type of workload ${workload.name}` });
   const ceiling = ceilingFor(policy, contract.unitType);
+  const runner = unitType ? runnerOf(unitType) : undefined;
+  // A program has no judgment to report (#122): its report's delegated and unresolved lists are empty by construction, so a
+  // contract that delegates a choice it must report, or leaves a decision unresolved, could never close a command unit.
+  if (runner && isCommandRunner(runner)) {
+    for (const d of contract.delegated) if (d.requiredReport !== false) problems.push({ path: "delegated", message: `delegated decision "${d.id}" (${d.subject}) asks for a reported choice, and unit type "${contract.unitType}" runs a program, which has no judgment to report: fix the decision in the contract, or give the work to a session` });
+    for (const u of contract.unresolved) problems.push({ path: "unresolved", message: `unresolved decision "${u.id}" (${u.subject}) needs an outcome in the report, and unit type "${contract.unitType}" runs a program, which surfaces nothing: leave it to a session, or fix what the program may not touch` });
+  }
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
   // Authority is what exists (lesson 12): a fixed decision cites an invariant the instance's identity declares, a
@@ -182,15 +197,21 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   await store.setStatus(contract.unitId, "dispatched");
   const startedAt = stamp();
   let sessionId: string | undefined;
+  let program: AttemptProgram | undefined;
+  // The same seam for both kinds (#122): a command unit's dispatcher is the control plane's own, over the declared program.
+  const dispatch: Dispatcher = runner && isCommandRunner(runner)
+    ? commandDispatcher(exec, { repo: options.repo, definitionRoot: options.definitionRoot ?? await definitionRootFor(options.repo), runner, ceiling, now })
+    : options.dispatcher;
   try {
-    ({ sessionId } = await options.dispatcher({
+    ({ sessionId, program } = await dispatch({
       unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile,
       attempt: attemptNumber, route: routeFor(policy, contract.unitType), policyPath: options.policyPath,
       ...(hint === undefined ? {} : { hint }),
     }));
   } catch (error) {
     const detail = (error as Error).message;
-    await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail });
+    const ran = error instanceof ProgramError ? error.program : undefined;
+    await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail, ...(ran ? { program: ran } : {}) });
     await store.setStatus(contract.unitId, "blocked", `dispatch error: ${detail}`);
     return { status: "blocked", reason: "dispatch-error", detail };
   }
@@ -208,7 +229,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
 
   // close — from the report the unit wrote, never from the domain
-  const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
+  const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }), ...(program === undefined ? {} : { program }) };
   const report = await store.getReport(contract.unitId, contract.version, attemptNumber);
   const budget = await store.getBudget(contract.unitId, attemptNumber);
   if (!report && budget?.exhausted) {
@@ -219,7 +240,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
   if (!report) {
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "no-report" });
-    await store.setStatus(contract.unitId, "blocked", "the unit ended without calling report_result");
+    await store.setStatus(contract.unitId, "blocked", program ? "the program ended without a report" : "the unit ended without calling report_result");
     return { status: "blocked", reason: "no-report" };
   }
   const reportProblems = checkResultReport(contract, report);
@@ -272,6 +293,11 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
   return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
 }
 
+/** The definition an instance runs under: the manifest's root, or the lab's for a repository that was never initialized. */
+async function definitionRootFor(repo: string): Promise<string> {
+  return (await readManifest(repo))?.definition.root ?? LAB_ROOT;
+}
+
 export interface ResolvePredictionsOptions {
   repo: string;
   /** The unit that just closed or aborted, as the store records it. */
@@ -294,8 +320,7 @@ export interface ResolvePredictionsOptions {
 export async function resolvePredictions(exec: Exec, options: ResolvePredictionsOptions): Promise<Resolved> {
   const now = options.now ?? Date.now;
   const { unitId, unitType, status } = options.unit;
-  const manifest = await readManifest(options.repo);
-  const definitionRoot = manifest?.definition.root ?? LAB_ROOT;
+  const definitionRoot = await definitionRootFor(options.repo);
   const workload = options.workload ?? (await loadWorkloadFor(options.unit.workload, definitionRoot).catch(() => undefined));
   const signature = options.contract?.expectedEvidence.find((e) => e.check?.kind === "export-signature");
   return resolveFromStores(options.repo, {
