@@ -25,8 +25,9 @@
   },
   "limitations": [
     "Positive grant covers write and edit only; the implement profile grants bash, which is not path-gated.",
-    "Read-only means declared read-only effects (effects.ts); a tool with an undeclared effect is refused from read-only profiles, not audited.",
-    "Lexical path check only, as for the vendor write gate."
+    "Read-only means declared read-only effects (effects.ts, with the effects a workload declares on its own tools beside the built-ins since #121); a tool with an undeclared effect is refused from read-only profiles, not audited.",
+    "Lexical path check only, as for the vendor write gate.",
+    "The grant covers what a unit writes directly. A workload-declared tool (#121) writes under its own declared outputs, which need not lie inside the profile's writable paths — the portfolio's trades/pending/ is under no write grant and reachable through place_trade alone — so a prefix outside this grant is not a prefix nothing can write; the definition check and the declared-tool card say what reaches it."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-21", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:profiles", "note": "A live arm without the profiles extension lets a unit write anywhere its tools reach; the closeout checks catch protected prefixes only, and the boundary grader counts the rest."},
