@@ -9,12 +9,14 @@
  *   changelog.md   `packages/regulator/CHANGELOG.md`
  *   roadmap.md     `ROADMAP.md`
  *   contributing.md `CONTRIBUTING.md`
+ *   figures/*.svg  `packages/regulator/figures/` (rendered from the definition by `regulator docs`), the
+ *                  hotspots' absolute docs links made site-relative
  *
  * Relative links in a copied file are re-based: a target inside `docs/` is linked
  * relative to the page's rewritten location; anything else links into the repository
  * on GitHub. Run by `pnpm --filter regulator-docs build` and `dev`.
  */
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,6 +25,7 @@ const ROOT = path.resolve(DOCS, "..");
 const PRODUCT = path.join(ROOT, "packages", "regulator");
 const OUT = path.join(DOCS, "generated");
 const REPO = "https://github.com/MetaCoding-io/regulator/blob/main";
+const DOCS_ORIGIN = "https://docs.regulator.metacoding.io";
 /** Directories under `docs/` the site does not build (as in `.vitepress/config.ts`); a link into one goes to GitHub. */
 const OFF_SITE = ["archive", "research"];
 
@@ -137,4 +140,11 @@ await copy(path.join(PRODUCT, "OPERATING.md"), "operating.md", "Operating");
 await copy(path.join(PRODUCT, "CHANGELOG.md"), "changelog.md");
 await copy(path.join(ROOT, "ROADMAP.md"), "roadmap.md");
 await copy(path.join(ROOT, "CONTRIBUTING.md"), "contributing.md");
-console.log(`generated ${Object.keys(PLACEMENT).length} pages into ${path.relative(ROOT, OUT)}/`);
+const figuresDir = path.join(PRODUCT, "figures");
+await mkdir(path.join(OUT, "figures"), { recursive: true });
+const figures = (await readdir(figuresDir)).filter((f) => f.endsWith(".svg"));
+for (const f of figures) {
+  const svg = await readFile(path.join(figuresDir, f), "utf8");
+  await writeFile(path.join(OUT, "figures", f), svg.replaceAll(`data-href="${DOCS_ORIGIN}/`, 'data-href="/'));
+}
+console.log(`generated ${Object.keys(PLACEMENT).length} pages and ${figures.length} figure(s) into ${path.relative(ROOT, OUT)}/`);

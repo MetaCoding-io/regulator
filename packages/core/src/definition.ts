@@ -51,7 +51,8 @@ export interface CheckedDefinition {
  * The package's own code and tooling beside the definition: not definition files, so not placed in a class. Everything
  * else under the root that is a directory must be declared by `DEFINITION_WRITERS` before anything reads it.
  */
-const NOT_DEFINITION_DIRS: ReadonlySet<string> = new Set(["src", "dist", "node_modules"]);
+/** Directories beside the definition that are not it: the code, its build, and `figures/`, which `regulator docs --write` renders from the definition and nothing reads back. */
+const NOT_DEFINITION_DIRS: ReadonlySet<string> = new Set(["src", "dist", "node_modules", "figures"]);
 
 async function jsonFiles(dir: string): Promise<string[]> {
   try {

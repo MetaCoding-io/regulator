@@ -4,11 +4,24 @@
  * and the website show one system. The first figure is the unit lifecycle: one node
  * per `UnitStatus`, one edge per row of `UNIT_TRANSITIONS`, numbered in table order.
  *
+ * Every figure comes in two shapes. The *fragment* is a `<g>` with an id, carrying its
+ * own `<defs>` under prefixed ids, so a hand-drawn frame can place it beside other
+ * things (the thread's third clause, refined 2026-10-26: a figure that spans more than
+ * the definition describes embeds the generated part and draws the rest). The *figure*
+ * is the fragment wrapped in `<svg>`. Ids are stable because they come from the
+ * definition: a node's id is its status, an edge's id is the pair it joins, and nothing
+ * is derived from position or render order, so a frame placed on one render still fits
+ * the next.
+ *
  * The SVG is plain and self-describing: every node carries `data-state`, every edge
  * `data-from`/`data-to`/`data-on`, and the count lines `data-count`, so a page can
  * place live records on it (units per state, a unit's visits, the step it is on)
- * without redrawing anything. Colours are CSS variables with fallbacks, so the figure
- * follows whichever theme embeds it.
+ * without redrawing anything. Every node and edge is also a hotspot in the shape the
+ * docs and the website already open cards on (`class="gl fig-hot"`, `data-label`,
+ * `data-def`, `data-href`), with the card text taken from the table's own fields, so a
+ * card can never say what the table does not. Colours are CSS variables with
+ * fallbacks, so the figure follows whichever theme embeds it; a host's own rules on
+ * the classes override them.
  */
 import { UNIT_TRANSITIONS, type UnitStatus, type UnitTransition } from "@metacoding.io/regulator-protocol";
 
@@ -22,6 +35,7 @@ const STATES: ReadonlyArray<{ id: UnitStatus; kind: string; title: string; note:
 ];
 const W = 200;
 const H = 130;
+const VIEW = { width: 800, height: 480 } as const;
 
 type Point = [number, number];
 interface EdgeGeometry { d: string; badge: Point; label?: Point }
@@ -61,11 +75,40 @@ export function lifecycleEdges(): LifecycleEdge[] {
   return UNIT_TRANSITIONS.map((transition, i) => ({ number: i + 1, transition }));
 }
 
+/** A generated figure as a part another figure can place. */
+export interface FigureFragment {
+  /** The `<g>`'s id; every id inside is prefixed with it. */
+  id: string;
+  /** `<g id="…" data-viewbox="0 0 w h">…</g>`, with its own `<defs>` inside. */
+  markup: string;
+  /** The coordinate space the fragment is drawn in. */
+  viewBox: { width: number; height: number };
+  /** The ids of its nodes and edges, in render order: stable across renders because each comes from the definition. */
+  ids: string[];
+}
+
+export interface FigureOptions {
+  /** The fragment's id and the prefix of every id inside it. */
+  id?: string;
+  /** Where a hotspot's "In the docs" link points: the docs site's origin, or "" for a site-relative link. */
+  docsBase?: string;
+}
+
+/** The docs page that states the mechanism, for the hotspots' links. */
+const LIFECYCLE_DOC = "/guide/control-room#views";
+
+/** A row of the table in a card's words. */
+function rowSentence(e: LifecycleEdge): string {
+  return `#${e.number} ${e.transition.on}, by the loop's ${e.transition.by}${e.transition.automatic ? "" : ", after a decision outside the loop"}: ${e.transition.description}.`;
+}
+
 /**
- * The unit lifecycle as inline SVG. Solid edges the loop takes on its own; dashed ones wait on something outside it
+ * The unit lifecycle as a fragment. Solid edges the loop takes on its own; dashed ones wait on something outside it
  * (the table's `automatic`). A pair with more than one row shows every number on one edge.
  */
-export function renderLifecycleFigure(): string {
+export function lifecycleFragment(options: FigureOptions = {}): FigureFragment {
+  const id = options.id ?? "unit-lifecycle";
+  const docsBase = options.docsBase ?? "";
   const edges = lifecycleEdges();
   const byPair = new Map<string, LifecycleEdge[]>();
   for (const e of edges) {
@@ -73,31 +116,55 @@ export function renderLifecycleFigure(): string {
     byPair.set(key, [...(byPair.get(key) ?? []), e]);
   }
   for (const key of byPair.keys()) if (!GEOMETRY[key]) throw new Error(`the lifecycle figure has no geometry for ${key}: UNIT_TRANSITIONS grew a pair the figure does not draw`);
+  const ids: string[] = [];
+  const href = esc(`${docsBase}${LIFECYCLE_DOC}`);
+  const hot = (elementId: string, label: string, def: string): string => {
+    ids.push(elementId);
+    return `id="${elementId}" tabindex="0" role="button" data-label="${esc(label)}" data-def="${esc(def)}" data-href="${href}"`;
+  };
   const parts: string[] = [];
-  parts.push(`<svg class="lifecycle" viewBox="0 0 800 480" role="img" aria-label="The unit lifecycle: ${STATES.length} states and ${edges.length} transitions, from UNIT_TRANSITIONS" xmlns="http://www.w3.org/2000/svg">`);
-  parts.push(`<defs><marker id="lc-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>`);
+  parts.push(`<g id="${id}" class="lifecycle-fragment" data-viewbox="0 0 ${VIEW.width} ${VIEW.height}">`);
+  parts.push(`<defs><marker id="${id}-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="currentColor"/></marker></defs>`);
   for (const [key, group] of byPair) {
     const g = GEOMETRY[key]!;
     const first = group[0]!.transition;
     const numbers = group.map((e) => e.number);
     const automatic = group.some((e) => e.transition.automatic);
-    parts.push(`<g class="edge${automatic ? "" : " waits"}" data-from="${first.from}" data-to="${first.to}" data-on="${esc(group.map((e) => e.transition.on).join(" "))}" data-numbers="${numbers.join(" ")}">`);
-    parts.push(`<path d="${g.d}" fill="none" stroke="currentColor" stroke-width="1.4"${automatic ? "" : ' stroke-dasharray="5 4"'} marker-end="url(#lc-arrow)"/>`);
-    parts.push(`<path class="active-path" d="${g.d}" fill="none" stroke-width="2.6" stroke-dasharray="6 5"/>`);
+    const label = `${first.from} → ${first.to}`;
+    const def = `${group.length === 1 ? "One row" : `${group.length} rows`} of UNIT_TRANSITIONS, ${automatic ? "taken by the loop on its own" : "taken only after a decision outside the loop"}. ${group.map(rowSentence).join(" ")}`;
+    parts.push(`<g class="edge${automatic ? "" : " waits"} gl fig-hot" ${hot(`${id}-edge-${first.from}-${first.to}`, label, def)} data-from="${first.from}" data-to="${first.to}" data-on="${esc(group.map((e) => e.transition.on).join(" "))}" data-numbers="${numbers.join(" ")}">`);
+    parts.push(`<path d="${g.d}" fill="none" stroke="currentColor" stroke-width="1.4"${automatic ? "" : ' stroke-dasharray="5 4"'} marker-end="url(#${id}-arrow)"/>`);
+    parts.push(`<path class="active-path" d="${g.d}" fill="none" stroke="var(--fig-accent, currentColor)" stroke-width="2.6" stroke-dasharray="6 5" opacity="0"/>`);
+    parts.push(`<path class="hit" d="${g.d}" fill="none" stroke="transparent" stroke-width="14" pointer-events="stroke"/>`);
     const r = numbers.length > 1 ? 13 : 10;
-    parts.push(`<g class="badge" transform="translate(${g.badge[0]},${g.badge[1]})"><circle r="${r}"/><text text-anchor="middle" dominant-baseline="central">${numbers.join("·")}</text></g>`);
+    parts.push(`<g class="badge" transform="translate(${g.badge[0]},${g.badge[1]})"><circle r="${r}" fill="var(--fig-bg, #fff)" stroke="var(--fig-line, currentColor)" stroke-width="1.2"/><text text-anchor="middle" dominant-baseline="central" font-size="10" font-family="var(--fig-mono, ui-monospace, monospace)" fill="var(--fig-muted, currentColor)">${numbers.join("·")}</text></g>`);
     parts.push(`</g>`);
   }
   for (const s of STATES) {
-    parts.push(`<g class="state" data-state="${s.id}" transform="translate(${s.x},${s.y})">`);
-    parts.push(`<rect width="${W}" height="${H}" rx="8"/>`);
-    parts.push(`<text class="kind" x="14" y="22">${esc(s.kind.toUpperCase())}</text>`);
-    parts.push(`<text class="title" x="14" y="46">${esc(s.title)}</text>`);
-    parts.push(`<text class="note" x="14" y="64">${esc(s.note)}</text>`);
-    parts.push(`<text class="count" x="14" y="92" data-count="units:${s.id}"></text>`);
-    parts.push(`<text class="count" x="14" y="110" data-count="visits:${s.id}"></text>`);
+    const into = edges.filter((e) => e.transition.to === s.id).map((e) => `#${e.number} ${e.transition.on}`);
+    const outOf = edges.filter((e) => e.transition.from === s.id).map((e) => `#${e.number} ${e.transition.on}`);
+    const def = `${s.kind}: ${s.note}. ${into.length ? `Entered by ${into.join(", ")}.` : "The status a unit starts in."} ${outOf.length ? `Left by ${outOf.join(", ")}.` : "A unit never leaves it."}`;
+    parts.push(`<g class="state gl fig-hot" ${hot(`${id}-state-${s.id}`, s.title, def)} data-state="${s.id}" transform="translate(${s.x},${s.y})">`);
+    parts.push(`<rect width="${W}" height="${H}" rx="8" fill="var(--fig-bg, #fff)" stroke="var(--fig-line, currentColor)" stroke-width="1.4"/>`);
+    parts.push(`<text class="kind" x="14" y="22" font-size="9" letter-spacing=".06em" fill="var(--fig-muted, currentColor)">${esc(s.kind.toUpperCase())}</text>`);
+    parts.push(`<text class="title" x="14" y="46" font-size="15" font-weight="600" fill="var(--fig-ink, currentColor)">${esc(s.title)}</text>`);
+    parts.push(`<text class="note" x="14" y="64" font-size="10.5" fill="var(--fig-muted, currentColor)">${esc(s.note)}</text>`);
+    parts.push(`<text class="count" x="14" y="92" font-size="10.5" font-family="var(--fig-mono, ui-monospace, monospace)" fill="var(--fig-muted, currentColor)" data-count="units:${s.id}"></text>`);
+    parts.push(`<text class="count" x="14" y="110" font-size="10.5" font-family="var(--fig-mono, ui-monospace, monospace)" fill="var(--fig-muted, currentColor)" data-count="visits:${s.id}"></text>`);
     parts.push(`</g>`);
   }
-  parts.push(`</svg>`);
-  return parts.join("");
+  parts.push(`</g>`);
+  return { id, markup: parts.join(""), viewBox: { ...VIEW }, ids };
 }
+
+/** The unit lifecycle as inline SVG: the fragment, wrapped. */
+export function renderLifecycleFigure(options: FigureOptions = {}): string {
+  const fragment = lifecycleFragment(options);
+  const edges = lifecycleEdges();
+  return `<svg class="lifecycle" viewBox="0 0 ${fragment.viewBox.width} ${fragment.viewBox.height}" role="img" aria-label="The unit lifecycle: ${STATES.length} states and ${edges.length} transitions, from UNIT_TRANSITIONS" xmlns="http://www.w3.org/2000/svg">${fragment.markup}</svg>`;
+}
+
+/** Every figure the generator draws, by the name `regulator docs --write` files it under. */
+export const FIGURES: ReadonlyArray<{ name: string; render: (options?: FigureOptions) => string }> = [
+  { name: "unit-lifecycle", render: renderLifecycleFigure },
+];

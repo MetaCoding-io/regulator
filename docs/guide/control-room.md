@@ -61,6 +61,11 @@ page itself asks nothing and writes nothing. When the fold and the unit record d
 (a status written around the loop, a record missing), the view says so rather than
 inventing a path.
 
+<figure class="generated-figure">
+<!--@include: ../generated/figures/unit-lifecycle.svg-->
+<figcaption>The unit lifecycle as the control room draws it, generated from <code>UNIT_TRANSITIONS</code> by <code>regulator docs --write</code>; hover, focus or tap a state or an edge for the table's own words on it. The count lines are empty here and filled in the control room.</figcaption>
+</figure>
+
 The instances view shows, for each `--instance`, the manifest line (the definition, the
 revision, the Pi pin, when the instance was initialized and by whom, and the declared
 prefixes). Below that it shows the units, each with its status, attempts, budget

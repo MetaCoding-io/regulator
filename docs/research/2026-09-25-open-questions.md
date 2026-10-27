@@ -161,6 +161,26 @@ contract, the cards on generated figures and `docs --write` for the SVGs are
 figure" in the decision above reads, from here, as "only author of a figure of what
 exists".
 
+**Landed (2026-10-27).** The fragment contract (#147). Every figure the generator draws
+comes in two shapes: `lifecycleFragment()` returns a `<g id="unit-lifecycle"
+data-viewbox="0 0 800 480">` with its own `<defs>` under prefixed ids and the list of ids
+it owns, and `renderLifecycleFigure()` is that fragment wrapped in `<svg>`. The ids come
+from the definition, a node's from its status and an edge's from the pair it joins, and
+a test renders twice and holds them identical, unique and drawn only from the table.
+Every node and edge is a hotspot in the shape the docs and the website open cards on
+(`class="gl fig-hot"`, `data-label`, `data-def`, `data-href`), with the card built from
+the row's trigger, the loop step that takes it, whether it waits, and its description, so
+a card cannot say what the table does not. `regulator docs --write` files the figure at
+`packages/regulator/figures/unit-lifecycle.svg` and `docs --check` holds it current under
+`pnpm check`; the definition check knows `figures/` as derived output, beside `dist/`.
+The docs copy the figure into `docs/generated/figures/` with site-relative links and the
+control-room guide embeds it; the website copies it in place of its hand-drawn six
+states, which closes the note above. The reflector pair's script takes `--embed
+instance=<figure.svg>` and places the fragment in the instance box, scaled and centred,
+and refuses a composition that loses an id or a card: the third clause as a mechanism,
+proven with the lifecycle fragment. Next: the one-level map over `ENFORCEMENT_POINTS`,
+the channels and the stores, the fragment the instance box is for.
+
 ## 2. A person should be able to create S4 intelligence
 
 **Today.** Intelligence enters the instance one way: a `research` unit under the
