@@ -179,7 +179,9 @@ states, which closes the note above. The reflector pair's script takes `--embed
 instance=<figure.svg>` and places the fragment in the instance box, scaled and centred,
 and refuses a composition that loses an id or a card: the third clause as a mechanism,
 proven with the lifecycle fragment. Next: the one-level map over `ENFORCEMENT_POINTS`,
-the channels and the stores, the fragment the instance box is for.
+the channels and the stores, the fragment the instance box is for
+([#153](https://github.com/MetaCoding-io/regulator/issues/153), which also closes the
+stores as a list).
 
 ## 2. A person should be able to create S4 intelligence
 
