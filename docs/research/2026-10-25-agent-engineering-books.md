@@ -173,8 +173,9 @@ already recorded.
    agent or the model changes; the registry's review dates are calendar-based
    (`regulator review --due`), the fingerprint records the model, and a route change
    re-opens nothing. For instruments that is a real gap; for gates it is arguable.
-   Lands as a backlog row. The release sequence (offline, shadow, canary, rollout) lands
-   in #53: the migration note states which gate each definition change passed. The
+   Lands as a backlog row. The release sequence (offline, shadow, canary, rollout) landed
+   in #53 (2026-10-27): the migration note states which gate each definition change
+   passed, in a closed vocabulary `regulator upgrade` reads and prints. The
    book's auto-rollback on SLO degradation is the step regulator leaves to a person; the
    Harness² note §8 records it so it is not re-proposed.
 
@@ -276,7 +277,7 @@ file).
 | Judge model, output contract, open-coding order, replan provenance (items 1, 3) | [#49](https://github.com/MetaCoding-io/regulator/issues/49) |
 | Amended arguments; the sandbox bypass (items 5, 6) | [#60](https://github.com/MetaCoding-io/regulator/issues/60) |
 | Handoff failure modes; the A2A card (items 7, 4) | [#14](https://github.com/MetaCoding-io/regulator/issues/14) |
-| The migration note states its gates (item 9) | [#53](https://github.com/MetaCoding-io/regulator/issues/53) |
+| The migration note states its gates (item 9) | [#53](https://github.com/MetaCoding-io/regulator/issues/53), landed: `### Migration` in the changelog, read by `regulator upgrade` |
 | The `RemoteAgent` boundary case (item 4) | [#58](https://github.com/MetaCoding-io/regulator/issues/58) |
 
 ---
