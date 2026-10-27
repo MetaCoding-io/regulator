@@ -4,19 +4,22 @@
  * unit runs in its place, so the model-free examples are refused by the same
  * mechanism a session is.
  *
- * The decision is core's `consentFor` over the ledger. This adds the two
- * things a gate owes beyond a verdict: the refusal recorded as an
- * `operational-signal` from the unit to S3, with the tool, the path and the
- * reason, and the instruction the unit is given — ask, with ask_human
- * kind=consent naming the call. An accepted consent may carry the arguments
- * a person amended; the gate hands back the call to run with them in place,
- * and names the fields that changed. An amendment the tool's schema refuses,
- * or one that moves the call to another path, is a rejection: the consent
- * was for that call.
+ * The decision is core's `consentFor` over the ledger, and what requires the
+ * consent is core's `consentRequiredFor`: the profile's grant, or (#121) the
+ * irreversible effect a workload declared on the tool, when the caller hands
+ * the gate the declared effects. This adds the two things a gate owes beyond
+ * a verdict: the refusal recorded as an `operational-signal` from the unit
+ * to S3, with the tool, the path or the arguments, the reason and what
+ * required the consent, and the instruction the unit is given — ask, with
+ * ask_human kind=consent naming the call. An accepted consent may carry the
+ * arguments a person amended; the gate hands back the call to run with them
+ * in place, and names the fields that changed. An amendment the tool's
+ * schema refuses, or one that moves the call to another path, is a
+ * rejection: the consent was for that call.
  */
 import { randomUUID } from "node:crypto";
-import { ObligationLedger, appendSignal, consentFor, consentGrantFor, normalizeConsentCall, severityForKind, type ConsentVerdict } from "@metacoding.io/regulator-core";
-import type { CapabilityProfile, ConsentCall, InteractionRequest, OperationalSignal } from "@metacoding.io/regulator-protocol";
+import { ObligationLedger, appendSignal, consentFor, consentRequiredFor, describeConsentRequirement, normalizeConsentCall, severityForKind, type ConsentVerdict } from "@metacoding.io/regulator-core";
+import type { CapabilityProfile, ConsentCall, InteractionRequest, OperationalSignal, ToolEffect } from "@metacoding.io/regulator-protocol";
 
 export interface ConsentGateOptions {
   /** The instance (the base checkout): where the ledger and the regulatory log live. */
@@ -28,6 +31,8 @@ export interface ConsentGateOptions {
   now?: () => number;
   /** The host's check of amended arguments against the tool's schema: undefined when they validate, otherwise why not. Without one, an amendment cannot be checked and is refused. */
   validate?: (args: Record<string, unknown>) => string | undefined;
+  /** The effects of the workload-declared tools (#121): a call of one whose effect is irreversible needs consent with no grant naming it. Absent: only the profile's grants guard. */
+  declared?: Readonly<Record<string, ToolEffect>>;
 }
 
 export type ConsentRefusal = "absent" | "pending" | "rejected" | "amendment-refused";
@@ -65,8 +70,9 @@ function explain(verdict: ConsentVerdict, unitId: string | undefined): string {
 export async function consentGate(options: ConsentGateOptions): Promise<ConsentGateDecision> {
   const now = options.now ?? Date.now;
   const call = normalizeConsentCall(options.call);
-  const grant = consentGrantFor(options.profile, call);
-  if (!grant) return { allowed: true, guarded: false };
+  const requirement = consentRequiredFor(options.profile, call, options.declared);
+  if (!requirement) return { allowed: true, guarded: false };
+  const { grant } = requirement;
   const ledger = new ObligationLedger(options.repo, now);
   const verdict = consentFor(await ledger.obligations(), await ledger.interactions(), options.unitId, call);
   const subject = subjectOf(call);
@@ -75,8 +81,8 @@ export async function consentGate(options: ConsentGateOptions): Promise<ConsentG
     const signal: OperationalSignal = {
       id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S1", kind: "operational-signal", channel: "signal", destination: "S3", severity: "advisory",
       subject: `consent refused: ${call.tool} ${subject}`, ...(options.unitId ? { unit: options.unitId } : {}),
-      observation: `${call.tool} ${subject} falls under profile "${options.profile.name}"'s consent grant (${grant.paths ? `under ${grant.paths.join(", ")}` : grant.pattern !== undefined ? `matching /${grant.pattern}/` : "every call"}) and was refused before it ran: ${reason}. The unit was told to ask with ask_human kind=consent.`,
-      evidence: [{ class: typeof call.arguments.command === "string" ? "command" : "file", ref: subject, observation: refusal }],
+      observation: `${call.tool} ${subject} ${requirement.source === "profile" ? `falls under profile "${options.profile.name}"'s consent grant (${grant.paths ? `under ${grant.paths.join(", ")}` : grant.pattern !== undefined ? `matching /${grant.pattern}/` : "every call"})` : `needs consent the gate derives from the workload's declaration of ${call.tool} (${describeConsentRequirement(requirement)}; no profile grant names it)`} and was refused before it ran: ${reason}. The unit was told to ask with ask_human kind=consent.`,
+      evidence: [typeof call.arguments.path === "string" ? { class: "file", ref: subject, observation: refusal } : { class: "command", ref: typeof call.arguments.command === "string" ? subject : `${call.tool} ${subject}`, observation: refusal }],
     };
     await appendSignal(options.repo, signal);
     return { allowed: false, guarded: true, refusal, reason, instruction: consentInstruction(call), signalId: signal.id, ...(obligationId === undefined ? {} : { obligationId }) };

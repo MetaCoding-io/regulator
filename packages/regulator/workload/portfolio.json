@@ -1,7 +1,7 @@
 {
   "name": "portfolio",
   "version": 1,
-  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Two of them run a program rather than a session (#122): the rebalance plan and the harvest candidates are arithmetic over the tree, written under trades/proposed/ and checked by the host like a model's work. Nothing here trades: a trade list is a file a person executes at the custodian, written under trades/pending/ only after consent on every trade in it, by a session that asks.",
+  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Two of them run a program rather than a session (#122): the rebalance plan and the harvest candidates are arithmetic over the tree, written under trades/proposed/ and checked by the host like a model's work. The workload declares one tool (#121), place_trade, whose declared effect is irreversible: the one way a trade list comes to exist under trades/pending/, and a call the harness refuses until a person's yes for it is on the record, with no profile naming it. Nothing here trades: a trade list is a file a person executes at the custodian.",
   "unitTypes": [
     {
       "name": "ingest-positions",
@@ -31,7 +31,7 @@
     },
     {
       "name": "plan-rebalance",
-      "description": "Compute the trade list that moves every targeted position toward the latest target at the latest export's prices, from the lots in the tax ordering and never through a wash sale, and write it under trades/proposed/ as a list a program computed and nobody has agreed to. A program, not a session (#122): the arithmetic is the workload's own, run by the control plane under a wall-clock budget, and the host checks the list it wrote exactly as it checks a model's. Consent and the copy under trades/pending/ are confirm-trades's.",
+      "description": "Compute the trade list that moves every targeted position toward the latest target at the latest export's prices, from the lots in the tax ordering and never through a wash sale, and write it under trades/proposed/ as a list a program computed and nobody has agreed to. A program, not a session (#122): the arithmetic is the workload's own, run by the control plane under a wall-clock budget, and the host checks the list it wrote exactly as it checks a model's. Consent and the copy under trades/pending/ are confirm-trades's, through place_trade.",
       "profile": "manager",
       "runner": {
         "kind": "command",
@@ -54,7 +54,7 @@
     },
     {
       "name": "confirm-trades",
-      "description": "Put the proposed trade list to a person — one consent question naming every trade, the lots each sell comes from and the tax it realises — and, after the yes, write it unchanged under trades/pending/, where a file is a commitment. A session: it asks, which a program cannot. The host checks that the pending list is the proposed one and that it keeps the band, the lots and the wash-sale window.",
+      "description": "Put the proposed trade list to a person — one consent question naming every trade, the lots each sell comes from and the tax it realises — and, after the yes, place it with place_trade, the workload's declared tool, which writes it unchanged under trades/pending/, where a file is a commitment. A session: it asks, which a program cannot; the copy is the tool's, not the model's, and the consent is derived from the tool's declared effect, so a call without the yes is refused before the file exists. The host checks that the pending list is the proposed one and that it keeps the band, the lots and the wash-sale window.",
       "profile": "manager",
       "checks": [
         "run_checks",
@@ -117,6 +117,41 @@
         "argv": [
           "node",
           "workload/portfolio/turnover.mjs"
+        ]
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "place_trade",
+      "description": "Place the trade list a person has agreed to: copy the list the plan-rebalance program wrote, trades/proposed/<date>.json, byte for byte to trades/pending/<date>.json, where a file is a commitment the household executes at the custodian. The one way a pending list comes to exist; nothing is moved or traded by it. Its effect is irreversible, so the harness refuses the call until a person's yes for exactly this call is on the record: ask first with ask_human kind=consent, naming every trade, the lots each sell comes from and the tax it realises, with call {\"tool\": \"place_trade\", \"arguments\": {\"proposed\": \"trades/proposed/<date>.json\"}}. Refuses a list that is not a trade list, and never replaces a pending file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proposed": {
+            "type": "string",
+            "pattern": "^trades/proposed/[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$",
+            "description": "The list the plan-rebalance program computed, trades/proposed/<date>.json: what the person was asked about, and what is placed byte for byte"
+          }
+        },
+        "required": [
+          "proposed"
+        ],
+        "additionalProperties": false
+      },
+      "effect": {
+        "filesystem": "write",
+        "execution": "none",
+        "network": "none",
+        "sideEffects": "irreversible"
+      },
+      "program": {
+        "argv": [
+          "node",
+          "workload/portfolio/place-trade.mjs"
+        ],
+        "outputs": [
+          "trades/pending/"
         ]
       }
     }

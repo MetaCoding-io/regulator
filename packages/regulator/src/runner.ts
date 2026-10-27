@@ -36,10 +36,10 @@ import { performance } from "node:perf_hooks";
 import { rm } from "node:fs/promises";
 import path from "node:path";
 import { ExecutionStore, fileSha256, graderFile, normalizeOutput } from "@metacoding.io/regulator-core";
-import { ResultReportInputSchema, type AttemptProgram, type BudgetCeiling, type BudgetLedger, type CommandRunner, type EvidenceExpectation, type ResultReport, type ResultReportInput } from "@metacoding.io/regulator-protocol";
+import { ResultReportInputSchema, type AttemptProgram, type BudgetCeiling, type BudgetLedger, type CommandRunner, type EvidenceExpectation, type Program, type ResultReport, type ResultReportInput } from "@metacoding.io/regulator-protocol";
 import { Value } from "typebox/value";
 import type { Dispatcher } from "./controller.js";
-import type { Exec } from "./exec.js";
+import type { Exec, ExecResult } from "./exec.js";
 
 /** A dispatch error from a program, carrying what ran so the attempt record can say so even when the run failed. */
 export class ProgramError extends Error {
@@ -61,7 +61,7 @@ export interface CommandDispatcherOptions {
 }
 
 /** The argv as the control plane runs it: the program's file made absolute under the definition, everything else as declared. */
-export function commandArgv(root: string, runner: CommandRunner, file: string): string[] {
+export function commandArgv(root: string, runner: Pick<Program, "argv">, file: string): string[] {
   let replaced = false;
   return runner.argv.map((entry) => {
     if (replaced || path.isAbsolute(entry) || path.relative(root, path.resolve(root, entry)) !== file.split("/").join(path.sep)) return entry;
@@ -84,18 +84,79 @@ async function changedPaths(exec: Exec, worktree: string): Promise<Set<string>> 
   return out;
 }
 
+export interface RunProgramOptions {
+  /** The definition root the program's file is resolved under. */
+  root: string;
+  program: Program;
+  /** The worktree the program runs in. */
+  cwd: string;
+  /** The ceiling the run is under; the lesser of it and the program's own `timeoutMs` is the timeout the program runs under. */
+  timeoutMs: number;
+  env?: NodeJS.ProcessEnv;
+  /** What the program is handed on stdin: a declared tool's arguments as JSON (#121). A command runner's program gets nothing. */
+  input?: string;
+}
+
+export interface ProgramRun {
+  /** The program that ran: its file under the definition and its hash. The exit is the result's. */
+  program: AttemptProgram;
+  argv: string[];
+  result: ExecResult;
+  elapsedMs: number;
+  timedOut: boolean;
+  /** The paths written under the declared outputs, as the index spells them. */
+  written: string[];
+  /** The paths written outside the declared outputs: undone before this returns, and named so the caller can refuse the run. */
+  outside: string[];
+}
+
+/**
+ * Run a program the definition declares — a command runner's or a declared tool's (#121) — in a worktree, under its
+ * declared outputs: the file is resolved under the definition and hashed, the worktree is diffed against itself before
+ * the run, and a write outside the outputs is undone before anything is returned. What the run means — a dispatch error,
+ * a refused tool call, a report — is the caller's: this returns what happened and refuses nothing but a program that
+ * names no file under the definition, which the definition check refuses first.
+ */
+export async function runProgram(exec: Exec, options: RunProgramOptions): Promise<ProgramRun> {
+  const { root, program: declared } = options;
+  const file = await graderFile(root, declared.argv);
+  if (!file) throw new ProgramError(`the program \`${declared.argv.join(" ")}\` names no file under the definition (${root}); the definition check refuses this, and the loop does not run what it cannot hash`);
+  const program: AttemptProgram = { file, sha256: await fileSha256(root, file) };
+  const argv = commandArgv(root, declared, file);
+  const outputs = declared.outputs.map(normalizeOutput);
+  const before = await changedPaths(exec, options.cwd);
+  const timeout = Math.min(declared.timeoutMs ?? Number.POSITIVE_INFINITY, options.timeoutMs);
+  const started = performance.now();
+  const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout, ...(options.env ? { env: options.env } : {}), ...(options.input === undefined ? {} : { input: options.input }) });
+  const elapsedMs = Math.round(performance.now() - started);
+  const timedOut = result.code !== 0 && elapsedMs >= timeout;
+  // The diff against the worktree before the run: a write outside the declared outputs is undone, whatever the exit.
+  const after = await changedPaths(exec, options.cwd);
+  const changed = [...after].filter((p) => !before.has(p)).sort();
+  const outside = changed.filter((p) => !outputs.some((o) => p.startsWith(o)));
+  if (outside.length) {
+    const tracked = await exec("git", ["ls-files", "--error-unmatch", "--", ...outside], { cwd: options.cwd });
+    const known = new Set(tracked.stdout.split("\n").map((l) => l.trim()).filter(Boolean));
+    for (const p of outside) {
+      if (known.has(p)) await exec("git", ["checkout", "--", p], { cwd: options.cwd });
+      else await rm(path.join(options.cwd, p), { force: true, recursive: true });
+    }
+  }
+  return { program, argv, result, elapsedMs, timedOut, written: changed.filter((p) => !outside.includes(p)), outside };
+}
+
 const TAIL_LINES = 3;
 const TAIL_CHARS = 400;
 
 /** The last lines of a program's output, bounded, on one line. */
-function tail(text: string): string {
+export function tail(text: string): string {
   const lines = text.trim().split("\n").map((l) => l.trim()).filter(Boolean).slice(-TAIL_LINES);
   const joined = lines.join(" | ");
   return joined.length > TAIL_CHARS ? `…${joined.slice(-TAIL_CHARS)}` : joined;
 }
 
 /** What a failed program said: its first lines, where a runtime puts the message, and its last, where it puts the exit; bounded, on one line. */
-function excerpt(text: string): string {
+export function excerpt(text: string): string {
   const lines = text.trim().split("\n").map((l) => l.trim()).filter(Boolean);
   const kept = lines.length > 2 * TAIL_LINES ? [...lines.slice(0, TAIL_LINES), "…", ...lines.slice(-TAIL_LINES)] : lines;
   const joined = kept.join(" | ");
@@ -138,42 +199,26 @@ export function commandDispatcher(exec: Exec, options: CommandDispatcherOptions)
   const { runner, ceiling, definitionRoot: root } = options;
   const store = new ExecutionStore(options.repo, now);
   return async (request) => {
-    const file = await graderFile(root, runner.argv);
-    if (!file) throw new ProgramError(`the program \`${runner.argv.join(" ")}\` names no file under the definition (${root}); the definition check refuses this, and the loop does not run what it cannot hash`);
-    const program: AttemptProgram = { file, sha256: await fileSha256(root, file) };
-    const argv = commandArgv(root, runner, file);
-    const outputs = runner.outputs.map(normalizeOutput);
-    const before = await changedPaths(exec, request.worktree);
-    const timeout = Math.min(runner.timeoutMs ?? Number.POSITIVE_INFINITY, ceiling.wallClockMs);
     const startedAt = stamp();
-    const started = performance.now();
-    const result = await exec(argv[0]!, argv.slice(1), {
-      cwd: request.worktree, timeout,
+    const timeout = Math.min(runner.timeoutMs ?? Number.POSITIVE_INFINITY, ceiling.wallClockMs);
+    const run = await runProgram(exec, {
+      root, program: runner, cwd: request.worktree, timeoutMs: ceiling.wallClockMs,
       env: { REGULATOR_CONTRACT: request.contractPath, REGULATOR_ATTEMPT: String(request.attempt), REGULATOR_UNIT: request.unitId, REGULATOR_PROFILE: request.profile },
     });
-    const elapsed = Math.round(performance.now() - started);
-    const timedOut = result.code !== 0 && elapsed >= timeout;
+    const { program, result, timedOut, written, outside } = run;
+    const file = program.file;
     // The ledger: wall-clock is the one dimension a program consumes; the rest is zero by construction.
     const ledger: BudgetLedger = {
       unitId: request.unitId, attempt: request.attempt,
       ceiling: { tokens: ceiling.tokens, ...(ceiling.cost === undefined ? {} : { cost: ceiling.cost }), wallClockMs: ceiling.wallClockMs, turns: ceiling.turns },
-      consumed: { tokens: 0, cost: 0, wallClockMs: elapsed, turns: 0 },
+      consumed: { tokens: 0, cost: 0, wallClockMs: run.elapsedMs, turns: 0 },
       startedAt, updatedAt: stamp(), models: [], compactions: [],
       ...(timedOut ? { exhausted: { dimension: "wallClockMs", at: stamp() } } : {}),
     };
     await store.writeBudget(ledger);
-    // The diff against the worktree before the run: a write outside the declared outputs is undone and refused, whatever the exit.
-    const after = await changedPaths(exec, request.worktree);
-    const written = [...after].filter((p) => !before.has(p)).sort();
-    const outside = written.filter((p) => !outputs.some((o) => p.startsWith(o)));
+    // A write outside the declared outputs was undone by the run and is refused here, whatever the exit.
     if (outside.length) {
-      const tracked = await exec("git", ["ls-files", "--error-unmatch", "--", ...outside], { cwd: request.worktree });
-      const known = new Set(tracked.stdout.split("\n").map((l) => l.trim()).filter(Boolean));
-      for (const p of outside) {
-        if (known.has(p)) await exec("git", ["checkout", "--", p], { cwd: request.worktree });
-        else await rm(path.join(request.worktree, p), { force: true, recursive: true });
-      }
-      throw new ProgramError(`the program wrote outside its declared outputs (${outputs.join(", ") || "none"}): ${outside.join(", ")}; the writes are undone and nothing of this attempt is committed`, { ...program, ...(timedOut ? {} : { exit: result.code }) });
+      throw new ProgramError(`the program wrote outside its declared outputs (${runner.outputs.map(normalizeOutput).join(", ") || "none"}): ${outside.join(", ")}; the writes are undone and nothing of this attempt is committed`, { ...program, ...(timedOut ? {} : { exit: result.code }) });
     }
     if (timedOut) throw new ProgramError(`the program ran past the wall-clock ceiling (${timeout} ms) and was stopped: timed out with nothing reported${result.stderr.trim() ? `; stderr: ${tail(result.stderr)}` : ""}`, program);
     if (result.code !== 0) throw new ProgramError(`the program exited ${result.code}: ${excerpt(result.stderr) || excerpt(result.stdout) || "(no output)"}`, { ...program, exit: result.code });

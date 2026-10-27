@@ -1,6 +1,6 @@
 {
   "name": "manager",
-  "description": "Read the portfolio and write the period's files. Direct write and edit calls are limited to lots/, targets/, trades/proposed/, trades/pending/ and reports/; no shell is granted, so the grant is complete at the tool boundary — the custodian's exports, the person's fills, the universe, the tax parameters, the benchmark and the portfolio's own checks under lib/ and test/ are all outside it. For the two unit types that run a program (plan-rebalance, harvest-losses) this profile is the effect declaration, not a grant: a program reaches its declared outputs under trades/proposed/, which no consent guards, and nothing else.",
+  "description": "Read the portfolio and write the period's files. Direct write and edit calls are limited to lots/, targets/, trades/proposed/ and reports/; no shell is granted, so the grant is complete at the tool boundary — the custodian's exports, the person's fills, the universe, the tax parameters, the benchmark and the portfolio's own checks under lib/ and test/ are all outside it. A trade list under trades/pending/ is never written directly: the one way there is place_trade, the workload's declared tool, whose irreversible effect is what the gate derives the consent question from, so no consent grant is listed here. For the two unit types that run a program (plan-rebalance, harvest-losses) this profile is the effect declaration, not a grant: a program reaches its declared outputs under trades/proposed/, which no consent guards, and nothing else.",
   "tools": [
     "read",
     "write",
@@ -15,18 +15,14 @@
     "ask_human",
     "notify_owner",
     "propose_policy_change",
-    "report_result"
+    "report_result",
+    "place_trade"
   ],
   "writablePaths": [
     "lots/",
     "targets/",
     "trades/proposed/",
-    "trades/pending/",
     "reports/"
-  ],
-  "consent": [
-    { "tool": "write", "paths": ["trades/pending/"] },
-    { "tool": "edit", "paths": ["trades/pending/"] }
   ],
   "thinkingLevel": "medium"
 }

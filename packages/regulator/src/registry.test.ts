@@ -42,6 +42,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.control.command-runner.v1",
     "reg.control.contract-advice.v1",
     "reg.control.contract-preserving-compaction.v1",
+    "reg.control.declared-tool.v1",
     "reg.control.evidence-preflight.v1",
     "reg.control.failure-observer.v1",
     "reg.control.memory-store.v1",
@@ -125,8 +126,8 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.warnings.filter((w) => w.file.startsWith("profiles/")), [], "no shipped profile grants a shell beside a guarded write");
   assert.deepEqual(definition.profiles.map((p) => [p.name, p.consent ?? []]), [
     ["auditor", []], ["bookkeeper", [{ tool: "write", paths: ["payments/pending/"] }, { tool: "edit", paths: ["payments/pending/"] }]], ["implement", []], ["intelligence", []],
-    ["manager", [{ tool: "write", paths: ["trades/pending/"] }, { tool: "edit", paths: ["trades/pending/"] }]], ["research", []],
-  ], "the two shipped grants (#60): the payment and the trade list; every other profile grants none");
+    ["manager", []], ["research", []],
+  ], "the one shipped grant (#60): the payment; the trade list's consent is derived from place_trade's declared effect (#121), and every other profile grants none");
   assert.deepEqual(definition.workloads.map((w) => w.name), ["personal-finance", "portfolio", "software-development"], "three workloads; the loop is generic over them");
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
