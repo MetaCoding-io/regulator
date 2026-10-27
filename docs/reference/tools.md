@@ -93,6 +93,7 @@ becomes an `operational-signal`, and the router decides what obligations they op
 | `subject`, `question` | what the question is about, and the question itself, including what the unit would do under each answer |
 | `options[]` | for a `choice`: two to six options. Required for that kind |
 | `action` | for `consent`: the irreversible action a yes authorizes, stated concretely. Required for that kind |
+| `call` | for `consent` under the profile's [consent grant](/concepts/asking-a-person#the-consent-grant): the call a yes authorizes, as the unit will make it — the tool and the arguments the grant matches (the path for a `write` or `edit`, the command for `bash`). The interception matches the record against the call, so a consent asked without it holds no guarded call |
 | `evidence[]` | what the person needs in order to decide |
 
 What each kind does:
@@ -113,7 +114,8 @@ cancellation, nothing is answered. The obligation stays open and is delivered to
 outbox, and for every kind but `recap` the pause gate refuses every tool with an effect
 for the rest of the session. The unit's attempt is recorded as `paused`. Later,
 `regulator answer` resolves the obligation, and the next attempt is told the answer as
-its hint.
+its hint; a consent answered with `--amend` runs the guarded call with the amended
+arguments in place of the unit's.
 
 That only a recap continues without an answer is a protocol constant, so no policy can
 make silence into consent. The policy's `attention.blockingPerAttempt` caps how many

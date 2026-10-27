@@ -197,3 +197,148 @@ test("advice is harness-owned (#110): `write` and `edit` to regulator/advice/<pr
   assert.deepEqual((findings[0] as { evidence: Array<{ ref: string }> }).evidence.map((e) => e.ref), ["regulator/advice/implement.md"]);
   assert.ok(notices.some((n) => n.level === "error" && /regulator\/advice\/implement\.md \(modified\); restored and recorded/.test(n.message)));
 });
+
+import { Type } from "typebox";
+import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
+import { ObligationLedger } from "@metacoding.io/regulator-core";
+import { PROFILES, startUnit } from "@metacoding.io/regulator";
+
+const bookkeeper: CapabilityProfile = {
+  name: "bookkeeper", description: "d", tools: ["read", "write", "edit", "ask_human", "report_result"], writablePaths: ["ledger/", "payments/pending/"],
+  consent: [{ tool: "write", paths: ["payments/pending/"] }, { tool: "edit", paths: ["payments/pending/"] }],
+};
+type Block = { block: boolean; reason: string } | undefined;
+
+test("the consent gate (#60): a write under the grant is refused before it runs without an accepted consent for that call on the unit — absent, still owed or refused — and the refusal is an operational-signal naming the unit, the tool, the path and the reason, with the instruction to ask; a yes holds on a later attempt for the same call, whatever the content, and a changed path or tool asks again", async (t) => {
+  const repo = await initRepo(t);
+  let clock = Date.parse("2026-09-23T09:00:00.000Z");
+  const tick = () => (clock += 1000);
+  const started = await startUnit(gitExec, { repo, unitId: "f5", owner: "alice", now: tick });
+  const { pi, handlers } = mockPi([{ name: "write", parameters: Type.Object({ path: Type.String(), content: Type.String() }) }, "edit", "read"]);
+  createAuthorityExtension({ now: tick, profile: bookkeeper })(pi);
+  const { ctx, statuses, notices } = ctxFor(started.worktree.path);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  assert.match(statuses.authority ?? "", /; 2 consent grants \(bookkeeper\)$/);
+  let n = 0;
+  const call = async (toolName: string, input: Record<string, unknown>) => {
+    const event = { type: "tool_call", toolName, toolCallId: `c${n++}`, input };
+    return { result: (await handlers.get("tool_call")!(event, ctx)) as Block, event };
+  };
+  const rent = "payments/pending/2026-09-rent.json";
+  const signals = async () => (await readSignals(repo)).filter((s) => s.kind === "operational-signal") as Array<{ unit?: string; subject: string; observation: string; evidence: Array<{ class: string; ref: string; observation?: string }>; severity: string }>;
+
+  // Absent: nothing asked, nothing runs.
+  let r = await call("write", { path: rent, content: "{}" });
+  assert.equal(r.result?.block, true);
+  assert.equal(r.result?.reason, 'regulator: write refused: no consent for this call is on the record for unit f5. Ask first: ask_human with kind=consent, an action stating what a yes authorizes, and call {"tool":"write","arguments":{"path":"payments/pending/2026-09-rent.json"}}; the harness refuses this call until a person\'s yes for that call is on the record, and holds the yes across attempts. Do not work around the refusal.');
+  let recorded = await signals();
+  assert.equal(recorded.length, 1);
+  assert.deepEqual([recorded[0]!.unit, recorded[0]!.severity, recorded[0]!.subject, recorded[0]!.evidence], ["f5", "advisory", `consent refused: write ${rent}`, [{ class: "file", ref: rent, observation: "absent" }]]);
+  assert.match(recorded[0]!.observation, /^write payments\/pending\/2026-09-rent\.json falls under profile "bookkeeper"'s consent grant \(under payments\/pending\/\) and was refused before it ran: no consent for this call is on the record for unit f5\. The unit was told to ask with ask_human kind=consent\.$/);
+  assert.ok(notices.some((x) => x.level === "warning" && /write refused — no consent/.test(x.message)));
+  assert.equal((await call("write", { path: "ledger/2026-08.csv", content: "" })).result, undefined, "a write the grant does not guard runs");
+  assert.equal((await call("read", { path: rent })).result, undefined, "reading is not guarded");
+
+  // Pending: asked, nobody answered. Silence is not consent.
+  const ledger = new ObligationLedger(repo, tick);
+  const ask = async (p: string) => {
+    const obligation = await ledger.openObligation({ subject: `consent: ${p}`, unit: "f5", concern: "interaction", sources: [`ask:${p}`], severity: "blocking", consumer: "human", blocks: true, question: `May I write ${p}?`, openedBy: "S1" });
+    const requestId = `r:${p}`;
+    await ledger.requestInteraction({ id: requestId, kind: "consent", subject: p, question: `May I write ${p}?`, action: `write ${p}`, call: { tool: "write", arguments: { path: p } }, severity: "blocking", unit: "f5", attempt: 1, obligationId: obligation.id, evidence: [], raisedBy: "S1", raisedAt: new Date(clock).toISOString(), timeoutMs: 1000, channel: "none" }, "S1");
+    await ledger.answerInteraction({ requestId, outcome: "unavailable", by: "S1", channel: "none" });
+    return { obligation, requestId };
+  };
+  const first = await ask(rent);
+  r = await call("write", { path: rent, content: "{}" });
+  assert.match(r.result?.reason ?? "", new RegExp(`^regulator: write refused: the consent question for this call \\(obligation ${first.obligation.id.slice(0, 8)}\\) has no answer yet, and silence is not consent\\. Ask first:`));
+  assert.equal((await signals()).at(-1)?.evidence[0]?.observation, "pending");
+
+  // Accepted: the call runs, on the path the write gate checked, with the content the unit proposed.
+  await ledger.answerInteraction({ requestId: first.requestId, outcome: "answered", answer: "yes", by: "alice", channel: "cli" });
+  await ledger.resolve(first.obligation.id, { by: "alice", disposition: "accepted", rationale: "yes" });
+  r = await call("write", { path: rent, content: '{ "amount": "1450.00" }' });
+  assert.equal(r.result, undefined);
+  assert.deepEqual(r.event.input, { path: "./payments/pending/2026-09-rent.json", content: '{ "amount": "1450.00" }' });
+
+  // A later attempt is a new session, and the yes is read off the ledger, not off a hint: the same call with other content runs without asking again.
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  r = await call("write", { path: `./${rent}`, content: "repaired after a check failure" });
+  assert.equal(r.result, undefined, "consent given on attempt 1 holds on attempt 3 for the same call");
+  assert.equal((await signals()).length, 2, "nothing was refused");
+
+  // A different action asks again: another path, or another tool on the consented path.
+  r = await call("write", { path: "payments/pending/2026-10-rent.json", content: "{}" });
+  assert.match(r.result?.reason ?? "", /^regulator: write refused: no consent for this call is on the record for unit f5\./);
+  r = await call("edit", { path: rent, oldText: "1450", newText: "1" });
+  assert.match(r.result?.reason ?? "", /^regulator: edit refused: no consent for this call is on the record for unit f5\. Ask first: ask_human with kind=consent, an action stating what a yes authorizes, and call {"tool":"edit","arguments":{"path":"payments\/pending\/2026-09-rent\.json"}}/);
+
+  // Rejected: a no is on the record, and the gate says who said it.
+  const second = await ask("payments/pending/2026-10-rent.json");
+  await ledger.answerInteraction({ requestId: second.requestId, outcome: "answered", answer: "no, October is not due", by: "alice", channel: "cli" });
+  await ledger.resolve(second.obligation.id, { by: "alice", disposition: "rejected", rationale: "no, October is not due" });
+  r = await call("write", { path: "payments/pending/2026-10-rent.json", content: "{}" });
+  assert.match(r.result?.reason ?? "", new RegExp(`^regulator: write refused: alice refused consent for this call \\(obligation ${second.obligation.id.slice(0, 8)}\\): do not perform it\\. Ask first:`));
+  assert.deepEqual((await signals()).map((s) => s.evidence[0]?.observation), ["absent", "pending", "absent", "absent", "rejected"]);
+  assert.equal(await gitExec("git", ["status", "--porcelain"], { cwd: started.worktree.path }).then((x) => x.stdout.trim()), "", "the gate ran before anything did: the tree is unchanged");
+});
+
+test("the consent gate honours a yes that amended the arguments (#60): the amended call runs in place of the proposed one and the tool result names the fields that changed; an amendment the tool's schema refuses, or one that moves the call to another path, is a rejection", async (t) => {
+  const repo = await initRepo(t);
+  let clock = Date.parse("2026-09-23T09:00:00.000Z");
+  const tick = () => (clock += 1000);
+  const started = await startUnit(gitExec, { repo, unitId: "f5", owner: "alice", now: tick });
+  const { pi, handlers } = mockPi([{ name: "write", parameters: Type.Object({ path: Type.String(), content: Type.String() }, { additionalProperties: false }) }, "edit", "read"]);
+  createAuthorityExtension({ now: tick, profile: bookkeeper })(pi);
+  const { ctx } = ctxFor(started.worktree.path);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  const ledger = new ObligationLedger(repo, tick);
+  const consented = async (p: string, amendedArguments: Record<string, unknown>) => {
+    const obligation = await ledger.openObligation({ subject: `consent: ${p}`, unit: "f5", concern: "interaction", sources: [`ask:${p}`], severity: "blocking", consumer: "human", blocks: true, question: "May I?", openedBy: "S1" });
+    const requestId = `r:${p}`;
+    await ledger.requestInteraction({ id: requestId, kind: "consent", subject: p, question: "May I?", action: `write ${p}`, call: { tool: "write", arguments: { path: p } }, severity: "blocking", unit: "f5", attempt: 1, obligationId: obligation.id, evidence: [], raisedBy: "S1", raisedAt: new Date(clock).toISOString(), timeoutMs: 1000, channel: "none" }, "S1");
+    await ledger.answerInteraction({ requestId, outcome: "answered", answer: "yes", by: "alice", channel: "cli", amendedArguments });
+    await ledger.resolve(obligation.id, { by: "alice", disposition: "accepted", rationale: `yes (arguments amended: ${JSON.stringify(amendedArguments)})` });
+    return obligation;
+  };
+  let n = 0;
+  const call = async (input: Record<string, unknown>) => {
+    const event = { type: "tool_call", toolName: "write", toolCallId: `c${n++}`, input };
+    return { result: (await handlers.get("tool_call")!(event, ctx)) as Block, event };
+  };
+
+  // The amended content runs; the unit's content does not.
+  const o = await consented("payments/pending/2026-09-rent.json", { content: '{ "amount": "1400.00" }' });
+  let r = await call({ path: "payments/pending/2026-09-rent.json", content: '{ "amount": "1450.00" }' });
+  assert.equal(r.result, undefined);
+  assert.deepEqual(r.event.input, { path: "./payments/pending/2026-09-rent.json", content: '{ "amount": "1400.00" }' }, "the amended call, on the checked path");
+  const result = await handlers.get("tool_result")!({ type: "tool_result", toolName: "write", toolCallId: r.event.toolCallId, input: r.event.input, content: [{ type: "text", text: "written" }], details: {}, isError: false }, ctx) as { content: Array<{ text: string }> };
+  assert.deepEqual(result.content.map((c) => c.text), ["written", "[regulator: this write ran with content as alice's consent amended it, not as you proposed. The record of the consent holds the amended value.]"]);
+  assert.equal(await handlers.get("tool_result")!({ type: "tool_result", toolName: "write", toolCallId: "other", input: {}, content: [{ type: "text", text: "x" }], details: {}, isError: false }, ctx), undefined, "a call that ran as proposed says nothing");
+
+  // An amendment the schema refuses is a rejection, recorded as one.
+  const bad = await consented("payments/pending/2026-10-rent.json", { content: 42 });
+  r = await call({ path: "payments/pending/2026-10-rent.json", content: "{}" });
+  assert.match(r.result?.reason ?? "", new RegExp(`^regulator: write refused: alice's consent \\(obligation ${bad.id.slice(0, 8)}\\) amended content, and the tool's schema refuses the result \\(/content: .+\\)\\. The amendment counts as a rejection; ask again if the work still needs the call\\. Ask first:`));
+  // So is one that moves the write somewhere else: the path is what was consented to.
+  const moved = await consented("payments/pending/2026-11-rent.json", { path: "payments/pending/2026-12-rent.json" });
+  r = await call({ path: "payments/pending/2026-11-rent.json", content: "{}" });
+  assert.match(r.result?.reason ?? "", new RegExp(`^regulator: write refused: alice's consent \\(obligation ${moved.id.slice(0, 8)}\\) amended path, and the path is what the grant guards: a different path is a different action, to be asked for on its own\\. The amendment counts as a rejection\\. Ask first:`));
+  const refusals = (await readSignals(repo)).filter((s) => s.kind === "operational-signal") as Array<{ subject: string; evidence: Array<{ observation?: string }> }>;
+  assert.deepEqual(refusals.map((s) => [s.subject, s.evidence[0]?.observation]), [["consent refused: write payments/pending/2026-10-rent.json", "amendment-refused"], ["consent refused: write payments/pending/2026-11-rent.json", "amendment-refused"]]);
+  assert.equal(o.id.length, 36);
+});
+
+test("the consent gate reads the profile the dispatcher names in the `profile` flag, as the profile grant does: the shipped bookkeeper guards payments/pending/, and a profile with no grant guards nothing", async (t) => {
+  const repo = await initRepo(t);
+  const started = await startUnit(gitExec, { repo, unitId: "f5", owner: "alice" });
+  for (const [name, p, blocked] of [["bookkeeper", "payments/pending/x.json", true], ["bookkeeper", "ledger/x.csv", false], ["implement", "src/x.js", false]] as const) {
+    const { pi, handlers, flags } = mockPi();
+    flags.set("profile", name);
+    createAuthorityExtension()(pi);
+    const { ctx, statuses } = ctxFor(started.worktree.path);
+    await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+    assert.equal(/consent grant/.test(statuses.authority ?? ""), (PROFILES[name]?.consent?.length ?? 0) > 0, name);
+    const result = (await handlers.get("tool_call")!({ type: "tool_call", toolName: "write", toolCallId: "w", input: { path: p, content: "" } }, ctx)) as Block;
+    assert.equal(result?.block ?? false, blocked, `${name} ${p}`);
+  }
+});

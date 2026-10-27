@@ -20,8 +20,13 @@ export interface MockPi {
   entries: { customType: string; data: unknown }[];
 }
 
+/** A built-in tool as `getAllTools` describes it: a name, and a parameter schema when a test needs one (the consent gate checks an amendment against it). */
+export type MockToolInfo = string | { name: string; parameters?: unknown };
+
 /** A `pi` that records registrations and runs `exec` for real. No session, no model. */
-export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash", "grep", "find", "ls"]): MockPi {
+export function mockPi(allTools: MockToolInfo[] = ["read", "write", "edit", "bash", "grep", "find", "ls"]): MockPi {
+  const builtIns = allTools.map((t) => (typeof t === "string" ? { name: t } : t));
+  const allToolNames = builtIns.map((t) => t.name);
   const state: MockPi = {
     pi: undefined as unknown as ExtensionAPI,
     handlers: new Map(),
@@ -39,7 +44,7 @@ export function mockPi(allToolNames: string[] = ["read", "write", "edit", "bash"
     // A value set before registration stands in for a CLI-provided flag; the default fills the gap.
     registerFlag: (name: string, options: { default?: boolean | string }) => { if (!state.flags.has(name)) state.flags.set(name, options.default); },
     getFlag: (name: string) => state.flags.get(name),
-    getAllTools: () => [...allToolNames, ...state.tools.keys()].map((name) => ({ name })),
+    getAllTools: () => [...builtIns, ...[...state.tools.values()].map((t) => ({ name: t.name, parameters: t.parameters }))],
     setActiveTools: (names: string[]) => state.activeTools.push(names),
     // The surface as last set; every tool until something sets it, as in Pi.
     getActiveTools: () => state.activeTools.at(-1) ?? [...allToolNames, ...state.tools.keys()],

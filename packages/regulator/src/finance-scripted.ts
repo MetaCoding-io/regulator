@@ -12,22 +12,28 @@
  *   careless     the same units, but the first attempt of each takes the
  *                shortcut a hurried person would: edits the bank's statement
  *                to make the books balance, invents a category for the
- *                merchant it cannot explain, writes a report from memory —
- *                and, on the repair attempt the router grants, does it right
+ *                merchant it cannot explain, writes a report from memory,
+ *                writes the payment without asking anyone — and, on the
+ *                next attempt the router or the answer grants, does it right
  *
- * A scripted unit never runs a session, so nothing here exercises the gates
- * inside one (the profile grant, the write gate, the pause gate): what the
- * example shows is the loop — the closeout checks over the ledger's own
- * suite, the protected prefixes, the consent obligation and the paused
- * attempt, the post-merge check on the base.
+ * A scripted unit never runs a session, so nothing here exercises most of
+ * the gates inside one (the profile grant, the write gate, the pause gate):
+ * what the example shows is the loop — the closeout checks over the ledger's
+ * own suite, the protected prefixes, the consent obligation and the paused
+ * attempt, the pre-merge trial. The one session gate it does run is the
+ * consent gate (#60): the write under payments/pending/ goes through the
+ * same `consentGate` the host's interception runs, so the careless payment
+ * is refused here by the mechanism that refuses it in a session, and the
+ * yes is read off the ledger rather than off the hint or the attempt.
  */
-import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { ExecutionStore, MemoryStore, ObligationLedger, severityForKind } from "@metacoding.io/regulator-core";
+import { ExecutionStore, MemoryStore } from "@metacoding.io/regulator-core";
 import type { InteractionPolicy, ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
+import { askConsentHeadless, consentGate } from "./consent.js";
 import type { DispatchRequest, Dispatcher } from "./controller.js";
 import type { Exec } from "./exec.js";
+import { PROFILES } from "./profiles.js";
 
 export const FINANCE_BEHAVIOURS = ["bookkeeper", "careless"] as const;
 export type FinanceBehaviour = (typeof FINANCE_BEHAVIOURS)[number];
@@ -147,20 +153,30 @@ export function financeDispatcher(exec: Exec, options: FinanceDispatcherOptions)
       return { summary: careless(r) ? "wrote the August close" : `wrote reports/${PERIOD}.md: ${totals.size} categories, ${open.length} open item(s) carried forward` };
     },
     "f5-prepare-payment": async (r) => {
-      const ledger = new ObligationLedger(options.repo, now);
-      const consented = /consent .*answered|answer(ed)?[^.]*\byes\b/i.test(r.hint ?? "");
-      if (!consented) {
-        // What ask_human does headlessly: the question is owed before anyone could answer it, nobody is there, and the answer is recorded as unavailable.
-        const question = "May I write payments/pending/2026-09-rent.json: 1450.00 to 14 Elm St (landlord), due 2026-09-05?";
-        const obligation = await ledger.openObligation({ subject: "consent: September rent", unit: r.unitId, concern: "interaction", sources: [`ask:${randomUUID()}`], severity: severityForKind("consent"), consumer: "human", blocks: true, question, openedBy: "S1" });
-        const request = { id: randomUUID(), kind: "consent" as const, subject: "September rent", question, action: "write payments/pending/2026-09-rent.json for 1450.00, due 2026-09-05", severity: severityForKind("consent"), unit: r.unitId, attempt: r.attempt, obligationId: obligation.id, evidence: [{ class: "file" as const, ref: "ledger/2026-08.csv", observation: "housing: -1450.00 on 2026-08-05, as in July" }], raisedBy: "S1" as const, raisedAt: stamp(), timeoutMs: options.interaction?.timeoutsMs.consent ?? 0, channel: "none" as const };
-        await ledger.requestInteraction(request, "S1");
-        await ledger.answerInteraction({ requestId: request.id, outcome: "unavailable", by: "S1", channel: "none" });
-        return { summary: "asked for consent to write the September rent payment; no one answered, nothing was written", extra: { residualUncertainty: [{ subject: "consent", reason: "the question is owed to a person", consequenceIfWrong: "high" }] } };
+      const file = "payments/pending/2026-09-rent.json";
+      const content = `${JSON.stringify({ payee: "14 Elm St (landlord)", amount: "1450.00", dueDate: "2026-09-05", category: "housing", memo: "September rent; consented on the record" }, null, 2)}\n`;
+      const paused = { summary: "asked for consent to write the September rent payment; no one answered, nothing was written", extra: { residualUncertainty: [{ subject: "consent", reason: "the question is owed to a person", consequenceIfWrong: "high" as const }] } };
+      const ask = () => askConsentHeadless(options.repo, {
+        unitId: r.unitId, attempt: r.attempt, subject: "September rent", question: `May I write ${file}: 1450.00 to 14 Elm St (landlord), due 2026-09-05?`,
+        action: `write ${file} for 1450.00, due 2026-09-05`, call: { tool: "write", arguments: { path: file } },
+        evidence: [{ class: "file", ref: "ledger/2026-08.csv", observation: "housing: -1450.00 on 2026-08-05, as in July" }], timeoutMs: options.interaction?.timeoutsMs.consent ?? 0, now,
+      });
+      // The bookkeeper asks before it writes, on its first attempt. Whether the write may run is never its reading of the
+      // hint or the attempt: the gate below decides on every attempt, from the record.
+      if (!careless(r) && r.attempt === 1) {
+        await ask();
+        return paused;
       }
-      await write(r.worktree, "payments/pending/2026-09-rent.json", `${JSON.stringify({ payee: "14 Elm St (landlord)", amount: "1450.00", dueDate: "2026-09-05", category: "housing", memo: "September rent; consented on the record" }, null, 2)}\n`);
+      // The write, through the gate the host's interception runs. The careless first attempt arrives here without having
+      // asked and is refused — recorded as an operational-signal — and only then asks; any later attempt writes on the yes.
+      const decision = await consentGate({ repo: options.repo, unitId: r.unitId, profile: PROFILES[r.profile]!, call: { tool: "write", arguments: { path: file, content } }, now, validate: (a) => (typeof a.content === "string" ? undefined : "write takes a content string") });
+      if (!decision.allowed) {
+        await ask();
+        return { ...paused, summary: `tried to write ${file} and was refused (${decision.reason}); asked for consent, no one answered, nothing was written` };
+      }
+      await write(r.worktree, file, String(decision.allowed && decision.guarded ? decision.arguments.content : content));
       await commit(r.worktree, "f5: September rent under payments/pending/, after consent");
-      return { summary: "consent given; wrote payments/pending/2026-09-rent.json for 1450.00 due 2026-09-05" };
+      return { summary: `consent given; wrote ${file} for 1450.00 due 2026-09-05` };
     },
   };
 

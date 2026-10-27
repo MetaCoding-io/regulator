@@ -10,6 +10,7 @@
 import path from "node:path";
 import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
 import { renderAdvice } from "./advice.js";
+import { describeConsentGrant } from "./consent.js";
 import { readOnlyViolations } from "./effects.js";
 
 /**
@@ -55,6 +56,10 @@ export function renderProfileSection(profile: CapabilityProfile, options: Render
   ];
   if (profile.tools.includes("bash")) {
     lines.push("bash is granted and is not path-gated: the writable paths bind you there too, and the harness cannot check it.");
+  }
+  // The grant described, not advised (#60): the refusal is the interception's; this says where it stands.
+  if (profile.consent?.length) {
+    lines.push(`Consent is required before: ${profile.consent.map(describeConsentGrant).join("; ")}. Ask first with ask_human kind=consent, naming the call (the tool and the arguments it will run with); the harness refuses such a call until a person's yes for it is on the record, and holds that yes across attempts.`);
   }
   if (options.advice !== undefined) {
     const advice = options.maxChars === undefined ? renderAdvice(options.advice, Number.POSITIVE_INFINITY) : renderAdvice(options.advice, options.maxChars);

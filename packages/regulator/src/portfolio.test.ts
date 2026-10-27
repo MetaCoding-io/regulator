@@ -3,7 +3,7 @@ import { cp, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { AuditLog, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile } from "@metacoding.io/regulator-core";
+import { AuditLog, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile, readSignals } from "@metacoding.io/regulator-core";
 import { driveUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { gitExec } from "./git-support.js";
@@ -69,6 +69,11 @@ async function assertProtectedUntouched(repo: string) {
   for (const prefix of PROTECTED) assert.deepEqual(await tree(repo, prefix), await tree(FIXTURE, prefix), `${prefix} on the base is byte for byte what the custodian and the person wrote`);
 }
 
+/** The consent gate's refusals on the record (#60): the operational-signals the interception writes before a guarded write runs. */
+async function refusals(repo: string) {
+  return (await readSignals(repo)).filter((s) => s.kind === "operational-signal" && s.subject.startsWith("consent refused:")) as Array<{ unit?: string; subject: string; observation: string; evidence: Array<{ class: string; ref: string; observation?: string }> }>;
+}
+
 async function pendingFiles(repo: string): Promise<string[]> {
   return (await readdir(path.join(repo, "trades", "pending"))).filter((f) => f.endsWith(".json")).sort();
 }
@@ -86,6 +91,7 @@ test("the definition declares the third workload: portfolio runs under the manag
   assert.equal(isReadOnlyProfile(PROFILES.auditor!), true, "the auditor grants nothing with a write, execution or side effect");
   assert.equal(PROFILES.manager!.tools.includes("bash"), false, "no shell: the write grant is complete at the tool boundary");
   assert.deepEqual(PROFILES.manager!.writablePaths, WRITABLE);
+  assert.deepEqual(PROFILES.manager!.consent, [{ tool: "write", paths: ["trades/pending/"] }, { tool: "edit", paths: ["trades/pending/"] }], "the trade list is a write under a guarded prefix (#60): the grant names the tool and the path, not a place_trade tool");
   for (const outside of ["lib/", "test/", "universe.json", "tax.json", "benchmark.json", ...PROTECTED]) assert.ok(!PROFILES.manager!.writablePaths.some((p) => outside.startsWith(p)), `${outside} is outside the manager's grant`);
   assert.ok(Object.hasOwn(checked.advice.files, "manager"), "the manager's advice is a file in the definition");
   assert.ok(checked.policies.some((p) => p.name === "portfolio" && Object.keys(p.budgets.byUnitType ?? {}).includes("plan-rebalance")));
@@ -125,6 +131,7 @@ test("the September close, done as the contracts ask: the lots are brought up to
   assert.equal(paused!.final.status === "blocked" ? paused!.final.reason : "", "paused");
   assert.deepEqual(paused!.decisions, [], "a paused unit is not routed: the recovery policy has nothing to say until a person answers");
   assert.deepEqual(await pendingFiles(repo), [], "nothing exists under trades/pending/ without a yes");
+  assert.deepEqual(await refusals(repo), [], "the manager asked before it wrote: the gate had nothing to refuse");
   const ledgerStore = new ObligationLedger(repo, clock);
   const owed = (await ledgerStore.open("p3-plan-rebalance")).filter((o) => o.concern === "interaction");
   assert.equal(owed.length, 1, "one question per list, not one per trade");
@@ -134,6 +141,7 @@ test("the September close, done as the contracts ask: the lots are brought up to
   assert.match(await readFile(path.join(repo, ".regulator", "outbox"), "utf8"), new RegExp(`deliver:${o.id}`), "delivered to the outbox for a person");
   const request = (await ledgerStore.interactions()).find((i) => i.request.obligationId === o.id)!;
   assert.deepEqual([request.request.kind, request.answers[0]?.outcome], ["consent", "unavailable"]);
+  assert.deepEqual(request.request.call, { tool: "write", arguments: { path: "trades/pending/2026-09-30.json" } }, "the question records the call a yes authorizes: what the consent gate matches (#60)");
   const interaction = await loadInteractionPolicy();
   assert.equal(checkDispositionAuthority(interaction, "bob", { severity: o.severity }), undefined, "bob may disposition up to blocking");
   await ledgerStore.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: "yes", by: "alice", channel: "cli" });
@@ -157,20 +165,32 @@ test("the September close, done as the contracts ask: the lots are brought up to
   await assertProtectedUntouched(repo);
 });
 
-test("the careless close: a list that trades past the target, sells from a lot the portfolio does not hold and creates a wash sale is refused by the portfolio's checks, each by name, at the first attempt that writes; the unit closes on the repair the recovery policy grants, and the base never received the refused list", async (t) => {
+test("the careless close: the trade list written without asking anyone is refused at the write by the consent gate — an operational-signal, the tree unchanged — and the unit then asks; after the yes, a list that trades past the target, sells from a lot the portfolio does not hold and creates a wash sale is refused by the portfolio's checks, each by name; the repair attempt writes on the yes already recorded without asking again, the unit closes, and the base never received the refused list", async (t) => {
   const repo = await portfolioInstance(t);
   for (const o of await close(repo, "careless", ["p1-ingest-positions", "p2-propose-target"])) assert.equal(o.final.status, "closed", `${o.unitId}: ${JSON.stringify(o.final)}`);
   const [paused] = await close(repo, "careless", ["p3-plan-rebalance"]);
   assert.equal(paused!.final.status === "blocked" ? paused!.final.reason : "", "paused");
-  assert.deepEqual(await pendingFiles(repo), []);
+  assert.deepEqual(paused!.decisions, [], "refused at the write, not at closeout");
+  assert.deepEqual(await pendingFiles(repo), [], "the tree is unchanged before the yes");
+  assert.deepEqual(await tree(repo, "trades/pending/"), await tree(FIXTURE, "trades/pending/"));
+  let seen = await refusals(repo);
+  assert.equal(seen.length, 1, "one refusal, by the gate (#60)");
+  assert.deepEqual([seen[0]!.unit, seen[0]!.subject, seen[0]!.evidence], ["p3-plan-rebalance", "consent refused: write trades/pending/2026-09-30.json", [{ class: "file", ref: "trades/pending/2026-09-30.json", observation: "absent" }]]);
+  assert.match(seen[0]!.observation, /falls under profile "manager"'s consent grant \(under trades\/pending\/\) and was refused before it ran: no consent for this call is on the record for unit p3-plan-rebalance\./);
   const ledgerStore = new ObligationLedger(repo, clock);
   const [o] = (await ledgerStore.open("p3-plan-rebalance")).filter((x) => x.concern === "interaction");
   const request = (await ledgerStore.interactions()).find((i) => i.request.obligationId === o!.id)!;
+  assert.deepEqual(request.request.call, { tool: "write", arguments: { path: "trades/pending/2026-09-30.json" } });
   await ledgerStore.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: "yes", by: "alice", channel: "cli" });
   await ledgerStore.resolve(o!.id, { by: "alice", disposition: dispositionForAnswer("consent", "yes"), rationale: "yes" });
   const [done] = await close(repo, "careless", ["p3-plan-rebalance"]);
   assert.equal(done!.final.status, "closed", JSON.stringify(done!.final));
   assert.deepEqual(done!.decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"]]);
+  // The yes holds across attempts (open questions §6, from #120): the repair attempt's hint is the router's, and the gate read
+  // the consent off the ledger for the same call. One question was asked in three attempts; nothing was refused after the yes.
+  assert.equal((await ledgerStore.interactions()).filter((i) => i.request.unit === "p3-plan-rebalance").length, 1, "the repair attempt did not ask again for the same action");
+  seen = await refusals(repo);
+  assert.equal(seen.length, 1);
   const audit = new AuditLog(repo);
   const { verdicts } = await audit.forUnit("p3-plan-rebalance");
   assert.deepEqual(verdicts.map((v) => v.verdict), ["fail", "pass"]);

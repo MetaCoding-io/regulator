@@ -31,7 +31,7 @@
  *   regulator obligation ack <id> --by <who> [--note <text>]   acknowledge without resolving
  *   regulator obligation resolve <id> --by <who> --disposition <d> --rationale <text>   close it: no-action, accepted-risk, rework, replan, fixed, verified, rejected, research-requested, audit-requested, policy-clarification-requested
  *   regulator obligation escalate <id> --by <who> --to <consumer> --rationale <text>   hand it to another consumer; the successor inherits the veto
- *   regulator answer <obligation> --by <who> --answer <text>   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it
+ *   regulator answer <obligation> --by <who> --answer <text> [--amend <json>]   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it. --amend, on a consent given with a yes, is the arguments the call runs with in place of the unit's (#60)
  *   regulator remind                           deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
  *   regulator signals route                    route every unrouted message under the routing policy (for sessions run by hand)
  *
@@ -103,7 +103,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -599,9 +599,22 @@ ${rationale}`]]) {
     if (request.request.options && !request.request.options.includes(answer!)) throw new Error(`the question offers ${request.request.options.join(" | ")}; "${answer}" is not one of them`);
     const by = await authorized(flag("by"), { severity: o.severity });
     const disposition = dispositionForAnswer(request.request.kind, answer!);
-    await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli" });
-    await ledger.resolve(o.id, { by, disposition, rationale: answer! });
-    console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
+    // A consent with amended arguments (#60): a yes for the call as the person changed it. The amendment rides the yes and the
+    // call the request recorded; the interception runs the amended call, and the tool's schema has the last word there.
+    let amendedArguments: Record<string, unknown> | undefined;
+    const amend = flag("amend");
+    if (amend !== undefined) {
+      if (request.request.kind !== "consent") throw new Error(`--amend amends the arguments of a call a consent authorizes; this question is a ${request.request.kind}`);
+      if (disposition !== "accepted") throw new Error(`--amend rides a yes: "${answer}" is not one, so there is no call to amend. Answer no, or answer yes with the amendment`);
+      if (!request.request.call) throw new Error(`the consent question recorded no call (the unit asked without \`call\`), so there are no arguments to amend; answer yes or no`);
+      let parsed: unknown;
+      try { parsed = JSON.parse(amend); } catch { throw new Error(`--amend takes a JSON object of the arguments to change, like '{"content":"..."}'`); }
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed) || !Object.keys(parsed).length) throw new Error(`--amend takes a JSON object of the arguments to change, like '{"content":"..."}'`);
+      amendedArguments = parsed as Record<string, unknown>;
+    }
+    await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli", ...(amendedArguments === undefined ? {} : { amendedArguments }) });
+    await ledger.resolve(o.id, { by, disposition, rationale: amendedArguments === undefined ? answer! : `${answer} (arguments amended: ${JSON.stringify(amendedArguments)})` });
+    console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${amendedArguments === undefined ? "" : ` with ${Object.keys(amendedArguments).join(", ")} amended`}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
   } else if (command === "eval" && sub) {
     // Evidence about the regulators (lesson 14). A behaviour names a scripted unit; without one the Pi dispatcher runs live units under each arm's extensions.
     const suite = await loadSuite(path.resolve(sub));
