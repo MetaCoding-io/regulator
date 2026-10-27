@@ -92,8 +92,10 @@ Why per instance: for the same reason identity is. An instance's advice is propo
 against and decided there; the reflector's live horizon is the next N units of *this*
 instance; and `identity promote` already models how a local decision becomes the next
 instance's seed. The cost is the one identity already pays: instances initialized
-earlier keep their own copy (`identity-promotion` card, limitation 3; DEBT row 39 and
-#53 are where a definition upgrade would carry it).
+earlier keep their own copy (`identity-promotion` card, limitation 3). *Landed 2026-10-27
+(#53): `regulator upgrade` seeds the advice set an older instance lacks and never
+overwrites a file it has; a promoted seed reaches such an instance only as a bullet of
+the release's migration note (DEBT row 44, narrowed).*
 
 **Alternatives considered.**
 
@@ -238,7 +240,8 @@ Limitations that become `DEBT.md` rows:
   disguise; the `glossary-lint` analogue for advice does not exist. The live horizon
   (§8 of the Harness² note) and the person are the only pressure.
 - Advice accepted in one instance does not reach another. This is identity's row and
-  shares its fate with #53 (`regulator upgrade`).
+  shared its fate with #53 (`regulator upgrade`), which landed: an absent file is seeded,
+  a file the instance has is never touched (row 44, narrowed).
 - The third path has no mechanism until the definition's repository runs under the
   loop (§6); the `BOUNDARY.md` row says so.
 - `advice.maxChars` cuts and warns, as `identity.maxChars` does; past the cap, part of

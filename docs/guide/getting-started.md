@@ -60,7 +60,7 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
    initialized and by whom (`--by`, or else your user and host), and the layout you
    declared.
 5. It refuses to run twice. There is no re-init; an existing instance moves to a new
-   definition only through an upgrade that a person performs.
+   definition through `regulator upgrade`, which a person runs.
 
 `--writable` names the paths where the implement profile may write directly; the
 profile's own default is `src/` and `test/`. `--protected` adds to the set of paths under

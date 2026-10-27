@@ -132,26 +132,83 @@ of exactly this kind.
 
 ## Upgrading
 
-The Pi version is pinned (`peerDependencies` in `package.json`; `doctor` compares it
-with what is installed). An upgrade is a change with evidence:
+Two things move under an instance: the definition (a package version, with a git
+revision behind it) and the Pi the host pins. Each is a change with evidence, and the
+manifest says which the instance is at.
 
-1. Bump the pin; run `pnpm install`.
-2. Walk the course's feature matrix (`FEATURE-MATRIX.md` in the Viable Agents repository): every Pi surface a module uses is a row.
-3. `pnpm check` on both CI Node versions.
-4. Run the drift suite headlessly (`regulator eval packages/regulator/evals/drift.json
-   --behaviour reference`) and, with a model, live; commit the live report with an
-   interpretation.
-5. Instances initialized under the old revision show `definition-drift` in `doctor`
-   until a person re-reads this note and runs their next unit; there is no re-init.
+### The definition
+
+An instance's manifest records the package version and the revision it was initialized
+or last upgraded under. When a newer package is installed, `doctor` reports
+`definition-drift` and says to run `regulator upgrade`; the command carries the
+instance forward and nothing else does.
+
+```sh
+pnpm add -D @metacoding.io/regulator@latest @metacoding.io/regulator-pi@latest
+regulator doctor                       # definition-drift: the installed package is newer — run `regulator upgrade`
+regulator upgrade --check              # the plan: what would be seeded, which versions are crossed, the notes
+regulator upgrade --by alice           # apply, print the notes, commit, rewrite the manifest
+regulator doctor                       # green: the version, the history and what it was checked against
+```
+
+What `upgrade` applies is a closed list, each step idempotent and reported: it seeds any
+file of a harness-owned directory the instance lacks from the definition's seed
+(`regulator/advice/` for an instance initialized before advice was a file set; a
+profile's advice file added since; `regulator/identity/` if it were ever absent) and
+never overwrites a file that exists, since a decided identity or advice file is the
+instance's own; and it adds the `.regulator/` line to `.gitignore`. `init` renders no
+other file into an instance, so there is nothing to re-render. Everything else a release
+changed — a policy, a workload, a profile, the registry, the seed of a file the instance
+already has — is read from the definition or is the person's to act on, and `upgrade`
+prints it verbatim from the release's migration note, under a heading per version
+crossed, with the gate each change passed before it landed: `check` (`regulator check`
+only), `scripted` or `live` (a committed eval report, by the SHA-256 of its file), or
+`none`. The note is a `### Migration` section under each version of `CHANGELOG.md`,
+in a shape the command parses; a version between the instance's and the installed one
+without a section refuses the whole upgrade, so no instance is carried through a version
+nobody wrote the note for.
+
+The command refuses a dirty base checkout, an instance ahead of the installed package,
+and a definition whose own `regulator check` fails; `--by` is checked against the
+interaction policy as S5, the way `identity accept` and `advice accept` are, because the
+seeds land under the directories only S5 writes. It commits what it changed on the base
+branch in one commit citing from and to, and rewrites `.regulator/instance.json` with
+the version, the revision, the registry count, the pin and one entry in `upgrades[]`:
+from, to, who, when, and the fingerprint of the committed report under `evals/reports/`
+whose `harnessRevision` is the target's — the evidence the instance's definition now
+rests on — or `none`, with a printed warning, when no report ran at that revision. The
+fingerprint is read, never computed; `upgrade` runs no eval. A second run on the same
+instance changes nothing and says so. The manifest is written by `init` and `upgrade`
+only; `doctor` reports it and upgrades nothing. A manifest written before the package
+version existed (0.1.0 to 0.1.3) is read as 0.1.3, the changelog's migration floor.
 
 The definition's own release path: an identity decision accepted in an instance
 (`regulator identity accept`) is promoted into the seed with
 `regulator identity promote <file>.md --by <who> --rationale <text>`, which commits in
 the definition's repository so every later `init` starts from it; an advice decision
 (`regulator advice accept`) the same way with `regulator advice promote <profile>.md`.
-An instance initialized before advice was a file set carries no `regulator/advice/`;
-`doctor` says so, and seeding it from the definition's `advice/` is a person's step
-until `regulator upgrade` exists (#53).
+A promoted seed reaches an instance that already has its own copy only as a bullet of
+the next release's migration note: `upgrade` seeds what is absent and leaves a decided
+file alone. The release itself is a person's step (CONTRIBUTING.md § Releasing): the
+commit that bumps the version turns `[Unreleased]` and its migration note into the
+version's.
+
+### The Pi pin
+
+The Pi version is pinned (`peerDependencies` in `packages/regulator-pi/package.json`;
+`doctor` compares it with what is installed, and the manifest records it). An upgrade
+is a change with evidence:
+
+1. Bump the pin; run `pnpm install`.
+2. Walk the course's feature matrix (`FEATURE-MATRIX.md` in the Viable Agents repository): every Pi surface a module uses is a row.
+3. `pnpm check` on both CI Node versions.
+4. Run the drift suite headlessly (`regulator eval packages/regulator/evals/drift.json
+   --behaviour reference`) and, with a model, live; commit the live report with an
+   interpretation. A committed report at the release's revision is what `upgrade`
+   records as the fingerprint an instance was upgraded against.
+5. Release: the pin change is a definition change the migration note names with its
+   gate, and instances meet it through `regulator upgrade` — the manifest's `pi` is
+   rewritten with the rest, and `doctor` is green again. There is no re-init.
 
 ## Security posture
 
@@ -179,7 +236,7 @@ Apply the model to the harness itself:
   green on both Node versions.
 - **Audit (S3\*):** `pnpm check`, `regulator check`, the drift suite's committed
   reports, and the review dates every registry record carries.
-- **Intelligence (S4):** the Pi feature matrix and the upgrade path above.
+- **Intelligence (S4):** the Pi feature matrix, the migration note per release and the upgrade path above.
 - **Operations (S3):** whoever runs `doctor` and `watch`, answers what the outbox
   delivers, and reads `regulator review --due` once a month.
 

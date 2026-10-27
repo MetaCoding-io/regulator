@@ -10,6 +10,13 @@
  *                  the first unit on.
  *   readManifest   what init wrote, validated; nothing else reads project
  *                  files to learn about the harness
+ *   upgradeInstance  carry an instance to the installed definition (#53):
+ *                  plan under core's `planUpgrade`, seed what is absent and
+ *                  never overwrite, add the ignore line, print the migration
+ *                  notes of every version crossed, record the committed
+ *                  report the target revision was checked against, rewrite
+ *                  the manifest and commit on the base branch. The only
+ *                  writer of the manifest beside init.
  *   doctor         the headless operating check: runtime, git, Pi pin,
  *                  the definition's own check, review dates, the instance's
  *                  base, what is owed and undelivered. Exit 1 on a problem;
@@ -23,8 +30,8 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, identityContextBudget, identityMaxChars, loadRegistry, readAdviceSet, readIdentity, reviewDue, undelivered } from "@metacoding.io/regulator-core";
-import { InstanceManifestSchema, assertValid, type InstanceManifest } from "@metacoding.io/regulator-protocol";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
+import { DEFINITION_WRITERS, InstanceManifestSchema, assertValid, type DefinitionPoint, type DefinitionWriterClass, type InstanceManifest, type UpgradeEntry } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, INSTANCE_SEEDS, canariesFromEnv } from "./unit.js";
 import { LAB_ROOT } from "./workload.js";
@@ -44,6 +51,16 @@ export async function readManifest(repo: string): Promise<InstanceManifest | und
   const value: unknown = JSON.parse(text);
   assertValid(InstanceManifestSchema, value, "instance manifest");
   return value;
+}
+
+/** The definition's package version, from the package.json beside it; undefined for a definition directory that ships none (a bare fork). */
+export async function definitionVersion(definitionRoot: string = LAB_ROOT): Promise<string | undefined> {
+  try {
+    const pkg = JSON.parse(await readFile(path.join(definitionRoot, "package.json"), "utf8")) as { version?: unknown };
+    return typeof pkg.version === "string" && /^\d+\.\d+\.\d+$/.test(pkg.version) ? pkg.version : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** The runtime the host pins (Pi's version for regulator-pi), or "none" when no host is installed: what the manifest records. */
@@ -107,9 +124,10 @@ export async function initInstance(exec: Exec, options: InitInstanceOptions): Pr
   if (canaries.length) await writeFile(path.join(repo, CANARIES_RELATIVE_PATH), `${canaries.join("\n")}\n`, "utf8");
 
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: definitionRoot });
+  const packageVersion = await definitionVersion(definitionRoot);
   const manifest: InstanceManifest = {
     version: 1,
-    definition: { root: definitionRoot, name: DEFINITION_NAME, registry: registry.records.length, harnessRevision: rev.code === 0 ? rev.stdout.trim() : "unknown", pi: await definitionPin(definitionRoot) },
+    definition: { root: definitionRoot, name: DEFINITION_NAME, registry: registry.records.length, harnessRevision: rev.code === 0 ? rev.stdout.trim() : "unknown", pi: await definitionPin(definitionRoot), ...(packageVersion ? { packageVersion } : {}) },
     ...(options.writablePaths?.length ? { writablePaths: [...options.writablePaths] } : {}),
     ...(options.protectedPaths?.length ? { protectedPaths: [...options.protectedPaths] } : {}),
     initializedAt: new Date(now()).toISOString(), initializedBy: options.by,
@@ -186,7 +204,10 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     let manifest: InstanceManifest | undefined;
     try {
       manifest = await readManifest(repo);
-      check("manifest", manifest !== undefined, manifest ? `definition ${manifest.definition.name} at ${manifest.definition.harnessRevision.slice(0, 7)}, ${manifest.definition.registry} regulators, pi ${manifest.definition.pi}; initialized ${manifest.initializedAt.slice(0, 10)} by ${manifest.initializedBy}${manifest.writablePaths ? `; writable ${manifest.writablePaths.join(", ")}` : ""}${manifest.protectedPaths ? `; protected ${manifest.protectedPaths.join(", ")}` : ""}` : `no ${INSTANCE_MANIFEST_RELATIVE_PATH}: run \`regulator init\``);
+      // The package version and the upgrade history (#53): which evidence the instance's definition rests on, read from the manifest.
+      const last = manifest?.upgrades?.at(-1);
+      const history = manifest ? `; package ${manifest.definition.packageVersion ?? "version not recorded (a manifest written before `regulator upgrade` existed)"}; ${manifest.upgrades?.length ? `upgraded ${manifest.upgrades.length}× — last ${last!.at.slice(0, 10)} by ${last!.by}, ${last!.from.packageVersion}@${last!.from.harnessRevision.slice(0, 7)} → ${last!.to.packageVersion}@${last!.to.harnessRevision.slice(0, 7)}, checked against ${last!.report === "none" ? "no report" : `report ${last!.reportFile ?? last!.report.slice(0, 12)}`}` : "never upgraded"}` : "";
+      check("manifest", manifest !== undefined, manifest ? `definition ${manifest.definition.name} at ${manifest.definition.harnessRevision.slice(0, 7)}, ${manifest.definition.registry} regulators, pi ${manifest.definition.pi}; initialized ${manifest.initializedAt.slice(0, 10)} by ${manifest.initializedBy}${manifest.writablePaths ? `; writable ${manifest.writablePaths.join(", ")}` : ""}${manifest.protectedPaths ? `; protected ${manifest.protectedPaths.join(", ")}` : ""}${history}` : `no ${INSTANCE_MANIFEST_RELATIVE_PATH}: run \`regulator init\``);
     } catch (error) {
       check("manifest", false, (error as Error).message);
     }
@@ -194,7 +215,10 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
       const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: definitionRoot });
       const current = rev.code === 0 ? rev.stdout.trim() : "unknown";
       const same = manifest.definition.harnessRevision === current && manifest.definition.registry === registry.records.length && manifest.definition.pi === pin;
-      check("definition-drift", same, same ? "the instance was initialized under this definition revision" : `initialized under ${manifest.definition.harnessRevision.slice(0, 7)} (${manifest.definition.registry} regulators, pi ${manifest.definition.pi}); the definition is now ${current.slice(0, 7)} (${registry.records.length}, pi ${pin}) — read OPERATING.md § Upgrading before the next unit`);
+      // A newer installed package, or a manifest with no version recorded, is what `regulator upgrade` carries an instance through (#53); doctor says so and upgrades nothing.
+      const installedVersion = await definitionVersion(definitionRoot);
+      const newer = installedVersion !== undefined && (manifest.definition.packageVersion === undefined || compareVersions(manifest.definition.packageVersion, installedVersion) < 0);
+      check("definition-drift", same, same ? "the instance was initialized under this definition revision" : `initialized under ${manifest.definition.harnessRevision.slice(0, 7)} (${manifest.definition.registry} regulators, pi ${manifest.definition.pi}); the definition is now ${current.slice(0, 7)} (${registry.records.length}, pi ${pin})${newer ? ` — the installed package ${installedVersion} is newer than the manifest's ${manifest.definition.packageVersion ?? "(none recorded)"}: run \`regulator upgrade\`` : " — run `regulator upgrade --check` to see whether a migration note applies, and read OPERATING.md § Upgrading before the next unit"}`);
     }
     let identityOk = false;
     try {
@@ -226,4 +250,138 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     check("obligations", notDelivered.length === 0 && baseHeld.length === 0, `${open.length} open; ${owedToPeople.length} owed to a person, ${notDelivered.length} not delivered${baseHeld.length ? `; ${baseHeld.length} holding the whole instance: ${baseHeld.map((o) => o.subject).join("; ")}` : ""}`);
   }
   return { at: new Date(now()).toISOString(), checks, problems: checks.filter((c) => !c.ok).length, warnings: checks.filter((c) => c.warning).length };
+}
+
+export interface UpgradeInstanceOptions {
+  repo: string;
+  /** The definition to upgrade to; the manifest's by default. */
+  definitionRoot?: string;
+  /** Who runs it; required to apply, recorded in the manifest and the commit. Checked against the interaction policy by the CLI before this is called. */
+  by?: string;
+  /** Plan and print; change nothing. */
+  check?: boolean;
+  now?: () => number;
+}
+
+/** The committed report the target revision was checked against, read from `evals/reports/`: never computed, never run. */
+export interface UpgradeEvidence {
+  report: "none" | string;
+  file?: string;
+  kind?: "scripted" | "live";
+}
+
+export interface UpgradedInstance {
+  plan: UpgradePlan;
+  /** The steps that applied, in order; empty on a dry run or a current instance. */
+  applied: UpgradeStep[];
+  /** The migration notes of every version crossed, rendered for a person. Empty when nothing is crossed. */
+  notes: string;
+  evidence: UpgradeEvidence;
+  /** The manifest after the upgrade; the one read when nothing was written. */
+  manifest: InstanceManifest;
+  /** What upgrade committed on the base branch, or nothing when the tree was already complete (the manifest is under `.regulator/`, ignored). */
+  committed: string | undefined;
+}
+
+/** The files of each class's seed directory the instance's copy lacks, and whether `.regulator/` is ignored: what the plan may seed. */
+async function snapshotInstance(repo: string, definitionRoot: string): Promise<InstanceSnapshot> {
+  const { readdir } = await import("node:fs/promises");
+  const absent: Partial<Record<DefinitionWriterClass, string[]>> = {};
+  for (const w of DEFINITION_WRITERS) {
+    if (!w.instance) continue;
+    const seedFiles = (await readdir(path.join(definitionRoot, w.seed[0]!), { withFileTypes: true }).catch(() => [])).filter((e) => e.isFile()).map((e) => e.name);
+    const have = new Set(await readdir(path.join(repo, w.instance)).catch(() => []));
+    const missing = seedFiles.filter((f) => !have.has(f));
+    if (missing.length) absent[w.class] = missing;
+  }
+  const ignore = await readFile(path.join(repo, ".gitignore"), "utf8").catch(() => "");
+  return { absent, ignored: ignore.split("\n").some((l) => l.trim() === ".regulator/" || l.trim() === ".regulator") };
+}
+
+/** A committed report under `evals/reports/` whose fingerprint names the target revision: live preferred over scripted, then by file name. */
+async function evidenceFor(definitionRoot: string, harnessRevision: string): Promise<UpgradeEvidence> {
+  const { committedReports } = await import("./predictions.js");
+  const at = (await committedReports(definitionRoot)).filter((r) => r.report.fingerprint.harnessRevision === harnessRevision).map((r) => ({ ...r, kind: r.report.fingerprint.dispatcher.startsWith("scripted:") ? "scripted" as const : "live" as const }));
+  const chosen = at.sort((a, b) => (a.kind === b.kind ? (a.file ?? "").localeCompare(b.file ?? "") : a.kind === "live" ? -1 : 1))[0];
+  return chosen ? { report: chosen.fingerprint, kind: chosen.kind, ...(chosen.file ? { file: chosen.file } : {}) } : { report: "none" };
+}
+
+/**
+ * Carry an instance to the installed definition (#53). Refuses an instance without a manifest, a definition that fails
+ * its own check or ships no version or changelog, and — to apply — a dirty base checkout. Applies only the plan's
+ * closed steps: a seed file absent from the instance is copied and a file that exists is never touched, so a decided
+ * identity or advice file stays as the person left it; the ignore line is added. Everything the migration notes say is
+ * printed, under a heading per version crossed, and nothing in them is acted on. The manifest is rewritten with the
+ * version, the revision, the registry count, the pin and one history entry naming the report the target revision was
+ * checked against; the tree change is one commit on the base branch citing from and to.
+ */
+export async function upgradeInstance(exec: Exec, options: UpgradeInstanceOptions): Promise<UpgradedInstance> {
+  const repo = path.resolve(options.repo);
+  const now = options.now ?? Date.now;
+  const manifest = await readManifest(repo);
+  if (!manifest) throw new Error(`${repo} is not an instance (no ${INSTANCE_MANIFEST_RELATIVE_PATH}); run \`regulator init\` first — upgrade carries an initialized instance forward`);
+  const definitionRoot = path.resolve(options.definitionRoot ?? manifest.definition.root);
+
+  // The definition must pass its own check before an instance is carried to it, as it must before it is installed.
+  const registry = await checkRegistry(path.join(definitionRoot, "registry"), definitionRoot);
+  const definition = await checkDefinition(definitionRoot);
+  const problems = [...registry.problems.map((p) => `${p.file}: ${p.message}`), ...definition.problems.map((p) => `${p.file}: ${p.message}`)];
+  if (problems.length) throw new Error(`the definition at ${definitionRoot} does not pass its check; nothing upgraded:\n${problems.join("\n")}`);
+  const packageVersion = await definitionVersion(definitionRoot);
+  if (!packageVersion) throw new Error(`the definition at ${definitionRoot} ships no package.json version; upgrade reads the installed version from it, and a forked definition carries its own version and CHANGELOG.md`);
+  const changelogText = await readFile(path.join(definitionRoot, "CHANGELOG.md"), "utf8").catch(() => undefined);
+  if (changelogText === undefined) throw new Error(`the definition at ${definitionRoot} ships no CHANGELOG.md; the migration notes upgrade prints live there`);
+  const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: definitionRoot });
+  const installed: DefinitionPoint = { packageVersion, harnessRevision: rev.code === 0 ? rev.stdout.trim() : "unknown" };
+
+  const plan = planUpgrade({ manifest, installed, definitionRoot, changelog: parseChangelog(changelogText), instance: await snapshotInstance(repo, definitionRoot) });
+  if (plan.outcome === "refused") throw new Error(`upgrade refused: ${plan.reason}`);
+  const evidence = await evidenceFor(definitionRoot, installed.harnessRevision);
+  if (plan.outcome === "current") return { plan, applied: [], notes: "", evidence, manifest, committed: undefined };
+  const notes = renderMigrationNotes(plan.crossed, installed.harnessRevision);
+  if (options.check) return { plan, applied: [], notes, evidence, manifest, committed: undefined };
+
+  if (!options.by) throw new Error("upgrade needs --by <who>: the manifest and the commit record who ran it");
+  if (!(await isClean(exec, repo))) throw new Error("the base checkout has uncommitted changes; an upgrade is committed on its own");
+  const { cp } = await import("node:fs/promises");
+  const staged: string[] = [];
+  const applied: UpgradeStep[] = [];
+  for (const step of plan.steps) {
+    if (!step.apply) continue;
+    if (step.step === "seed") {
+      await mkdir(path.join(repo, step.instance), { recursive: true });
+      for (const file of step.files) {
+        // `force: false` with an existing target throws rather than overwrites: the step seeds what is absent and nothing else.
+        await cp(path.join(step.seed, file), path.join(repo, step.instance, file), { force: false, errorOnExist: true });
+        staged.push(path.posix.join(step.instance, file));
+      }
+    } else {
+      const ignore = path.join(repo, ".gitignore");
+      const current = await readFile(ignore, "utf8").catch(() => "");
+      await appendFile(ignore, `${current.length && !current.endsWith("\n") ? "\n" : ""}.regulator/\n`, "utf8");
+      staged.push(".gitignore");
+    }
+    applied.push(step);
+  }
+
+  const entry: UpgradeEntry = { from: plan.from, to: plan.to, report: evidence.report, ...(evidence.file ? { reportFile: evidence.file } : {}), by: options.by, at: new Date(now()).toISOString() };
+  const upgraded: InstanceManifest = {
+    ...manifest,
+    definition: { ...manifest.definition, root: definitionRoot, registry: registry.records.length, harnessRevision: installed.harnessRevision, pi: await definitionPin(definitionRoot), packageVersion: installed.packageVersion },
+    upgrades: [...(manifest.upgrades ?? []), entry],
+  };
+  assertValid(InstanceManifestSchema, upgraded, "instance manifest");
+  await writeFile(path.join(repo, INSTANCE_MANIFEST_RELATIVE_PATH), `${JSON.stringify(upgraded, null, 2)}\n`, "utf8");
+
+  let committed: string | undefined;
+  if (staged.length) {
+    const seeded = applied.flatMap((s) => (s.step === "seed" ? s.files.map((f) => path.posix.join(s.instance, f)) : []));
+    const body = [`Definition ${DEFINITION_NAME} ${plan.from.packageVersion}@${plan.from.harnessRevision.slice(0, 7)} → ${plan.to.packageVersion}@${plan.to.harnessRevision.slice(0, 7)} (${registry.records.length} regulators, pi ${upgraded.definition.pi}).`, seeded.length ? `Seeded from the definition, absent here: ${seeded.join(", ")}.` : undefined, applied.some((s) => s.step === "ignore") ? "Added the .regulator/ ignore line." : undefined, `Checked against ${evidence.report === "none" ? "no committed report at this revision" : `${evidence.kind} report ${evidence.file ?? evidence.report}`}.`].filter(Boolean).join("\n");
+    for (const args of [["add", "--", ...staged], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `regulator upgrade: ${plan.from.packageVersion} → ${plan.to.packageVersion} by ${options.by}\n\n${body}`]]) {
+      const r = await exec("git", args, { cwd: repo });
+      if (r.code !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr.trim()}`);
+    }
+    committed = await headRevision(exec, repo);
+  }
+  return { plan, applied, notes, evidence, manifest: upgraded, committed };
 }
