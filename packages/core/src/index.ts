@@ -9,6 +9,8 @@ export { isReadOnlyProfile, isWritableUnder, renderProfileSection, type RenderPr
 export { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, profileOfAdviceFile, readAdviceSet, renderAdvice, type AdviceContextBudget, type AdviceProblem, type AdviceSet, type DeclaredProfile } from "./advice.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
 export { checkRegistry, formatEnforcementPoint, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type CheckRegistryOptions, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
+export { PATHOLOGIES_FILE, PATHOLOGY_END_MARKER, checkPathologies, loadPathologies, pathologyMarker, regulatorShortName, renderAbsorbedBy, renderPathologyTable, splicePathologyTables, type LoadedPathologies } from "./pathologies.js";
+export { renderViabilityMarkdown, type AblationArm, type ViabilityOptions } from "./viability.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";
@@ -35,6 +37,7 @@ export {
   type ConsentGrantProblem, type ConsentVerdict,
 } from "./consent.js";
 export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
+export { checkCommandRunner, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";

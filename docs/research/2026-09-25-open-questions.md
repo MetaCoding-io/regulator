@@ -282,6 +282,14 @@ SHACL run has no session and so no profile that means anything.
   deterministic and probabilistic units under one contract shape, and the picture in
   §1 shows both kinds on the same spine.
 
+**Landed (2026-10-27, [#122](https://github.com/MetaCoding-io/regulator/issues/122)).**
+As proposed, with three things the portfolio case settled: the budget is wall-clock
+alone for now (CPU and artifact size are DEBT row 49); the runner's reach is a declared
+`outputs[]` list, refused by the definition check outside the profile's writable paths
+or under a consent grant, since a program cannot ask; and a program's contract fixes
+what a session's would delegate, because the report's delegated and unresolved lists
+are empty by construction. The portfolio note's §3 records the consent decision.
+
 ## 4. Predictive intelligence: S4 as a model of "outside and then"
 
 **What S4 is today.** Two records do two jobs. `remember` writes operational memory — a

@@ -22,6 +22,7 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.control.budget-guard.v1` | Budget guard | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.canary-watch.v1` | Credential canary watch | S3* | deterministic-gate | active | 2026-12-01 |
 | `reg.audit.closeout-gate.v1` | Closeout gate | S3* | deterministic-gate | active | 2026-12-01 |
+| `reg.control.command-runner.v1` | Command runner (a unit that runs a program) | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.contract-advice.v1` | Contract advice section | S3 | prompt | active | 2026-12-01 |
 | `reg.control.contract-preserving-compaction.v1` | Contract-preserving compaction | S3 | model-judgment | active | 2026-12-01 |
 | `reg.identity.definition-check.v1` | Definition check | S5 | deterministic-gate | active | 2026-12-01 |
@@ -302,6 +303,7 @@ does not do. `since` is the package version that first shipped the record.
 - The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+- A command unit (a unit type whose runner is a program, reg.control.command-runner.v1) is not metered by this guard: no session opens, so no turn end and no tool call reaches it. The loop's runner meters wall-clock alone — the policy's ceiling for the unit type is the timeout the program runs under — and writes the ledger once at the end with tokens, cost and turns zero by construction; a run past the ceiling is marked exhausted on the wall-clock dimension and refused as a dispatch error. Nothing halts a program before that timeout, and no other ceiling applies to it.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -389,6 +391,52 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `none` — The verify step is the S3 loop itself: an arm without closeout is a different orchestrator, not an ablation. The checks it runs are ablated one at a time (identity-untouched, export-signature).
 
 **Retirement condition.** Never: independent verification is INV-003. Individual checks retire under their own conditions.
+
+
+## Command runner (a unit that runs a program)
+
+`reg.control.command-runner.v1` · S3 · deterministic-gate · active · unreleased
+
+**Purpose.** Run a unit whose work is a program rather than a model, through the same loop and the same steps as a session unit — start, lease, worktree, dispatch, read back the report, route, close — with the control plane's own dispatcher in place of the host's. A unit type declares its `runner`: `session`, the default, or `command` with an argv, an optional timeout and the prefixes the program may write under. The loop resolves the argv's file under the definition as it resolves a declared grader's, hashes it into the attempt record, runs it in the unit's worktree with the contract path and the attempt in its environment under the policy's wall-clock ceiling for the unit type as the one budget, records tokens, cost and turns as zero, and commits what the program wrote under its declared outputs. The program's exit and its output are its report: exit 0 with a last stdout line that is a JSON object becomes the report's summary and extra fields, validated against the report schema with the delegated and unresolved lists empty by construction; exit 0 without one is `exit 0` and the stdout tail; the required evidence is referenced by class for the host's checks. A non-zero exit, a run past the ceiling or a write outside the declared outputs — the diff of the worktree against itself before the run — is undone where it can be and refused as a dispatch error, routed under the recovery policy as a session's is. A contract that delegates a reported choice or leaves a decision unresolved to a command unit is refused at dispatch, since a program has no judgment to report. The profile stays on the unit type as the effect declaration the definition check reads: it refuses a command runner without an argv, one naming no file under the definition, one under a profile granting bash or any arbitrary-execution tool, an output outside the profile's writable paths, and an output under a consent grant of the profile, since a program cannot ask and may not write where a yes is required. The closeout does not change: the host re-runs the workload's checks at the revision whether a model or a program produced it. This absorbs the case where a program would otherwise be trusted for what it is rather than for its output.
+
+**Absorbs.** `trusted-program` — A deterministic step — a parser, a normalizer, an optimiser — is run outside the loop because it needs no model, and its output enters the domain on the strength of what the program is: no lease, no budget, no record of which program ran, no check at the revision it produced, and no place in the definition where its reach is declared. Or the same step is run as a session under a profile that is a tool grant for a model it never uses, paying tokens for arithmetic and leaving the program's own reach undeclared.
+
+**Mechanism.** `src/runner.ts` at `loop:runUnit` (the dispatcher is the runner's for a `command` unit type (commandDispatcher), never the host's; a contract delegating a reported choice or leaving a decision unresolved to a command unit is refused before anything is claimed; the attempt record carries the program's file, hash and exit), `check:checkDefinition` (checkCommandRunner in core: no argv, no file under the definition, arbitrary execution granted, an output outside the writable paths, an output under a consent grant), `cli:unit dispatch` (no host is loaded for a unit type that runs a program), `cli:unit drive` (the same)
+
+**Channels.** consumes `workload (the unit type's runner)`, `policy (budgets.wallClockMs for the unit type)`, `the contract (its expected evidence, for the report's references; its delegated and unresolved lists, refused when non-empty)`, `the program's exit code, stdout and stderr`, `git status of the worktree before and after the run` · emits `attempt record (program: file, sha256, exit)`, `budget ledger (wall-clock consumed; tokens, cost and turns zero; exhausted on a timeout)`, `result report (from the exit and the last stdout line)`, `a commit of the program's writes under its outputs`, `dispatch error (non-zero exit, timeout, a write outside the outputs)`
+
+**Scope.** subjects unit, attempt, program · resources the unit's worktree, the execution store, the definition (the program's file)
+
+**Cost.** The program's own run, once per attempt, plus two `git status` reads and one commit in the worktree; no model calls, no tokens. A program unit costs what its arithmetic costs.
+
+**May.**
+- run the declared program in the unit's worktree under the policy's wall-clock ceiling
+- commit what the program wrote under its declared outputs
+- undo and refuse a write outside the declared outputs, and refuse a non-zero exit or a timeout as a dispatch error
+- refuse a program's report that claims a delegated choice or an unresolved outcome
+- refuse at dispatch a contract that delegates a reported choice or leaves a decision unresolved to a program
+
+**May not.**
+- trust the program's output: the closeout's checks at the revision decide, exactly as for a session
+- run a program whose file is not under the definition, or without hashing it
+- let a program write where a consent grant requires a yes (the definition check refuses the declaration)
+- renew the lease, ask a person, or call a tool on the program's behalf
+- choose a model, a route or a hint: a program has none
+
+**Evidence.** `src/controller.test.ts`, `src/portfolio.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/workload.test.ts`
+
+**Limitations.**
+- The host trusts the declared command to be the workload's program, as it trusts `npm test` to be the project's suite, and inspects nothing beyond its effect declaration (the profile, read by the definition check) and its outputs: what the program imports, what it reads, and anything it reaches by an absolute path, a network call or a process it spawns are unseen. The diff against the worktree before the run catches what remains in the worktree after it; a write outside the worktree is not caught, and a write under a protected prefix inside it is caught twice, here and by identity-untouched at closeout.
+- A program cannot ask, so its outputs may not sit under a consent grant of its profile; the definition check refuses the declaration. Work whose output needs a person's yes is split: the program proposes under an unguarded prefix, and a session that can ask confirms and writes under the guarded one. Nothing derives the split; the workload declares it.
+- The budget is wall-clock alone: the policy's ceiling for the unit type, and the runner's own timeout below it, as the timeout the program runs under. Tokens, cost and turns are zero by construction. CPU and the size of what a program writes are not metered (open questions §3 named both; docs/DEBT.md row 49).
+- The lease the loop took at start is not renewed while the program runs, so a program that runs longer than the lease's TTL outlives its claim; the wall-clock ceiling, not the lease, bounds it. A session's gates — the profile grant, the write gate, the pause gate, the lease gate on every tool call — are not exercised by a program, which calls no tool; its reach is checked once at the declaration and once after the run.
+- A program's report carries no judgment, so a contract for a command unit fixes what a session's contract would delegate (the portfolio's lot ordering and extent are fixed decisions on the program's contract). A program's stdout is the only channel for a report; a program that writes its summary elsewhere reports `exit 0` and the tail of whatever it printed.
+
+**Ownership.** regulator-maintainers · introduced 2026-10-27 · review by 2026-12-01
+
+**Ablation.** `loop:runner` — A step of the loop; not ablatable by the harness. Without the runner a command unit type has no way to run. The deliberately wrong program in src/portfolio.test.ts is the test that the closeout, not the runner, judges a program's output: its list is refused by the portfolio's own suite, and nothing read the program to decide that.
+
+**Retirement condition.** Never while a workload declares a unit type whose work is a program: the runner is what makes the declaration mean something, and what gives a program a lease, a budget and a record.
 
 
 ## Contract advice section
@@ -1952,6 +2000,7 @@ does not do. `since` is the package version that first shipped the record.
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
 - The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
+- A command unit (reg.control.command-runner.v1) holds the lease the loop took at start and nothing renews it while the program runs: a program that runs longer than the TTL outlives its claim, and the wall-clock ceiling, not the lease, is what bounds it. The tool-call refusal here is not exercised by a program, which calls no tool; what keeps two units off one checkout for a program is the loop taking the lease before the run and the runner writing only in the unit's own worktree.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 

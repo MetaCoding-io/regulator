@@ -23,6 +23,10 @@ behaviour lives.
 | `unitTypes[].profile` | string | the capability profile the unit runs under; it must exist |
 | `unitTypes[].checks` | [host check names](/reference/host-checks), each a name or `{ "name", "options" }` | the checks the host runs at the unit's revision to reach the technical verdict. Only `glossary-lint` takes an option, `commitMessages: "blocking" \| "advisory"`, and an option given to a check that does not take one fails the definition check |
 | `unitTypes[].requiresContract` | boolean | `false` only for a type that may run without a contract; such a type must then run under a read-only profile |
+| `unitTypes[].runner` | optional | how a unit of the type runs: `{ "kind": "session" }`, the default when the field is absent — a model under the profile's grant, opened by the host — or `{ "kind": "command", "argv", "timeoutMs"?, "outputs" }`, a program the control plane runs itself in the unit's worktree with no host and no model |
+| `unitTypes[].runner.argv` | string[] | the program, in the shape a grader command has: the first argument that is a file under the definition is the program's file, made absolute when it runs and hashed into the attempt record so a report can say what produced the revision. A command naming no such file fails the definition check |
+| `unitTypes[].runner.timeoutMs` | integer, optional | the program's own limit; the lesser of it and the policy's `wallClockMs` for the unit type is the timeout the program runs under. Wall-clock is a program's one budget: tokens, cost and turns are zero by construction |
+| `unitTypes[].runner.outputs[]` | project-relative prefixes | the whole of what the program may write: a write anywhere else, found by diffing the worktree against itself before the run, is undone and refused as a dispatch error. Each prefix must fall inside the profile's writable paths and under none of its consent grants (a program cannot ask, so it may not write where a yes is required); the definition check refuses either. Empty means the program writes nothing |
 | `metrics[]` | optional | the metrics this workload declares for the eval harness, each with its grader: a declaration, never an inference. A suite pre-registers a declared name as it does a built-in one |
 | `metrics[].name` | `workload:<this workload>/<metric>` | namespaced to the workload that owns it; a declaration in another workload's name, or in an instrument's, fails the definition check |
 | `metrics[].kind`, `metrics[].direction` | `count` \| `rate` \| `score`; `lower` \| `higher` \| `none` | what the number is, and which way is better |
@@ -35,6 +39,19 @@ the monthly close over a ledger, and the `portfolio` workload the period close o
 portfolio under management. A contract is loaded together with the workload it names,
 so one instance may run several workloads. [Authoring a workload](/guide/authoring-a-workload)
 says what a new one declares.
+
+A unit type that runs a program keeps a `profile`, and it means something different
+there: not a tool grant, since a program calls no tool, but the *effect declaration* the
+definition check reads — where a unit of the type may write (`outputs` must fall inside
+`writablePaths`), what needs a yes (`outputs` may not fall under `consent`), and that
+nothing arbitrary runs beside it (a profile granting `bash` or any other
+arbitrary-execution tool is refused on a command runner, since a program's reach is its
+declared outputs and nothing wider). A program reports by its exit and its last stdout
+line, so the profile need not grant `report_result`; its contract delegates nothing and
+leaves nothing unresolved, since a program has no judgment to report, and the loop
+refuses one that does. The `portfolio` workload's `plan-rebalance` and `harvest-losses`
+are the shipped command runners; the [command runner](/reference/regulators#reg-control-command-runner-v1)
+record says what the runner trusts and what it does not.
 
 A unit type and the profile it runs under are named separately on purpose, and the
 names do not line up one to one. In the shipped workload, `implement` and `integrate`
@@ -275,9 +292,11 @@ it too.
 | `ablation.switch`, `ablation.note` | the eval arm that runs with this regulator off |
 | `retirement.condition` | when the regulator may be retired, typically once ablation shows no significant regression across model versions and suites |
 
-The [regulators](/reference/regulators) page and the
-[enforcement boundary](/reference/boundary) are both rendered from these records by
-`regulator docs`.
+The [regulators](/reference/regulators) page, the
+[enforcement boundary](/reference/boundary) and the [viability case](/reference/viability)
+are all rendered from these records by `regulator docs`; the viability case also reads
+`registry/pathologies.json`, the [pathology catalog](/PATHOLOGIES)'s rows, each naming the
+regulators that absorb it by record id.
 
 ## Identity seed
 

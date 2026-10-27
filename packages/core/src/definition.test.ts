@@ -170,3 +170,71 @@ test("a committed report over a declared suite version says the same optimisatio
   ]);
   assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: [{ name: "workload:pf/turnover", optimise: true }], report: { ...report, suite: { ...report.suite, optimise: "workload:pf/turnover" } } }), []);
 });
+
+/**
+ * Command runners (#122). A definition with one workload, `pf`, whose `plan` unit type runs a program under the profile
+ * the options describe, so the problems about `workload/pf.json` are the ones the runner's declaration earns.
+ */
+async function runnerDefinition(t: { after(fn: () => Promise<void>): void }, options: { runner?: unknown; profile?: Record<string, unknown>; programFile?: boolean } = {}): Promise<string[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-runner-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "report_result"], writablePaths: ["trades/proposed/", "trades/pending/"], consent: [{ tool: "write", paths: ["trades/pending/"] }], ...options.profile });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.programFile !== false) await write(dir, "workload/pf/plan.mjs", "process.stdout.write('{\"summary\":\"planned\"}\\n');\n");
+  const runner = options.runner ?? { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/proposed/"] };
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes: [{ name: "plan", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true, runner }] });
+  const checked = await checkDefinition(dir);
+  return checked.problems.filter((p) => p.file === "workload/pf.json").map((p) => p.message);
+}
+
+test("a command runner (#122) whose program is a file under the definition, whose outputs are inside the profile's writable paths and under no consent grant, and whose profile grants no arbitrary execution, passes the definition check; the profile need not grant report_result, since a program reports by its exit and its output", async (t) => {
+  assert.deepEqual(await runnerDefinition(t), []);
+  assert.deepEqual(await runnerDefinition(t, { profile: { tools: ["read", "write"] } }), [], "no report tool to grant: the loop reads the program's exit and last line");
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: [] } }), [], "a program that writes nothing declares no outputs");
+});
+
+test("refused: a command runner without an argv — the schema refuses the shape, and the check names the unit type", async (t) => {
+  const problems = await runnerDefinition(t, { runner: { kind: "command", outputs: ["trades/proposed/"] } });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0]!, /^Invalid workload pf\.json: payload does not match the closed runtime schema\. unit type "plan" declares a command runner without an argv: a program is named or there is nothing to run$/);
+  assert.match((await runnerDefinition(t, { runner: { kind: "command", argv: [], outputs: [] } }))[0] ?? "", /without an argv/);
+});
+
+test("refused: a command runner whose argv names no file under the definition — the file is what the attempt record hashes", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { programFile: false }), [
+    'unit type "plan" runs the program `node workload/pf/plan.mjs`, and no argument of it is a file under the definition: the program\'s file is what the attempt record hashes, and it is missing',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "-e", "1"], outputs: [] } }), [
+    'unit type "plan" runs the program `node -e 1`, and no argument of it is a file under the definition: the program\'s file is what the attempt record hashes, and it is missing',
+  ]);
+});
+
+test("refused: a command runner whose declared output falls under a consent grant of its profile — a program cannot ask, so it may not write where a yes is required", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/pending/"] } }), [
+    'unit type "plan" declares output "trades/pending/", which falls under profile "manager"\'s consent grant (write under trades/pending/): a program cannot ask, so it may not write where a yes is required',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/"] }, profile: { writablePaths: ["trades/"] } }), [
+    'unit type "plan" declares output "trades/", which falls under profile "manager"\'s consent grant (write under trades/pending/): a program cannot ask, so it may not write where a yes is required',
+  ], "a prefix above the guarded one reaches it");
+  assert.deepEqual(await runnerDefinition(t, { profile: { consent: [{ tool: "write" }] } }), [
+    'unit type "plan" declares output "trades/proposed/", which falls under profile "manager"\'s consent grant (every write call): a program cannot ask, so it may not write where a yes is required',
+  ], "a bare grant on write guards every output");
+});
+
+test("refused: a command runner under a profile that grants bash or any arbitrary-execution tool — a program's reach is its declared outputs, nothing wider", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { profile: { tools: ["read", "write", "bash", "report_result"] } }), [
+    'unit type "plan" runs a program under profile "manager", which grants bash, whose execution is arbitrary: a profile on a command runner is an effect declaration, and a program\'s reach is its declared outputs, nothing wider',
+  ]);
+});
+
+test("refused: a command runner whose outputs lie outside the profile's writable paths, or outside the project", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["reports/", "trades/proposed/"] } }), [
+    'unit type "plan" declares output "reports/", which is outside profile "manager"\'s writable paths (trades/proposed/, trades/pending/): a program writes only where its effect declaration says a unit of the profile may',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/proposed/../../../etc/"] } }), [
+    'unit type "plan" declares output "trades/proposed/../../../etc/", which is not inside the project',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { profile: { writablePaths: [], consent: [] } }), [
+    'unit type "plan" declares output "trades/proposed/", which is outside profile "manager"\'s writable paths (none): a program writes only where its effect declaration says a unit of the profile may',
+  ], "a read-only effect declaration admits no output");
+});

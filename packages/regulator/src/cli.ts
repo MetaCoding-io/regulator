@@ -11,7 +11,8 @@
  *                                                         target revision was checked against, rewrite the manifest and commit on the base branch; --check prints the plan
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
- *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
+ *   regulator docs [--write | --check]   render REGULATORS.md, BOUNDARY.md and VIABILITY.md from the registry records, and the
+ *                                        pathology catalog's tables from registry/pathologies.json
  *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
  *   regulator fixture <dest> [--oscillation | --injection | --finance | --portfolio]   copy a fixture into its own git repo (identity and advice seeded, canaries recorded)
  *
@@ -79,7 +80,7 @@ import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isHarnessEdit, metricNames, type Disposition, type HarnessEdit, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
@@ -88,7 +89,7 @@ import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
-import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
+import { closeUnit, driveUnit, routeUnit, runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
@@ -97,7 +98,7 @@ import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
-import { loadWorkloadFor } from "./workload.js";
+import { loadWorkloadFor, unitTypeOf } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const [command, sub, ...rest] = process.argv.slice(2);
@@ -110,6 +111,15 @@ const usage = () => {
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
+/**
+ * The dispatcher a contract's unit needs: the host's for a session, honouring --host and REGULATOR_HOST; none for a unit
+ * type that runs a program (#122), which the loop runs itself, so no host has to be installed to drive it.
+ */
+const dispatcherFor = async (workload: WorkloadDefinition, contract: WorkContract, echo: boolean): Promise<Dispatcher> => {
+  const type = unitTypeOf(workload, contract.unitType);
+  if (type && isCommandRunner(runnerOf(type))) return async () => { throw new Error(`unit type "${type.name}" runs a program; the loop runs it without a host`); };
+  return (await loadHost(flag("host"))).host.dispatcher({ echo });
+};
 const interactionP = () => loadInteractionPolicy(path.resolve(flag("interaction") ?? INTERACTION_POLICY_PATH));
 /** Who may disposition what: the interaction policy's people. Refuses before anything is written. */
 async function authorized(by: string | undefined, ask: { severity: Severity; disposition?: Disposition; s5?: boolean }): Promise<string> {
@@ -353,7 +363,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: await dispatcherFor(workload, contract, !rest.includes("--quiet")) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
@@ -374,7 +384,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: await dispatcherFor(workload, contract, !rest.includes("--quiet")) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }

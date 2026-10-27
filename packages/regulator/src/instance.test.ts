@@ -51,7 +51,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 50);
+  assert.equal(result.manifest.definition.registry, 51);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
@@ -162,7 +162,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   const by = (name: string) => report.checks.find((c) => c.name === name)!;
   assert.match(by("manifest").detail, /; package version not recorded \(a manifest written before `regulator upgrade` existed\); never upgraded$/);
   assert.equal(by("definition-drift").ok, false);
-  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(50, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
+  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(51, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
   assert.equal(by("advice").ok, false, "doctor sees the missing advice files");
   const before = await git("rev-parse", "HEAD");
 
@@ -190,7 +190,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.ok(result.committed && result.committed !== before, "the seeded files are one commit on the base branch");
   assert.equal(await git("rev-parse", "HEAD"), result.committed);
   assert.equal(await git("status", "--porcelain"), "", "the base is clean after: nothing left unstaged");
-  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(50 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
+  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(51 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
   assert.deepEqual((await readdir(path.join(repo, "regulator/advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"]);
   assert.equal(await readFile(path.join(repo, "regulator/advice/manager.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice/manager.md"), "utf8"), "seeded byte for byte");
   assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), "- Decided here: say so in your summary.\n", "the file a person decided is exactly as they left it");
@@ -199,7 +199,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.equal(tracked.length, 6, "every advice file is committed");
   const upgraded = (await readManifest(repo))!;
   assert.equal(upgraded.definition.packageVersion, "0.1.3");
-  assert.equal(upgraded.definition.registry, 50);
+  assert.equal(upgraded.definition.registry, 51);
   assert.match(upgraded.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.notEqual(upgraded.definition.harnessRevision, REV_0_1_3);
   assert.deepEqual(upgraded.upgrades, [{ from: { packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, to: { packageVersion: "0.1.3", harnessRevision: upgraded.definition.harnessRevision }, report: "none", by: "alice", at: "2026-09-22T12:00:00.000Z" }]);

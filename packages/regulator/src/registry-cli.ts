@@ -3,12 +3,13 @@
  *
  *   node dist/registry-cli.js check [--today <date>]   validate the registry records and the rest of the definition (profiles, workload,
  *                                            policies, identity, evals; lesson 12), exit 1 on problems — an overdue review date is one (lesson 15)
- *   node dist/registry-cli.js docs [--write]  render REGULATORS.md, BOUNDARY.md and the figures under figures/ (to stdout, or in place)
+ *   node dist/registry-cli.js docs [--write]  render REGULATORS.md, BOUNDARY.md, VIABILITY.md, the tables of docs/PATHOLOGIES.md and the
+ *                                            figures under figures/ (to stdout, or in place); --check reports a stale one
  */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown } from "@metacoding.io/regulator-core";
+import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, renderViabilityMarkdown, splicePathologyTables, type AblationArm } from "@metacoding.io/regulator-core";
 import { FIGURES } from "./figures.js";
 import { readDefinition } from "./status.js";
 
@@ -16,6 +17,9 @@ const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
 const docsPath = path.join(registryDir, "REGULATORS.md");
 const boundaryPath = path.join(labRoot, "BOUNDARY.md");
+const viabilityPath = path.join(labRoot, "VIABILITY.md");
+/** The catalog's prose is hand-written; `docs` re-renders only the tables between its marker comments. */
+const pathologiesDocPath = path.join(labRoot, "../../docs/PATHOLOGIES.md");
 const figuresDir = path.join(labRoot, "figures");
 /** The figures' hotspot links point at the docs site, since the files are copied by the website as well as the docs. */
 const DOCS_ORIGIN = "https://docs.regulator.metacoding.io";
@@ -27,16 +31,22 @@ const registry = await checkRegistry(registryDir, labRoot, { today });
 
 if (command === "check") {
   for (const problem of registry.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
-  console.log(`${registry.records.length} regulator(s), ${registry.problems.length} problem(s)`);
+  for (const warning of registry.warnings) console.error(`⚠ ${warning.file}: ${warning.message}`);
+  console.log(`${registry.records.length} regulator(s), ${registry.pathologies.length} pathology row(s), ${registry.problems.length} problem(s)${registry.warnings.length ? `, ${registry.warnings.length} warning(s)` : ""}`);
   const definition = await checkDefinition(labRoot);
   for (const problem of definition.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
   for (const warning of definition.warnings) console.error(`⚠ ${warning.file}: ${warning.message}`);
   console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)${definition.warnings.length ? `, ${definition.warnings.length} warning(s)` : ""}`);
   process.exit(registry.problems.length + definition.problems.length === 0 ? 0 : 1);
 } else if (command === "docs") {
+  const arms: AblationArm[] = (await checkDefinition(labRoot)).evals.flatMap((suite) => suite.arms.map((arm) => ({ suite: suite.name, arm: arm.name, ...(arm.ablates ? { ablates: arm.ablates } : {}), ...(arm.switch ? { switch: arm.switch } : {}) })));
+  // The catalog lives in the repository's docs/, which an installed package does not carry; there, it is not an output.
+  const pathologiesDoc = await readFile(pathologiesDocPath, "utf8").catch(() => undefined);
   const outputs: Array<[string, string]> = [
     [docsPath, renderRegistryMarkdown(registry.records)],
     [boundaryPath, renderBoundaryMarkdown(registry.records)],
+    [viabilityPath, renderViabilityMarkdown(registry.records, { pathologies: registry.pathologies, shortNames: registry.shortNames, arms })],
+    ...(pathologiesDoc === undefined ? [] : [[pathologiesDocPath, splicePathologyTables(pathologiesDoc, registry.pathologies, registry.shortNames)] as [string, string]]),
     ...await Promise.all(FIGURES.map(async ({ name, render }): Promise<[string, string]> => [path.join(figuresDir, `${name}.svg`), `${render(await readDefinition(labRoot), { docsBase: DOCS_ORIGIN })}\n`])),
   ];
   if (flags.includes("--write")) {

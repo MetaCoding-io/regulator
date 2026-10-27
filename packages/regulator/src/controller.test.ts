@@ -831,3 +831,179 @@ test("predictions resolve from the stores at close and abort (#138): a unit name
   assert.deepEqual(owedS5.map((o) => o.subject.split(" ")[1]), ["p-disconfirm", "p-confirm"], "each disconfirmed live horizon is owed to S5 once");
   assert.equal((await new ExecutionStore(repo).listAttempts("u2")).length, 1, "the resolution changed nothing about the unit");
 });
+
+/**
+ * The command runner (#122). A definition root of its own in a temporary directory, holding the programs the unit types
+ * below name; the loop resolves and hashes them there as it would under the instance manifest's root.
+ */
+async function programs(t: Parameters<typeof initRepo>[0], files: Record<string, string>): Promise<string> {
+  const { mkdtemp, mkdir, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const root = await mkdtemp(path.join(tmpdir(), "regulator-programs-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  for (const [name, content] of Object.entries(files)) {
+    await mkdir(path.dirname(path.join(root, name)), { recursive: true });
+    await writeFile(path.join(root, name), content);
+  }
+  return root;
+}
+
+/** The software workload with one unit type more, `normalize`, which runs the named program and writes under out/. */
+async function commandWorkload(argv: string[], options: { outputs?: string[]; timeoutMs?: number } = {}) {
+  const workload = await loadWorkload();
+  return { ...workload, unitTypes: [...workload.unitTypes, { name: "normalize", description: "a program over the tree", profile: "manager", checks: ["run_tests", "run_checks"], requiresContract: true, runner: { kind: "command" as const, argv, outputs: options.outputs ?? ["out/"], ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }) } }] };
+}
+
+/** The fixture contract re-addressed to the program's unit type, delegating nothing and leaving nothing unresolved: a program has no judgment to report. */
+async function commandContract(): Promise<WorkContract> {
+  const contract = await loadContract(contractFile);
+  return { ...contract, id: "tc-normalize", unitId: "n1", unitType: "normalize", objective: "normalize the tree into out/", delegated: [], unresolved: [] };
+}
+
+const noHost: Dispatcher = async () => { throw new Error("a command unit never reaches the host's dispatcher"); };
+const sha256Of = async (file: string) => (await import("node:crypto")).createHash("sha256").update(await readFile(file)).digest("hex");
+
+test("a command unit (#122), exit 0 with a JSON line: the loop takes the lease and worktree, runs the declared program in the worktree with the contract and the attempt in its environment, never calls the host's dispatcher, commits the program's writes under its outputs, reads the last stdout line as the report with empty delegated and unresolved lists, hashes the program into the attempt record, meters wall-clock only, verifies at the revision and closes", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, {
+    "programs/normalize.mjs": [
+      'import { mkdirSync, writeFileSync } from "node:fs";',
+      'mkdirSync("out", { recursive: true });',
+      'writeFileSync("out/rows.json", JSON.stringify({ rows: 3, contract: process.env.REGULATOR_CONTRACT, attempt: process.env.REGULATOR_ATTEMPT, unit: process.env.REGULATOR_UNIT }));',
+      'console.log("normalizing…");',
+      'console.log(JSON.stringify({ summary: "normalized 3 rows into out/rows.json", evidence: [{ class: "file", ref: "out/rows.json", observation: "three rows" }], delegatedResults: [], residualUncertainty: [{ subject: "row 2", reason: "a blank cell was read as zero", consequenceIfWrong: "low" }] }));',
+      "",
+    ].join("\n"),
+  });
+  const contract = await commandContract();
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "programs/normalize.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status, "closed", JSON.stringify(outcome));
+  const store = new ExecutionStore(repo);
+  const written = JSON.parse(await readFile(path.join(repo, "out", "rows.json"), "utf8")) as Record<string, unknown>;
+  assert.equal(written.rows, 3, "the program's output landed on the base through the ordinary close");
+  assert.match(String(written.contract), /\.regulator\/units\/n1\/contract\.v1\.json$/, "the contract path was in the program's environment");
+  assert.deepEqual([written.attempt, written.unit], ["1", "n1"]);
+  const report = await store.getReport("n1", 1, 1);
+  assert.equal(report?.summary, "normalized 3 rows into out/rows.json");
+  assert.deepEqual([report?.delegatedResults, report?.unresolvedOutcomes], [[], []], "empty by construction: a program claims no judgment");
+  assert.deepEqual(report?.evidence, [
+    { class: "file", ref: "out/rows.json", observation: "three rows" },
+    { class: "test", ref: "e-tests", observation: "owed to the host's checks at closeout; a program runs no check of its own" },
+    { class: "command", ref: "e-checks", observation: "owed to the host's checks at closeout; a program runs no check of its own" },
+  ], "the program cites its file; the required classes point at the host's checks, which the closeout runs");
+  assert.equal(report?.residualUncertainty.length, 1, "the extra fields a program may carry are kept");
+  const [attempt] = await store.listAttempts("n1");
+  assert.deepEqual(attempt?.program, { file: "programs/normalize.mjs", sha256: await sha256Of(path.join(root, "programs/normalize.mjs")), exit: 0 }, "the attempt record says what program produced the revision");
+  assert.equal(attempt?.outcome, "reported");
+  assert.equal(attempt?.sessionId, undefined, "no session was opened");
+  const budget = await store.getBudget("n1", 1);
+  assert.deepEqual([budget?.consumed.tokens, budget?.consumed.turns, budget?.consumed.cost, budget?.models], [0, 0, 0, []], "tokens and turns are zero by construction");
+  assert.ok((budget?.consumed.wallClockMs ?? -1) >= 0 && budget?.exhausted === undefined, "wall-clock is the one dimension metered");
+  assert.equal(budget?.ceiling.wallClockMs, (await withPolicy()).policy.budgets.default.wallClockMs, "the policy's ceiling for the unit type");
+  assert.deepEqual(await unitStatus(gitExec, repo), [], "lease released on close");
+  const log = await gitExec("git", ["log", "--format=%s", "-3"], { cwd: repo });
+  assert.deepEqual(log.stdout.trim().split("\n").sort(), ["Reintegrate unit/n1", "init", "n1: attempt 1 of the program normalize.mjs"], "the runner committed the outputs; the program committed nothing");
+});
+
+test("a command unit, exit 0 with no JSON line: the report's summary is \"exit 0\" and the stdout tail, and the unit closes on the host's checks like any other", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, { "p.mjs": 'console.log("read 2 files");\nconsole.log("nothing to write");\n' });
+  const contract = await commandContract();
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "p.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status, "closed", JSON.stringify(outcome));
+  const report = await new ExecutionStore(repo).getReport("n1", 1, 1);
+  assert.equal(report?.summary, "exit 0: read 2 files | nothing to write");
+  assert.deepEqual(report?.evidence.map((e) => [e.class, e.ref]), [["test", "e-tests"], ["command", "e-checks"]], "nothing claimed beyond the host's checks");
+  const silent = await initRepo(t);
+  const quiet = await programs(t, { "q.mjs": "" });
+  assert.equal((await runUnit(gitExec, { ...(await withPolicy()), repo: silent, contract, workload: await commandWorkload(["node", "q.mjs"]), definitionRoot: quiet, owner: "alice", dispatcher: noHost })).status, "closed");
+  assert.equal((await new ExecutionStore(silent).getReport("n1", 1, 1))?.summary, "exit 0", "no output at all");
+});
+
+test("a command unit, non-zero exit: a dispatch error with the exit code and the stderr tail, the attempt recorded as error with the program and its exit, the unit blocked for the recovery policy and the lease kept; a JSON line that claims a delegated choice is refused the same way", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, {
+    "fail.mjs": 'console.error("no prices for 2026-09-30");\nprocess.exit(3);\n',
+    "claims.mjs": 'console.log(JSON.stringify({ summary: "planned", delegatedResults: [{ decisionId: "d-lots", choice: "the 2025 lot" }] }));\n',
+  });
+  const contract = await commandContract();
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "fail.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status, "blocked");
+  assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
+  assert.match(outcome.status === "blocked" ? outcome.detail ?? "" : "", /^the program exited 3: no prices for 2026-09-30$/);
+  const store = new ExecutionStore(repo);
+  const [attempt] = await store.listAttempts("n1");
+  assert.equal(attempt?.outcome, "error");
+  assert.deepEqual(attempt?.program, { file: "fail.mjs", sha256: await sha256Of(path.join(root, "fail.mjs")), exit: 3 });
+  assert.match((await store.getUnit("n1"))?.reason ?? "", /^dispatch error: the program exited 3/);
+  assert.equal((await unitStatus(gitExec, repo)).length, 1, "the claim is kept for S3 to route");
+  assert.equal(await store.getReport("n1", 1, 1), undefined, "no report from a failed program");
+
+  const second = await initRepo(t);
+  const claimed = await runUnit(gitExec, { ...(await withPolicy()), repo: second, contract, workload: await commandWorkload(["node", "claims.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(claimed.status === "blocked" && claimed.reason, "dispatch-error");
+  assert.match(claimed.status === "blocked" ? claimed.detail ?? "" : "", /claims delegatedResults, which a program does not have/);
+});
+
+test("a command unit, past the wall-clock ceiling: the program is stopped at the policy's wallClockMs for the unit type, the ledger says the ceiling was crossed, the attempt is an error carrying the program without an exit, and the unit is blocked as a dispatch error", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, { "slow.mjs": "await new Promise((r) => setTimeout(r, 20_000));\n" });
+  const base = await withPolicy();
+  const policy = { ...base.policy, budgets: { ...base.policy.budgets, byUnitType: { normalize: { wallClockMs: 500 } } } };
+  const contract = await commandContract();
+  const outcome = await runUnit(gitExec, { ...base, policy, repo, contract, workload: await commandWorkload(["node", "slow.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
+  assert.match(outcome.status === "blocked" ? outcome.detail ?? "" : "", /ran past the wall-clock ceiling \(500 ms\) and was stopped: timed out/);
+  const store = new ExecutionStore(repo);
+  const [attempt] = await store.listAttempts("n1");
+  assert.equal(attempt?.outcome, "error");
+  assert.deepEqual(attempt?.program, { file: "slow.mjs", sha256: await sha256Of(path.join(root, "slow.mjs")) }, "no exit code: the program did not end on its own");
+  const budget = await store.getBudget("n1", 1);
+  assert.equal(budget?.exhausted?.dimension, "wallClockMs");
+  assert.ok((budget?.consumed.wallClockMs ?? 0) >= 500);
+  assert.deepEqual([budget?.ceiling.wallClockMs, budget?.consumed.tokens], [500, 0]);
+  // The runner's own timeout, below the ceiling, is honoured the same way.
+  const quick = await initRepo(t);
+  const own = await runUnit(gitExec, { ...base, repo: quick, contract, workload: await commandWorkload(["node", "slow.mjs"], { timeoutMs: 300 }), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.match(own.status === "blocked" ? own.detail ?? "" : "", /\(300 ms\)/);
+});
+
+test("a command unit that writes outside its declared outputs: the diff against the worktree before the run names the stray paths, they are undone, nothing of the attempt is committed, and the unit is blocked as a dispatch error; the closeout's identity-untouched check stays as the second catch for a protected prefix", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, {
+    "stray.mjs": [
+      'import { mkdirSync, writeFileSync } from "node:fs";',
+      'mkdirSync("out", { recursive: true });',
+      'writeFileSync("out/ok.json", "{}");',
+      'writeFileSync("src/index.js", "export const answer = 41;\\n");',
+      'writeFileSync("README.md", "rewritten\\n");',
+      'writeFileSync("vendor-note.txt", "new\\n");',
+      'console.log(JSON.stringify({ summary: "done" }));',
+      "",
+    ].join("\n"),
+  });
+  const contract = await commandContract();
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "stray.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
+  assert.equal(outcome.status === "blocked" ? outcome.detail : "", "the program wrote outside its declared outputs (out/): README.md, src/index.js, vendor-note.txt; the writes are undone and nothing of this attempt is committed");
+  const worktree = path.join(repo, ".regulator", "worktrees", "n1");
+  assert.equal(await readFile(path.join(worktree, "src", "index.js"), "utf8"), "export const answer = 42;\n", "the tracked file is restored");
+  assert.equal(await readFile(path.join(worktree, "README.md"), "utf8"), "fixture\n");
+  await assert.rejects(stat(path.join(worktree, "vendor-note.txt")), /ENOENT/, "the stray new file is removed");
+  assert.equal((await gitExec("git", ["log", "--format=%s", "main..unit/n1"], { cwd: worktree })).stdout.trim(), "", "nothing committed on the branch");
+  const store = new ExecutionStore(repo);
+  assert.equal((await store.listAttempts("n1"))[0]?.outcome, "error");
+  assert.equal(await store.getReport("n1", 1, 1), undefined);
+  assert.equal(await readFile(path.join(repo, "src", "index.js"), "utf8"), "export const answer = 42;\n", "the base never saw it");
+});
+
+test("a contract that delegates a reported choice, or leaves a decision unresolved, to a command unit is refused before anything is claimed: a program has no judgment to report", async (t) => {
+  const repo = await initRepo(t);
+  const root = await programs(t, { "p.mjs": "" });
+  const contract = await loadContract(contractFile);
+  const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract: { ...contract, id: "tc-n", unitId: "n1", unitType: "normalize" }, workload: await commandWorkload(["node", "p.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
+  assert.equal(outcome.status, "refused");
+  assert.deepEqual(outcome.status === "refused" ? outcome.problems.map((p) => p.path) : [], ["delegated", "delegated", "unresolved"]);
+  assert.match(outcome.status === "refused" ? outcome.problems[0]?.message ?? "" : "", /"d-helpers" .* runs a program, which has no judgment to report/);
+  assert.equal(await new ExecutionStore(repo).getUnit("n1"), undefined, "nothing was recorded");
+});

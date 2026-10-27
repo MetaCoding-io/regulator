@@ -156,6 +156,32 @@ export function pendingLists() {
   return readdirSync(dir).filter((f) => f.endsWith(".json")).sort().map((f) => ({ file: `trades/pending/${f}`, ...JSON.parse(readFileSync(path.join(dir, f), "utf8")) }));
 }
 
+/** Trade lists a program computed and nobody has agreed to yet (`trades/proposed/<date>.json`), in date order. */
+export function proposedLists() {
+  const dir = path.join(ROOT, "trades", "proposed");
+  return readdirSync(dir).filter((f) => /^\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().map((f) => ({ file: `trades/proposed/${f}`, ...JSON.parse(readFileSync(path.join(dir, f), "utf8")) }));
+}
+
+/** Every trade list the checks judge: the agreed ones and the proposed ones, each with its file. */
+export function tradeLists() {
+  return [...pendingLists(), ...proposedLists()];
+}
+
+/**
+ * The lots a program found at an unrealised loss (`trades/proposed/harvest-<date>.json`), in date order: candidates
+ * for a harvest, each naming the lot, its shares, its cost, the price and the loss. Not a trade list: nothing in one is
+ * a trade until a harvest contract turns a candidate into a sell and a replacement from the ticker's set.
+ */
+export function harvestCandidates() {
+  const dir = path.join(ROOT, "trades", "proposed");
+  return readdirSync(dir).filter((f) => /^harvest-\d{4}-\d{2}-\d{2}\.json$/.test(f)).sort().map((f) => ({ file: `trades/proposed/${f}`, ...JSON.parse(readFileSync(path.join(dir, f), "utf8")) }));
+}
+
+/** A lot's unrealised gain or loss at a price, in cents: negative is a loss. */
+export function unrealised(lot, price) {
+  return (price - lot.costPerShare) * lot.shares;
+}
+
 /** A lot's id: the fill date and the ticker. One buy of a ticker per day is the custodian's convention and this ledger's. */
 export function lotId(date, ticker) {
   return `${date}-${ticker}`;

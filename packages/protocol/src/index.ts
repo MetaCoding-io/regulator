@@ -356,11 +356,11 @@ export {
   type Consequence, type DelegatedDecision, type EvidenceExpectation, type ExpectationCheck, type FixedDecision, type ResultReport, type ResultReportInput,
   type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
 } from "./contracts.js";
-export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isWorkloadDefinition, type CheckEntry, type CheckOptions, type UnitType, type WorkloadDefinition } from "./workload.js";
+export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchema, HOST_CHECK_NAMES, RunnerSchema, SESSION_RUNNER, SessionRunnerSchema, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isCommandRunner, isWorkloadDefinition, runnerOf, type CheckEntry, type CheckOptions, type CommandRunner, type Runner, type SessionRunner, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
   isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
-  type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
+  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {
@@ -405,3 +405,4 @@ export {
   type ProbeHorizon, type ReportFingerprint, type TrajectoryMoment,
 } from "./prediction.js";
 export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";
+export { AbsorbedBySchema, CourseModuleSchema, InvariantIdSchema, PATHOLOGY_SECTIONS, PathologiesFileSchema, PathologyRowSchema, PathologySectionSchema, isPathologiesFile, isPathologyRow, type AbsorbedBy, type PathologiesFile, type PathologyRow, type PathologySection } from "./pathologies.js";
