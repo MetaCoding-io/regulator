@@ -21,17 +21,22 @@
  *    its own extensions or skills into the harness (`project_trust` → no); and
  *    any canary value the instance declares (`.regulator/canaries`) is redacted
  *    from every tool result and reported when it appears in the model's text.
- * 5. The consent gate (#60). A call that falls under the profile's consent
- *    grant — a write or edit under a guarded prefix, a shell command the
- *    grant's pattern matches, any call of a bare-granted tool — runs only
- *    when the ledger holds a consent obligation for this unit, resolved as
- *    accepted, whose recorded call covers it. Otherwise the call is refused
- *    before it runs, the refusal is an operational-signal to S3, and the
- *    unit is told to ask with ask_human kind=consent naming the call. A yes
- *    that carries amended arguments runs the amended call in place of the
- *    proposed one, and the tool result names what changed. The profile is
- *    the one the dispatcher names in the `profile` flag, as the profile
- *    grant reads it.
+ * 5. The consent gate (#60, #121). A call that falls under the profile's
+ *    consent grant — a write or edit under a guarded prefix, a shell command
+ *    the grant's pattern matches, any call of a bare-granted tool — or that
+ *    calls a tool the workload declared with an irreversible effect, for
+ *    which the gate derives the same bare grant from the declaration with no
+ *    profile naming it, runs only when the ledger holds a consent obligation
+ *    for this unit, resolved as accepted, whose recorded call covers it.
+ *    Otherwise the call is refused before it runs, the refusal is an
+ *    operational-signal to S3, and the unit is told to ask with ask_human
+ *    kind=consent naming the call. A yes that carries amended arguments runs
+ *    the amended call in place of the proposed one, and the tool result
+ *    names what changed. The profile is the one the dispatcher names in the
+ *    `profile` flag, as the profile grant reads it; the declared effects are
+ *    the definition's workloads', read at load, and only theirs: a built-in
+ *    with an irreversible effect (ask_human, notify_owner) is a channel to a
+ *    person, and consent on it would be circular.
  *
  * Load with checkpoints 2–8; this checkpoint supersedes the lexical vendor
  * gate of checkpoint 1 and the profile grant's path check of checkpoint 3.
@@ -42,11 +47,11 @@ import path from "node:path";
 import { Type } from "typebox";
 import { Value } from "typebox/value";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { SeveritySchema, type AuditFinding, type CapabilityProfile, type PolicyProposal } from "@metacoding.io/regulator-protocol";
+import { SeveritySchema, type AuditFinding, type CapabilityProfile, type PolicyProposal, type ToolEffect } from "@metacoding.io/regulator-protocol";
 import { discoverConventions } from "@metacoding.io/regulator-checks";
-import { PROTECTED_S5_PATHS, appendSignal, consentGrantFor, prepareWritePath } from "@metacoding.io/regulator-core";
+import { PROTECTED_S5_PATHS, appendSignal, consentRequiredFor, prepareWritePath } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
-import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, PROFILES, consentGate, isProfileName, leaseStoreFor } from "@metacoding.io/regulator";
+import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, LAB_ROOT, PROFILES, consentGate, declaredEffects, isProfileName, leaseStoreFor, loadDeclaredToolsSync } from "@metacoding.io/regulator";
 import { baseRoot } from "@metacoding.io/regulator";
 
 export interface AuthorityExtensionOptions {
@@ -55,6 +60,10 @@ export interface AuthorityExtensionOptions {
   canaries?: readonly string[];
   /** The profile whose consent grant the gate enforces; by default the one the `profile` flag names, as the profile grant reads it. */
   profile?: CapabilityProfile;
+  /** The effects of the workload-declared tools the gate derives consent from (#121); by default the definition's, read at load. */
+  declared?: Readonly<Record<string, ToolEffect>>;
+  /** The definition the declared tools are read from; the lab's by default. */
+  definitionRoot?: string;
 }
 
 export const REDACTION = "[REDACTED: canary]";
@@ -109,6 +118,8 @@ export async function restoreProtected(cwd: string, before: Map<string, Buffer>,
 
 export function createAuthorityExtension(options: AuthorityExtensionOptions = {}): (pi: ExtensionAPI) => void {
   const now = options.now ?? Date.now;
+  // The declared effects (#121): the workloads' own tools and nothing built in, so the derivation never reaches a channel to a person.
+  const declared = options.declared ?? declaredEffects(loadDeclaredToolsSync(options.definitionRoot ?? LAB_ROOT));
 
   return (pi) => {
     const exec: Exec = async (command, args, execOptions) => {
@@ -165,16 +176,19 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
       }
       const trusted = typeof ctx.isProjectTrusted === "function" ? ctx.isProjectTrusted() : false;
       const grants = profile.consent?.length ?? 0;
-      ctx.ui.setStatus("authority", `authority: protecting ${protectedPaths.join(", ")}; project ${trusted ? "TRUSTED (unexpected)" : "untrusted"}; ${canaries.length} canar${canaries.length === 1 ? "y" : "ies"}${grants ? `; ${grants} consent grant${grants === 1 ? "" : "s"} (${profile.name})` : ""}`);
+      const derived = profile.tools.filter((t) => declared[t]?.sideEffects === "irreversible");
+      ctx.ui.setStatus("authority", `authority: protecting ${protectedPaths.join(", ")}; project ${trusted ? "TRUSTED (unexpected)" : "untrusted"}; ${canaries.length} canar${canaries.length === 1 ? "y" : "ies"}${grants ? `; ${grants} consent grant${grants === 1 ? "" : "s"} (${profile.name})` : ""}${derived.length ? `; consent derived for ${derived.join(", ")} (${profile.name})` : ""}`);
       if (trusted) ctx.ui.notify("regulator: this project is trusted — its own extensions and skills may have loaded into the harness. A unit's project should never be.", "warning");
     });
 
-    // 5. The consent gate: a guarded call runs only on a person's recorded yes for it. Not the model's decision, and not the hint's.
+    // 5. The consent gate: a guarded call — under the profile's grant, or a declared tool whose irreversible effect derives one —
+    // runs only on a person's recorded yes for it. Not the model's decision, and not the hint's.
     const consent = async (toolName: string, toolCallId: string, input: Record<string, unknown>, notify: (message: string) => void): Promise<ToolCallEventResult | undefined> => {
-      if (!consentGrantFor(profile, { tool: toolName, arguments: input })) return undefined;
-      if (!base) return { block: true, reason: `regulator: ${toolName} falls under profile "${profile.name}"'s consent grant, and this session is not inside a repository the orchestrator knows: no consent can be on the record here.` };
+      const requirement = consentRequiredFor(profile, { tool: toolName, arguments: input }, declared);
+      if (!requirement) return undefined;
+      if (!base) return { block: true, reason: `regulator: ${toolName} ${requirement.source === "profile" ? `falls under profile "${profile.name}"'s consent grant` : "needs consent derived from its declared effect"}, and this session is not inside a repository the orchestrator knows: no consent can be on the record here.` };
       const decision = await consentGate({
-        repo: base, ...(unitId ? { unitId } : {}), profile, call: { tool: toolName, arguments: input }, now,
+        repo: base, ...(unitId ? { unitId } : {}), profile, call: { tool: toolName, arguments: input }, now, declared,
         validate: (args) => {
           const schema = pi.getAllTools().find((t) => t.name === toolName)?.parameters;
           if (!schema) return "the tool's schema is not known to this session";

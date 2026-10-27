@@ -25,7 +25,7 @@ import { adviceContextBudget, adviceFileName, adviceMaxChars, isWritableUnder, r
 import type { Exec } from "@metacoding.io/regulator";
 import { readManifest } from "@metacoding.io/regulator";
 import { isProfileName, PROFILES, type ProfileName } from "@metacoding.io/regulator";
-import { ADVICE_RELATIVE_DIR, POLICY_PATH, baseRoot } from "@metacoding.io/regulator";
+import { ADVICE_RELATIVE_DIR, LAB_ROOT, POLICY_PATH, baseRoot, declaredEffects, loadDeclaredToolsSync } from "@metacoding.io/regulator";
 
 export const PROFILE_SECTION_TAG = "regulator_profile";
 
@@ -37,6 +37,8 @@ type ThinkingLevel = Parameters<ExtensionAPI["setThinkingLevel"]>[0];
 
 export function createProfilesExtension(options: ProfilesExtensionOptions = {}): (pi: ExtensionAPI) => void {
   const defaultProfile = options.defaultProfile ?? "implement";
+  // The workload-declared tools' effects (#121): the section says which granted ones the gate derives a consent for.
+  const declared = declaredEffects(loadDeclaredToolsSync(LAB_ROOT));
 
   return (pi) => {
     let current: CapabilityProfile = PROFILES[defaultProfile];
@@ -101,7 +103,7 @@ export function createProfilesExtension(options: ProfilesExtensionOptions = {}):
     // Level 5: the profile's advice rides along as a system-prompt section, from the instance's file (#110), cut at the
     // policy's limit with the cut said once. Pi diffs sections, so a stable section is a cache-friendly patch, not a rewrite.
     pi.on("before_agent_start", (event, ctx) => {
-      event.systemPromptOptions.sections[PROFILE_SECTION_TAG] = advice === undefined ? renderProfileSection(current) : renderProfileSection(current, { advice, maxChars });
+      event.systemPromptOptions.sections[PROFILE_SECTION_TAG] = advice === undefined ? renderProfileSection(current, { declared }) : renderProfileSection(current, { advice, maxChars, declared });
       const budget = advice === undefined ? undefined : adviceContextBudget(current.name, advice, maxChars);
       if (budget?.warning && !truncationSignalled) {
         truncationSignalled = true;
