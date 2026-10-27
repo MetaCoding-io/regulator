@@ -274,7 +274,7 @@ file).
 | Reported confidence as an instrument (item 2); five backlog rows (items 8–12); the 2026-10-24 row updated | [open questions](2026-09-25-open-questions.md) §4, §6 |
 | Consent is yes or no (item 5) | [asking a person](../concepts/asking-a-person.md), "what is not there yet" |
 | Judge model, output contract, open-coding order, replan provenance (items 1, 3) | [#49](https://github.com/MetaCoding-io/regulator/issues/49) |
-| Amended arguments; the sandbox bypass (items 5, 6) | [#60](https://github.com/MetaCoding-io/regulator/issues/60) |
+| Amended arguments; the sandbox bypass (items 5, 6) | [#60](https://github.com/MetaCoding-io/regulator/issues/60), landed: `regulator answer --amend <json>` and the interception running the amended call; `regulator check` warning about `bash` beside a guarded write, and the card's limitation that a grant is enforced on the named tool's calls only |
 | Handoff failure modes; the A2A card (items 7, 4) | [#14](https://github.com/MetaCoding-io/regulator/issues/14) |
 | The migration note states its gates (item 9) | [#53](https://github.com/MetaCoding-io/regulator/issues/53) |
 | The `RemoteAgent` boundary case (item 4) | [#58](https://github.com/MetaCoding-io/regulator/issues/58) |
