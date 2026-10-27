@@ -73,6 +73,7 @@ Rules:
 | 46 | `advice.maxChars` cuts and warns, as `identity.maxChars` does: past the cap, part of a profile's advice is text the model never sees. `check`, `doctor` and the session's status line say so, `advice accept` refuses a file over it, and nothing shortens the file. | `advice-context` limitation 3 | unscheduled (shortening is a person's decision; the limit is the policy's to raise) | #110 |
 | 47 | The execution store keeps a unit's current status only, so a unit's path through `UNIT_TRANSITIONS` is a reconstruction: `unitTrajectory` folds the attempt, verdict, decision and obligation records through the table, and the three moves that leave no record of their own (reintegrated, reintegration refused, a dispatch refused before any attempt) are placed at the record that follows. The gate in `setStatus` is on the pair, not the trigger. A status history in the store, one line per transition with its trigger, would make the fold a read and the gate a check on the trigger. | `unit-lifecycle` limitations 1 and 2 | unscheduled (with the figures thread, `ROADMAP.md`) | unreleased, after 0.1.4 |
 | 48 | A judged metric — a declaration with an `instrument` ref — is refused by `regulator check` until the instrument record carries its held-out score, and no instrument record kind exists, so the lookup (`instrumentHeldOutScore` in core) resolves nothing and every judged metric waits. The refusal path is built; the record kind, its levels and its calibration report (open questions §4; #49's two judged metrics; the DSPy judge procedure in the Harness² note §9) are not. | `eval-harness` limitation 5 | [#49](https://github.com/MetaCoding-io/regulator/issues/49) (the judged metrics) and the instrument record kind, after the prediction record [#138](https://github.com/MetaCoding-io/regulator/issues/138) | unreleased, after 0.1.4 ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) |
+| 49 | A command unit (a unit type whose runner is a program) is budgeted in wall-clock alone: the policy's ceiling for the unit type is the timeout the program runs under, and tokens, cost and turns are zero by construction. CPU and the size of what the program writes, which open questions §3 named beside wall-clock as a program's budget, are not metered, so a program that writes a very large file inside the ceiling is bounded by nothing but the disk. | `command-runner` limitation 3 | unscheduled (a `cpuMs` and an `artifactBytes` ceiling on the budget policy, read by the runner from the child's resource usage and the size of what it committed; the ArticleMiner note §4.7 is the case) | #122 |
 
 Some limits are permanent, and they are listed here so that nobody re-files them as
 debt. Prompt sections are advice and can be ignored (`contract-advice`). A model summary
@@ -80,4 +81,8 @@ can be wrong, and only the deterministic block is guaranteed
 (`contract-preserving-compaction`). The evidence preflight trusts the session's own tool
 run by design, and independence belongs to the closeout gate (`evidence-preflight`). An
 effect with no observable trace can only be reconciled as absent (`effect-journal`). The
-gate reads the report and never the diff (`result-report-gate`).
+gate reads the report and never the diff (`result-report-gate`). The command runner
+trusts the declared command to be the workload's program, as the host trusts the
+project's test command to be its suite, and inspects nothing beyond the effect
+declaration and the outputs; a program cannot ask, so its outputs never sit under a
+consent grant (`command-runner`).

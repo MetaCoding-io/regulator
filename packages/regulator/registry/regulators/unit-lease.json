@@ -27,7 +27,8 @@
   "limitations": [
     "Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.",
     "The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.",
-    "Leases are files on one machine; nothing coordinates across hosts."
+    "Leases are files on one machine; nothing coordinates across hosts.",
+    "A command unit (reg.control.command-runner.v1) holds the lease the loop took at start and nothing renews it while the program runs: a program that runs longer than the TTL outlives its claim, and the wall-clock ceiling, not the lease, is what bounds it. The tool-call refusal here is not exercised by a program, which calls no tool; what keeps two units off one checkout for a program is the loop taking the lease before the run and the runner writing only in the unit's own worktree."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "loop:lease", "note": "Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm."},

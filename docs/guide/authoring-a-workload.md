@@ -13,7 +13,7 @@ The harness decides how a decision is enforced, verified, recovered from and owe
 | You decide | The harness decides |
 | --- | --- |
 | The domain output and the source of truth, and which prefixes are protected | That a protected prefix is diffed against the base at every closeout (`identity-untouched`), and that the manifest's prefixes join the harness-owned ones |
-| The unit types: their names, the profile each runs under, and which host checks judge each one | Which checks exist (`HOST_CHECK_NAMES`), how each is run, and that a verdict comes from fresh evidence at the committed revision, never from the report |
+| The unit types: their names, the profile each runs under, which host checks judge each one, and which of them run a program instead of a session | Which checks exist (`HOST_CHECK_NAMES`), how each is run, and that a verdict comes from fresh evidence at the committed revision, never from the report — whether a model or a program produced it |
 | The profiles: the tools by declared effect, the writable prefixes, whether there is a shell | That `write` and `edit` are refused outside the prefixes, that a read-only profile grants only read-only effects, and that a contracted type's profile must grant `report_result` |
 | The domain's own checks and the test command that runs them | That the command is discovered from `package.json` or a `test/` directory, run by the host at closeout and again on the merged tree before anything lands, and that an inherited test file may not shrink |
 | The budgets and model routes per unit type | That a ceiling crossed ends the attempt, that attempts are counted, and that the recovery policy decides what happens next by cause |
@@ -58,6 +58,29 @@ Each step names the check that proves it before the next step starts.
    `identity-untouched`; a writing type adds `run_checks` and `glossary-lint`; a type
    that only confirms gets none.
    *Proof:* `regulator check` passes with the new workload counted.
+
+   **Declare a program instead of a session** for a unit type whose work is wholly
+   determined by its inputs — arithmetic over the tree, a parser, a normalizer — and
+   that never needs to ask anyone: `"runner": { "kind": "command", "argv": ["node",
+   "workload/<name>/<step>.mjs"], "outputs": ["<prefix>/"] }`. The program lives under
+   the definition beside the graders, reads the tree through the fixture's own `lib/`,
+   writes only under its declared outputs, and prints one JSON line last, `{ "summary",
+   "evidence"? }`, as its report. The loop runs it in the worktree with no host and no
+   model, under the policy's `wallClockMs` for the unit type as its one budget, and the
+   host checks what it wrote exactly as it checks a model's work. Three things decide
+   whether a step is a program's: it has no judgment to report (its contract delegates
+   nothing and leaves nothing unresolved); its outputs sit inside the profile's
+   writable paths and under none of its consent grants, since a program cannot ask —
+   the portfolio splits its rebalance into a program that proposes under
+   `trades/proposed/` and a session that confirms under `trades/pending/` for exactly
+   this reason; and the profile it names grants no shell, because the profile is the
+   program's effect declaration and a program's reach is its declared outputs, nothing
+   wider. Keep the step a session when any of the three fails.
+   *Proof:* `regulator check` refuses a command runner without an argv, one naming no
+   file under the definition, one under a profile granting `bash`, an output outside the
+   writable paths or under a consent grant; `node --test` on the scripted close shows
+   the loop running the program, and a deliberately wrong one refused by the suite at
+   closeout (`portfolio.test.ts`).
 
 5. **Declare the profiles.** `profiles/<name>.json` with the tools by effect and the
    writable prefixes, and `advice/<name>.md` beside it — the definition check refuses a
@@ -150,10 +173,16 @@ actually the author's. Everything else was already decided.
   a position the custodian carries without a fill has no lot and is an open item,
   never a guess.
 - **Which rules wait.** The design names checks on a harvest's benefit and on an
-  executed wash sale's cost-basis adjustment; there is no harvest unit yet, so the
-  checks are not written. The design puts a risk tolerance in the identity; the number
-  is not set, so the check is not written. A rule without the number it needs is
-  recorded as waiting, not approximated.
+  executed wash sale's cost-basis adjustment; the harvest program finds the candidates
+  and judges none, so those checks are not written. The design puts a risk tolerance in
+  the identity; the number is not set, so the check is not written. A rule without the
+  number it needs is recorded as waiting, not approximated.
+- **Where a program's output goes.** The rebalance is arithmetic, so it is a program;
+  but a trade list needs a person's yes, and a program cannot ask. The split is the
+  program's output under an unguarded prefix the suite checks like any list, and a
+  session that puts the list to a person and copies it under the guarded prefix after
+  the yes — with one more assertion in the suite that the copy is the list the person
+  was asked about, since the consent records the path and not the content.
 
 And these were the harness's, found by running the checklist rather than by reading
 about them: the definition check refused the fixture directory until it had a class
