@@ -1,6 +1,6 @@
 {
   "name": "manager",
-  "description": "Read the portfolio and write the period's files. Direct write and edit calls are limited to lots/, targets/, trades/pending/ and reports/; no shell is granted, so the grant is complete at the tool boundary — the custodian's exports, the person's fills, the universe, the tax parameters, the benchmark and the portfolio's own checks under lib/ and test/ are all outside it.",
+  "description": "Read the portfolio and write the period's files. Direct write and edit calls are limited to lots/, targets/, trades/proposed/, trades/pending/ and reports/; no shell is granted, so the grant is complete at the tool boundary — the custodian's exports, the person's fills, the universe, the tax parameters, the benchmark and the portfolio's own checks under lib/ and test/ are all outside it. For the two unit types that run a program (plan-rebalance, harvest-losses) this profile is the effect declaration, not a grant: a program reaches its declared outputs under trades/proposed/, which no consent guards, and nothing else.",
   "tools": [
     "read",
     "write",
@@ -20,6 +20,7 @@
   "writablePaths": [
     "lots/",
     "targets/",
+    "trades/proposed/",
     "trades/pending/",
     "reports/"
   ],

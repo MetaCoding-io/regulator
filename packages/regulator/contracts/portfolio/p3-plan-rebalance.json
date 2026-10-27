@@ -12,11 +12,10 @@
   "id": "tc-p3-plan-rebalance",
   "unitId": "p3-plan-rebalance",
   "unitType": "plan-rebalance",
-  "objective": "Plan September's rebalance: write trades/pending/2026-09-30.json — the trades that move every position toward targets/2026-09-30.json at the 2026-09-30 prices, each sell naming the lots it comes from — after a person consents to the whole list.",
-  "contribution": "The one unit whose output the household acts on. Consent is asked once, before the file exists, naming every trade; without a yes, nothing is written and the unit waits.",
+  "objective": "Plan September's rebalance: write trades/proposed/2026-09-30.json — the trades that move every position toward targets/2026-09-30.json at the 2026-09-30 prices, each sell naming the lots it comes from with the gain and the tax it realises — as a list a program computed and nobody has agreed to.",
+  "contribution": "The arithmetic of the close, done by the workload's program under a wall-clock budget. Nothing it writes is a commitment: the confirm unit asks a person about this list and copies it under trades/pending/ after the yes.",
   "constraintRefs": [
-    "reg.algedonic.interaction-contract.v1",
-    "reg.algedonic.pause-gate.v1",
+    "reg.control.command-runner.v1",
     "reg.control.profile-write-grant.v1",
     "reg.audit.closeout-gate.v1"
   ],
@@ -46,9 +45,27 @@
       "authorityRef": "human:alice"
     },
     {
-      "id": "f-consent",
-      "subject": "consent before a trade list",
-      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.",
+      "id": "f-lots",
+      "subject": "which lots each sell comes from",
+      "decision": "The tax ordering is a rule here, not a choice: a loss before a gain, and among gains a long-term lot before a short-term one; never a lot whose sale is a wash sale against another lot of the ticker acquired inside the window. Every sell names its lots with the gain or loss and the tax each realises.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-extent",
+      "subject": "how far to trade",
+      "decision": "All the way to the target in whole shares and never past it: an overweight is sold down to its target from the lots the ordering allows, and an underweight is bought toward its target with the cash there is.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-untouched",
+      "subject": "a position the target does not name",
+      "decision": "Not traded. VNQ, which universe.json does not name, stays as it is; the review carries it as an open item, since a program surfaces nothing.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-proposed",
+      "subject": "nothing is agreed",
+      "decision": "The list is written under trades/proposed/ and nowhere else. Nothing is written under trades/pending/: a file there is a commitment, and consent is a session's to ask (confirm-trades).",
       "authorityRef": "human:alice"
     },
     {
@@ -58,30 +75,12 @@
       "authorityRef": "human:alice"
     }
   ],
-  "delegated": [
-    {
-      "id": "d-lots",
-      "subject": "which lots each sell comes from",
-      "bounds": "Within the tax ordering — a loss before a gain, and among gains a long-term lot before a short-term one — and never a lot whose sale is a wash sale against the lot history. Report the lot chosen for every sell, with the gain or loss and the tax it realises."
-    },
-    {
-      "id": "d-extent",
-      "subject": "whether to trade all the way to the target or only back inside the band",
-      "bounds": "Every targeted position lands inside the band either way. Report the choice with the tax consequence of each."
-    }
-  ],
-  "unresolved": [
-    {
-      "id": "u-vnq",
-      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
-      "reason": "Nobody has said what it is or what it cost; the target does not name it and no lot holds it.",
-      "handling": "defer"
-    }
-  ],
+  "delegated": [],
+  "unresolved": [],
   "expectedEvidence": [
     {
       "id": "e-portfolio-checks",
-      "description": "run_tests: the portfolio's own suite passes at the committed revision — the list moves every position toward its target and not past it, lands inside the band, sells only from held lots, and creates no wash sale",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the proposed list moves every position toward its target and not past it, lands inside the band, sells only from held lots, and creates no wash sale",
       "class": "test",
       "required": true
     },

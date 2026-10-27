@@ -13,7 +13,8 @@ files.
 | `prices/` | the closing prices on each export date, for every ETF in the universe and everything held | the person, from the custodian; **protected** |
 | `lots/` | the tax-lot ledger: `lots.csv`, the open lots, and `lots.json`, the date it is current to | units under the `manager` profile |
 | `targets/` | one target per date: the weights; the band it is rebalanced within is `benchmark.json`'s | units |
-| `trades/pending/` | trade lists the household has agreed to execute; a file here is a commitment | units, after consent |
+| `trades/proposed/` | a list a program computed; not yet agreed: `<date>.json`, the rebalance the `plan-rebalance` program planned, and `harvest-<date>.json`, the lots the `harvest-losses` program found at an unrealised loss | the workload's programs, under no consent; checked by the suite as a pending list is |
+| `trades/pending/` | trade lists the household has agreed to execute; a file here is a commitment, and it carries the very trades the proposed list of its date computed | units, after consent |
 | `trades/executed/` | what was actually traded, one file per fill date, from the custodian's confirmations | the person; **protected** |
 | `reports/` | the period review: the valuation, the time-weighted return, the open items | units |
 | `universe.json` | the ETFs the portfolio may hold, grouped into exchangeable sets | the person |
@@ -42,15 +43,19 @@ npm test
 ```
 
 `test/portfolio.test.js` is what the harness runs at every closeout and again on the
-merged tree before anything lands. Six assertions, each the domain's own arithmetic:
+merged tree before anything lands. Eight assertions, each the domain's own arithmetic:
 every target is feasible (long-only, summing to one, naming only the universe, each
-benchmark subset within its tolerance); every pending trade list moves each position
-toward its target, not past it, and lands every targeted position inside the band;
-every sell names lots the portfolio holds; no trade in a pending list creates a wash
-sale against the lot history; the lots reconcile to the executed trades and to the
-custodian's positions; and a period's report states the positions' time-weighted return
-and carries every position outside the universe as an open item. A unit cannot weaken
-these: `lib/` and `test/` are not under any profile's writable prefixes.
+benchmark subset within its tolerance); every pending or proposed trade list moves each
+position toward its target, not past it, and lands every targeted position inside the
+band; every sell names lots the portfolio holds; no trade in a pending or proposed list
+creates a wash sale against the lot history; a pending list carries the trades the
+proposed list of its date computed; every harvest candidate is an open lot at an
+unrealised loss at its date's prices, with the loss as the arithmetic says; the lots
+reconcile to the executed trades and to the custodian's positions; and a period's
+report states the positions' time-weighted return and carries every position outside
+the universe as an open item. A unit cannot weaken these, and a program cannot either:
+`lib/` and `test/` are not under any profile's writable prefixes, and a program's
+reach is its declared outputs.
 
 `test/turnover.test.js` covers `turnover` in `lib/portfolio.js`, the one-way turnover a
 target implies against the current weights. It is not a check over the tree; it is the

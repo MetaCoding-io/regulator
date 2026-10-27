@@ -94,6 +94,14 @@ function tail(text: string): string {
   return joined.length > TAIL_CHARS ? `…${joined.slice(-TAIL_CHARS)}` : joined;
 }
 
+/** What a failed program said: its first lines, where a runtime puts the message, and its last, where it puts the exit; bounded, on one line. */
+function excerpt(text: string): string {
+  const lines = text.trim().split("\n").map((l) => l.trim()).filter(Boolean);
+  const kept = lines.length > 2 * TAIL_LINES ? [...lines.slice(0, TAIL_LINES), "…", ...lines.slice(-TAIL_LINES)] : lines;
+  const joined = kept.join(" | ");
+  return joined.length > 2 * TAIL_CHARS ? `${joined.slice(0, TAIL_CHARS)}…${joined.slice(-TAIL_CHARS)}` : joined;
+}
+
 /** The references a program's report carries for the evidence the contract requires: one per required expectation, by class, naming the host's check and claiming no run. */
 function hostEvidenceFor(expectations: readonly EvidenceExpectation[], claimed: readonly { class: string }[]): ResultReportInput["evidence"] {
   return expectations
@@ -168,7 +176,7 @@ export function commandDispatcher(exec: Exec, options: CommandDispatcherOptions)
       throw new ProgramError(`the program wrote outside its declared outputs (${outputs.join(", ") || "none"}): ${outside.join(", ")}; the writes are undone and nothing of this attempt is committed`, { ...program, ...(timedOut ? {} : { exit: result.code }) });
     }
     if (timedOut) throw new ProgramError(`the program ran past the wall-clock ceiling (${timeout} ms) and was stopped: timed out with nothing reported${result.stderr.trim() ? `; stderr: ${tail(result.stderr)}` : ""}`, program);
-    if (result.code !== 0) throw new ProgramError(`the program exited ${result.code}: ${tail(result.stderr) || tail(result.stdout) || "(no output)"}`, { ...program, exit: result.code });
+    if (result.code !== 0) throw new ProgramError(`the program exited ${result.code}: ${excerpt(result.stderr) || excerpt(result.stdout) || "(no output)"}`, { ...program, exit: result.code });
     const input = reportFromOutput(result.stdout, request.contract.expectedEvidence);
     // The program's writes under its outputs are the attempt's commit; a program that wrote nothing leaves the branch as it was.
     if (written.length) {

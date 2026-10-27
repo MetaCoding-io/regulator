@@ -1,0 +1,66 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p4-confirm-trades",
+  "unitId": "p4-confirm-trades",
+  "unitType": "confirm-trades",
+  "objective": "Confirm September's rebalance: read trades/proposed/2026-09-30.json, the list the plan-rebalance program computed, put it to a person as one consent question naming every trade, the lots each sell comes from and the tax it realises, and after the yes write it unchanged to trades/pending/2026-09-30.json.",
+  "contribution": "The one unit whose output the household acts on. Consent is asked once, before the pending file exists, naming every trade; without a yes, nothing is written and the unit waits. The list is the program's: this unit asks and copies, it does not plan.",
+  "constraintRefs": [
+    "reg.algedonic.interaction-contract.v1",
+    "reg.algedonic.pause-gate.v1",
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-proposed",
+      "subject": "the list",
+      "decision": "The list is trades/proposed/2026-09-30.json, computed by the plan-rebalance program, and is not changed by this unit: the pending file carries the very trades the proposed file does, and the suite refuses one that does not.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-consent",
+      "subject": "consent before a trade list",
+      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [],
+  "unresolved": [
+    {
+      "id": "u-vnq",
+      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
+      "reason": "Nobody has said what it is or what it cost; the target does not name it and no lot holds it.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the pending list is the proposed one, moves every position toward its target and not past it, lands inside the band, sells only from held lots, and creates no wash sale",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}
