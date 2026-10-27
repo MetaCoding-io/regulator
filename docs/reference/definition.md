@@ -32,6 +32,12 @@ behaviour lives.
 | `metrics[].kind`, `metrics[].direction` | `count` \| `rate` \| `score`; `lower` \| `higher` \| `none` | what the number is, and which way is better |
 | `metrics[].instrument` | optional string | the instrument record whose judgment the metric is. Refused until that record exists with its held-out score; the record kind does not exist yet |
 | `metrics[].grader.argv` | string[] | the command the host runs in the instance after each unit, with the first argument that is a file under the definition made absolute (the file's hash goes into the report's fingerprint; a command naming no such file fails the check). It reads the tree and writes one JSON line per metric, `{ "metric", "value", "observation"? }`; it never reads a unit's report, and it is never a model. `grader.timeoutMs` is optional |
+| `tools[]` | optional | the tools this workload declares, each with its effect contract and the program that implements it: an action of the domain as a typed tool, not a path convention. The host registers a declared tool generically from the definition; a profile grants it by name, as it grants a built-in |
+| `tools[].name` | `^[a-z][a-z0-9_]*$` | the name the model calls; may not be a built-in's, and one workload declares it |
+| `tools[].description` | string | what the tool does, for the model; the host appends the consent rule when it derives one |
+| `tools[].parameters` | JSON Schema, `"type": "object"` | the schema the model sees and the harness validates a call against, as for every tool |
+| `tools[].effect` | `{ filesystem, execution, network, sideEffects }` | what happens in the world when it runs, on the [four axes](/concepts/coordination#profiles-grant-tools-by-effect) every built-in declares. The one thing the control plane derives from an effect: `sideEffects: "irreversible"` means a call needs a person's recorded yes before it runs, with no `consent[]` entry naming it ([Asking a person](/concepts/asking-a-person#the-consent-grant)). `execution: "arbitrary"` is refused: a declared tool is a program whose reach is its outputs |
+| `tools[].program` | `{ argv, timeoutMs?, outputs }` | the program, in the command runner's shape: argv under the definition (hashed into the call's session entry), the prefixes it may write under as its whole reach — a write elsewhere is undone and the call refused — and an optional timeout. The outputs need not lie inside any profile's writable paths; a profile that grants an irreversible declared tool and may write under its outputs directly fails the check, since a plain write there would need no yes. It is run in the unit's worktree with the call's arguments on stdin as JSON, and its last stdout line (`{ "summary", "evidence"? }`, or the tail) is what the model is told |
 
 The shipped `software-development` workload declares the unit types `plan`, `research`,
 `implement`, `verify`, `integrate` and `close`. The `personal-finance` workload declares
@@ -52,6 +58,13 @@ leaves nothing unresolved, since a program has no judgment to report, and the lo
 refuses one that does. The `portfolio` workload's `plan-rebalance` and `harvest-losses`
 are the shipped command runners; the [command runner](/reference/regulators#reg-control-command-runner-v1)
 record says what the runner trusts and what it does not.
+
+A workload may also declare *tools* (`tools[]`): the domain's own actions, each with an
+effect contract. The `portfolio` workload declares `place_trade`, the one way a trade
+list comes to exist under `trades/pending/`, whose program copies the proposed list byte
+for byte after a person's yes. The [declared tool](/reference/regulators#reg-control-declared-tool-v1)
+record says what the host does with a declaration and what it does not, and
+[session tools](/reference/tools#tools-a-workload-declares) says how one runs.
 
 A unit type and the profile it runs under are named separately on purpose, and the
 names do not line up one to one. In the shipped workload, `implement` and `integrate`
@@ -93,14 +106,18 @@ paths, a pattern must be a regular expression on a tool with arbitrary execution
 one entry guards one way. A profile that guards a write and also grants `bash` is warned
 about, naming the profile and the path, unless a `bash` entry's pattern covers that
 path: the shell is not path-gated, so without one the grant is enforced on the named
-tool's calls only. A grant is a declaration; nothing is derived from a tool's effects.
+tool's calls only. A grant is a declaration; the one thing derived from an effect is the
+consent on a tool the workload declares with `sideEffects: "irreversible"`, which needs
+no entry here (`tools[]`, above).
 
 The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
 `manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
 its `bash` is not gated by path. `research` is read-only, and `intelligence` is
 read-only plus `report_intelligence`. `bookkeeper` and `auditor` are the profiles for
 the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
-`manager` is the portfolio's, guarding the same under `trades/pending/`.
+`manager` is the portfolio's, with no grant of its own: `trades/pending/` is outside its
+writable paths, and the consent on a trade list is derived from `place_trade`'s declared
+effect.
 [Coordination](/concepts/coordination#profiles-grant-tools-by-effect) explains the
 effect axes and what counts as read-only.
 

@@ -408,10 +408,13 @@ Every registry record states its limitations, and this example does the same:
   the identity write gate, the pause gate) are exercised by their own tests and not by
   this close. A live run with a model is the drill.
 - The consent grant is a declaration on the `bookkeeper` profile: `write` and `edit`
-  under `payments/pending/`. Nothing derives it from a tool's effects, and the example
-  has no tool that moves money on purpose; a `pay` tool with a declared irreversible
-  effect would be [#121](https://github.com/MetaCoding-io/regulator/issues/121)'s case
-  for deriving the grant on top of the declaration.
+  under `payments/pending/`. Nothing derives it from a tool's effects here, and the
+  example has no tool that moves money on purpose. The derivation exists since
+  [#121](https://github.com/MetaCoding-io/regulator/issues/121): a tool a workload
+  declares with an irreversible effect needs the yes with no grant naming it, and the
+  [portfolio](portfolio.md) is the case, with `place_trade` writing a commitment a
+  person executes. A `pay` tool in that shape would move the ledger's grant the same
+  way; the ledger keeps the path grant as the smaller example of the declared kind.
 - The finance invariants are a person's fixed decisions here; they have not been made
   identity. They belong in the fork described in §2, and the lab's own identity stays
   the software harness's.

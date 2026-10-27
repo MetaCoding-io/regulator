@@ -114,7 +114,11 @@ plane's own stores. That definition admits `report_result`, `report_intelligence
 `remember` and `propose_policy_change`, which only record things for S3. It excludes
 `run_tests`. Its schema is a single string, but it runs whatever the project's test
 suite does, so its effect is `project-code` with unknown side effects. A profile that
-calls itself read-only and grants `run_tests` fails `regulator check`.
+calls itself read-only and grants `run_tests` fails `regulator check`. A workload may
+declare [tools of its own](/reference/tools#tools-a-workload-declares) with an effect on
+the same axes, and a profile is judged by those effects too: a read-only profile cannot
+be granted the portfolio's `place_trade`, whose declared side effect is irreversible,
+and that one value is what the consent gate derives a consent question from.
 
 In the session, the profile grant limits the active tool surface to the profile's tools
 and limits `write` and `edit` to the profile's writable prefixes. When the instance

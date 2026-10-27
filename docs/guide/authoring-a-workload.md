@@ -14,7 +14,8 @@ The harness decides how a decision is enforced, verified, recovered from and owe
 | --- | --- |
 | The domain output and the source of truth, and which prefixes are protected | That a protected prefix is diffed against the base at every closeout (`identity-untouched`), and that the manifest's prefixes join the harness-owned ones |
 | The unit types: their names, the profile each runs under, which host checks judge each one, and which of them run a program instead of a session | Which checks exist (`HOST_CHECK_NAMES`), how each is run, and that a verdict comes from fresh evidence at the committed revision, never from the report — whether a model or a program produced it |
-| The profiles: the tools by declared effect, the writable prefixes, whether there is a shell | That `write` and `edit` are refused outside the prefixes, that a read-only profile grants only read-only effects, and that a contracted type's profile must grant `report_result` |
+| The profiles: the tools by declared effect, the writable prefixes, whether there is a shell | That `write` and `edit` are refused outside the prefixes, that a read-only profile grants only read-only effects (a workload's declared ones included), and that a contracted type's profile must grant `report_result` |
+| The domain's own actions as declared tools: a name, a schema, an effect on the four axes, and the program behind each | That the host registers a declared tool from the definition and runs it under its declared outputs, and that a call of one whose effect is irreversible is refused until a person's yes for that call is on the record |
 | The domain's own checks and the test command that runs them | That the command is discovered from `package.json` or a `test/` directory, run by the host at closeout and again on the merged tree before anything lands, and that an inherited test file may not shrink |
 | The budgets and model routes per unit type | That a ceiling crossed ends the attempt, that attempts are counted, and that the recovery policy decides what happens next by cause |
 | Each contract: what is fixed, delegated and unresolved, the authority each fixed decision cites, and the evidence expected | That a fixed decision's authority must resolve (an invariant, a regulator, an obligation or a person), that a delegated choice must be reported, and that an unresolved decision has no "settled" outcome |
@@ -82,15 +83,34 @@ Each step names the check that proves it before the next step starts.
    the loop running the program, and a deliberately wrong one refused by the suite at
    closeout (`portfolio.test.ts`).
 
+   **Declare the domain's own dangerous action as a tool** rather than as a prefix the
+   model writes under: `tools[]` on the workload, with a name, the description and the
+   parameters schema the model sees, an effect on the four axes every built-in
+   declares, and a program in the command runner's shape that takes the call's
+   arguments on stdin and writes only under its declared outputs. The portfolio's
+   `place_trade` copies the proposed list byte for byte under `trades/pending/`, a
+   prefix no profile may write directly, so "copied unchanged" is the tool's property.
+   Declare the effect honestly: `sideEffects: "irreversible"` is the one value the gate
+   derives a consent question from, so a call needs a person's recorded yes with no
+   `consent[]` entry naming it, and a read-only profile cannot be granted the tool.
+   *Proof:* `regulator check` refuses a declared tool with a built-in's name, a schema
+   that is not an object's, an effect that says arbitrary execution or disagrees with
+   the outputs, a program with no file under the definition, and a granting profile
+   that may write under the outputs directly; the scripted close shows the call refused
+   without the yes and run on it (`portfolio.test.ts`, `declared-tools.test.ts`).
+
 5. **Declare the profiles.** `profiles/<name>.json` with the tools by effect and the
    writable prefixes, and `advice/<name>.md` beside it — the definition check refuses a
    profile with no advice file. Reuse a shipped profile where the grant is the same
    (the portfolio reuses the `auditor`). No shell for a profile whose grant must be
-   complete at the tool boundary. Declare which writes need consent: `consent[]` on the
-   profile names the tool and the prefix (the payment under `payments/pending/`, the
-   trade list under `trades/pending/`), and the host's interception refuses the write
-   until a person's yes for it is on the record. The advice may describe the grant; it
-   is never what enforces it.
+   complete at the tool boundary. Grant a declared tool by name, as a built-in is
+   granted. Declare which direct writes need consent: `consent[]` on the profile names
+   the tool and the prefix (the payment under `payments/pending/`), and the host's
+   interception refuses the write until a person's yes for it is on the record; an
+   irreversible declared tool needs no entry, since its consent is derived from the
+   effect, and its outputs stay outside the writable paths (the trade list under
+   `trades/pending/`). The advice may describe the grant; it is never what enforces it,
+   and a rule a gate enforces is not restated as advice.
    *Proof:* `regulator check`, which refuses a grant naming a tool the profile does not
    grant or a path outside its writable paths and warns about `bash` beside a guarded
    write; the tests that enumerate the shipped profiles and advice files
@@ -180,9 +200,15 @@ actually the author's. Everything else was already decided.
 - **Where a program's output goes.** The rebalance is arithmetic, so it is a program;
   but a trade list needs a person's yes, and a program cannot ask. The split is the
   program's output under an unguarded prefix the suite checks like any list, and a
-  session that puts the list to a person and copies it under the guarded prefix after
-  the yes — with one more assertion in the suite that the copy is the list the person
-  was asked about, since the consent records the path and not the content.
+  session that puts the list to a person and, after the yes, places it with a declared
+  tool whose program copies it under `trades/pending/` — with one assertion in the
+  suite that the copy is the list the person was asked about, which now guards a bug in
+  the tool rather than a shortcut a session could take.
+- **What the domain's dangerous action is.** A tool, not a prefix. `place_trade` is
+  declared with an irreversible effect and a program, so the consent question is derived
+  by the gate from the declaration and the advice line that said to ask is deleted;
+  the profile grants the tool by name and lists no path grant on `trades/pending/`.
+  Nothing moves money: the file is what a person executes.
 
 And these were the harness's, found by running the checklist rather than by reading
 about them: the definition check refused the fixture directory until it had a class
