@@ -174,7 +174,7 @@ delivered to the outbox and reminded about, and it stops nothing while it waits.
 | Every sell names a held lot; the lots reconcile to executed trades and positions | 2, a deterministic check | — |
 | The report's return is the time-weighted return | 2, a deterministic check | — |
 | A harvest's benefit exceeds its costs | 2, a check, once a harvest exists | there is no harvest unit in this phase; the check arrives with the harvest contract ([#124](https://github.com/MetaCoding-io/regulator/issues/124)) |
-| Consent before a trade list | 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | *whether* an action needs consent is still the model's to notice (`docs/DEBT.md` row 29). A `place_trade` tool declared `irreversible` would let a gate derive it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
+| Consent before a trade list | 2, a gate (the profile's consent grant, refusing the write under `trades/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived. A `place_trade` tool declared `irreversible` would let a gate derive it on top ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
 | Which lot a sale comes from | 4, judgment bounded by the tax ordering, reported | the ordering is a rule; the choice among equals is the unit's |
 | Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | no harvest yet; the sets are declared so the check has them |
 | The expected-return inputs | 4, judgment bounded by the subset tolerances, reported | it is judgment; the cap is fixed, the inputs are reported |
@@ -413,9 +413,10 @@ of the ledger instance; this one reads the same way.
 - The scripted units never run a session, so the gates *inside* one (the profile grant,
   the identity write gate, the pause gate) are exercised by their own tests and not by
   this close. A live run with a model is the drill.
-- Whether an action needs consent is the model's to notice (`docs/DEBT.md` row 29). A
-  `place_trade` tool whose declared effect is `irreversible` would let a gate derive it,
-  and this workload is the case for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)).
+- The consent grant is a declaration on the `manager` profile: `write` and `edit` under
+  `trades/pending/`. Nothing derives it from a tool's effects; a `place_trade` tool
+  whose declared effect is `irreversible` would let a gate derive it on top, and this
+  workload is the case for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)).
 - `plan-rebalance` runs as a session. Its work is arithmetic and should be a program
   under a wall-clock budget, checked by the host like a model's ([#122](https://github.com/MetaCoding-io/regulator/issues/122)).
 - There is no S4. The exports arrive by hand. The three sensors the design names are
