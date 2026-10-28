@@ -65,7 +65,8 @@ For a domain that is not software, the same steps with different prefixes:
 --protected statements/,payments/executed/` — the worked example in
 [`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) walks the design
 and the declaration; `regulator fixture ~/portfolio --portfolio`, then `init --writable
-lots/,targets/,trades/pending/,reports/ --protected positions/,prices/,trades/executed/`, is
+lots/,targets/,trades/proposed/,reports/ --protected positions/,prices/,trades/executed/`
+(never `trades/pending/`, which only the workload's `place_trade` tool reaches), is
 the third workload's ([`docs/examples/portfolio.md`](../../docs/examples/portfolio.md)).
 
 The manifest is harness-owned and written by a person. The project's own files —

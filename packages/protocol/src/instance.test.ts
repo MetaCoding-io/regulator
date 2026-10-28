@@ -33,7 +33,7 @@ test("the manifest stays at schema version 1 (#53): one written before the packa
 });
 
 test("the migration note is a typed shape (#53): a closed class list, a closed gate vocabulary where scripted and live carry a report fingerprint and check and none carry nothing, and the version is semver or unreleased", () => {
-  assert.deepEqual([...MIGRATION_CLASSES], ["identity", "policy", "workload", "profile", "advice", "registry"]);
+  assert.deepEqual([...MIGRATION_CLASSES], ["identity", "policy", "workload", "profile", "advice", "registry", "contract"]);
   assert.deepEqual([...MIGRATION_GATES], ["check", "scripted", "live", "none"]);
   const bullet = { class: "advice", path: "advice/<profile>.md", gate: { kind: "check" }, text: "Advice is a file set; upgrade seeds regulator/advice/ where absent." };
   for (const gate of [{ kind: "check" }, { kind: "none" }, { kind: "scripted", report: sha }, { kind: "live", report: sha }]) assert.equal(Value.Check(MigrationBulletSchema, { ...bullet, gate }), true, JSON.stringify(gate));

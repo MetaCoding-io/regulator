@@ -8,18 +8,19 @@
  * never relied on for enforcement.
  */
 import path from "node:path";
-import type { CapabilityProfile } from "@metacoding.io/regulator-protocol";
+import type { CapabilityProfile, ToolEffect } from "@metacoding.io/regulator-protocol";
 import { renderAdvice } from "./advice.js";
+import { consentDerivedFrom } from "./declared-tools.js";
 import { describeConsentGrant } from "./consent.js";
-import { readOnlyViolations } from "./effects.js";
+import { TOOL_EFFECTS, readOnlyViolations } from "./effects.js";
 
 /**
  * A profile is read-only when every tool it grants has a declared read-only
  * effect and it grants no direct writes. Removing `write`, `edit` and `bash`
  * is not enough: a tool with a one-string schema can still run the project.
  */
-export function isReadOnlyProfile(profile: CapabilityProfile): boolean {
-  return profile.writablePaths.length === 0 && readOnlyViolations(profile.tools).length === 0;
+export function isReadOnlyProfile(profile: CapabilityProfile, effects: Readonly<Record<string, ToolEffect>> = TOOL_EFFECTS): boolean {
+  return profile.writablePaths.length === 0 && readOnlyViolations(profile.tools, effects).length === 0;
 }
 
 /**
@@ -42,6 +43,8 @@ export interface RenderProfileOptions {
   advice?: string;
   /** The budget policy's `advice.maxChars`; the file's text is cut there, with a marker, as the identity is at `identity.maxChars`. */
   maxChars?: number;
+  /** The effects of the workload-declared tools (#121): a granted one with an irreversible effect is described beside the profile's own consent grants, since the gate derives a consent for it. */
+  declared?: Readonly<Record<string, ToolEffect>>;
 }
 
 /**
@@ -57,9 +60,12 @@ export function renderProfileSection(profile: CapabilityProfile, options: Render
   if (profile.tools.includes("bash")) {
     lines.push("bash is granted and is not path-gated: the writable paths bind you there too, and the harness cannot check it.");
   }
-  // The grant described, not advised (#60): the refusal is the interception's; this says where it stands.
-  if (profile.consent?.length) {
-    lines.push(`Consent is required before: ${profile.consent.map(describeConsentGrant).join("; ")}. Ask first with ask_human kind=consent, naming the call (the tool and the arguments it will run with); the harness refuses such a call until a person's yes for it is on the record, and holds that yes across attempts.`);
+  // The grant described, not advised (#60): the refusal is the interception's; this says where it stands. A declared tool
+  // with an irreversible effect stands beside the grants (#121): the gate derives its consent from the declaration.
+  const derived = profile.tools.filter((t) => { const e = options.declared?.[t]; return e !== undefined && consentDerivedFrom(e); });
+  const required = [...(profile.consent ?? []).map(describeConsentGrant), ...derived.map((t) => `every ${t} call (its declared effect is irreversible)`)];
+  if (required.length) {
+    lines.push(`Consent is required before: ${required.join("; ")}. Ask first with ask_human kind=consent, naming the call (the tool and the arguments it will run with); the harness refuses such a call until a person's yes for it is on the record, and holds that yes across attempts.`);
   }
   if (options.advice !== undefined) {
     const advice = options.maxChars === undefined ? renderAdvice(options.advice, Number.POSITIVE_INFINITY) : renderAdvice(options.advice, options.maxChars);

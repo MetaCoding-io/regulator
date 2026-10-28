@@ -51,7 +51,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 51);
+  assert.equal(result.manifest.definition.registry, 52);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
@@ -64,6 +64,20 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   const report = await doctor(gitExec, { repo, now: () => clock });
   const advice = report.checks.find((c) => c.name === "advice");
   assert.deepEqual([advice?.ok, advice?.detail, advice?.warning], [true, "regulator/advice/ present: 6 file(s) for auditor, bookkeeper, implement, intelligence, manager, research", undefined]);
+  const reach = report.checks.find((c) => c.name === "manifest-writable");
+  assert.deepEqual([reach?.ok, reach?.detail], [true, "no manifest prefix reaches a declared tool's guarded output (place_trade: trades/pending/)"], "the manifest's prefixes (lib/, test/) reach no declared tool's outputs");
+});
+
+test("doctor refuses an instance manifest whose writable prefixes reach a declared tool's guarded output (#121): the prefixes replace a writing profile's in the session, so a plain write there would need no yes and the consent the gate derives from the tool's effect would be bypassed — the line to drop is named, since upgrade never rewrites a person's declaration", async (t) => {
+  const repo = await unfamiliarRepo(t);
+  await initInstance(gitExec, { repo, writablePaths: ["lots/", "targets/", "trades/proposed/", "trades/pending/", "reports/"], by: "alice", now: () => clock });
+  const report = await doctor(gitExec, { repo, now: () => clock, today: "2026-09-22" });
+  const reach = report.checks.find((c) => c.name === "manifest-writable")!;
+  assert.equal(reach.ok, false);
+  assert.match(reach.detail, /^the manifest declares "trades\/pending\/" writable, which reaches place_trade's output "trades\/pending\/": a unit's plain write there needs no yes, so the consent the gate derives from the tool's irreversible effect is bypassed\. Remove the prefix from \.regulator\/instance\.json by hand/);
+  assert.ok(report.problems >= 1);
+  const above = await doctor(gitExec, { repo: await (async () => { const r = await unfamiliarRepo(t); await initInstance(gitExec, { repo: r, writablePaths: ["trades/"], by: "alice", now: () => clock }); return r; })(), now: () => clock, today: "2026-09-22" });
+  assert.equal(above.checks.find((c) => c.name === "manifest-writable")?.ok, false, "a prefix above the output reaches it");
 });
 
 test("doctor says when the instance's identity set is over its context budget (#51): the identity check passes with a warning that names the size, the limit and the files cut, `--json` carries it, and nothing is a problem", async (t) => {
@@ -162,7 +176,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   const by = (name: string) => report.checks.find((c) => c.name === name)!;
   assert.match(by("manifest").detail, /; package version not recorded \(a manifest written before `regulator upgrade` existed\); never upgraded$/);
   assert.equal(by("definition-drift").ok, false);
-  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(51, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
+  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(52, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
   assert.equal(by("advice").ok, false, "doctor sees the missing advice files");
   const before = await git("rev-parse", "HEAD");
 
@@ -190,7 +204,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.ok(result.committed && result.committed !== before, "the seeded files are one commit on the base branch");
   assert.equal(await git("rev-parse", "HEAD"), result.committed);
   assert.equal(await git("status", "--porcelain"), "", "the base is clean after: nothing left unstaged");
-  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(51 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
+  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(52 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
   assert.deepEqual((await readdir(path.join(repo, "regulator/advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"]);
   assert.equal(await readFile(path.join(repo, "regulator/advice/manager.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice/manager.md"), "utf8"), "seeded byte for byte");
   assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), "- Decided here: say so in your summary.\n", "the file a person decided is exactly as they left it");
@@ -199,7 +213,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.equal(tracked.length, 6, "every advice file is committed");
   const upgraded = (await readManifest(repo))!;
   assert.equal(upgraded.definition.packageVersion, "0.1.3");
-  assert.equal(upgraded.definition.registry, 51);
+  assert.equal(upgraded.definition.registry, 52);
   assert.match(upgraded.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.notEqual(upgraded.definition.harnessRevision, REV_0_1_3);
   assert.deepEqual(upgraded.upgrades, [{ from: { packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, to: { packageVersion: "0.1.3", harnessRevision: upgraded.definition.harnessRevision }, report: "none", by: "alice", at: "2026-09-22T12:00:00.000Z" }]);

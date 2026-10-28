@@ -6,6 +6,7 @@ export * from "./status.js";
 export * from "./controller.js";
 export * from "./runner.js";
 export * from "./consent.js";
+export * from "./declared-tools.js";
 export * from "./contract-file.js";
 export * from "./instance.js";
 export * from "./unit.js";

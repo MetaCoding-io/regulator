@@ -30,7 +30,7 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
+import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, declaredToolsOf, guardedOutputsOf, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
 import { DEFINITION_WRITERS, InstanceManifestSchema, assertValid, type DefinitionPoint, type DefinitionWriterClass, type InstanceManifest, type UpgradeEntry } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, INSTANCE_SEEDS, canariesFromEnv } from "./unit.js";
@@ -219,6 +219,14 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
       const installedVersion = await definitionVersion(definitionRoot);
       const newer = installedVersion !== undefined && (manifest.definition.packageVersion === undefined || compareVersions(manifest.definition.packageVersion, installedVersion) < 0);
       check("definition-drift", same, same ? "the instance was initialized under this definition revision" : `initialized under ${manifest.definition.harnessRevision.slice(0, 7)} (${manifest.definition.registry} regulators, pi ${manifest.definition.pi}); the definition is now ${current.slice(0, 7)} (${registry.records.length}, pi ${pin})${newer ? ` — the installed package ${installedVersion} is newer than the manifest's ${manifest.definition.packageVersion ?? "(none recorded)"}: run \`regulator upgrade\`` : " — run `regulator upgrade --check` to see whether a migration note applies, and read OPERATING.md § Upgrading before the next unit"}`);
+      // The manifest's writable prefixes replace a writing profile's in the session (#121): one that reaches the output of a
+      // declared tool whose consent is derived lets a plain write land there with no yes asked. The manifest is a person's
+      // declaration, which upgrade never rewrites, so doctor says which line to drop by hand.
+      const guarded = guardedOutputsOf([...declaredToolsOf(definition.workloads).values()].map((d) => d.tool));
+      const reached = guarded.flatMap(({ tool, output }) => (manifest!.writablePaths ?? []).filter((w) => output.startsWith(w) || w.startsWith(output)).map((prefix) => ({ tool, output, prefix })));
+      check("manifest-writable", reached.length === 0, reached.length
+        ? `the manifest declares ${reached.map((r) => `"${r.prefix}"`).join(", ")} writable, which reaches ${reached.map((r) => `${r.tool}'s output "${r.output}"`).join(", ")}: a unit's plain write there needs no yes, so the consent the gate derives from the tool's irreversible effect is bypassed. Remove the prefix from ${INSTANCE_MANIFEST_RELATIVE_PATH} by hand (the manifest is a person's declaration; upgrade never rewrites it) and take the trade list, or its like, through the tool`
+        : guarded.length ? `no manifest prefix reaches a declared tool's guarded output (${guarded.map((g) => `${g.tool}: ${g.output}`).join(", ")})` : "the definition declares no tool whose consent is derived; nothing for the manifest to reach");
     }
     let identityOk = false;
     try {

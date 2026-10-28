@@ -77,6 +77,10 @@ test("no trade in a pending or proposed list creates a wash sale against the lot
   }
 });
 
+// A pending list comes to exist only through the workload's place_trade tool, which copies the proposed file byte for byte
+// after a person's yes (regulator #121); a session cannot write one. So this assertion no longer guards a model's shortcut
+// (a list trimmed after the yes, which the careless unit of #120 took) but a bug in the tool's program: a copy that is not
+// the list the person was asked about is refused here by name, whatever wrote it.
 test("a pending list carries the trades the proposed list of its date computed: what the person agreed to is what is executed", () => {
   const proposed = new Map(proposedLists().map((l) => [l.date, l]));
   for (const list of pendingLists()) {

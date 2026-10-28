@@ -8,8 +8,11 @@ portfolio of exchange-traded funds held at a custodian, rebalanced against a tar
 a period, with a tax-lot ledger beside it. The design is in
 [`docs/research/2026-10-24-portfolio-workload.md`](../research/2026-10-24-portfolio-workload.md);
 this page is what the design's first phase became, file by file, what it found, and
-what the second phase's first slice — the `command` runner, so that the two unit types
-whose work is arithmetic run as programs — changed in it.
+what the second phase's first two slices changed in it: the `command` runner, so that
+the two unit types whose work is arithmetic run as programs, and `place_trade`, a tool
+the workload declares with an effect contract, so that the consent on a trade list is
+derived by the gate from the declared effect rather than listed as a path a profile
+guards.
 
 It is a good third domain for one reason above the others. The ledger's work was
 judgment sitting on arithmetic. A portfolio inverts the ratio: nearly all of it is
@@ -26,10 +29,12 @@ Everything below runs today. The fixture, the workload, the profile, the contrac
 scripted manager are in [`packages/regulator`](../../packages/regulator/), and
 [`packages/regulator/src/portfolio.test.ts`](../../packages/regulator/src/portfolio.test.ts)
 drives the September close end to end under `pnpm check`. Nothing in the control plane
-changed for the first phase. One thing changed for the second: the loop can run a unit
+changed for the first phase. Two things changed for the second: the loop can run a unit
 type's declared program in place of a session
-([#122](https://github.com/MetaCoding-io/regulator/issues/122)), and this workload is
-the case that asked for it. The first half of this page is the part you do before
+([#122](https://github.com/MetaCoding-io/regulator/issues/122)), and a workload can
+declare a tool with an effect contract, from which the gate derives the consent
+([#121](https://github.com/MetaCoding-io/regulator/issues/121)); this workload is the
+case that asked for both. The first half of this page is the part you do before
 writing any of that; the [authoring guide](../guide/authoring-a-workload.md) is the same material as a
 checklist, with what this example had to decide separated from what the harness decided
 for it.
@@ -69,15 +74,15 @@ committed revision at closeout, whichever produced it:
 
 | Unit type | Runner | Profile | May write | Checks the host runs at closeout |
 | --- | --- | --- | --- | --- |
-| `ingest-positions` | session | manager | `lots/`, `targets/`, `trades/proposed/`, `trades/pending/`, `reports/` | `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `glossary-lint` |
+| `ingest-positions` | session | manager | `lots/`, `targets/`, `trades/proposed/`, `reports/` | `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `glossary-lint` |
 | `propose-target` | session | manager | same | same |
 | `plan-rebalance` | command: `node workload/portfolio/plan-rebalance.mjs` | manager, as an effect declaration | `trades/proposed/` | same |
-| `confirm-trades` | session | manager | same as `ingest-positions` | same |
+| `confirm-trades` | session | manager | same as `ingest-positions`; `trades/pending/` through `place_trade` alone | same |
 | `harvest-losses` | command: `node workload/portfolio/harvest-losses.mjs` | manager, as an effect declaration | `trades/proposed/harvest-` | same |
 | `review` | session | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `close-period` | session | auditor | nothing | — |
 
-Four decisions in this table matter. The manager gets no shell, as the bookkeeper did
+Five decisions in this table matter. The manager gets no shell, as the bookkeeper did
 not, so the write grant is complete at the tool boundary — and a profile with a shell
 could not be a program's effect declaration at all, since a program's reach is its
 declared outputs and nothing wider. `lib/`, `test/`, `universe.json`, `tax.json` and
@@ -85,12 +90,16 @@ declared outputs and nothing wider. `lib/`, `test/`, `universe.json`, `tax.json`
 program can weaken the check that judges it or widen the universe it may trade. The two
 unit types whose work is wholly arithmetic are programs: the loop runs the declared
 command in the worktree under a wall-clock budget, with no session and no model, and
-checks what it wrote exactly as it checks a model's work. And the rebalance is split in
+checks what it wrote exactly as it checks a model's work. The rebalance is split in
 two because a program cannot ask: `plan-rebalance` writes its list under
 `trades/proposed/`, a prefix no consent guards, and `confirm-trades`, a session, puts
-that list to a person and copies it unchanged under `trades/pending/` after the yes —
-the definition check refuses a program whose outputs sit under a consent grant, so the
-split is enforced, not advised. The `auditor` profile is the ledger's, reused as it is.
+that list to a person. And `trades/pending/` is under no write grant at all: the one
+way a pending list comes to exist is `place_trade`, the tool the workload declares with
+an irreversible effect, whose program copies the proposed list byte for byte after the
+yes. The gate derives the consent question from that declared effect, so the question
+is asked because the tool is what it is, not because the profile's advice said so, and
+"copied unchanged" is a property of the tool rather than a sentence the model keeps.
+The `auditor` profile is the ledger's, reused as it is.
 
 ### S2 — What stops units from tripping over each other?
 
@@ -120,9 +129,10 @@ The contract for `confirm-trades`, the session that follows it, keeps what a pro
 cannot do:
 
 - Fixed: the list is `trades/proposed/2026-09-30.json`, the program's, and is not
-  changed by this unit — the pending file carries the very trades the proposed file
-  does; no file is written under `trades/pending/` until a person answers yes to one
-  question naming every trade, its lots and its tax; `trades/executed/` is the person's.
+  changed by this unit — `place_trade` writes the pending file byte for byte from it;
+  no file is written under `trades/pending/` until a person answers yes to one
+  question naming every trade, its lots and its tax, and naming the call the yes
+  authorizes; `trades/executed/` is the person's.
 - Unresolved, which the unit never settles and instead surfaces: two shares of VNQ, a
   position the custodian's export carries that the universe does not name. Nobody has
   said what it is or what it cost. Its handling is *defer*: nothing trades it, and the
@@ -181,7 +191,7 @@ statement did.
 | Invariant | Checked by |
 | --- | --- |
 | The custodian's exports and the price history are never written by a unit | `positions/` and `prices/` are outside the writable prefixes, so the profile grant refuses the write in the session; `--protected` in the manifest means `identity-untouched` refuses the closeout if anything got past the grant |
-| A trade list is written only after a person's yes to one question naming every trade | the contract fixes it; the profile's consent grant refuses a `write` under `trades/pending/` without a recorded yes; `ask_human` with `kind=consent` opens a blocking obligation and the pause gate refuses every tool with an effect until a person answers; silence is never consent, a protocol constant. A program may not write there at all: the definition check refuses a command runner whose outputs sit under the grant, so the program proposes and a session confirms |
+| A trade list is written only after a person's yes to one question naming every trade | the contract fixes it; `trades/pending/` is outside every write grant, and `place_trade`, the one tool that reaches it, is declared `irreversible`, so the gate derives the consent and refuses the call without a recorded yes for it; `ask_human` with `kind=consent` opens a blocking obligation and the pause gate refuses every tool with an effect until a person answers; silence is never consent, a protocol constant. A program may not write there at all: a program's outputs are its reach, and the plan's are `trades/proposed/` |
 | What was traded is the person's record | `trades/executed/` is outside the grant and protected |
 | A unit never extends the universe, the exchangeable sets or the tax parameters | the three files are outside every writable prefix |
 | The portfolio's risk stays inside the person's tolerance | *not yet*: the design puts a volatility bound in the identity and a check on a target's predicted volatility; the bound is a number a person has not set and the check needs a covariance input, so neither exists in this phase (§5) |
@@ -211,9 +221,9 @@ delivered to the outbox and reminded about, and it stops nothing while it waits.
 | The report's return is the time-weighted return | 2, a deterministic check | — |
 | A harvest candidate is an open lot at a loss, with the loss as the arithmetic says | 2, a deterministic check | — |
 | A harvest's benefit exceeds its costs | 2, a check, once a harvest exists | the program finds the candidates and judges none; the check arrives with the harvest contract ([#124](https://github.com/MetaCoding-io/regulator/issues/124)) |
-| The pending list is the list the person was asked about | 2, a deterministic check | the consent records the path, not the content; the suite holds the copy to the proposal |
+| The pending list is the list the person was asked about | 3, the tool's program copies the proposed file byte for byte, plus 2, a deterministic check | the suite's assertion still runs at every closeout, and what it guards now is a bug in `place-trade.mjs`, not a model's shortcut: a session cannot write the file |
 | A program's output is right | 2, the same checks at the revision the program produced | nothing reads the program; its exit and its claim satisfy nothing, and a wrong program is refused by the suite and escalated when the policy's attempts are spent |
-| Consent before a trade list | 2, a gate (the profile's consent grant, refusing the write under `trades/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived. A `place_trade` tool declared `irreversible` would let a gate derive it on top ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
+| Consent before a trade list | 2, a gate (the consent derived from `place_trade`'s declared effect, refusing the call without a recorded yes), plus 3, a typed tool (`place_trade`, with an effect contract; `ask_human`, `kind=consent`), plus 2, a gate (pause) | — ([#121](https://github.com/MetaCoding-io/regulator/issues/121): derived from the declaration, with no profile naming the tool) |
 | Which lot a sale comes from | 2, a rule the program implements, checked by the suite (held lots, no wash sale) | was judgment in the first phase; a program has no judgment, so the ordering is a fixed decision on its contract and the choice among equals is the ordering's tie-break |
 | Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | no harvest yet; the sets are declared so the check has them |
 | The expected-return inputs | 4, judgment bounded by the subset tolerances, reported | it is judgment; the cap is fixed, the inputs are reported |
@@ -276,29 +286,53 @@ from the new lot is not. Two shares nobody can explain sit outside the universe.
 }
 ```
 
-The descriptions are elided. `regulator check` refuses a unit type whose profile is not
+The descriptions are elided, and so is the tool the workload declares beside its unit
+types:
+
+```json
+{
+  "tools": [
+    {
+      "name": "place_trade",
+      "description": "Place the trade list a person has agreed to: copy trades/proposed/<date>.json byte for byte to trades/pending/<date>.json, where a file is a commitment …",
+      "parameters": { "type": "object", "properties": { "proposed": { "type": "string", "pattern": "^trades/proposed/[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$" } }, "required": ["proposed"], "additionalProperties": false },
+      "effect": { "filesystem": "write", "execution": "none", "network": "none", "sideEffects": "irreversible" },
+      "program": { "argv": ["node", "workload/portfolio/place-trade.mjs"], "outputs": ["trades/pending/"] }
+    }
+  ]
+}
+```
+
+`regulator check` refuses a unit type whose profile is not
 declared or whose check the host does not run, and for a command runner one without an
 argv, one naming no file under the definition, one under a profile granting a shell, an
-output outside the profile's writable paths or under one of its consent grants; it
-passes with three workloads and two programs.
+output outside the profile's writable paths or under one of its consent grants; for a
+declared tool, a built-in's name, a schema that is not an object's, an effect that says
+arbitrary execution or disagrees with the outputs, a program with no file under the
+definition, and a profile that grants the tool beside a plain write under its outputs.
+It passes with three workloads, two programs and one declared tool.
 
 ### The profile: [`manager.json`](../../packages/regulator/profiles/manager.json), with [`advice/manager.md`](../../packages/regulator/advice/manager.md)
 
 ```json
 {
   "name": "manager",
-  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human", "notify_owner", "propose_policy_change", "report_result"],
-  "writablePaths": ["lots/", "targets/", "trades/proposed/", "trades/pending/", "reports/"],
-  "consent": [{ "tool": "write", "paths": ["trades/pending/"] }, { "tool": "edit", "paths": ["trades/pending/"] }],
+  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human", "notify_owner", "propose_policy_change", "report_result", "place_trade"],
+  "writablePaths": ["lots/", "targets/", "trades/proposed/", "reports/"],
   "thinkingLevel": "medium"
 }
 ```
 
-The advice is a file of its own, as every profile's is since the accept-path split: the
-exports and the fills are never edited; check the lots first and say which lot each sell
-comes from, with its tax; a position the universe does not name is not yours to trade
-or to explain; ask once per list, naming every trade, and write nothing without a yes.
-The definition check refuses a profile with no advice file.
+The profile grants `place_trade` by name, as it grants a built-in, and lists no consent
+grant: `trades/pending/` is outside its writable paths, and the yes a trade list needs is
+derived from the tool's declared effect. The advice is a file of its own, as every
+profile's is since the accept-path split: the exports and the fills are never edited;
+check the lots first and say which lot each sell comes from, with its tax; a position
+the universe does not name is not yours to trade or to explain; a list under
+`trades/proposed/` is the program's, confirmed by asking and then placing it. The line
+the first phase carried — ask before writing a trade list, and write nothing without a
+yes — is gone: the refusal says it, naming the call, and a rule a gate enforces is not
+restated as advice. The definition check refuses a profile with no advice file.
 
 ### The policy: [`packages/regulator/policies/portfolio.json`](../../packages/regulator/policies/portfolio.json)
 
@@ -343,11 +377,11 @@ with its decisions sorted as §1 says:
 {
   "id": "tc-p4-confirm-trades", "unitId": "p4-confirm-trades", "unitType": "confirm-trades",
   "workload": { "name": "portfolio", "version": 1 },
-  "objective": "Confirm September's rebalance: read trades/proposed/2026-09-30.json, the list the plan-rebalance program computed, put it to a person as one consent question naming every trade, the lots each sell comes from and the tax it realises, and after the yes write it unchanged to trades/pending/2026-09-30.json.",
-  "constraintRefs": ["reg.algedonic.interaction-contract.v1", "reg.algedonic.pause-gate.v1", "reg.control.profile-write-grant.v1", "reg.audit.closeout-gate.v1"],
+  "objective": "Confirm September's rebalance: read trades/proposed/2026-09-30.json, the list the plan-rebalance program computed, put it to a person as one consent question naming every trade, the lots each sell comes from and the tax it realises, and after the yes place it with place_trade — the workload's declared tool, which writes it unchanged to trades/pending/2026-09-30.json.",
+  "constraintRefs": ["reg.algedonic.interaction-contract.v1", "reg.control.declared-tool.v1", "reg.algedonic.pause-gate.v1", "reg.control.profile-write-grant.v1", "reg.audit.closeout-gate.v1"],
   "fixed": [
-    { "id": "f-proposed", "subject": "the list", "decision": "The list is trades/proposed/2026-09-30.json, computed by the plan-rebalance program, and is not changed by this unit: the pending file carries the very trades the proposed file does, and the suite refuses one that does not.", "authorityRef": "human:alice" },
-    { "id": "f-consent",  "subject": "consent before a trade list", "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.", "authorityRef": "human:alice" },
+    { "id": "f-proposed", "subject": "the list", "decision": "The list is trades/proposed/2026-09-30.json, computed by the plan-rebalance program, and is not changed by this unit: place_trade writes the pending file byte for byte from it, and the suite refuses a pending list that does not carry the proposed trades.", "authorityRef": "human:alice" },
+    { "id": "f-consent",  "subject": "consent before a trade list", "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade — and names the call: place_trade with proposed trades/proposed/2026-09-30.json. The harness refuses the call without that yes on the record. Silence is not consent.", "authorityRef": "human:alice" },
     { "id": "f-executed", "subject": "trades/executed/", "decision": "The record of what was traded is the person's; a unit never writes there.", "authorityRef": "human:alice" }
   ],
   "delegated": [],
@@ -402,8 +436,8 @@ over a target's predicted volatility is written when the covariance input exists
 ```
 
 The fork also adds, in `GLOSSARY.md`, the words this instance does not use: `order`
-(say *trade*, until a `place_trade` tool exists) and `rebalance` for anything but the
-whole list. `glossary-lint` then enforces them on the branch.
+(say *trade*; the tool is `place_trade`) and `rebalance` for anything but the whole
+list. `glossary-lint` then enforces them on the branch.
 
 ---
 
@@ -415,18 +449,18 @@ With the lab built (`pnpm install && pnpm build`) and `regulator` on the path, a
 ```sh
 regulator fixture ~/portfolio --portfolio     # the managed portfolio as a git repository
 cd ~/portfolio
-regulator init --writable lots/,targets/,trades/proposed/,trades/pending/,reports/ \
-               --protected positions/,prices/,trades/executed/ --by alice
+regulator init --writable lots/,targets/,trades/proposed/,reports/ \
+               --protected positions/,prices/,trades/executed/ --by alice   # never trades/pending/: that is place_trade's
 regulator doctor                              # exit 1 on any problem
 
 L=packages/regulator/contracts/portfolio; P=packages/regulator/policies/portfolio.json
 regulator unit drive $L/p1-ingest-positions.json --policy $P
 regulator unit drive $L/p2-propose-target.json --policy $P
 regulator unit drive $L/p3-plan-rebalance.json --policy $P    # a program: no host, no model; closes on the suite
-regulator unit drive $L/p4-confirm-trades.json --policy $P    # asks once; nobody answers; pauses
+regulator unit drive $L/p4-confirm-trades.json --policy $P    # asks once, naming the place_trade call; nobody answers; pauses
 regulator obligations                          # consent: the September trade list — owed to a person, veto
 regulator answer <obligation> --by alice --answer yes
-regulator unit drive $L/p4-confirm-trades.json --policy $P    # the next attempt carries the answer
+regulator unit drive $L/p4-confirm-trades.json --policy $P    # the next attempt's place_trade call runs on the recorded yes
 regulator unit drive $L/p5-harvest-losses.json --policy $P    # a program: where the losses are
 regulator unit drive $L/p6-review.json --policy $P
 regulator unit evidence p3-plan-rebalance      # the portfolio's checks, bound to the revision the program produced
@@ -436,10 +470,9 @@ regulator status --definition packages/regulator --instance .
 
 Without a model, the same close runs scripted. `node --test packages/regulator/dist/portfolio.test.js`
 drives it with two behaviours for the sessions — the `manager`, which does what the
-contracts ask, and the `careless`, which writes the pending list without asking anyone
-and then writes a list that is not the one the person was asked about, and takes the
-router's repair — while the two programs run as the loop runs them, with nothing
-standing in. A third test runs a deliberately wrong program in the plan's place. What
+contracts ask, and the `careless`, which calls `place_trade` without asking anyone —
+while the two programs run as the loop runs them, with nothing standing in, and the
+tool's program runs through the same runner the host's extension calls. A third test runs a deliberately wrong program in the plan's place. What
 the tests assert is what you would look for in the control room:
 
 - Units p1 and p2 close on evidence the host produced: `run_checks`, `run_tests` (the
@@ -459,18 +492,26 @@ the tests assert is what you would look for in the control room:
   model's work would. Nothing exists under `trades/pending/`.
 - Unit p4 pauses. One consent question is a blocking obligation owed to a person, and
   it names every trade, the lots each sell comes from and the tax it realises, as the
-  program computed them. The attempt is recorded as `paused`, the question is delivered
-  to the outbox, the recovery policy is not consulted, and nothing exists under
-  `trades/pending/`. After `alice` answers yes, the next attempt writes the proposed
-  list byte for byte under `trades/pending/` and closes.
+  program computed them, and the call a yes authorizes: `place_trade` with the proposed
+  list. The attempt is recorded as `paused`, the question is delivered to the outbox,
+  the recovery policy is not consulted, and nothing exists under `trades/pending/`.
+  After `alice` answers yes, the next attempt's `place_trade` call runs on the recorded
+  yes, the tool writes the proposed list byte for byte under `trades/pending/`, the
+  report cites the file with the program that placed it by file and hash, and the unit
+  closes.
 - Unit p5 closes as p3 did: three lots under water at the 30 September prices, listed
   with their losses and nothing said about whether to take them.
 - Unit p6 is verified by the host although it writes nothing.
-- The careless confirmation is refused at the write by the consent gate, an
-  operational-signal and the tree unchanged; after the yes, its trimmed list is refused
-  by the one assertion that holds the pending list to the proposed one, and the repair
-  attempt copies the program's list on the yes already recorded. The base carries the
-  program's list and never the refused one.
+- The careless confirmation calls `place_trade` without asking and is refused by the
+  consent gate before anything exists — the consent derived from the tool's declared
+  effect, with no profile grant naming it — as an operational-signal with the tree
+  unchanged; it then asks. After the yes, its next call runs on the yes already
+  recorded, the tool copies the program's list, and the unit closes on its first
+  verified attempt. The shortcut the first phase's careless unit took, a pending list
+  that was not the one the person was asked about, is impossible by construction: a
+  session does not write the file. The suite's assertion that holds the pending list to
+  the proposed one still runs at every closeout, and now guards a bug in the tool's
+  program rather than a model's shortcut.
 - The wrong program, a second argv on a test-only copy of the unit type, sells past the
   target. The suite refuses it at closeout by name on both attempts the policy grants,
   the recovery router says repair and then escalate, an algedonic signal reaches S5,
@@ -503,10 +544,14 @@ of the ledger instance; this one reads the same way.
   this close. A live run with a model is the drill. The two programs are not scripted:
   the loop runs them as it would in production, so what this close shows of the runner
   is the real thing.
-- The consent grant is a declaration on the `manager` profile: `write` and `edit` under
-  `trades/pending/`. Nothing derives it from a tool's effects; a `place_trade` tool
-  whose declared effect is `irreversible` would let a gate derive it on top, and this
-  workload is the case for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)).
+- The consent on a trade list is derived from `place_trade`'s declared effect and from
+  nothing else: a declared tool whose side effects are `unknown` derives no consent,
+  and a built-in's irreversible effect never does. The tool's program is trusted to be
+  the workload's, as the two command runners are; what it does beyond its declared
+  outputs is unseen, and the session's other effect gates treat it as a tool of
+  undeclared effect, which is safe and imprecise. The
+  [declared tool](../../packages/regulator/registry/regulators/declared-tool.json) record
+  lists the rest.
 - The programs are trusted to be the workload's programs, as `npm test` is trusted to
   be the project's suite. The runner inspects nothing beyond the effect declaration and
   the outputs; what a program imports or reaches by an absolute path is unseen, and a
@@ -540,6 +585,9 @@ a number a check reads has to live in the tree, not in the contract alone; that 
 fixture's data is a design decision — it has to carry the thing each check exists to
 refuse, or the careless behaviour cannot be caught; and, from the second phase, when a
 step is a program's rather than a session's (no judgment to report, outputs under no
-consent grant, no shell on its profile), and that a step whose output needs a yes is two
-units, a program that proposes and a session that confirms, with a check that the copy
-is the proposal.
+consent grant, no shell on its profile), that a step whose output needs a yes is two
+units, a program that proposes and a session that confirms, and that the domain's own
+dangerous action is a tool the workload declares with an effect contract rather than a
+prefix the model writes under: the consent is then derived from the declaration, the
+copy is the tool's, and the advice line that said to ask is deleted, since a rule a gate
+enforces is not restated as advice.

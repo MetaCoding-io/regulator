@@ -19,13 +19,24 @@
  *                        so a yes on attempt 1 holds on attempt 3 for the
  *                        same call and a different call asks again
  *
- * Pi-free and pure. Nothing here reads a tool's effects to decide that a call
- * needs consent: the grant is written, and `effectOf` is read only to find
- * the tools a path cannot gate (`execution: "arbitrary"`).
+ *   consentRequiredFor   the grant *or* the derivation (#121): a profile's
+ *                        grant first, else a bare grant derived from a
+ *                        workload-declared tool's irreversible effect — the
+ *                        one thing the gate derives from an effect, scoped
+ *                        to the tools the definition declares, never to the
+ *                        built-ins (`ask_human` and `notify_owner` are
+ *                        irreversible and are the control plane's channels
+ *                        to a person; consent on them would be circular)
+ *
+ * Pi-free and pure. A profile's grant is written and never inferred; the
+ * built-in effects are read only to find the tools a path cannot gate
+ * (`execution: "arbitrary"`). The derivation reads the declared effects the
+ * caller passes, which are a workload's and no one else's.
  */
 import path from "node:path";
 import { isDeepStrictEqual } from "node:util";
-import type { CapabilityProfile, ConsentCall, ConsentGrant, InteractionRequest, ObligationState } from "@metacoding.io/regulator-protocol";
+import type { CapabilityProfile, ConsentCall, ConsentGrant, InteractionRequest, ObligationState, ToolEffect } from "@metacoding.io/regulator-protocol";
+import { consentDerivedFrom } from "./declared-tools.js";
 import { effectOf } from "./effects.js";
 import type { InteractionState } from "./obligations.js";
 
@@ -116,6 +127,33 @@ export function consentGrantFor(profile: CapabilityProfile, call: ConsentCall): 
     }
     return true;
   });
+}
+
+/** Why a call needs consent: a `consent[]` entry of the profile, or the irreversible effect a workload declared on the tool (#121). */
+export interface ConsentRequirement {
+  grant: ConsentGrant;
+  source: "profile" | "effect";
+  /** The declared effect the requirement is derived from, when it is. */
+  effect?: ToolEffect;
+}
+
+/**
+ * What requires consent for this call, or undefined when nothing does: the profile's own grant first, as `consentGrantFor`
+ * finds it; else, when the tool is one the workload declared with `sideEffects: "irreversible"`, a bare grant on every
+ * call of it, derived from the declaration. `declared` is the declared tools' effects and nothing else, so a built-in is
+ * never derived for.
+ */
+export function consentRequiredFor(profile: CapabilityProfile, call: ConsentCall, declared: Readonly<Record<string, ToolEffect>> = {}): ConsentRequirement | undefined {
+  const grant = consentGrantFor(profile, call);
+  if (grant) return { grant, source: "profile" };
+  const effect = declared[call.tool];
+  if (effect && consentDerivedFrom(effect)) return { grant: { tool: call.tool }, source: "effect", effect };
+  return undefined;
+}
+
+/** A requirement in one phrase: the grant as the profile wrote it, or the derivation and what it was derived from. */
+export function describeConsentRequirement(requirement: ConsentRequirement): string {
+  return requirement.source === "profile" ? describeConsentGrant(requirement.grant) : `every ${requirement.grant.tool} call, derived from its declared effect (sideEffects: irreversible)`;
 }
 
 /** The call a consent recorded covers this one: the same tool, and every argument the record names equal in the call. */

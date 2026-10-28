@@ -12,10 +12,11 @@
   "id": "tc-p4-confirm-trades",
   "unitId": "p4-confirm-trades",
   "unitType": "confirm-trades",
-  "objective": "Confirm September's rebalance: read trades/proposed/2026-09-30.json, the list the plan-rebalance program computed, put it to a person as one consent question naming every trade, the lots each sell comes from and the tax it realises, and after the yes write it unchanged to trades/pending/2026-09-30.json.",
-  "contribution": "The one unit whose output the household acts on. Consent is asked once, before the pending file exists, naming every trade; without a yes, nothing is written and the unit waits. The list is the program's: this unit asks and copies, it does not plan.",
+  "objective": "Confirm September's rebalance: read trades/proposed/2026-09-30.json, the list the plan-rebalance program computed, put it to a person as one consent question naming every trade, the lots each sell comes from and the tax it realises, and after the yes place it with place_trade — the workload's declared tool, which writes it unchanged to trades/pending/2026-09-30.json.",
+  "contribution": "The one unit whose output the household acts on. Consent is asked once, before the pending file exists, naming every trade; without a yes the tool is refused, nothing is written and the unit waits. The list is the program's and the copy is the tool's: this unit asks and places, it does not plan and it does not write the file.",
   "constraintRefs": [
     "reg.algedonic.interaction-contract.v1",
+    "reg.control.declared-tool.v1",
     "reg.algedonic.pause-gate.v1",
     "reg.control.profile-write-grant.v1",
     "reg.audit.closeout-gate.v1"
@@ -24,13 +25,13 @@
     {
       "id": "f-proposed",
       "subject": "the list",
-      "decision": "The list is trades/proposed/2026-09-30.json, computed by the plan-rebalance program, and is not changed by this unit: the pending file carries the very trades the proposed file does, and the suite refuses one that does not.",
+      "decision": "The list is trades/proposed/2026-09-30.json, computed by the plan-rebalance program, and is not changed by this unit: place_trade writes the pending file byte for byte from it, and the suite refuses a pending list that does not carry the proposed trades.",
       "authorityRef": "human:alice"
     },
     {
       "id": "f-consent",
       "subject": "consent before a trade list",
-      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade. Silence is not consent.",
+      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every trade, the lots each sell comes from and the tax it realises — one question per list, not one per trade — and names the call: place_trade with proposed trades/proposed/2026-09-30.json. The harness refuses the call without that yes on the record. Silence is not consent.",
       "authorityRef": "human:alice"
     },
     {

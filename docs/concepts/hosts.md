@@ -104,12 +104,13 @@ regulator was in play for those runs.
 
 ## The Pi host
 
-`@metacoding.io/regulator-pi` implements every host-side concern as one of eleven Pi
+`@metacoding.io/regulator-pi` implements every host-side concern as one of twelve Pi
 extensions. Each extension carries a single concern:
 
 | Extension | Concern |
 | --- | --- |
 | `tools` | `read_conventions`, `run_tests` and `run_checks` |
+| `declared-tools` | every tool a workload declares, registered from the definition and run under its declared outputs |
 | `profiles` | the profile's tool surface and write grant |
 | `coordination` | the lease gate, the heartbeat, the thrash detector |
 | `contract` | the contract in context, and `report_result` |
@@ -135,7 +136,7 @@ report records the version it ran under. The same extensions are declared under
 - The seam has one implementation. Until a second host exists, "host-agnostic" is a
   claim about the code's structure that no second host has tested.
   [Issue #58](https://github.com/MetaCoding-io/regulator/issues/58)
-  asks for one, with a manifest that declares which of the eleven concerns it does not
+  asks for one, with a manifest that declares which of the twelve concerns it does not
   implement, so that `doctor` can say what a unit under that host is not protected by.
 - A host's coverage is not declared. Nothing records, per host, which session-side
   regulators it enforces. What exists is the

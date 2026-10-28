@@ -136,3 +136,41 @@ test("the lookup over the ledger: absent until asked, pending while owed, reject
   await ledger.resolve(prose.obligation.id, { by: "alice", disposition: "accepted", rationale: "yes" });
   assert.deepEqual(await verdict("f6"), { status: "absent" });
 });
+
+import { consentRequiredFor, describeConsentRequirement } from "./consent.js";
+import { consentDerivedFrom, declaredEffectsOf, derivedConsentGrant } from "./declared-tools.js";
+import { effectOf, readOnlyViolations, withDeclaredEffects } from "./effects.js";
+import { isReadOnlyProfile } from "./profiles.js";
+
+const irreversible = { filesystem: "write" as const, execution: "project-code" as const, network: "none" as const, sideEffects: "irreversible" as const };
+const placeTrade = { name: "place_trade", description: "d", parameters: { type: "object" }, effect: irreversible, program: { argv: ["node", "workload/portfolio/place-trade.mjs"], outputs: ["trades/pending/"] } };
+const lookup = { ...placeTrade, name: "lookup_price", effect: { filesystem: "read" as const, execution: "none" as const, network: "none" as const, sideEffects: "none" as const }, program: { argv: ["node", "x.mjs"], outputs: [] } };
+
+test("consent is derived from a declared tool's irreversible effect (#121): a profile's own grant first, else a bare grant on every call of a workload-declared tool whose side effects are irreversible, and nothing for a built-in however irreversible, since the derivation reads the declared effects alone", () => {
+  const manager: CapabilityProfile = { name: "manager", description: "d", tools: ["read", "place_trade", "lookup_price", "ask_human", "notify_owner", "report_result"], writablePaths: ["lots/"] };
+  const declared = declaredEffectsOf([placeTrade, lookup]);
+  assert.deepEqual(consentRequiredFor(manager, { tool: "place_trade", arguments: { proposed: "trades/proposed/2026-09-30.json" } }, declared), { grant: { tool: "place_trade" }, source: "effect", effect: irreversible });
+  assert.equal(consentRequiredFor(manager, { tool: "lookup_price", arguments: {} }, declared), undefined, "a declared read-only tool derives nothing");
+  assert.equal(consentRequiredFor(manager, { tool: "ask_human", arguments: { kind: "consent" } }, declared), undefined, "ask_human is irreversible and is the channel the consent is asked through: never derived");
+  assert.equal(consentRequiredFor(manager, { tool: "notify_owner", arguments: { message: "x" } }, declared), undefined, "notify_owner is irreversible and is a channel to a person: never derived");
+  assert.equal(consentRequiredFor(manager, { tool: "place_trade", arguments: {} }), undefined, "without the declared effects there is nothing to derive from");
+  assert.deepEqual(consentRequiredFor({ ...bookkeeper, tools: [...bookkeeper.tools, "place_trade"], consent: [...bookkeeper.consent!, { tool: "place_trade" }] }, { tool: "place_trade", arguments: {} }, declared), { grant: { tool: "place_trade" }, source: "profile" }, "a profile's own grant on the tool is the grant; the derivation is on top, not instead");
+  assert.deepEqual(consentRequiredFor(bookkeeper, { tool: "write", arguments: { path: "payments/pending/x.json" } }, declared), { grant: { tool: "write", paths: ["payments/pending/"] }, source: "profile" });
+  assert.equal(describeConsentRequirement({ grant: { tool: "place_trade" }, source: "effect", effect: irreversible }), "every place_trade call, derived from its declared effect (sideEffects: irreversible)");
+  assert.equal(describeConsentRequirement({ grant: { tool: "write", paths: ["payments/pending/"] }, source: "profile" }), "write under payments/pending/");
+  assert.deepEqual([consentDerivedFrom(irreversible), consentDerivedFrom({ ...irreversible, sideEffects: "unknown" }), consentDerivedFrom({ ...irreversible, sideEffects: "reversible" })], [true, false, false], "unknown says nothing, and nothing is derived from it");
+  assert.deepEqual([derivedConsentGrant(placeTrade), derivedConsentGrant(lookup)], [{ tool: "place_trade" }, undefined]);
+  // The declared effects reach the profile checks: a read-only profile may not be granted an irreversible declared tool, and a read-only declared one is fine.
+  const effects = withDeclaredEffects(declared);
+  assert.deepEqual(effectOf("place_trade", effects), irreversible);
+  assert.equal(effectOf("place_trade"), undefined, "the built-in table knows no declared tool");
+  assert.deepEqual(effectOf("write", withDeclaredEffects({ write: irreversible })), { filesystem: "write", execution: "none", network: "none", sideEffects: "reversible" }, "a built-in keeps its own declaration");
+  assert.deepEqual(readOnlyViolations(["read", "lookup_price", "place_trade"], effects), ["place_trade"]);
+  assert.deepEqual(readOnlyViolations(["read", "lookup_price"]), ["lookup_price"], "undeclared without the table");
+  assert.equal(isReadOnlyProfile({ name: "auditor", description: "read-only", tools: ["read", "lookup_price"], writablePaths: [] }, effects), true);
+  assert.equal(isReadOnlyProfile({ name: "auditor", description: "read-only", tools: ["read", "place_trade"], writablePaths: [] }, effects), false);
+  // The profile section says the derived consent beside the declared grants, and nothing for a profile that grants no such tool.
+  assert.match(renderProfileSection(manager, { declared }), /^Consent is required before: every place_trade call \(its declared effect is irreversible\)\. Ask first with ask_human kind=consent/m);
+  assert.match(renderProfileSection({ ...bookkeeper, tools: [...bookkeeper.tools, "place_trade"] }, { declared }), /^Consent is required before: write under payments\/pending\/; edit under payments\/pending\/; every place_trade call \(its declared effect is irreversible\)\./m);
+  assert.doesNotMatch(renderProfileSection(manager), /Consent is required/, "without the declared effects the section says what it said");
+});

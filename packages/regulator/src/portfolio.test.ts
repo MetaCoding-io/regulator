@@ -3,13 +3,14 @@ import { cp, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
-import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, dispositionForAnswer, isReadOnlyProfile, readSignals } from "@metacoding.io/regulator-core";
+import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, checkDefinition, checkDispositionAuthority, consentRequiredFor, dispositionForAnswer, isReadOnlyProfile, readSignals, withDeclaredEffects } from "@metacoding.io/regulator-core";
 import { driveUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { gitExec } from "./git-support.js";
 import { initInstance } from "./instance.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { loadPolicy } from "./policy.js";
+import { declaredEffects, loadDeclaredToolsSync } from "./declared-tools.js";
 import { portfolioDispatcher, type PortfolioBehaviour } from "./portfolio-scripted.js";
 import { PROFILES } from "./profiles.js";
 import { loadRecoveryPolicy } from "./recovery-policy.js";
@@ -23,8 +24,10 @@ import { LAB_ROOT, loadWorkloadFor } from "./workload.js";
 const FIXTURE = path.join(LAB_ROOT, "fixture-portfolio");
 const CONTRACTS = path.join(LAB_ROOT, "contracts", "portfolio");
 const PORTFOLIO_POLICY = path.join(LAB_ROOT, "policies", "portfolio.json");
-const WRITABLE = ["lots/", "targets/", "trades/proposed/", "trades/pending/", "reports/"];
-const PROGRAMS = { plan: "workload/portfolio/plan-rebalance.mjs", harvest: "workload/portfolio/harvest-losses.mjs" };
+/** What a unit of the manager profile may write directly: never trades/pending/, which only place_trade reaches (#121). */
+const WRITABLE = ["lots/", "targets/", "trades/proposed/", "reports/"];
+const PROGRAMS = { plan: "workload/portfolio/plan-rebalance.mjs", harvest: "workload/portfolio/harvest-losses.mjs", place: "workload/portfolio/place-trade.mjs" };
+const PLACE_TRADE_CALL = { tool: "place_trade", arguments: { proposed: "trades/proposed/2026-09-30.json" } };
 const sha256Of = async (file: string) => createHash("sha256").update(await readFile(file)).digest("hex");
 const PROTECTED = ["positions/", "prices/", "trades/executed/"];
 /** A clock that moves: an answer recorded after an attempt ended must be later than it, as it would be for a person. */
@@ -90,7 +93,7 @@ const SEPTEMBER_TRADES = [
   { ticker: "VXUS", side: "buy", shares: 29 },
 ];
 
-test("the definition declares the third workload: portfolio runs under the manager and auditor profiles, two of its unit types run a program under the manager's effect declaration (#122), the manager has no shell, the portfolio policy budgets the programs in wall-clock, and the check passes with three workloads", async () => {
+test("the definition declares the third workload: portfolio runs under the manager and auditor profiles, two of its unit types run a program under the manager's effect declaration (#122), it declares place_trade with an irreversible effect from which the consent is derived (#121), the manager has no shell and no path grant on trades/pending/, the portfolio policy budgets the programs in wall-clock, and the check passes with three workloads", async () => {
   const checked = await checkDefinition(LAB_ROOT);
   assert.deepEqual(checked.problems, []);
   assert.deepEqual(checked.workloads.map((w) => w.name).sort(), ["personal-finance", "portfolio", "software-development"]);
@@ -107,17 +110,27 @@ test("the definition declares the third workload: portfolio runs under the manag
   ], "the two arithmetic types declare their program and its reach; everything else is a session by default");
   assert.equal(isReadOnlyProfile(PROFILES.auditor!), true, "the auditor grants nothing with a write, execution or side effect");
   assert.equal(PROFILES.manager!.tools.includes("bash"), false, "no shell: the write grant is complete at the tool boundary, and a program under this profile has no arbitrary execution beside it");
-  assert.deepEqual(PROFILES.manager!.writablePaths, WRITABLE);
-  assert.deepEqual(PROFILES.manager!.consent, [{ tool: "write", paths: ["trades/pending/"] }, { tool: "edit", paths: ["trades/pending/"] }], "the trade list is a write under a guarded prefix (#60): the grant names the tool and the path, not a place_trade tool; trades/proposed/ is under no grant, which is why a program may write there");
-  for (const outside of ["lib/", "test/", "universe.json", "tax.json", "benchmark.json", ...PROTECTED]) assert.ok(!PROFILES.manager!.writablePaths.some((p) => outside.startsWith(p)), `${outside} is outside the manager's grant`);
+  assert.deepEqual(PROFILES.manager!.writablePaths, WRITABLE, "trades/pending/ is under no write grant: the one way there is the tool");
+  assert.equal(PROFILES.manager!.consent, undefined, "no consent grant on the profile (#121): what needs a yes is derived from the tool's declared effect, not listed by path");
+  for (const outside of ["lib/", "test/", "universe.json", "tax.json", "benchmark.json", "trades/pending/", ...PROTECTED]) assert.ok(!PROFILES.manager!.writablePaths.some((p) => outside.startsWith(p)), `${outside} is outside the manager's grant`);
+  // The declared tool (#121): one, with the effect every built-in declares on, a program under the definition and trades/pending/ as its whole reach; granted to the manager by name.
+  assert.deepEqual(portfolio.tools?.map((t) => [t.name, t.effect, t.program, Object.keys(t.parameters.properties as object), (t.parameters as { required: string[] }).required]), [["place_trade", { filesystem: "write", execution: "none", network: "none", sideEffects: "irreversible" }, { argv: ["node", PROGRAMS.place], outputs: ["trades/pending/"] }, ["proposed"], ["proposed"]]]);
+  assert.ok(PROFILES.manager!.tools.includes("place_trade"), "granted by name, as a built-in is");
+  assert.ok(!PROFILES.auditor!.tools.includes("place_trade"));
+  const declared = declaredEffects(loadDeclaredToolsSync(LAB_ROOT));
+  assert.deepEqual(Object.keys(declared), ["place_trade"], "what the host reads off the definition at load");
+  assert.deepEqual(consentRequiredFor(PROFILES.manager!, PLACE_TRADE_CALL, declared), { grant: { tool: "place_trade" }, source: "effect", effect: declared.place_trade }, "the consent is derived: a bare grant on every call, from the effect, with no profile naming it");
+  assert.equal(consentRequiredFor(PROFILES.manager!, { tool: "write", arguments: { path: "trades/pending/2026-09-30.json" } }, declared), undefined, "a plain write there needs no consent because the grant refuses it outright: the prefix is outside the manager's writable paths");
+  assert.equal(isReadOnlyProfile({ ...PROFILES.auditor!, tools: [...PROFILES.auditor!.tools, "place_trade"] }, withDeclaredEffects(declared)), false, "a read-only profile could not be granted it: the declared effect is what the check reads");
+  assert.deepEqual(checked.warnings.filter((w) => w.file.startsWith("workload/")), [], "no shipped profile reaches trades/pending/ beside the tool");
   assert.ok(Object.hasOwn(checked.advice.files, "manager"), "the manager's advice is a file in the definition");
   const budgets = checked.policies.find((p) => p.name === "portfolio")!.budgets.byUnitType!;
-  assert.equal(budgets["confirm-trades"]!.attempts, 3, "the first attempt is spent asking for consent; a refused list still has a repair");
+  assert.equal(budgets["confirm-trades"]!.attempts, 3, "the first attempt is spent asking for consent; a refused call still has a repair");
   assert.deepEqual(budgets["plan-rebalance"], { wallClockMs: 60000, attempts: 2 }, "a program is budgeted in wall-clock alone");
   assert.deepEqual(budgets["harvest-losses"], { wallClockMs: 60000, attempts: 2 });
 });
 
-test("the September close, done as the contracts ask: the lots are brought up to date and the review written on host-run evidence bound to the revision, the target is feasible, the trade list is computed by the plan-rebalance program with no session and checked by the suite like a model's work, its confirmation waits on one consent question naming every trade and copies it under trades/pending/ once a person says yes, the harvest candidates are a program's too, the review closes, and the custodian's exports and the person's fills are byte for byte what they were", async (t) => {
+test("the September close, done as the contracts ask: the lots are brought up to date and the review written on host-run evidence bound to the revision, the target is feasible, the trade list is computed by the plan-rebalance program with no session and checked by the suite like a model's work, its confirmation waits on one consent question naming every trade and the place_trade call, places it with the tool once a person says yes, the harvest candidates are a program's too, the review closes, and the custodian's exports and the person's fills are byte for byte what they were", async (t) => {
   const repo = await portfolioInstance(t);
   const outcomes = await close(repo, "manager", ["p1-ingest-positions", "p2-propose-target"]);
   for (const o of outcomes) {
@@ -178,11 +191,12 @@ test("the September close, done as the contracts ask: the lots are brought up to
   assert.equal(owed.length, 1, "one question per list, not one per trade");
   const o = owed[0]!;
   assert.deepEqual([o.consumer, o.severity, o.blocks, o.subject], ["human", "blocking", true, "consent: the September trade list"]);
-  for (const named of [/the list under trades\/proposed\/2026-09-30\.json/, /sell 3 VTI from lot 2025-03-14-VTI \(gain 139\.50, long-term, tax 20\.93\)/, /sell 4 BND from lot 2026-09-02-BND \(gain 6\.40, short-term, tax 2\.24\)/, /buy 29 VXUS/, /Realised tax 23\.17 in all/]) assert.match(o.question ?? "", named, "the question names every trade, the lots it sells from and the tax it realises, as the program computed them");
+  for (const named of [/^May I place trades\/proposed\/2026-09-30\.json as trades\/pending\/2026-09-30\.json with place_trade: /, /sell 3 VTI from lot 2025-03-14-VTI \(gain 139\.50, long-term, tax 20\.93\)/, /sell 4 BND from lot 2026-09-02-BND \(gain 6\.40, short-term, tax 2\.24\)/, /buy 29 VXUS/, /Realised tax 23\.17 in all/]) assert.match(o.question ?? "", named, "the question names every trade, the lots it sells from and the tax it realises, as the program computed them");
   assert.match(await readFile(path.join(repo, ".regulator", "outbox"), "utf8"), new RegExp(`deliver:${o.id}`), "delivered to the outbox for a person");
   const request = (await ledgerStore.interactions()).find((i) => i.request.obligationId === o.id)!;
   assert.deepEqual([request.request.kind, request.answers[0]?.outcome], ["consent", "unavailable"]);
-  assert.deepEqual(request.request.call, { tool: "write", arguments: { path: "trades/pending/2026-09-30.json" } }, "the question records the call a yes authorizes: what the consent gate matches (#60)");
+  assert.deepEqual(request.request.call, PLACE_TRADE_CALL, "the question records the call a yes authorizes — the tool and its argument, not a path (#121): what the consent gate matches");
+  assert.match(request.request.action ?? "", /^place_trade with proposed trades\/proposed\/2026-09-30\.json: 3 trades written to trades\/pending\/2026-09-30\.json, byte for byte as proposed$/);
   const interaction = await loadInteractionPolicy();
   assert.equal(checkDispositionAuthority(interaction, "bob", { severity: o.severity }), undefined, "bob may disposition up to blocking");
   await ledgerStore.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: "yes", by: "alice", channel: "cli" });
@@ -190,9 +204,14 @@ test("the September close, done as the contracts ask: the lots are brought up to
   const [done] = await close(repo, "manager", ["p4-confirm-trades"]);
   assert.equal(done!.final.status, "closed", JSON.stringify(done!.final));
   assert.deepEqual(await pendingFiles(repo), ["2026-09-30.json"]);
-  assert.equal(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8"), await readFile(path.join(repo, "trades", "proposed", "2026-09-30.json"), "utf8"), "the pending list is the proposed one, byte for byte: the session asked and copied, it did not plan");
+  assert.equal(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8"), await readFile(path.join(repo, "trades", "proposed", "2026-09-30.json"), "utf8"), "the pending list is the proposed one, byte for byte: the tool copied it; the session asked and called, it neither planned nor wrote");
   assert.equal((await ledgerStore.open()).filter((x) => x.blocks).length, 0, "nothing is owed that holds a unit");
-  assert.deepEqual((await audit.forUnit("p4-confirm-trades")).verdicts.map((v) => v.verdict), ["pass"], "the paused attempt produced no verdict; the consented one passed");
+  const p4 = await audit.forUnit("p4-confirm-trades");
+  assert.deepEqual(p4.verdicts.map((v) => v.verdict), ["pass"], "the paused attempt produced no verdict; the consented one passed");
+  assert.deepEqual(p4.evidence.filter((r) => r.check.startsWith("file:")).map((r) => [r.check, r.verdict]), [["file:trades/pending/2026-09-30.json", "pass"]], "the report cites the file the tool wrote, and the host finds it at the revision");
+  const placed = await store.getReport("p4-confirm-trades", 1, 2);
+  assert.match(placed?.evidence.find((e) => e.ref === "trades/pending/2026-09-30.json")?.observation ?? "", new RegExp(`^byte for byte trades/proposed/2026-09-30\\.json: 3 trade\\(s\\); placed by ${PROGRAMS.place} \\(${(await sha256Of(path.join(LAB_ROOT, PROGRAMS.place))).slice(0, 12)}\\), exit 0$`), "the tool's provenance: which program placed it, by file and hash");
+  assert.match(placed?.summary ?? "", /^consent given; place_trade wrote trades\/pending\/2026-09-30\.json, byte for byte the list under trades\/proposed\/2026-09-30\.json: sell 3 VTI; sell 4 BND; buy 29 VXUS\./);
 
   // The harvest candidates: the second program; where the losses are, and nothing about whether to take them.
   const [harvested] = await close(repo, "manager", ["p5-harvest-losses"]);
@@ -209,39 +228,40 @@ test("the September close, done as the contracts ask: the lots are brought up to
   await assertProtectedUntouched(repo);
 });
 
-test("the careless close: the pending list written without asking anyone is refused at the write by the consent gate — an operational-signal, the tree unchanged — and the unit then asks; after the yes, a pending list that is not the one the person was asked about is refused by the suite by name, the repair attempt copies the program's list on the yes already recorded without asking again, the unit closes, and the base never received the refused list", async (t) => {
+test("the careless close (#121): place_trade called without asking anyone is refused by the consent gate before anything exists — derived from the tool's declared effect, with no profile grant naming it: an operational-signal, the tree unchanged — and the unit then asks; after the yes, the next attempt's call runs on the yes already recorded without asking again, the tool copies the program's list byte for byte, and the unit closes on its first verified attempt. The shortcut the careless unit of #120 took, a pending list that was not the one the person was asked about, is impossible by construction: a session does not write the file", async (t) => {
   const repo = await portfolioInstance(t);
   for (const o of await close(repo, "careless", ["p1-ingest-positions", "p2-propose-target", "p3-plan-rebalance"])) assert.equal(o.final.status, "closed", `${o.unitId}: ${JSON.stringify(o.final)}`);
   const [paused] = await close(repo, "careless", ["p4-confirm-trades"]);
   assert.equal(paused!.final.status === "blocked" ? paused!.final.reason : "", "paused");
-  assert.deepEqual(paused!.decisions, [], "refused at the write, not at closeout");
+  assert.deepEqual(paused!.decisions, [], "refused at the call, not at closeout");
   assert.deepEqual(await pendingFiles(repo), [], "the tree is unchanged before the yes");
   assert.deepEqual(await tree(repo, "trades/pending/"), await tree(FIXTURE, "trades/pending/"));
   let seen = await refusals(repo);
-  assert.equal(seen.length, 1, "one refusal, by the gate (#60)");
-  assert.deepEqual([seen[0]!.unit, seen[0]!.subject, seen[0]!.evidence], ["p4-confirm-trades", "consent refused: write trades/pending/2026-09-30.json", [{ class: "file", ref: "trades/pending/2026-09-30.json", observation: "absent" }]]);
-  assert.match(seen[0]!.observation, /falls under profile "manager"'s consent grant \(under trades\/pending\/\) and was refused before it ran: no consent for this call is on the record for unit p4-confirm-trades\./);
+  assert.equal(seen.length, 1, "one refusal, by the gate");
+  assert.deepEqual([seen[0]!.unit, seen[0]!.subject, seen[0]!.evidence], ["p4-confirm-trades", 'consent refused: place_trade {"proposed":"trades/proposed/2026-09-30.json"}', [{ class: "command", ref: 'place_trade {"proposed":"trades/proposed/2026-09-30.json"}', observation: "absent" }]]);
+  assert.match(seen[0]!.observation, /needs consent the gate derives from the workload's declaration of place_trade \(every place_trade call, derived from its declared effect \(sideEffects: irreversible\); no profile grant names it\) and was refused before it ran: no consent for this call is on the record for unit p4-confirm-trades\./);
   const ledgerStore = new ObligationLedger(repo, clock);
   const [o] = (await ledgerStore.open("p4-confirm-trades")).filter((x) => x.concern === "interaction");
   const request = (await ledgerStore.interactions()).find((i) => i.request.obligationId === o!.id)!;
-  assert.deepEqual(request.request.call, { tool: "write", arguments: { path: "trades/pending/2026-09-30.json" } });
+  assert.deepEqual(request.request.call, PLACE_TRADE_CALL);
   await ledgerStore.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: "yes", by: "alice", channel: "cli" });
   await ledgerStore.resolve(o!.id, { by: "alice", disposition: dispositionForAnswer("consent", "yes"), rationale: "yes" });
   const [done] = await close(repo, "careless", ["p4-confirm-trades"]);
   assert.equal(done!.final.status, "closed", JSON.stringify(done!.final));
-  assert.deepEqual(done!.decisions.map((d) => [d.cause, d.action]), [["check-failure", "repair"]]);
-  // The yes holds across attempts (open questions §6, from #120): the repair attempt's hint is the router's, and the gate read
-  // the consent off the ledger for the same call. One question was asked in three attempts; nothing was refused after the yes.
-  assert.equal((await ledgerStore.interactions()).filter((i) => i.request.unit === "p4-confirm-trades").length, 1, "the repair attempt did not ask again for the same action");
+  assert.deepEqual(done!.decisions, [], "nothing to repair: the tool wrote what the person was asked about, so the suite had nothing to refuse");
+  // The yes holds across attempts (open questions §6, from #120): the gate read the consent off the ledger for the same call.
+  // One question was asked in two attempts; nothing was refused after the yes.
+  assert.equal((await ledgerStore.interactions()).filter((i) => i.request.unit === "p4-confirm-trades").length, 1, "the next attempt did not ask again for the same call");
   seen = await refusals(repo);
   assert.equal(seen.length, 1);
   const audit = new AuditLog(repo);
-  const { verdicts } = await audit.forUnit("p4-confirm-trades");
-  assert.deepEqual(verdicts.map((v) => v.verdict), ["fail", "pass"]);
-  const refused = verdicts[0]!.reasons.join("\n");
-  assert.match(refused, /run_tests/);
-  assert.match(refused, /not ok: a pending list carries the trades the proposed list of its date computed/, "the consent recorded the path; the suite is what holds the content to the list the person was asked about");
-  assert.equal(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8"), await readFile(path.join(repo, "trades", "proposed", "2026-09-30.json"), "utf8"), "the base carries the program's list, never the refused one");
+  const { verdicts, evidence } = await audit.forUnit("p4-confirm-trades");
+  assert.deepEqual(verdicts.map((v) => v.verdict), ["pass"]);
+  assert.equal(evidence.find((r) => r.check === "run_tests" && r.attempt === 2)?.verdict, "pass");
+  // The suite's assertion that a pending list carries the proposed trades still runs at every closeout. What it guards has
+  // changed: not a model's shortcut, which no session can take now, but a bug in place-trade.mjs — a tool that wrote
+  // something other than the list it was handed would be refused here by name, as the careless unit of #120 was.
+  assert.equal(await readFile(path.join(repo, "trades", "pending", "2026-09-30.json"), "utf8"), await readFile(path.join(repo, "trades", "proposed", "2026-09-30.json"), "utf8"), "the base carries the program's list: the tool's copy, which the suite's pending-equals-proposed check judged at closeout");
   await assertProtectedUntouched(repo);
 });
 

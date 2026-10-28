@@ -21,7 +21,8 @@
  * Pi-free and pure, beside the file lookup the graders share.
  */
 import path from "node:path";
-import type { CapabilityProfile, CommandRunner, UnitType } from "@metacoding.io/regulator-protocol";
+import { HARNESS_OWNED_INSTANCE_DIRS, type CapabilityProfile, type CommandRunner, type Program, type UnitType } from "@metacoding.io/regulator-protocol";
+import { PROTECTED_S5_PATHS } from "./authority.js";
 import { PATH_GUARDED_TOOLS, describeConsentGrant } from "./consent.js";
 import { effectOf } from "./effects.js";
 import { graderFile } from "./metrics.js";
@@ -53,25 +54,49 @@ export interface CheckCommandRunnerOptions {
   profile?: CapabilityProfile;
 }
 
-/** What `regulator check` refuses about one command runner, in the order a reader fixes them. */
-export async function checkCommandRunner(options: CheckCommandRunnerOptions): Promise<string[]> {
-  const { root, type, runner, profile } = options;
+/** An output prefix a program may never declare: the identity, the advice and the S5 artifacts change through their accept paths, never through a program. */
+function harnessOwned(output: string): boolean {
+  return [...HARNESS_OWNED_INSTANCE_DIRS, ...PROTECTED_S5_PATHS].some((p) => output.startsWith(p) || p.startsWith(output));
+}
+
+/**
+ * What any program's declaration earns on its own (#121; shared by the command runner and a declared tool): an argv
+ * naming no file under the definition (the file is what the record hashes), an output outside the project, and an output
+ * under a harness-owned or S5 prefix. `at` names the declaring thing; `record` says what hashes the file.
+ */
+export async function checkProgram(root: string, at: string, program: Program, record: string = "the attempt record"): Promise<{ problems: string[]; outputs: string[] }> {
   const problems: string[] = [];
-  const at = `unit type "${type.name}"`;
-  if (!(await graderFile(root, runner.argv))) {
-    problems.push(`${at} runs the program \`${runner.argv.join(" ")}\`, and no argument of it is a file under the definition: the program's file is what the attempt record hashes, and it is missing`);
+  const outputs: string[] = [];
+  if (!(await graderFile(root, program.argv))) {
+    problems.push(`${at} runs the program \`${program.argv.join(" ")}\`, and no argument of it is a file under the definition: the program's file is what ${record} hashes, and it is missing`);
   }
-  if (!profile) return problems;
-  const arbitrary = profile.tools.filter((t) => effectOf(t)?.execution === "arbitrary");
-  if (arbitrary.length) {
-    problems.push(`${at} runs a program under profile "${profile.name}", which grants ${arbitrary.join(", ")}, whose execution is arbitrary: a profile on a command runner is an effect declaration, and a program's reach is its declared outputs, nothing wider`);
-  }
-  for (const declared of runner.outputs) {
+  for (const declared of program.outputs) {
     const output = normalizeOutput(declared);
     if (output === ".." || output.startsWith("../") || path.posix.isAbsolute(output)) {
       problems.push(`${at} declares output "${declared}", which is not inside the project`);
       continue;
     }
+    if (harnessOwned(output)) {
+      problems.push(`${at} declares output "${declared}", which is the identity's, the advice's or S5's: those change through their accept paths, never through a program`);
+      continue;
+    }
+    outputs.push(output);
+  }
+  return { problems, outputs };
+}
+
+/** What `regulator check` refuses about one command runner, in the order a reader fixes them. */
+export async function checkCommandRunner(options: CheckCommandRunnerOptions): Promise<string[]> {
+  const { root, type, runner, profile } = options;
+  const at = `unit type "${type.name}"`;
+  const { problems, outputs } = await checkProgram(root, at, runner);
+  if (!profile) return problems;
+  const arbitrary = profile.tools.filter((t) => effectOf(t)?.execution === "arbitrary");
+  if (arbitrary.length) {
+    problems.push(`${at} runs a program under profile "${profile.name}", which grants ${arbitrary.join(", ")}, whose execution is arbitrary: a profile on a command runner is an effect declaration, and a program's reach is its declared outputs, nothing wider`);
+  }
+  for (const output of outputs) {
+    const declared = runner.outputs.find((o) => normalizeOutput(o) === output) ?? output;
     if (!profile.writablePaths.some((w) => output.startsWith(w))) {
       problems.push(`${at} declares output "${declared}", which is outside profile "${profile.name}"'s writable paths (${profile.writablePaths.join(", ") || "none"}): a program writes only where its effect declaration says a unit of the profile may`);
     }

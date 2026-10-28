@@ -23,12 +23,12 @@ judgment (a model's judgment or prompt advice). A function held only by judgment
 | --- | --- | --- |
 | **S1** — operations: the units that do the work | none: the units are S1, and what regulates them is listed under S2, S3 and S3\* | — |
 | **S2** — coordination between units | deterministic-gate: `effect-journal`, `reintegration`, `thrash-detector`, `unit-lease` | — |
-| **S3** — operational control: the loop, its contracts, budgets and routing | deterministic-gate: `budget-guard`, `command-runner`, `evidence-preflight`, `failure-observer`, `model-router`, `obligation-router`, `pause-gate`, `profile-write-grant`, `progression-veto`, `recovery-router`, `result-report-gate`, `unit-lifecycle`, `work-contract-gate` · typed-tool: `memory-store` | model-judgment: `contract-preserving-compaction` · prompt: `contract-advice` |
+| **S3** — operational control: the loop, its contracts, budgets and routing | deterministic-gate: `budget-guard`, `command-runner`, `evidence-preflight`, `failure-observer`, `model-router`, `obligation-router`, `pause-gate`, `profile-write-grant`, `progression-veto`, `recovery-router`, `result-report-gate`, `unit-lifecycle`, `work-contract-gate` · typed-tool: `declared-tool`, `memory-store` | model-judgment: `contract-preserving-compaction` · prompt: `contract-advice` |
 | **S3\*** — audit: evidence the unit does not control | type: `span-projection` · deterministic-gate: `behavioral-canary`, `behaviour-check`, `canary-watch`, `closeout-gate`, `doctor`, `eval-harness`, `glossary-lint`, `identity-untouched-check`, `inherited-tests-check`, `pre-merge-trial`, `prediction-resolution` | — |
 | **S4** — intelligence: the environment and the future | typed-tool: `intelligence-intake` | — |
 | **S5** — identity and policy: who may change what the system is | deterministic-gate: `advice-decision`, `algedonic-delivery`, `definition-check`, `definition-writers`, `disposition-authority`, `identity-promotion`, `identity-write-gate`, `instance-manifest`, `outbox-watcher`, `project-trust-rule`, `regulator-lifecycle`, `s5-decision` · typed-tool: `interaction-contract`, `proposal-intake` | prompt: `advice-context`, `identity-context` |
 
-49 active regulators: 45 mechanism, 4 judgment. 2 retired records stay in the registry as history and appear nowhere below.
+50 active regulators: 46 mechanism, 4 judgment. 2 retired records stay in the registry as history and appear nowhere below.
 
 ## 2. Channel table
 
@@ -60,6 +60,7 @@ the reasoning lives, and a team states it here for its own rules.
 | `command-runner` | `trusted-program` | deterministic-gate | `loop:runUnit`, `check:checkDefinition`, `cli:unit dispatch`, `cli:unit drive` | `loop:runner` | 5 |
 | `contract-advice` | `uninformed-unit` | prompt | `host:before_agent_start` | `extension:contract` | 2 |
 | `contract-preserving-compaction` | `compaction-amnesia` | model-judgment | `host:session_before_compact`, `host:session_compact`, `host:session_compact_failed` | `extension:budget` | 4 |
+| `declared-tool` | `undeclared-action` | typed-tool | `tool:declared`, `host:tool_call`, `host:session_start`, `check:checkDefinition` | `extension:declared-tools` | 6 |
 | `definition-check` | `assembled-not-declared` | deterministic-gate | `cli:check`, `check:checkDefinition`, `check:checkDefinition`, `check:checkDefinition`, `check:checkDefinition`, `check:checkDefinition` | `none` | 4 |
 | `definition-writers` | `assembled-not-declared` | deterministic-gate | `check:checkDefinition`, `cli:check`, `cli:docs` | `none` | 4 |
 | `disposition-authority` | `disposition-by-anyone` | deterministic-gate | `cli:answer`, `cli:obligation ack`, `cli:obligation resolve`, `cli:obligation escalate`, `cli:memory retract`, `cli:unit accept`, `cli:identity accept`, `cli:identity reject`, `cli:identity promote` | `policy:interaction.people` | 3 |
@@ -84,7 +85,7 @@ the reasoning lives, and a team states it here for its own rules.
 | `pause-gate` | `waiting-in-name-only` | deterministic-gate | `host:tool_call`, `host:agent_before_settle`, `loop:runUnit`, `loop:routeUnit` | `extension:algedonic` | 3 |
 | `pre-merge-trial` | `semantic-conflict` | deterministic-gate | `loop:finishUnit`, `cli:unit finish` | `loop:pre-merge` | 4 |
 | `prediction-resolution` | `remedy-adopted-on-its-diagnosis` | deterministic-gate | `loop:resolvePredictions`, `cli:advice accept` | `loop:resolve-predictions` | 6 |
-| `profile-write-grant` | `ungranted-capability-use` | deterministic-gate | `host:session_start`, `host:tool_call` | `extension:profiles` | 3 |
+| `profile-write-grant` | `ungranted-capability-use` | deterministic-gate | `host:session_start`, `host:tool_call` | `extension:profiles` | 4 |
 | `progression-veto` | `last-signal-wins` | deterministic-gate | `loop:runUnit`, `loop:closeUnit` | `loop:progression-veto` | 3 |
 | `project-trust-rule` | `trust-boundary-crossing` | deterministic-gate | `host:dispatcher`, `host:project_trust` | `loop:definition-loader` | 4 |
 | `proposal-intake` | `proposal-as-policy` | typed-tool | `tool:propose_policy_change` | `extension:authority` | 3 |
@@ -115,6 +116,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 - **Command runner (a unit that runs a program)** (`command-runner`). Ablation: `loop:runner` — A step of the loop; not ablatable by the harness. Without the runner a command unit type has no way to run. The deliberately wrong program in src/portfolio.test.ts is the test that the closeout, not the runner, judges a program's output: its list is refused by the portfolio's own suite, and nothing read the program to decide that. Retirement condition: Never while a workload declares a unit type whose work is a program: the runner is what makes the declaration mean something, and what gives a program a lease, a budget and a record.
 - **Contract advice section** (`contract-advice`). Ablation: `extension:contract` — Shares the contract extension with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all. Retirement condition: Retire the advice when a contract-aware model needs no rendered section: units under three model versions report every delegated decision without it, with the gate still on.
 - **Contract-preserving compaction** (`contract-preserving-compaction`). Ablation: `extension:budget` — Shares the budget extension with the budget guard. A live arm without it compacts under Pi's default and the contract block is not carried. Retirement condition: No compaction in the drift suite loses a fixed decision across three model versions with the block off, measured by the report gate's refusals after a compaction.
+- **Declared tool (a workload's own action, with an effect contract)** (`declared-tool`). Ablation: `extension:declared-tools` — Without the extension no declared tool is registered: a unit whose work needs one has no way to act, and nothing is left for the derived consent to guard, since the outputs are outside every write grant. The arm measures absence, not bypass; the bypass arm is a profile that writes under the outputs directly, which the definition check refuses, so it cannot be declared. Retirement condition: Never while a workload declares a tool: the declaration is what the gate derives from, and what gives the action an effect a profile can be judged by.
 - **Definition check** (`definition-check`). Ablation: `none` — A check on the definition, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against. Retirement condition: Never: a declared control plane is checked as a whole or it is assembled.
 - **Definition writers (the accept-path split)** (`definition-writers`). Ablation: `none` — A check on the definition and a constant the gates derive from, run under pnpm check and regulator check, not in a session or the loop: nothing runs without it to compare against. Retirement condition: Never: a definition whose writers are not declared is assembled. The declaration row's gap retires when the definition's repository runs under the loop.
 - **Disposition authority** (`disposition-authority`). Ablation: `policy:interaction.people` — A people list naming everyone at critical with every grant is the ablation; the harness does not throw policy switches. A scripted run never dispositions anything. Retirement condition: Retire when authentication replaces the name: a deployment that signs dispositions makes the policy's people a projection of its accounts.
@@ -158,7 +160,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 
 The statement is [`BOUNDARY.md`](BOUNDARY.md), rendered from the same records: for every mechanical regulator, where it is
 enforced and the routes around it, with the accept paths of the definition. This case carries the count, not a second
-copy: 180 stated limitations across 49 active regulators, of which 45 enforce and 4 advise or judge,
+copy: 187 stated limitations across 50 active regulators, of which 46 enforce and 4 advise or judge,
 counted per regulator in the ledger's last column. A gate with no stated limitation does not pass `regulator check`, so a
 count of zero there is an advice or judgment record, and a limitation that names later work has a row in
 [`docs/DEBT.md`](../../docs/DEBT.md).
@@ -188,6 +190,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `command-runner` | `src/controller.test.ts`, `src/portfolio.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/workload.test.ts` | not stated | switch `loop:runner`; no arm declares it |
 | `contract-advice` | `../regulator-pi/src/contract.test.ts` | not stated | switch `extension:contract`; no arm declares it |
 | `contract-preserving-compaction` | `../regulator-pi/src/budget.test.ts`, `../core/src/policy.test.ts` | not stated | switch `extension:budget`; no arm declares it |
+| `declared-tool` | `../regulator-pi/src/declared-tools.test.ts`, `../regulator-pi/src/enforcement-points.test.ts`, `src/declared-tools.test.ts`, `src/portfolio.test.ts`, `../core/src/consent.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/workload.test.ts` | not stated | switch `extension:declared-tools`; no arm declares it |
 | `definition-check` | `../core/src/definition.test.ts`, `src/registry.test.ts` | not stated | none |
 | `definition-writers` | `../protocol/src/definition-writers.test.ts`, `../core/src/definition.test.ts`, `../regulator-pi/src/authority.test.ts`, `src/controller.test.ts`, `src/registry.test.ts` | not stated | none |
 | `disposition-authority` | `src/cli.test.ts`, `../core/src/interaction.test.ts` | not stated | switch `policy:interaction.people`; no arm declares it |
@@ -204,7 +207,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `inherited-tests-check` | `../checks/src/verify.test.ts`, `src/evals.test.ts`, `src/instance.test.ts` | not stated | `no-inherited-tests` (drift) |
 | `instance-manifest` | `src/instance.test.ts`, `src/cli.test.ts` | not stated | none |
 | `intelligence-intake` | `../regulator-pi/src/intelligence.test.ts`, `src/controller.test.ts` | not stated | switch `extension:intelligence`; no arm declares it |
-| `interaction-contract` | `../regulator-pi/src/algedonic.test.ts`, `../core/src/interaction.test.ts`, `../regulator-pi/src/authority.test.ts`, `../core/src/consent.test.ts`, `../core/src/definition.test.ts`, `src/cli.test.ts`, `src/finance.test.ts`, `src/portfolio.test.ts` | not stated | switch `extension:algedonic`; no arm declares it |
+| `interaction-contract` | `../regulator-pi/src/algedonic.test.ts`, `../core/src/interaction.test.ts`, `../regulator-pi/src/authority.test.ts`, `../core/src/consent.test.ts`, `../core/src/definition.test.ts`, `src/cli.test.ts`, `src/finance.test.ts`, `src/portfolio.test.ts`, `../regulator-pi/src/declared-tools.test.ts` | not stated | switch `extension:algedonic`; no arm declares it |
 | `memory-store` | `../regulator-pi/src/identity.test.ts`, `../core/src/identity.test.ts` | not stated | switch `extension:identity`; no arm declares it |
 | `model-router` | `../core/src/policy.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `policy:models.fallback`; no arm declares it |
 | `obligation-router` | `../core/src/obligations.test.ts`, `src/controller.test.ts` | not stated | switch `loop:route-messages`; no arm declares it |
@@ -249,6 +252,7 @@ part of this list and are linked, not copied: a debt row is what the build owes,
 | **Oscillation** (functional pathologies) | oscillation across *units* rather than within one (a coordination-oscillation signal is part of #14) |
 | **Budget without a limit behaviour** (functional pathologies) | a reserve for verification and recovery at the instance level is not declared (the viability-theory framing; unscheduled) |
 | **Recovery per unit hides a shared cause** (functional pathologies) | a level-2 count over recovery decisions that opens an obligation on the instance when N units hit one cause in a window (the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §4 item 8, after Lanham §8.3.7's circuit breaker); recorded as a backlog row, not debt, because the card names the per-unit count as a limit |
+| **The undeclared action** (functional pathologies) | the derivation reads one value of one axis, and an irreversibility outside the tree (a network call the program makes) is declared, not observed (`declared-tool` limitations 2 and 4) |
 | **Attention decay** (information and channel pathologies) | what S3 does with the finding: no recovery cause names it (DEBT row 42), and a model that keeps the marker and still drifts is not seen |
 | **Compaction discards the constraint** (information and channel pathologies) | a model summary can still be wrong, and only the deterministic block is guaranteed (a permanent limit) |
 | **Summary discards the uncertainty** (information and channel pathologies) | observation versus inference is not a typed distinction on evidence, and retraction dependencies are not tracked |

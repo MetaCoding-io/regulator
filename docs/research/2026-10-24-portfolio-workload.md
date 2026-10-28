@@ -7,8 +7,10 @@
   example's §5: the band lives in `benchmark.json` (a first draft had it in the target file, a unit's file), the harvest checks and the risk-tolerance check wait for their inputs, and
   `plan-rebalance` ran as a session until #122. Phase 2b landed ([#122](https://github.com/MetaCoding-io/regulator/issues/122)): the `command`
   runner, with `plan-rebalance` and `harvest-losses` as programs writing under `trades/proposed/` and a `confirm-trades` session that
-  asks and copies the list under `trades/pending/`; the consent decision is recorded in §3 under the S1 table. Phase 2's other items are
-  [#121](https://github.com/MetaCoding-io/regulator/issues/121), [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
+  asks and copies the list under `trades/pending/`; the consent decision is recorded in §3 under the S1 table. Phase 2a landed ([#121](https://github.com/MetaCoding-io/regulator/issues/121), 2026-10-27): `place_trade`, a tool the workload declares with an
+  irreversible effect, from which the gate derives the consent; the path grant on `trades/pending/` and the advice line are gone, and the
+  landed paragraphs are in §3 and §5 row 2. Phase 2's other items are
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
   blocked on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)); its other blocker, the
   open-metric row, landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129) with this workload's turnover as the first declared metric. All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
@@ -74,7 +76,7 @@ portfolio and none has one in a ledger:
 | The ledger does not… | The portfolio… |
 | --- | --- |
 | automate S4: the statement arrives by hand | has three sensors with thresholds the book defines: a drift band crossed (13.2.2), an unrealised loss worth harvesting (14.3), a new positions export or price file landing |
-| derive consent from a tool's effect (DEBT row 29) | has a `place_trade` tool whose declared side effect is `irreversible`, writing a trade list a person executes, so the gate can derive the consent question from the effect declaration instead of the model noticing |
+| derive consent from a tool's effect (DEBT row 29) | has a `place_trade` tool whose declared side effect is `irreversible`, writing a trade list a person executes, so the gate can derive the consent question from the effect declaration instead of the model noticing (landed, #121) |
 | make its invariants identity | has a risk tolerance (2.5), a universe and a jurisdiction that are the person's, versioned, and written only through `identity accept` |
 | resolve the unknown merchant | has the same open-item shape (a view the person has not given, a corporate action nobody has explained) and, in Black–Litterman, a way to carry a missing view as "no view" rather than a guess |
 | run a session | is the first workload where several unit types *should not* run a session at all: rebalancing and harvesting are deterministic given their inputs, which is the `command` runner of [open questions §3](2026-09-25-open-questions.md#3-must-every-unit-run-a-pi-session) with a concrete case |
@@ -110,7 +112,7 @@ verified about it is regulatory state.
 | `ingest-positions` | session | manager | `lots/`, `reports/` | `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `glossary-lint` |
 | `propose-target` | session | manager | `targets/`, `reports/` | same |
 | `plan-rebalance` | command (§5): `node workload/portfolio/plan-rebalance.mjs` | manager, as an effect declaration | `trades/proposed/` | same |
-| `confirm-trades` | session | manager | `trades/pending/`, `reports/` | same |
+| `confirm-trades` | session | manager | `reports/`; `trades/pending/` through `place_trade` alone (#121) | same |
 | `harvest-losses` | command (§5): `node workload/portfolio/harvest-losses.mjs` | manager, as an effect declaration | `trades/proposed/harvest-` | same |
 | `review` | session | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `close-period` | session | auditor | nothing | — |
@@ -145,6 +147,30 @@ check — that arithmetic is #124's, said so in the program's header. The lot ch
 the extent, delegated to the session before, are fixed decisions on the program's
 contract, because a program has no judgment to report and the loop refuses a contract
 that delegates to one.
+
+**Landed (2026-10-27, #121).** `place_trade` took the execution. The workload declares
+it under `tools[]` — a name, the schema the model sees, an effect on the four axes
+(`sideEffects: "irreversible"`) and a program in the command runner's shape,
+`workload/portfolio/place-trade.mjs`, run in the unit's worktree with the call's
+arguments on stdin and `trades/pending/` as its whole reach — and the host registers it
+generically from the definition. The consent is derived by the gate from the declared
+effect, scoped to workload-declared tools: the `manager` profile grants `place_trade` by
+name, lists no `consent[]` entry, and no longer writes under `trades/pending/` at all,
+which the definition check now requires of a profile that grants an irreversible
+declared tool (a plain write under its outputs would need no yes). The advice line that
+said to ask before writing a trade list is deleted, since the refusal says it naming the
+call. `confirm-trades` asks once, naming the call, and places the list with the tool
+after the yes; the tool copies the proposed file byte for byte, so "copied unchanged" is
+the tool's property and the suite's pending-equals-proposed assertion guards a bug in
+the program, not a model's shortcut — the careless unit of #120 that trimmed the list
+after the yes is impossible by construction, and the careless behaviour is now a unit
+that calls the tool without asking, refused by the derived consent before the file
+exists. One decision the prompt left open was taken against its own letter: it asked
+that a declared tool's writes be refused when they land outside the writable paths of
+every granting profile, and also that `trades/pending/` leave the manager's writable
+paths; the two cannot both hold, and the second is what keeps the derived consent from
+being bypassed by a plain write, so the check refuses the converse — a granting profile
+that reaches the outputs directly. The record is `declared-tool`.
 
 ### S2 — What stops units from tripping over each other?
 
@@ -227,7 +253,7 @@ have a seam (`regulator watch` already runs a channel command, `packages/regulat
 | Invariant | Checked by |
 | --- | --- |
 | The custodian's export and the price history are never written by a unit | `positions/` and `prices/` are outside the writable prefixes; `--protected` in the manifest means `identity-untouched` refuses the closeout if anything got past the grant |
-| A trade list is written only after a person's yes to a consent question naming every trade | the contract fixes it; `ask_human` with `kind=consent` opens a blocking obligation and the pause gate refuses every tool with an effect until a person answers; silence is never consent (a protocol constant). With `place_trade` declared `irreversible`, the gate derives the question (§5) |
+| A trade list is written only after a person's yes to a consent question naming every trade | the contract fixes it; `ask_human` with `kind=consent` opens a blocking obligation and the pause gate refuses every tool with an effect until a person answers; silence is never consent (a protocol constant). `place_trade` is declared `irreversible` and the gate derives the question from that (#121, landed): the call is refused without the yes on the record, and `trades/pending/` is under no write grant |
 | What was traded is the person's record | `trades/executed/` is outside the grant and protected |
 | A unit never extends the universe, the exchangeable sets or the tax parameters | the three files are outside every writable prefix |
 | The portfolio's risk stays inside the person's tolerance | the volatility bound (2.5, 10.2.1) is a number in the identity, and the target check refuses a target whose predicted volatility exceeds it |
@@ -256,7 +282,7 @@ the outbox and reminded about. A view the unit wants and does not have is a
 | Every sell names a held lot; the lots reconcile to executed trades and positions | 2, a deterministic check | — |
 | A harvest's benefit exceeds its costs | 2, a check, with the volatility input a fixed decision | the opportunity cost prices an option (14.3.2); the input is a number the person fixes, not a judgment the unit makes |
 | The report's return is the time-weighted return | 2, a deterministic check | — |
-| Consent before a trade list | 3, a typed tool, plus 2, the pause gate; 2 once consent is derived from the effect | the ledger's reason, until #60 |
+| Consent before a trade list | 2, the gate deriving it from `place_trade`'s declared effect, plus 3, the tool's effect contract, plus 2, the pause gate | — (landed, #121) |
 | Which lot a sale comes from | 4, judgment bounded by the tax ordering, reported | the ordering is a rule; the choice among equals is the unit's |
 | Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | 14.3.3's ordering is advice; the check is what refuses a wrong one |
 | The expected-return inputs | 4, judgment bounded by the view's confidence cap | it is judgment; the cap is fixed, the view is reported |
@@ -292,7 +318,7 @@ and against its seam, in the order the phases (§6) need it.
 | Needed | Level | Seam | Exists as |
 | --- | --- | --- | --- |
 | The domain's checks in Node | 2 | `test/portfolio.test.js` under `npm test`, discovered as the ledger's are (`packages/checks/src/conventions.ts`) | nothing new. **Decided here:** the checks are ported to plain JavaScript. They are arithmetic (sums, bands, date windows, lot reconciliation, a time-weighted return); none needs an optimiser. The alternative, declared checks for a non-Node domain (the ArticleMiner note §4.1), stays the right slice for ArticleMiner and is not forced by this workload |
-| A `place_trade` tool with a declared effect | 3 | a workload-declared tool with `sideEffects: "irreversible"` (`packages/protocol/src/effects.ts`), writing under `trades/pending/` | DEBT row 29, [#60](https://github.com/MetaCoding-io/regulator/issues/60): the per-tool consent grant as a profile field, enforced by interception. This workload is the case that makes #60 concrete without a tool that moves money |
+| A `place_trade` tool with a declared effect | 3 | a workload-declared tool with `sideEffects: "irreversible"` (`packages/protocol/src/effects.ts`), writing under `trades/pending/` | **Landed (2026-10-27, #121).** `tools[]` on the workload definition (`DeclaredToolSchema`: name, description, parameters, effect, program), registered by the host's `declared-tools` extension and run through `runDeclaredTool` under the tool's declared outputs with the arguments on stdin; `consentRequiredFor` in core derives a bare grant from a declared tool's irreversible effect beside the profile's `consent[]`, read by the host's interception and the lab's `consentGate` alike, so `--amend` and consent across attempts hold as for a path grant; `readOnlyViolations`, `isReadOnlyProfile` and `effectOf` read the declared effects; `regulator check` refuses a declared tool with a built-in's name, a non-object schema, arbitrary execution, an effect that disagrees with its outputs, no program file, or a granting profile that writes under its outputs directly, and `regulator doctor` refuses an instance manifest whose writable prefixes reach them. The record is `declared-tool`; this workload was the case, as #60 needed, without a tool that moves money |
 | The `command` runner for `plan-rebalance` and `harvest-losses` | 2 | the workload definition's unit type gains a `runner` (open questions §3) | landed as [#122](https://github.com/MetaCoding-io/regulator/issues/122): `runner: { kind: "command", argv, timeoutMs?, outputs[] }` on the unit type, the loop running the program itself through the same dispatcher seam under the policy's `wallClockMs`, the program's file hashed into the attempt record, its exit and last stdout line as the report, a write outside `outputs` undone and refused, and the definition check refusing a program without a file under the definition, under a shell-granting profile, or writing outside the writable paths or under a consent grant (`command-runner`). The two programs are plain JavaScript over `lib/portfolio.js`, not the book's Python: the arithmetic needed no optimiser, as §5's first row found for the checks |
 | Sensors declared in the definition | 2 | `policies/intelligence.json` with `sensors[]` (open questions §2) | proposed; no issue. Three sensors here: a path glob over `positions/` and `prices/`, a drift-band command, a harvest-threshold command |
 | Workload-declared metrics and graders | 2 | `workload/<name>.json` gains `metrics[]`, each with its grader argv; `EVAL_METRICS` becomes the built-in set (open questions §6, the ArticleMiner note §4.6) | landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129): `workload:portfolio/turnover`, the one-way turnover the latest target implies against the custodian's positions, by `workload/portfolio/turnover.mjs` over `lib/portfolio.js`, pre-registered by `evals/portfolio-turnover.json`. The book's other summary statistics (13.4.4: tax cost, spread cost, mean and maximum deviation) and the backtester as the grader are #125's to declare the same way |
@@ -321,7 +347,8 @@ worked example page, written to the recipe in the finance example §6. This is w
 asks for, with its authoring guide written from the experience of writing it.
 
 **Phase 2 — the mechanisms the workload is the case for.** `place_trade` under #60
-([#121](https://github.com/MetaCoding-io/regulator/issues/121)); the `command` runner with the plan and the harvest candidates as programs
+([#121](https://github.com/MetaCoding-io/regulator/issues/121), landed 2026-10-27: §3's landed paragraph says what the tool is and what the gate
+derives from it); the `command` runner with the plan and the harvest candidates as programs
 ([#122](https://github.com/MetaCoding-io/regulator/issues/122), landed 2026-10-27: §3's decided paragraph says where a program may write and
 where a session still asks); the three sensors ([#123](https://github.com/MetaCoding-io/regulator/issues/123)); the harvest contract with the
 exchangeable sets and the wash-sale check live, the benefit-versus-cost check over the candidates the harvest program now
@@ -354,7 +381,7 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
 first row as its one recorded decision. Phase 2's issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
 [#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names;
-#122 has landed, and #124 now starts from the candidates its program lists.
+#121 and #122 have landed, and #124 now starts from the candidates its program lists.
 Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row after the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138));
 the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) has landed.
 
