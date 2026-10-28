@@ -548,10 +548,14 @@ thread](../research/2026-09-25-open-questions.md#1-the-control-room-should-show-
 decided that a generator over the definition is the only author of a figure of what
 exists. These figures are the other two cases the thread names: the "after" is a design,
 which no generator can draw until it lands, and the "before" spans more than the
-definition describes. Its instance box is the first figure the generator must reproduce,
-from the registry's channels, enforcement points and stores. When it does, the drawn
-frame embeds the generated box, and when the design lands the generated figure replaces
-the drawing, which becomes history in the research note.
+definition describes. The generator now draws the instance box's literal counterpart,
+the [one-level map](/concepts/control-plane#the-five-functions) on the control-plane
+page and in the control room, from the workload, the profiles, the enforcement points,
+the records and the stores. The pair here stays drawn by decision: composed into the
+frame, the generated box read worse than either part, so this page keeps the drawing
+where the composition matters and the concept page keeps the generated figure where the
+mechanism is stated. When the design lands, the generated figure replaces the drawing,
+which becomes history in the research note.
 
 Every box and edge in both figures is a hotspot. Hover, focus or tap one for what it
 is, in a sentence or two, and a link to the page that states the mechanism. The same

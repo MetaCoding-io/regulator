@@ -92,6 +92,8 @@ test("the server serves the page and the JSON view, refuses writes, and knows no
   assert.match(html, /Interaction policy[\s\S]*Interactions — what units asked a person, and what came back/, "the algedonic view (lesson 13)");
   assert.match(html, /Assurance — what the evals say[\s\S]*Lifecycle — review, ablation, retirement/, "the assurance and lifecycle views (lesson 14)");
   assert.match(html, /<section id="lifecycle">[\s\S]*<svg class="lifecycle"[\s\S]*data-state="blocked"[\s\S]*data-count="units:closed"/, "the unit lifecycle figure, drawn from UNIT_TRANSITIONS, with a place for the live counts");
+  assert.match(html, /<section id="map">[\s\S]*<svg class="instance-map"[\s\S]*data-workload="software-development"[\s\S]*data-unit-type="implement"[\s\S]*data-count="units:implement"/, "the one-level map, drawn from the definition, with a place for the live counts per unit type (#153)");
+  assert.match(html, /id="instance-map-store-signals-ndjson"[^>]*data-def="\.regulator\/signals\.ndjson: [^"]+"/, "a store's card says what the store is and who claims it");
   assert.match(html, /data-from="blocked" data-to="aborted" data-on="abort"/, "an edge per row of the table");
   assert.match(html, /copy as a question/, "a step's why can be taken to an agent; the page itself asks nothing");
   assert.match(html, /const LIFECYCLE_EDGES = \[\{"number":1,"transition":\{"from":"contracted","to":"dispatched","on":"dispatch"/, "the legend is the table, inlined");

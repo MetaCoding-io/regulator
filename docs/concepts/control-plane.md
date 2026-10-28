@@ -35,6 +35,17 @@ a rule is enforced at is a recorded fact about the system.
 | **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation for S3 to consider. It never replans the work itself. See [intelligence and memory](/concepts/intelligence-and-memory). |
 | **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition and protected by the write gate and the `identity-untouched` check. | Committed files. A unit may propose a change. Only a person with `actAsS5` in the interaction policy may accept one, and the S5 decision path is the only thing that writes an identity file. See [protecting identity](/concepts/identity). |
 
+The same level, drawn from the definition rather than described: every box is a kind the
+definition declares (the carried files and their writer classes, the loop's steps, the
+software-development workload's unit types under their profiles, the routing policy, the
+S2 records, the checks the workload names, the stores) and every edge an enforcement
+point or a command. Hover, focus or tap one for the record behind it.
+
+<figure class="generated-figure">
+<!--@include: ../generated/figures/instance-map.svg-->
+<figcaption>One regulated level, generated from the definition by <code>regulator docs --write</code>. The count lines on the unit types are empty here and filled in the control room, which places an instance's units on the same figure.</figcaption>
+</figure>
+
 ## The loop
 
 <figure>

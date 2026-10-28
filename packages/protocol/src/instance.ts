@@ -114,3 +114,39 @@ export type MigrationNote = Static<typeof MigrationNoteSchema>;
 export function isMigrationNote(value: unknown): value is MigrationNote {
   return Value.Check(MigrationNoteSchema, value);
 }
+
+/**
+ * Where an instance keeps its state: every path under `.regulator/` the harness writes, as a closed list (#153),
+ * so a registry record's `scope.resources` can name a store the instance actually keeps and nothing else, a figure
+ * can draw the records column from the records, and "who writes where" is a query over the registry rather than a
+ * drawing. A workspace is under the directory but is not a record. A new store is added here in the same change
+ * that writes it; a test holds the list against the path constants and against a run's `.regulator/`.
+ */
+export interface InstanceStore {
+  /** The path relative to the base checkout; a directory ends in `/` and covers everything under it. */
+  readonly path: string;
+  readonly name: string;
+  readonly kind: "record" | "workspace" | "manifest";
+  readonly description: string;
+}
+
+export const INSTANCE_STORES: readonly InstanceStore[] = [
+  { path: ".regulator/instance.json", name: "the instance manifest", kind: "manifest", description: "what `regulator init` wrote: the definition and its version, the Pi pin, the layout a person declared" },
+  { path: ".regulator/units/", name: "the execution store", kind: "record", description: "one directory per unit: the unit record (the only mutable file), the contract, the report, one line per attempt and one per recovery decision" },
+  { path: ".regulator/leases/", name: "the leases", kind: "record", description: "one file per held lease on a worktree, with its owner and expiry" },
+  { path: ".regulator/signals.ndjson", name: "the regulatory log", kind: "record", description: "signals, the obligations they became, dispositions and prediction resolutions; append-only" },
+  { path: ".regulator/audit.ndjson", name: "the audit log", kind: "record", description: "host-run evidence, technical verdicts and human acceptances, each bound to a revision; append-only" },
+  { path: ".regulator/memory.ndjson", name: "operational memory", kind: "record", description: "facts a unit recorded with `remember`, each with provenance and an expiry; append-only, never identity" },
+  { path: ".regulator/effects.ndjson", name: "the effect journal", kind: "record", description: "a side effect intended before it happens, committed after, reconciled on restart; append-only" },
+  { path: ".regulator/trace.ndjson", name: "the trace", kind: "record", description: "the session's gated events as the extension records them" },
+  { path: ".regulator/outbox", name: "the outbox", kind: "record", description: "what is owed to a person, one delivery per line, forwarded by the watcher" },
+  { path: ".regulator/outbox.cursor", name: "the outbox cursor", kind: "record", description: "how far the watcher has forwarded the outbox" },
+  { path: ".regulator/events.db", name: "the event store", kind: "record", description: "the SQLite regulatory event store" },
+  { path: ".regulator/worktrees/", name: "the worktrees", kind: "workspace", description: "a unit's isolated checkout: domain output, not a record" },
+  { path: ".regulator/trials/", name: "the trial merges", kind: "workspace", description: "the pre-merge trial's checkout of the merged tree, verified before a reintegration lands" },
+];
+
+/** The store a path under `.regulator/` belongs to: the file itself, or the directory it is under. */
+export function instanceStoreFor(resource: string): InstanceStore | undefined {
+  return INSTANCE_STORES.find((s) => (s.path.endsWith("/") ? resource === s.path || resource.startsWith(s.path) : resource === s.path));
+}

@@ -174,14 +174,45 @@ a card cannot say what the table does not. `regulator docs --write` files the fi
 `packages/regulator/figures/unit-lifecycle.svg` and `docs --check` holds it current under
 `pnpm check`; the definition check knows `figures/` as derived output, beside `dist/`.
 The docs copy the figure into `docs/generated/figures/` with site-relative links and the
-control-room guide embeds it; the website copies it in place of its hand-drawn six
-states, which closes the note above. The reflector pair's script takes `--embed
+control-room guide embeds it; the website copied it in place of its hand-drawn six
+states for a day and then put the drawing back (below). The reflector pair's script takes `--embed
 instance=<figure.svg>` and places the fragment in the instance box, scaled and centred,
 and refuses a composition that loses an id or a card: the third clause as a mechanism,
 proven with the lifecycle fragment. Next: the one-level map over `ENFORCEMENT_POINTS`,
 the channels and the stores, the fragment the instance box is for
 ([#153](https://github.com/MetaCoding-io/regulator/issues/153), which also closes the
 stores as a list).
+
+**Landed (2026-10-27).** The one-level map (#153), and a decision about where it is
+shown. `INSTANCE_STORES` in `protocol` is the closed list of what the harness writes
+under `.regulator/` (eleven records, two workspaces, the manifest), held against the path
+constants and against a run's directory by tests; `regulator check` refuses a record
+whose `scope.resources` names a path under `.regulator/` the list does not, and four
+records were migrated from free text, which closes the "who writes where" row of the
+table above. `instanceMapFragment()` draws one regulated level from the definition view:
+the carried files and their writer classes, a person as their only writer, the loop's
+steps, the workload's unit types under their profiles (S4 where the profile reports
+intelligence), the routing policy, the S2 records, the checks the workload names,
+operational memory and the stores, with every edge an enforcement point or a command and
+every card the record or list entry behind it. `regulator docs --write` files it as
+`figures/instance-map.svg`; the control-plane concept page embeds it; the control room
+shows it as a *Map* view with the instance's units counted onto their unit types.
+
+The decision: the reflector pair stays drawn. The generated box was composed into the
+hand-drawn frame with `--embed`, as clause 3 says, and the composition read worse than
+either part: a grid places what the definition declares, and the definition does not
+declare where things should sit or which words matter most, so the drawn interior's
+emphasis ("the only writer" beside the person, the proposal's path around the edge) had
+no equivalent. The maintainer's call, 2026-10-27: a design figure may stay drawn as a
+whole where a composed version loses the composition, labelled as drawn; the generated
+figure lives where a literal figure earns its place, beside the text that states the
+mechanism and in the control room, where it carries live records. The same call put the
+website's hand-drawn six states back the same day: the generated lifecycle says the same
+twelve transitions, and reads worse on that page. So the thread's "only author" rule
+holds for the docs and the control room, and the website may keep a drawing of a
+generated figure when the drawing reads better, checked against the table when the table
+changes. Clause 3 stands as a mechanism (`--embed` works and is tested) and is not an
+obligation. Next: the sequence view, the gates placed on the unit's path.
 
 ## 2. A person should be able to create S4 intelligence
 

@@ -22,8 +22,9 @@
  */
 import { lifecycleEdges, renderLifecycleFigure } from "@metacoding.io/regulator";
 
-export function renderPage(): string {
-  return PAGE.replace("__LIFECYCLE_FIGURE__", () => renderLifecycleFigure()).replace("__LIFECYCLE_EDGES__", () => JSON.stringify(lifecycleEdges()));
+export function renderPage(options: { instanceMap?: string } = {}): string {
+  return PAGE.replace("__LIFECYCLE_FIGURE__", () => renderLifecycleFigure()).replace("__LIFECYCLE_EDGES__", () => JSON.stringify(lifecycleEdges()))
+    .replace("__INSTANCE_MAP__", () => options.instanceMap ?? `<p class="empty">no definition directory was given, so there is no map to draw</p>`);
 }
 
 const PAGE = String.raw`<!doctype html>
@@ -102,6 +103,10 @@ const PAGE = String.raw`<!doctype html>
   .banner { font-size: 12px; color: var(--muted); }
   .figure { max-width: 900px; }
   svg.lifecycle { width: 100%; height: auto; display: block; color: var(--muted); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  svg.instance-map { width: 100%; height: auto; display: block; color: var(--muted); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; --fig-bg: var(--panel); --fig-line: var(--line); --fig-ink: var(--ink); --fig-muted: var(--muted); --fig-accent: var(--accent); --fig-mono: var(--mono); }
+  svg.instance-map .unit-type.occupied > rect { stroke: var(--ink); }
+  svg.instance-map .unit-type.here > rect { stroke: var(--accent); stroke-width: 2.4; }
+  svg.instance-map [data-count] { fill: var(--ink); }
   svg.lifecycle .state rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.4; transition: stroke .15s, fill .15s; }
   svg.lifecycle .state text { fill: var(--ink); }
   svg.lifecycle .state .kind { font-size: 9px; letter-spacing: .06em; fill: var(--muted); }
@@ -152,6 +157,11 @@ const PAGE = String.raw`<!doctype html>
       <div class="figure">__LIFECYCLE_FIGURE__</div>
       <div id="stepper"><p class="empty">Select a unit to step through its path.</p></div>
       <details><summary>The transitions, as <code>UNIT_TRANSITIONS</code> declares them — solid edges the loop takes on its own, dashed ones wait on something outside it</summary><table class="legend" id="legend"></table></details>
+    </section>
+    <section id="map">
+      <h2>Map — one regulated level, drawn from the definition, with the instance's units on it</h2>
+      <p class="banner" id="map-meta">loading…</p>
+      <div class="figure">__INSTANCE_MAP__</div>
     </section>
     <section id="instances"><h2>Instances</h2><p class="empty">loading…</p></section>
   </div>
@@ -216,8 +226,30 @@ const PAGE = String.raw`<!doctype html>
     document.getElementById("meta").textContent = "as of " + view.generatedAt + (paused ? " · paused" : " · refreshing every 5s");
     renderDefinition(view.definition);
     renderLifecycle();
+    renderMap();
     renderInstances(view.instances);
     renderInspector();
+  }
+
+  // ---- Map: the figure is static (drawn from the definition at startup); the instance's units are counted onto its unit types here.
+  function renderMap() {
+    const sec = document.getElementById("map");
+    const svg = sec.querySelector("svg.instance-map");
+    const meta = document.getElementById("map-meta");
+    const sel = selectedUnit();
+    const inst = sel ? sel.inst : view.instances[0];
+    if (!svg) { meta.textContent = "no map"; return; }
+    const counts = {};
+    for (const x of (inst ? inst.units : [])) counts[x.unit.unitType] = (counts[x.unit.unitType] || 0) + 1;
+    svg.querySelectorAll("[data-count]").forEach((t) => {
+      const type = t.dataset.count.replace(/^units:/, "");
+      t.textContent = inst && counts[type] ? counts[type] + (counts[type] === 1 ? " unit" : " units") : "";
+    });
+    svg.querySelectorAll(".unit-type").forEach((g) => {
+      g.classList.toggle("occupied", !!counts[g.dataset.unitType]);
+      g.classList.toggle("here", !!sel && sel.u.unit.unitType === g.dataset.unitType);
+    });
+    meta.innerHTML = (inst ? "instance <span class='mono'>" + esc(inst.dir) + "</span> · " + inst.units.length + " unit(s) placed by unit type" : "no instance: the definition alone") + " · hover a box or an edge for the record behind it";
   }
 
   // ---- Lifecycle: the figure is static (drawn from the table at startup); records are placed on it here.

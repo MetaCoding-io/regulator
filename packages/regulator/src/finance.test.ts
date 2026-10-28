@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { cp, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { instanceStoreFor } from "@metacoding.io/regulator-protocol";
 import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -104,6 +105,8 @@ test("the August close, done as the contracts ask: four units close on the ledge
   const o = owed[0]!;
   assert.deepEqual([o.consumer, o.severity, o.blocks, o.subject], ["human", "blocking", true, "consent: September rent"]);
   assert.match(await readFile(path.join(repo, ".regulator", "outbox"), "utf8"), new RegExp(`deliver:${o.id}`), "delivered to the outbox for a person");
+  // Every path the run left under .regulator/ is a store the closed list names (#153).
+  for (const entry of await readdir(path.join(repo, ".regulator"))) assert.ok(instanceStoreFor(`.regulator/${entry}`) ?? instanceStoreFor(`.regulator/${entry}/`), `.regulator/${entry} is a store INSTANCE_STORES names`);
   const request = (await ledgerStore.interactions()).find((i) => i.request.obligationId === o.id)!;
   assert.deepEqual([request.request.kind, request.answers[0]?.outcome], ["consent", "unavailable"]);
   assert.deepEqual(request.request.call, { tool: "write", arguments: { path: "payments/pending/2026-09-rent.json" } }, "the question records the call a yes authorizes: what the consent gate matches (#60)");

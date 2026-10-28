@@ -397,7 +397,7 @@ export {
   type DeclaredMetricName, type GraderCommand, type GraderOutput, type MetricDeclaration, type MetricDirection, type MetricKind,
 } from "./metrics.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
-export { DefinitionPointSchema, InstanceManifestSchema, MIGRATION_CLASSES, MIGRATION_GATES, MigrationBulletSchema, MigrationGateSchema, MigrationNoteSchema, UpgradeEntrySchema, isInstanceManifest, isMigrationNote, type DefinitionPoint, type InstanceManifest, type MigrationBullet, type MigrationClass, type MigrationGate, type MigrationGateKind, type MigrationNote, type UpgradeEntry } from "./instance.js";
+export { DefinitionPointSchema, InstanceManifestSchema, MIGRATION_CLASSES, MIGRATION_GATES, MigrationBulletSchema, MigrationGateSchema, MigrationNoteSchema, UpgradeEntrySchema, isInstanceManifest, isMigrationNote, type DefinitionPoint, type InstanceManifest, type MigrationBullet, type MigrationClass, type MigrationGate, type MigrationGateKind, type MigrationNote, type UpgradeEntry, INSTANCE_STORES, instanceStoreFor, type InstanceStore } from "./instance.js";
 export {
   DiagnosisRefSchema, HARNESS_EDIT_KIND, HarnessEditSchema, LiveHorizonSchema, PredictionBaselineSchema, PredictionDirectionSchema, PredictionHorizonSchema, PredictionOutcomeSchema,
   PredictionResolutionSchema, PredictionSchema, ProbeHorizonSchema, ReportFingerprintSchema, RequestedChangeSchema, TrajectoryMomentSchema, claimsHarnessEdit, isHarnessEdit, isPredictionResolution,

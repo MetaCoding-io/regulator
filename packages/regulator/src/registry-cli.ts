@@ -11,6 +11,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkDefinition, checkRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, renderViabilityMarkdown, splicePathologyTables, type AblationArm } from "@metacoding.io/regulator-core";
 import { FIGURES } from "./figures.js";
+import { readDefinition } from "./status.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const registryDir = path.join(labRoot, "registry");
@@ -46,7 +47,7 @@ if (command === "check") {
     [boundaryPath, renderBoundaryMarkdown(registry.records)],
     [viabilityPath, renderViabilityMarkdown(registry.records, { pathologies: registry.pathologies, shortNames: registry.shortNames, arms })],
     ...(pathologiesDoc === undefined ? [] : [[pathologiesDocPath, splicePathologyTables(pathologiesDoc, registry.pathologies, registry.shortNames)] as [string, string]]),
-    ...FIGURES.map(({ name, render }): [string, string] => [path.join(figuresDir, `${name}.svg`), `${render({ docsBase: DOCS_ORIGIN })}\n`]),
+    ...await Promise.all(FIGURES.map(async ({ name, render }): Promise<[string, string]> => [path.join(figuresDir, `${name}.svg`), `${render(await readDefinition(labRoot), { docsBase: DOCS_ORIGIN })}\n`])),
   ];
   if (flags.includes("--write")) {
     await mkdir(figuresDir, { recursive: true });
