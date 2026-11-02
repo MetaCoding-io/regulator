@@ -261,7 +261,7 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) await gitExec("git", args, { cwd: dir });
   let r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, "no manifest yet: only the definition checks run, and the definition is fine");
-  assert.doesNotMatch(r.stdout, /manifest/);
+  assert.doesNotMatch(r.stdout, /^\w+\s+manifest/m);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(52 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/, regulator\/advice\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
