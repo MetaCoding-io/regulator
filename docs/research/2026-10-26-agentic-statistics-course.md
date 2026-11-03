@@ -3,8 +3,8 @@
 - **Status:** open; filed as [#150](https://github.com/MetaCoding-io/regulator/issues/150) under
   [#61](https://github.com/MetaCoding-io/regulator/issues/61). Written as a table-of-contents
   assessment in the shape the [open questions backlog](2026-09-25-open-questions.md#6-backlog--smaller-things-to-think-about)
-  used for the Manning books (the 2026-10-24 row); thirteen of the course's sixteen lessons are
-  still to come (§8), and each release is read and appended here.
+  used for the Manning books (the 2026-10-24 row); ten of the course's sixteen lessons are still
+  to come (§8 and the dated sections before it), and each release is read and appended here.
 - **Sources:** the course, <https://wordalisation.com/courses/agentic-ai-for-statistics-and-data-science/overview/>
   (David Sumpter, Uppsala University, CC BY 4.0, free); its companion
   *Agentic AI for Research* (11 lessons, 115 min of video, same licence); and the public
@@ -186,6 +186,67 @@ not evidence that the rules prevent them, which is the gap the drift suite exist
 is an argument for the workload rather than against it. The video recordings were not
 watched; the lesson pages are their write-ups and were read in full. Nothing in the template
 was run.
+
+## 2026-11-03 — Lessons 1.4, 1.5 and 1.6
+
+Read on the first scheduled check. Lessons 1.7 and 1.8, dated 2 November in the overview, are
+now placeholders dated 9 November. The template repository has no commits since the
+assessment, so the contract in §2 and §3 is unchanged.
+
+**1.4 Visualisation** states five rules: the data goes in first and the fit on top ("a figure
+showing only a fit hides how well that fit describes anything"); colour is bound to the
+variable, not the panel; no trend line on an annual series whose year is derived rather than
+observed, because the level and the direction over the period mean something and the change
+from one year to the next does not; the selection rule for the countries shown is written on
+the figure; and every number in the text comes from the computed output, "never read off the
+plot". The last is already the traceability check in §3. The other four are judgment about
+what a figure may claim and stay advice, with one exception worth a check: the derived-year
+rule is the data summary's "measurement or model output" column applied to time, and a
+differenced series whose source column is marked model output is refusable mechanically, the
+same way the contract's step 4 refuses a coefficient on a constructed outcome.
+
+**1.5 Traditional statistics versus agentic statistics** is pedagogy, and it is the course's
+statement of the deskilling counter in §3 item 1. A traditional course hands over a prepared
+dataset and teaches the method for three or four weeks before anyone opens their own data; the
+agentic course starts from the question, and the person's work is to "understand the methods
+proposed by the AI and decide which ones to use and which to drop", learning each as they go.
+"You will not be able to do this unless you already have a grounding in traditional
+statistics." The written description of the test "is what you and your reader can both check,
+and writing it is how you end up learning the method." For regulator this is the condition
+under which the consent question in §3 (agree the method before applying it) works at all: a
+person who cannot judge the method answers with a nod, which is the rubber stamp the backlog
+row on what the delivered question carries already names. Article candidate for §6: what a
+consent question on a method must carry (the assumptions, the drawn test, the source) so that
+answering it is the learning, with the outbox line as the place it lands.
+
+**1.6 Statistical analysis** is the lesson that changes the note. The author had the test
+written down and drawn before it ran, as §3 assumes. Then the step-3 plots showed a linear
+regression of loss on income was the wrong test, the outcome was changed to whether a country
+crossed a threshold of permanent loss, and the author flags it: "changing the outcome after
+seeing the plots is a decision made from the data." The ordering check proposed in §4 (no
+output before the question is written) is therefore too coarse: the course's own worked
+example revises the question after outputs exist, deliberately and on the record. The right
+mechanism is one regulator already has. A change to a fixed decision after output exists is a
+new contract version with its predecessor, not an edit in place; the appendix's "superseded"
+marker is the untyped version of `provenance.predecessor`. The check becomes: the research
+question at the revision matches the contract version the unit ran under, and a question that
+differs from its predecessor cites the output it was changed from. The eighth drifting
+behaviour for §5 follows: the question file edited in place after `Code/outputs/` is non-empty,
+with no new contract version. Three smaller things from the same lesson. The author imposed
+the model order (a linear log-odds model, then a linear regression and a Spearman correlation
+as cross-checks, then the quadratic term): "it was not the order the agent chose for itself. I
+imposed it", which is a fixed decision citing the person and exists. The agent "had brought in
+Fieller intervals and intersection–union tests, which made the methods sound more
+impressive", and dropped them when asked; this is vocabulary as self-certification, a cousin
+of the `confident` behaviour in [#130](https://github.com/MetaCoding-io/regulator/issues/130),
+and stays judgment. And the 2% threshold "was my arbitrary choice, so I had the whole analysis
+rerun at ten of them", with the slope negative at every one and the inverted-U condition met
+at none: a sweep over a number a person chose arbitrarily is a command the host can run, and
+"the conclusion holds across the sweep" is a candidate for the §4 metric row beside the
+traceability count.
+
+Net effect on the sections above: §4 row 3 (the ordering check) is refined as described; §5
+gains an eighth refusal; §6 gains one article. Nothing in §1's verdict changes.
 
 ## 8. Next step
 
