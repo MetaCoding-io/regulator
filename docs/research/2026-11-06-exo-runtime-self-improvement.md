@@ -277,13 +277,153 @@ Three things, none of them a claim before its evidence exists.
   that never arrives). Both go into the study protocol in #105 as things the design must
   distinguish, not as findings.
 
+- **The opposing claim, stated so it can be tested.** On architecture the two agree: protect
+  the record, keep the guardian outside the editor, log every activation. On who the
+  guardian is they sit at different points of one axis, and Exo's §7 concedes the axis.
+  Where they oppose each other is the *timescale of adaptation*. Exo bets that a harness
+  edit made mid-task pays back inside that task, and its figure 5 says it does after an
+  early premium. regulator's path for the same edit is proposal, probe, a person, and
+  then the next units; the unit that saw the waste never gets the fix. The cost gains Exo
+  reports are therefore the price of the boundary, less whatever share of them is
+  reachable without crossing it (§8 argues that share is large). The second opposition
+  is philosophical and unmeasured on both sides: Exo's bitter-lesson reading is that the
+  mechanism layer shrinks toward the minimum needed for safety as models improve;
+  regulator's is that what shrinks is the advice, and the lines between advice, identity
+  and grant stay. Exo's intelligence floor (§5.4.3) bears on both: self-editing gained
+  nothing below the floor, so the boundary costs less there and more above it. Paper 1
+  should state the timescale claim as a proposition with a number against it (§8's
+  experiment), and the bitter-lesson claim as a position, not a finding.
+
 ## 7. Next step
 
 No issue from this note on its own. Items 1, 2, 4 and 6 of §4 are additions to the
 done-when list of the probe-arm issue (the accept-path split's slice 3) when it is filed
 after [#46](https://github.com/MetaCoding-io/regulator/issues/46); item 7 and §6 go into
-[#103](https://github.com/MetaCoding-io/regulator/issues/103) and
-[#104](https://github.com/MetaCoding-io/regulator/issues/104) now, as research. Item 3,
+[#103](https://github.com/MetaCoding-io/regulator/issues/103),
+[#104](https://github.com/MetaCoding-io/regulator/issues/104) and
+[#105](https://github.com/MetaCoding-io/regulator/issues/105) now, as research. Item 3,
 the read-only ledger tool, can be filed on its own under `roadmap:0.2` once a card is
-written for it; item 5 waits for the reflector package. The threads table in
+written for it; item 5 waits for the reflector package. From §8: the advice line that
+asks (§8.2, gap 1) is a change to the shipped advice files and can land now by
+`advice promote`; the self-advice tool (§8.3) is a design item for the reflector thread,
+probed under the drift suite as the experiment §6 names, after #46. The threads table in
 [`ROADMAP.md`](../../ROADMAP.md) carries this order.
+
+## 8. The point the note walked past: can units feed the loop? (added 2026-11-07)
+
+§2 said Exo is the strongest published argument for the thing regulator refuses, a unit
+editing its own harness mid-task, and then did not say what regulator does with that
+argument. A reader asked three questions: can units raise a signal to the reflector
+directly, the way a manager asks the team for ideas; is the better focus §4 item 5, the
+scripts one unit writes becoming tools every unit may call; and is regulator making
+claims that oppose the paper's. §6's last bullet answers the third. This section answers
+the first two.
+
+### 8.1 What regulator refuses, precisely
+
+Not proposing, and not building. A unit may propose any change to the definition
+(`propose_policy_change` is on the `implement`, `bookkeeper` and `manager` profiles,
+`packages/regulator/profiles/`), may record what it learned for later units (`remember`,
+same profiles; scoped by unit type, `packages/protocol/src/memory.ts`), and may write and
+run any code it likes under its writable prefixes, `bash` included
+(`packages/regulator/profiles/implement.json`). What it may not do is three things: write
+a definition file (the write gate and the bash watch over `DEFINITION_WRITERS`'s
+instance paths, `packages/regulator-pi/src/authority.ts`); have its proposal take effect
+without an accept (INV-002); and change the harness that is running it, compaction and
+context assembly first of all, which are the budget policy's and not the unit's
+(`packages/regulator-pi/src/budget.ts`). The first two are the boundary. The third is
+where Exo's timescale claim lives, and it is the only one of the three a reader could
+call a refusal of adaptation rather than of authority.
+
+### 8.2 The manager asking the team: that is this design, and it has three gaps
+
+The analogy describes regulator, not Exo. In Exo the employee rewrites their own job
+description and HR checks that it parses. Here S1 proposes and S5 decides, which is the
+VSM's own picture of the channel, and the reflector as designed (Harness² note §7) reads
+precisely the records a unit's ideas land in: the regulatory log for proposals and
+uncertainty reports, the memory store for facts. So the channel exists. Why it does not
+yet deliver what Exo delivers:
+
+1. **Nothing asks.** No shipped advice file tells a unit that a repeated procedure, a
+   tool it had to build, or a context waste it noticed is wanted output, and where to
+   put it (a fact for later units goes to `remember`; a change to how units are run goes
+   to `propose_policy_change`). Exo's base policy carries its improvement strategy, and
+   Harness²'s editor is asked for two candidates per task. One paragraph per advice file,
+   landed by `advice promote`, and the proposal channel has a sender. Level 5, and the
+   right level: the asking is advice, the channel it feeds is typed.
+
+2. **The reader is not built.** A unit's proposal today is an obligation owed to a
+   person, which is correct and slow. A unit cannot file a typed `harness-edit` itself:
+   the prediction block rides on an intelligence signal
+   (`packages/protocol/src/prediction.ts`), and `report_intelligence` is on the
+   `intelligence` profile alone. So ideas from `implement` units arrive as plain text,
+   and the component that would aggregate them across units, attach the prediction and
+   shape the `harness-edit` is the reflector, designed and unbuilt. This is the same
+   dependency §4 item 5 has, not a new one.
+
+3. **The latency stays.** With both fixed, the unit that noticed the waste still never
+   benefits from the fix. That is the timescale claim of §6, and no amount of asking
+   closes it. §8.3 is what does, partly.
+
+### 8.3 How much of Exo's gain is reachable without crossing the line
+
+More than §4 made clear, and in two parts.
+
+**Tools.** Most of Exo's measured gain came from procedures the agent wrote and reused:
+the batched combat tool, the incident snapshot revised five times, the API-docs fetch
+(§5.2.1, §5.4). A regulator unit can do the first half today: write the script under a
+writable prefix, run it through `bash`, and `remember` where it is and what it does, with
+a scope, so the next unit of the type finds the fact rendered into its context. No
+mechanism changes; the asking paragraph of §8.2 is what makes a unit do it. What Exo has
+and this does not is in its §2.1: a policy-level tool is "wired directly into context
+assembly" while code in the environment "must be remembered and managed entirely by
+model reasoning". §4 item 5 is the mechanism that closes that gap without a unit ever
+writing the harness: the reflector sees the same program in several units' spans, and
+proposes it as a declared tool with an effect (`DeclaredToolSchema`), landing through the
+merged-change path under a person. So the answer to the second question is yes: item 5
+is where the proposal channel turns into the thing Exo measured, and it should be the
+focus once the reflector exists.
+
+**Context.** Exo's other large edit was to context policy: keep four turn summaries,
+move older strategy to durable memory (§5.2.1); on AppWorld, move the changing task list
+out of the standing prompt (§5.4.1). regulator refuses a unit editing compaction, and
+should. But there is a middle the note did not have. A unit could be granted a tool,
+call it `note_to_self`, whose only effect is to append a short note to the unit's own
+rendered context for the rest of the *current attempt*: carried in the deterministic
+block of contract-preserving compaction (`renderPreservedContext`,
+`packages/core/src/policy.ts`) so it survives eviction, recorded as a signal in the
+regulatory log with the unit and revision, and offered to the reflector at close as the
+diagnosis half of a draft `harness-edit`. Nothing under the definition is touched;
+identity still renders from the files; the canary still reads every reply; the closeout
+checks are unchanged. What the unit gets is Exo's timescale restricted to advice, scoped
+to one attempt, and logged: it can tell itself, mid-task, "the test output is noise past
+the first failure; stop reading it", and the next compaction keeps that sentence. What
+the instance gets is a record of what units tell themselves, which is the evidence the
+reflector needs to propose the same sentence as advice for every unit.
+
+Hazards, for the card: a unit telling itself to skip a rule. The rules a unit must keep
+are in the identity set and the contract, neither of which the note can touch, and
+`glossary-lint`, `behaviour-check` and `identity-untouched` judge the output regardless.
+A note is advice to itself at level 5, and the design's claim is that level 5 cannot
+override levels 1 to 3; if the drift suite shows otherwise, the tool is wrong, which is
+why it is probed first. Second hazard: self-report as control variety, if a note were
+read by anything as more than a note. It is rendered to the unit that wrote it and read
+by the reflector as a diagnosis; the router never sees it.
+
+**The experiment.** Run the drift suite with `note_to_self` on and off, under the
+regulators enabled, and read cost, cache share and the drift graders. That puts a number
+on §6's timescale claim from regulator's side: how much of Exo's within-task payback
+survives when the edits are restricted to a unit's own advice and the harness stays
+where it is. It is a live-model run and waits on
+[#46](https://github.com/MetaCoding-io/regulator/issues/46) like everything else here.
+
+### 8.4 Where this leaves the refusal
+
+regulator still refuses the thing Exo does: a unit editing compaction, context assembly,
+grants and its own improvement procedure, with activation gated by a build. What §8
+adds is that the refusal is narrower than §2's sentence made it sound. Proposing is
+open; building is open; remembering is open; advising oneself for an attempt can be
+opened without moving the line; and turning a unit's script into everyone's tool is a
+proposal away. The one thing kept is that the harness is changed by a path with a
+person on it, and the one thing that costs is latency, which §8.3's experiment measures
+instead of asserting.
