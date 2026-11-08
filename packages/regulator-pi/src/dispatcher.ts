@@ -221,4 +221,6 @@ export const host: Host = {
   extensions: EXTENSIONS,
   extensionPath,
   dispatcher: (options: HostDispatcherOptions = {}) => piDispatcher({ ...(options.echo === undefined ? {} : { echo: options.echo }), ...(options.extensions ? { extensionPaths: options.extensions.map(extensionPath) } : {}) }),
+  // The same lookup the dispatcher makes before choosing: Pi's registry, filtered to the providers with a key.
+  availableModels: async () => (await (await ModelRuntime.create()).getAvailable()).map((m) => `${m.provider}/${m.id}`),
 };
