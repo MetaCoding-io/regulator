@@ -402,13 +402,13 @@ test("a washed loss the person chose to take (#124): on a copy of the fixture wi
   assert.match(ingestReport?.summary ?? "", /replayed the fills since 2026-08-31 into the lots, now current to 2026-10-31 and reconciled to the custodian, with 1 wash sale\(s\) carried into the replacement lot's basis/);
   // The same lots at the fill price alone — what an ingest that ignored the wash sale would write — fail the suite by name.
   await writeFile(path.join(repo, "lots", "lots.csv"), lots.replace("2026-10-15-BND,BND,2026-10-15,20,72.50,82.00,2025-03-14-BND", "2026-10-15-BND,BND,2026-10-15,20,72.50,,"), "utf8");
-  const unadjusted = await gitExec("node", ["--test"], { cwd: repo });
+  const unadjusted = await gitExec("node", ["--test", "--test-reporter=tap"], { cwd: repo });
   assert.notEqual(unadjusted.code, 0, "the suite refuses a lots file without the adjustment");
   assert.match(unadjusted.stdout + unadjusted.stderr, /not ok .*the lots reconcile to the executed trades and to the custodian's positions, with the basis adjusted and the sold lot marked/);
   assert.match(unadjusted.stdout + unadjusted.stderr, /lot 2026-10-15-BND carries a basis of 1450\.00 \(20 at 72\.50\); the fills imply 1532\.00, with 82\.00 of the loss on 2025-03-14-BND disallowed and added to it: a buy inside the wash-sale window/);
   await writeFile(path.join(repo, "lots", "lots.json"), (await readFile(path.join(repo, "lots", "lots.json"), "utf8")).replace(/"washSales": \[[^]*?\]/, '"washSales": []'), "utf8");
   await writeFile(path.join(repo, "lots", "lots.csv"), lots, "utf8");
-  const unmarked = await gitExec("node", ["--test"], { cwd: repo });
+  const unmarked = await gitExec("node", ["--test", "--test-reporter=tap"], { cwd: repo });
   assert.match(unmarked.stdout + unmarked.stderr, /lots\/lots\.json: washSales does not mark the loss sales the fills washed/, "an adjusted lot with the sold lot unmarked is refused too");
   for (const [i, prefix] of PROTECTED.entries()) assert.deepEqual(await tree(repo, prefix), shipped[i], `${prefix} on the base is byte for byte what the copy carried, October included`);
 });
