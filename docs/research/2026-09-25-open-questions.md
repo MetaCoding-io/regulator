@@ -229,7 +229,8 @@ and the docs and the course get the same one. The committed eval reports carry a
 runs and metrics, not the stores, so that fixture does not exist yet. Smaller things from
 the same source (a lesson strip over `introducedIn`, predictions placed on the step they
 bet on, a header phase and an owed-to-a-person badge over the read model, a change
-signal in place of the five-second poll) are rows in §6. Still read-only (§5).
+signal in place of the five-second poll) are rows in §6. Still read-only (§5). Filed as
+[#171](https://github.com/MetaCoding-io/regulator/issues/171).
 
 ## 2. A person should be able to create S4 intelligence
 

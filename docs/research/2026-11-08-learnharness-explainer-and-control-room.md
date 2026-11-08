@@ -1,9 +1,9 @@
 # LearnHarness and a generated explainer of it, read against the control room
 
-- **Status:** open. The next step is the sequence view the figures thread already
-  names ([open questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects)),
-  with §4's first three items folded into its design; the remaining items are backlog
-  rows there.
+- **Status:** graduated: §4 items 1–3 are the sequence view,
+  [#171](https://github.com/MetaCoding-io/regulator/issues/171), under the figures thread
+  ([open questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects));
+  items 4–7 are backlog rows in §6 there.
 - **Source:** a post by Yi-Yi (@yiyibuilds, 2026-11-06) reviewing
   [LearnHarness](https://github.com/amosblomqvist/learnharness) ("Agent harness for
   learning difficult things", AGPL, a Next.js application in an Electron host on the Pi
