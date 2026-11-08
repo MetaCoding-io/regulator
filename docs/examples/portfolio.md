@@ -8,11 +8,12 @@ portfolio of exchange-traded funds held at a custodian, rebalanced against a tar
 a period, with a tax-lot ledger beside it. The design is in
 [`docs/research/2026-10-24-portfolio-workload.md`](../research/2026-10-24-portfolio-workload.md);
 this page is what the design's first phase became, file by file, what it found, and
-what the second phase's first two slices changed in it: the `command` runner, so that
-the two unit types whose work is arithmetic run as programs, and `place_trade`, a tool
-the workload declares with an effect contract, so that the consent on a trade list is
-derived by the gate from the declared effect rather than listed as a path a profile
-guards.
+what the second phase changed in it: the `command` runner, so that the two unit types
+whose work is arithmetic run as programs; `place_trade`, a tool the workload declares
+with an effect contract, so that the consent on a trade list is derived by the gate from
+the declared effect rather than listed as a path a profile guards; and the harvest, the
+example's second dangerous action, a session whose contract bounds a judgment with two
+rules about *pairs* of trades and whose list the suite judges by its kind.
 
 It is a good third domain for one reason above the others. The ledger's work was
 judgment sitting on arithmetic. A portfolio inverts the ratio: nearly all of it is
@@ -23,7 +24,14 @@ a trade list moves toward the target and not past it, whether a sale is a wash s
 whether the lots agree with the custodian, whether a stated return is the time-weighted
 one: each is a sum, a band, a date window or a product, and none needs an optimiser.
 The dangerous action is also plural here. A rebalance is many trades at once, so consent
-has to be asked once for a list, not once per leg.
+has to be asked once for a list, not once per leg. And there are two of them: a rebalance,
+which moves positions toward a target, and a harvest, which sells lots at a loss for the
+tax and buys their replacements from a set the person declared exchangeable. The second
+differs from the first in three ways this page comes back to: its legs come in pairs, a
+sell and the buy that replaces it; its delegated decision has two bounds, one about the
+lot and one about the pair; and its list is of another kind, so the check that holds a
+rebalance inside the band ticker by ticker would refuse the very swap a harvest exists
+for, and the suite has to know which list it is judging.
 
 Everything below runs today. The fixture, the workload, the profile, the contracts and a
 scripted manager are in [`packages/regulator`](../../packages/regulator/), and
@@ -34,7 +42,10 @@ type's declared program in place of a session
 ([#122](https://github.com/MetaCoding-io/regulator/issues/122)), and a workload can
 declare a tool with an effect contract, from which the gate derives the consent
 ([#121](https://github.com/MetaCoding-io/regulator/issues/121)); this workload is the
-case that asked for both. The first half of this page is the part you do before
+case that asked for both. The harvest
+([#124](https://github.com/MetaCoding-io/regulator/issues/124)) asked for nothing new in
+the control plane: a session unit type, a contract, a wider schema on the declared tool,
+and a fixture whose checks know a list's kind. The first half of this page is the part you do before
 writing any of that; the [authoring guide](../guide/authoring-a-workload.md) is the same material as a
 checklist, with what this example had to decide separated from what the harness decided
 for it.
@@ -52,11 +63,11 @@ prompt), and give a reason whenever the answer sits below the top.
 
 | | For the portfolio |
 | --- | --- |
-| Domain output | `targets/<date>.json`, the target weights; `trades/proposed/<date>.json`, a trade list a program computed and nobody has agreed to, and `trades/proposed/harvest-<date>.json`, the lots a program found at a loss; `trades/pending/<date>.json`, a trade list the household has agreed to execute; `lots/lots.csv`, the tax-lot ledger derived from executed trades, with `lots/lots.json` saying the date it is current to; `reports/<period>.md`, the period review. |
+| Domain output | `targets/<date>.json`, the target weights; `trades/proposed/<date>.json`, a trade list a program computed and nobody has agreed to, `trades/proposed/harvest-<date>.json`, the lots a program found at a loss, and `trades/proposed/harvest-plan-<date>.json`, the harvest a unit planned from them; `trades/pending/<name>.json`, a trade list the household has agreed to execute, rebalance or harvest; `lots/lots.csv`, the tax-lot ledger derived from executed trades, each lot with its fill price and the loss an executed wash sale disallowed into it, with `lots/lots.json` saying the date it is current to and marking the sold lots; `reports/<period>.md`, the period review. |
 | Source of truth | `positions/`, the custodian's exports of holdings and cash, and `prices/`, the closing prices on each export date. The harness reads them and never writes them. If the lots and the positions disagree, the lots are wrong. |
 | The person's record | `trades/executed/`, what was actually traded, written by the person from the custodian's confirmations. A unit never writes there. |
-| The person's choices | `universe.json`, the ETFs the portfolio may hold, grouped into sets the person considers exchangeable but not substantially identical; `tax.json`, the rates, the long-term cutoff, the wash-sale window and the jurisdiction; `benchmark.json`, the reference weights and the subsets a target holds within a tolerance of them. A unit never extends any of them. |
-| The domain's own checks | `test/portfolio.test.js`, eight assertions: the target is feasible; a trade list, proposed or pending, moves toward the target and not past it and lands inside the band, every sell in it names a held lot, and no trade in it creates a wash sale against the lot history; a pending list carries the trades the proposed list of its date computed; every harvest candidate is an open lot at a loss with the loss as the arithmetic says; the lots reconcile to the executed trades and to the positions; and the report's return is the positions' time-weighted return. |
+| The person's choices | `universe.json`, the ETFs the portfolio may hold, grouped into sets the person considers exchangeable but not substantially identical; `tax.json`, the rates, the long-term cutoff, the wash-sale window and the jurisdiction; `benchmark.json`, the reference weights and the subsets a target holds within a tolerance of them; `harvest.json`, the trading cost of a leg and the tracking volatility a harvest's opportunity cost is priced from. A unit never extends any of them. |
+| The domain's own checks | `test/portfolio.test.js`, ten assertions, judging a list by its kind: the target is feasible; every list says a kind its name agrees with; a rebalance list, proposed or pending, moves toward the target and not past it and lands inside the band; every sell in any list names a held lot, counted across the lists of a day; no trade in any list creates a wash sale — a rebalance against the lot history and the fills, a harvest also against the other lists of its window, set by set; a pending list carries the trades the proposed list of its name computed; every harvest candidate is an open lot at a loss with the loss as the arithmetic says; a harvest list sells whole candidate lots worth taking by `harvest.json`'s arithmetic, buys only what they free from the sold ticker's set, keeps every set inside the band and accounts for every candidate it leaves; the lots reconcile to the executed trades and to the positions, with the basis adjusted wherever the fills washed a loss; and the report's return is the positions' time-weighted return. |
 
 The one rule carries over unchanged: **nothing reads its own progress off the
 portfolio.** Whether September is ingested, targeted, rebalanced or reviewed is
@@ -65,7 +76,7 @@ state. What was verified about it is regulatory state.
 
 ### S1 — What are the units of work, and what may each one touch?
 
-Seven unit types, five sessions and two programs, each under a capability profile. For
+Eight unit types, six sessions and two programs, each under a capability profile. For
 a session the profile is a grant over declared tool *effects*; for a program it is the
 *effect declaration* the definition check reads, since a program calls no tool. The
 "may write" column is what the profile permits for a session and what the program
@@ -79,27 +90,34 @@ committed revision at closeout, whichever produced it:
 | `plan-rebalance` | command: `node workload/portfolio/plan-rebalance.mjs` | manager, as an effect declaration | `trades/proposed/` | same |
 | `confirm-trades` | session | manager | same as `ingest-positions`; `trades/pending/` through `place_trade` alone | same |
 | `harvest-losses` | command: `node workload/portfolio/harvest-losses.mjs` | manager, as an effect declaration | `trades/proposed/harvest-` | same |
+| `plan-harvest` | session | manager | same as `ingest-positions`; writes `trades/proposed/harvest-plan-<date>.json` | same |
 | `review` | session | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `close-period` | session | auditor | nothing | — |
 
-Five decisions in this table matter. The manager gets no shell, as the bookkeeper did
+Six decisions in this table matter. The manager gets no shell, as the bookkeeper did
 not, so the write grant is complete at the tool boundary — and a profile with a shell
 could not be a program's effect declaration at all, since a program's reach is its
-declared outputs and nothing wider. `lib/`, `test/`, `universe.json`, `tax.json` and
-`benchmark.json` are under no profile's writable prefixes, so neither a unit nor a
-program can weaken the check that judges it or widen the universe it may trade. The two
-unit types whose work is wholly arithmetic are programs: the loop runs the declared
-command in the worktree under a wall-clock budget, with no session and no model, and
-checks what it wrote exactly as it checks a model's work. The rebalance is split in
-two because a program cannot ask: `plan-rebalance` writes its list under
-`trades/proposed/`, a prefix no consent guards, and `confirm-trades`, a session, puts
-that list to a person. And `trades/pending/` is under no write grant at all: the one
-way a pending list comes to exist is `place_trade`, the tool the workload declares with
-an irreversible effect, whose program copies the proposed list byte for byte after the
-yes. The gate derives the consent question from that declared effect, so the question
-is asked because the tool is what it is, not because the profile's advice said so, and
-"copied unchanged" is a property of the tool rather than a sentence the model keeps.
-The `auditor` profile is the ledger's, reused as it is.
+declared outputs and nothing wider. `lib/`, `test/`, `universe.json`, `tax.json`,
+`benchmark.json` and `harvest.json` are under no profile's writable prefixes, so neither
+a unit nor a program can weaken the check that judges it, widen the universe it may
+trade, or move the numbers a harvest is judged by. The two unit types whose work is
+wholly arithmetic are programs: the loop runs the declared command in the worktree under
+a wall-clock budget, with no session and no model, and checks what it wrote exactly as
+it checks a model's work. The rebalance is split in two because a program cannot ask:
+`plan-rebalance` writes its list under `trades/proposed/`, a prefix no consent guards,
+and `confirm-trades`, a session, puts that list to a person. The harvest is split in
+three, and its middle is a session for a different reason: `harvest-losses`, a program,
+says where the losses are; `plan-harvest` decides which to take and what replaces each,
+a judgment the contract bounds and the unit reports, which the loop refuses to delegate
+to a program; and `confirm-trades` again puts the list to a person, under a second
+contract over the harvest list. And `trades/pending/` is under no write grant at all:
+the one way a pending list comes to exist is `place_trade`, the tool the workload
+declares with an irreversible effect, whose program copies the proposed list — either
+kind, under its own name — byte for byte after the yes. The gate derives the consent
+question from that declared effect, so the question is asked because the tool is what it
+is, not because the profile's advice said so, and "copied unchanged" is a property of
+the tool rather than a sentence the model keeps. The `auditor` profile is the ledger's,
+reused as it is.
 
 ### S2 — What stops units from tripping over each other?
 
@@ -142,8 +160,40 @@ cannot do:
 The contract for `harvest-losses`, the second program, fixes the lots, the tax
 parameters and one thing more: candidates only. Every lot under water at the date's
 prices is listed with its loss, with no threshold and no benefit-versus-cost judgment;
-that arithmetic, and the replacement from the ticker's exchangeable set, is the harvest
-contract's ([#124](https://github.com/MetaCoding-io/regulator/issues/124)).
+that arithmetic, and the replacement from the ticker's exchangeable set, is the next
+contract's.
+
+The contract for `plan-harvest`, the session that reads those candidates, is the one
+whose delegated decision has two bounds, and the first shipped contract where a bound is
+a rule about a *pair* of trades rather than one:
+
+- Fixed: the exchangeable sets are `universe.json`; the window and the rates are
+  `tax.json`; the trading cost of a leg and the tracking volatility are `harvest.json`,
+  and the arithmetic is the one `lib/portfolio.js` states — the benefit is the loss at
+  the rate the lot's holding period earns, the costs are two legs at the rate on the
+  lot's value and an at-the-money option on the tracking difference over the window; the
+  candidates are the program's file and the lots are current to the date; the list is
+  planned over the positions after the agreed rebalance list of the date, exchanges
+  within a set, keeps every set inside the band and buys only with what its sells free;
+  it is written under `trades/proposed/` as `harvest-plan-2026-09-30.json` with kind
+  `harvest`, and nothing under `trades/pending/`.
+- Delegated, with bounds and a required report: *which eligible candidates to harvest* —
+  whole lots whose benefit exceeds both costs and whose ticker has no shares acquired
+  inside the window beyond what the day's lists sell, ordered by benefit net of costs,
+  each reported with the benefit and the two costs, and every candidate not taken
+  accounted for with its reason (benefit below costs, blocked by a recent buy, no
+  replacement available); and *which ETF replaces a sold one* — another ticker of the
+  sold ticker's set, never the same ticker, never a ticker the list also sells, never one
+  sold at a loss inside the window, bought with the proceeds in whole shares. The
+  result-report check reads the two reported choices as the decisions' completion; the
+  suite holds every stated reason against the arithmetic.
+- Unresolved, handling *defer*: a candidate lot whose ticker no set names. None arose in
+  September — VNQ has no lot — and the report says so.
+
+The contract for the harvest's confirmation is the rebalance's confirmation over the
+other list: the same fixed consent rule, the same `place_trade` call with the harvest
+list's name, the question naming every leg — each sell with its lot, its loss and the
+tax it saves, each buy with the ticker it replaces.
 
 The contract for `propose-target` delegates one thing that is judgment, and bounds it:
 the expected-return inputs. In this phase no view has been raised, so the inputs are
@@ -153,9 +203,9 @@ says what that bound becomes when a view with a numeric confidence exists.
 
 Budgets are set per attempt and per unit type in a policy file. The read-only types get
 one attempt; `confirm-trades` gets three, because its first is spent asking for consent
-and a refused list still deserves a repair. The two programs are budgeted in wall-clock
-alone, with a second attempt in case the first is refused: their tokens and turns are
-zero by construction.
+and a refused list still deserves a repair; `plan-harvest` gets two, one repair after a
+refused list. The two programs are budgeted in wall-clock alone, with a second attempt
+in case the first is refused: their tokens and turns are zero by construction.
 
 ### S3\* — How do we know the plan is right without believing the unit?
 
@@ -193,7 +243,7 @@ statement did.
 | The custodian's exports and the price history are never written by a unit | `positions/` and `prices/` are outside the writable prefixes, so the profile grant refuses the write in the session; `--protected` in the manifest means `identity-untouched` refuses the closeout if anything got past the grant |
 | A trade list is written only after a person's yes to one question naming every trade | the contract fixes it; `trades/pending/` is outside every write grant, and `place_trade`, the one tool that reaches it, is declared `irreversible`, so the gate derives the consent and refuses the call without a recorded yes for it; `ask_human` with `kind=consent` opens a blocking obligation and the pause gate refuses every tool with an effect until a person answers; silence is never consent, a protocol constant. A program may not write there at all: a program's outputs are its reach, and the plan's are `trades/proposed/` |
 | What was traded is the person's record | `trades/executed/` is outside the grant and protected |
-| A unit never extends the universe, the exchangeable sets or the tax parameters | the three files are outside every writable prefix |
+| A unit never extends the universe, the exchangeable sets, the tax parameters or the harvest inputs | the four files are outside every writable prefix |
 | The portfolio's risk stays inside the person's tolerance | *not yet*: the design puts a volatility bound in the identity and a check on a target's predicted volatility; the bound is a number a person has not set and the check needs a covariance input, so neither exists in this phase (§5) |
 
 The last row is the one the ledger could not have, and this phase does not have it
@@ -206,7 +256,9 @@ a number a check can read once someone has written it down.
 Once per trade list, before the file exists. The question names every trade, the lots it
 sells from and the tax it realises, because that is what a person is consenting to. Not
 once per trade: a rebalance is one decision with many legs, and asking several times is
-the attention budget spent on the wrong thing. The unresolved position does not
+the attention budget spent on the wrong thing. A harvest is a second list and a second
+question, naming each sell with its loss and the tax it saves and each buy with the
+ticker it replaces, since a swap is what the person is consenting to. The unresolved position does not
 interrupt anyone. It is an open item on the review, owed to a person as an obligation,
 delivered to the outbox and reminded about, and it stops nothing while it waits.
 
@@ -216,16 +268,19 @@ delivered to the outbox and reminded about, and it stops nothing while it waits.
 | --- | --- | --- |
 | The target is feasible under the declared constraints | 2, a deterministic check (`test/portfolio.test.js`) | — |
 | The trade list moves toward the target, not past it, and lands inside the band | 2, a deterministic check | — |
-| No trade creates a wash sale | 2, a deterministic check | — |
+| No trade creates a wash sale | 2, a deterministic check, by the list's kind: a rebalance against the lot history and the fills, a harvest also against the other lists of its window | — |
 | Every sell names a held lot; the lots reconcile to executed trades and positions | 2, a deterministic check | — |
 | The report's return is the time-weighted return | 2, a deterministic check | — |
 | A harvest candidate is an open lot at a loss, with the loss as the arithmetic says | 2, a deterministic check | — |
-| A harvest's benefit exceeds its costs | 2, a check, once a harvest exists | the program finds the candidates and judges none; the check arrives with the harvest contract ([#124](https://github.com/MetaCoding-io/regulator/issues/124)) |
+| A harvest's benefit exceeds its costs | 2, a deterministic check, with the volatility input a fixed decision in `harvest.json` | the opportunity cost prices an option on the tracking difference; the input is a number the person fixes, not a judgment the unit makes |
+| A harvest exchanges within a set: every buy from the sold ticker's set, never a ticker the list sells, every set inside the band, only what the sells free | 2, a deterministic check, set by set | — |
+| Every candidate not harvested is accounted for, and the reason holds | 2, a deterministic check over the list's dispositions, plus 2, the result-report check reading the delegated decision's report | the reason is one of a closed list; the suite recomputes it |
+| The cost-basis adjustment an executed wash sale forces | 2, a deterministic check over the lots against the fills | the derivation is one function the ingest and the check share; a lots file without it is refused by name |
 | The pending list is the list the person was asked about | 3, the tool's program copies the proposed file byte for byte, plus 2, a deterministic check | the suite's assertion still runs at every closeout, and what it guards now is a bug in `place-trade.mjs`, not a model's shortcut: a session cannot write the file |
 | A program's output is right | 2, the same checks at the revision the program produced | nothing reads the program; its exit and its claim satisfy nothing, and a wrong program is refused by the suite and escalated when the policy's attempts are spent |
 | Consent before a trade list | 2, a gate (the consent derived from `place_trade`'s declared effect, refusing the call without a recorded yes), plus 3, a typed tool (`place_trade`, with an effect contract; `ask_human`, `kind=consent`), plus 2, a gate (pause) | — ([#121](https://github.com/MetaCoding-io/regulator/issues/121): derived from the declaration, with no profile naming the tool) |
 | Which lot a sale comes from | 2, a rule the program implements, checked by the suite (held lots, no wash sale) | was judgment in the first phase; a program has no judgment, so the ordering is a fixed decision on its contract and the choice among equals is the ordering's tie-break |
-| Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | no harvest yet; the sets are declared so the check has them |
+| Which candidates to harvest, and which exchangeable ETF replaces each | 4, judgment bounded by the arithmetic, the set and the wash-sale check, reported | the ordering among equals and the choice within a set are the unit's; the bounds are what refuse a wrong one |
 | The expected-return inputs | 4, judgment bounded by the subset tolerances, reported | it is judgment; the cap is fixed, the inputs are reported |
 | Tone, thoroughness, "check the lots first" | 5, advice in the profile | advice by definition |
 
@@ -248,14 +303,15 @@ managed-portfolio/
   universe.json                  the ETFs, in exchangeable sets (the person's)
   tax.json                       rates, cutoff, window, jurisdiction (the person's)
   benchmark.json                 reference weights and subset tolerances (the person's)
+  harvest.json                   the trading cost of a leg, the tracking volatility (the person's)
   positions/                     the custodian's exports — protected
     2026-07-31.csv/.json  2026-08-31  2026-09-15 (a deposit)  2026-09-30
   prices/                        closing prices on each export date — protected
   trades/executed/               what was traded — protected
     2025-03-14.json  2026-09-02.json
-  trades/proposed/               a list a program computed; not yet agreed
+  trades/proposed/               lists nobody has agreed to: a program's rebalance, the candidates, a unit's harvest plan
   trades/pending/                a file here is a commitment
-  lots/lots.csv, lots.json       the open lots, current to 2026-08-31
+  lots/lots.csv, lots.json       the open lots, current to 2026-08-31, with the wash-sale columns empty
   targets/2026-08-31.json        August's target
   reports/2026-08.md             August's review
   lib/portfolio.js, test/        the portfolio's own checks — outside every write grant
@@ -280,6 +336,7 @@ from the new lot is not. Two shares nobody can explain sit outside the universe.
     { "name": "plan-rebalance",   "profile": "manager", "runner": { "kind": "command", "argv": ["node", "workload/portfolio/plan-rebalance.mjs"], "outputs": ["trades/proposed/"] }, "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
     { "name": "confirm-trades",   "profile": "manager", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
     { "name": "harvest-losses",   "profile": "manager", "runner": { "kind": "command", "argv": ["node", "workload/portfolio/harvest-losses.mjs"], "outputs": ["trades/proposed/harvest-"] }, "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
+    { "name": "plan-harvest",     "profile": "manager", "checks": ["run_checks", "run_tests", "inherited-tests", "identity-untouched", "glossary-lint"], "requiresContract": true },
     { "name": "review",           "profile": "auditor", "checks": ["run_tests", "inherited-tests", "identity-untouched"], "requiresContract": true },
     { "name": "close-period",     "profile": "auditor", "checks": [], "requiresContract": true }
   ]
@@ -294,8 +351,8 @@ types:
   "tools": [
     {
       "name": "place_trade",
-      "description": "Place the trade list a person has agreed to: copy trades/proposed/<date>.json byte for byte to trades/pending/<date>.json, where a file is a commitment …",
-      "parameters": { "type": "object", "properties": { "proposed": { "type": "string", "pattern": "^trades/proposed/[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$" } }, "required": ["proposed"], "additionalProperties": false },
+      "description": "Place the trade list a person has agreed to: copy the proposed list — trades/proposed/<date>.json or trades/proposed/harvest-plan-<date>.json — byte for byte to the same name under trades/pending/, where a file is a commitment …",
+      "parameters": { "type": "object", "properties": { "proposed": { "type": "string", "pattern": "^trades/proposed/(harvest-plan-)?[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$" } }, "required": ["proposed"], "additionalProperties": false },
       "effect": { "filesystem": "write", "execution": "none", "network": "none", "sideEffects": "irreversible" },
       "program": { "argv": ["node", "workload/portfolio/place-trade.mjs"], "outputs": ["trades/pending/"] }
     }
@@ -310,7 +367,8 @@ output outside the profile's writable paths or under one of its consent grants; 
 declared tool, a built-in's name, a schema that is not an object's, an effect that says
 arbitrary execution or disagrees with the outputs, a program with no file under the
 definition, and a profile that grants the tool beside a plain write under its outputs.
-It passes with three workloads, two programs and one declared tool.
+It passes with three workloads, two programs and one declared tool. The tool's schema
+admits the two list names and nothing else: not the candidates file, not a pending one.
 
 ### The profile: [`manager.json`](../../packages/regulator/profiles/manager.json), with [`advice/manager.md`](../../packages/regulator/advice/manager.md)
 
@@ -344,7 +402,7 @@ policies, unchanged.
 
 ### The contracts: [`packages/regulator/contracts/portfolio/`](../../packages/regulator/contracts/portfolio/)
 
-There are six, one per unit of the September close. The program's contract fixes
+There are eight, one per unit of the September close. The program's contract fixes
 everything and delegates nothing:
 
 ```json
@@ -395,6 +453,30 @@ with its decisions sorted as §1 says:
 }
 ```
 
+And this is the harvest's, the one with two bounds; its fixed decisions are elided to
+their subjects, since §1 lists them:
+
+```json
+{
+  "id": "tc-p6-plan-harvest", "unitId": "p6-plan-harvest", "unitType": "plan-harvest",
+  "workload": { "name": "portfolio", "version": 1 },
+  "objective": "Plan September's harvest: read trades/proposed/harvest-2026-09-30.json, the candidates the harvest-losses program found, and write trades/proposed/harvest-plan-2026-09-30.json — a list of kind harvest, planned over the positions after the agreed rebalance list trades/pending/2026-09-30.json …",
+  "constraintRefs": ["reg.control.profile-write-grant.v1", "reg.audit.closeout-gate.v1"],
+  "fixed": [
+    { "id": "f-sets", "subject": "the exchangeable sets", "…": "…" }, { "id": "f-tax", "…": "…" }, { "id": "f-inputs", "subject": "the harvest inputs", "…": "…" },
+    { "id": "f-candidates", "…": "…" }, { "id": "f-baseline", "subject": "what the list is planned over", "…": "…" }, { "id": "f-proposed", "…": "…" }, { "id": "f-executed", "…": "…" }
+  ],
+  "delegated": [
+    { "id": "d-harvest", "subject": "which eligible candidates to harvest", "bounds": "Only candidates of the program's file, each a whole lot; only those whose benefit exceeds both costs by harvest.json's arithmetic and whose ticker has no shares acquired inside the window beyond what the day's lists sell; ordered in the list by benefit net of costs, each sell reported with the benefit and the two costs. Every candidate not harvested is accounted for … with its reason — benefit below costs, blocked by a recent buy, or no replacement available …", "requiredReport": true },
+    { "id": "d-replacement", "subject": "which ETF replaces a sold one", "bounds": "Another ticker of the sold ticker's set in universe.json, never the same ticker, never a ticker the list also sells, never one sold at a loss inside the window; bought with the sell's proceeds in whole shares and not past them. Reported per sell.", "requiredReport": true }
+  ],
+  "unresolved": [
+    { "id": "u-unnamed", "subject": "a candidate lot whose ticker no set in universe.json names", "reason": "The household has not said what would replace it; a harvest without a replacement is a sale, not an exchange.", "handling": "defer" }
+  ],
+  "expectedEvidence": [ { "id": "e-portfolio-checks", "class": "test", "required": true, "description": "run_tests: … every sell in the harvest list is a whole candidate lot at a loss worth taking, every buy is from the sold ticker's set and never a ticker the list sells, no trade creates a wash sale …, every set stays inside the band …, and every candidate not taken is accounted for with a reason the arithmetic confirms" }, { "id": "e-checks", "…": "…" } ]
+}
+```
+
 ### The identity, in your definition
 
 The lab's `identity/` is the software harness's, so the contracts cite the person who
@@ -420,11 +502,11 @@ it realises.
 Checked by: `ask_human` opens a blocking obligation; the pause gate refuses every tool
 with an effect until it is answered; silence, timeout and cancellation are never a yes.
 
-## INV-007 — The universe, the tax parameters and the benchmark are the person's
+## INV-007 — The universe, the tax parameters, the benchmark and the harvest inputs are the person's
 
-No unit writes `universe.json`, `tax.json` or `benchmark.json`.
+No unit writes `universe.json`, `tax.json`, `benchmark.json` or `harvest.json`.
 
-Checked by: the three files are outside every profile's writable prefixes.
+Checked by: the four files are outside every profile's writable prefixes.
 
 ## INV-008 — The portfolio's risk stays inside the person's tolerance
 
@@ -462,7 +544,9 @@ regulator obligations                          # consent: the September trade li
 regulator answer <obligation> --by alice --answer yes
 regulator unit drive $L/p4-confirm-trades.json --policy $P    # the next attempt's place_trade call runs on the recorded yes
 regulator unit drive $L/p5-harvest-losses.json --policy $P    # a program: where the losses are
-regulator unit drive $L/p6-review.json --policy $P
+regulator unit drive $L/p6-plan-harvest.json --policy $P      # a session: which to take, what replaces each, why the rest are left
+regulator unit drive $L/p7-confirm-harvest.json --policy $P   # asks once about the harvest list; pauses; answer; drive again
+regulator unit drive $L/p8-review.json --policy $P
 regulator unit evidence p3-plan-rebalance      # the portfolio's checks, bound to the revision the program produced
 regulator unit show p3-plan-rebalance          # the attempt: the program's file, its hash, its exit; zero tokens
 regulator status --definition packages/regulator --instance .
@@ -470,14 +554,19 @@ regulator status --definition packages/regulator --instance .
 
 Without a model, the same close runs scripted. `node --test packages/regulator/dist/portfolio.test.js`
 drives it with two behaviours for the sessions — the `manager`, which does what the
-contracts ask, and the `careless`, which calls `place_trade` without asking anyone —
-while the two programs run as the loop runs them, with nothing standing in, and the
-tool's program runs through the same runner the host's extension calls. A third test runs a deliberately wrong program in the plan's place. What
-the tests assert is what you would look for in the control room:
+contracts ask, and the `careless`, which calls `place_trade` without asking anyone and, in its harvest,
+buys back what it sells — while the two programs run as the loop runs them, with nothing
+standing in, and the tool's program runs through the same runner the host's extension
+calls. The sessions do their arithmetic through the fixture's own `lib/portfolio.js`,
+read from the worktree, so the ingest and the suite's reconciliation share one derivation
+of the lots and the harvest plan and the harvest check share one evaluation. A third test
+runs a deliberately wrong program in the plan's place; a fourth adds October to a copy of
+the fixture and ingests a wash sale the person chose to make. What the tests assert is
+what you would look for in the control room:
 
 - Units p1 and p2 close on evidence the host produced: `run_checks`, `run_tests` (the
-  portfolio's eight assertions and the turnover arithmetic's test, discovered from
-  `package.json`), `inherited-tests`,
+  portfolio's ten assertions with the turnover and harvest arithmetic's tests, discovered
+  from `package.json`), `inherited-tests`,
   `identity-untouched` and `glossary-lint`, each bound to the unit's committed revision,
   and, before each merge lands, `pre-merge:run_tests` on the merged tree.
 - The lots on the base are current to 30 September, with the 2 September fill as a lot
@@ -501,7 +590,22 @@ the tests assert is what you would look for in the control room:
   closes.
 - Unit p5 closes as p3 did: three lots under water at the 30 September prices, listed
   with their losses and nothing said about whether to take them.
-- Unit p6 is verified by the host although it writes nothing.
+- Unit p6 closes on its first attempt with a harvest list of one pair: 190 BND sold from
+  the 2025 lot at a loss of 779.00 — a tax benefit of 116.85 against 14.04 of trading
+  cost and 32.12 of opportunity cost — and 139 AGG bought with the proceeds, the other
+  ticker of the bonds set. The 2 September BND lot that would have washed the sale is
+  sold by the agreed rebalance list the same day, which is why the harvest is planned over
+  the positions after that list. The two VXUS candidates are left, each with a reason the
+  suite recomputes: the September lot is worth taking but the agreed rebalance buys 29
+  VXUS the same day, so it is blocked by a recent buy; the 2025 lot's long-term benefit of
+  24.75 does not cover costs of 29.05. The report's two delegated results say all of this,
+  which is what the result-report check reads as the decisions' completion, and the
+  unresolved decision reports that no candidate fell outside the sets.
+- Unit p7 pauses on one question naming both legs — the sell with its lot, its loss and
+  the tax it saves, the buy with the ticker it replaces — and the `place_trade` call with
+  the harvest list's name. After the yes, the tool copies the list byte for byte under
+  `trades/pending/harvest-plan-2026-09-30.json`, beside the rebalance's.
+- Unit p8 is verified by the host although it writes nothing.
 - The careless confirmation calls `place_trade` without asking and is refused by the
   consent gate before anything exists — the consent derived from the tool's declared
   effect, with no profile grant naming it — as an operational-signal with the tree
@@ -512,6 +616,22 @@ the tests assert is what you would look for in the control room:
   session does not write the file. The suite's assertion that holds the pending list to
   the proposed one still runs at every closeout, and now guards a bug in the tool's
   program rather than a model's shortcut.
+- The careless harvest sells the BND lot and buys BND back as its own "replacement": the
+  wash sale the sets exist to avoid. The suite refuses it at closeout by two names — the
+  wash-sale check, which sees the buy in the list, and the harvest check, which sees a
+  replacement the set does not allow — the router says repair, and the second attempt
+  writes the manager's list. The first attempt's report said plainly what it had done;
+  the suite, not the report, is what refused it.
+- October, on a copy of the fixture the test builds (the committed fixture stays at
+  September, since every unit reads its latest export off the tree): the September lists
+  executed on 1 October, then 20 BND bought back on 15 October, fourteen days after
+  selling 190 at a loss — the person's choice, recorded as made. The ingest replays the
+  fills through `lib/portfolio.js` and the lots carry it: the new BND lot's basis is
+  1450.00 plus 82.00 of disallowed loss (twenty shares at 4.10 under their cost), the
+  sold lot is marked in `lots.json` with the sale, the shares, the amount and the lot it
+  went into, and the review says so. The suite accepts those lots and refuses, by name
+  and with the two numbers, a lots file written at the fill price alone, or one with the
+  adjustment but the sold lot unmarked.
 - The wrong program, a second argv on a test-only copy of the unit type, sells past the
   target. The suite refuses it at closeout by name on both attempts the policy grants,
   the recovery router says repair and then escalate, an algedonic signal reaches S5,
@@ -559,11 +679,30 @@ of the ledger instance; this one reads the same way.
   rather than one unit.
 - There is no S4. The exports arrive by hand. The three sensors the design names are
   [#123](https://github.com/MetaCoding-io/regulator/issues/123).
-- There is no harvest, only its candidates. The program says where the losses are and
-  nothing about whether to take them, so two of the design's checks have nothing to
-  check yet: a harvest's benefit against its costs, and the cost-basis adjustment an
-  executed wash sale forces on the lots ([#124](https://github.com/MetaCoding-io/regulator/issues/124)).
-  The exchangeable sets are declared so those checks have them.
+- The harvest's arithmetic is the household's model, not a tax authority's. The benefit
+  is the loss at the lot's rate, with no account of the deferral (a lower basis is taxed
+  later) or of the capital-loss limits; the opportunity cost is one option price on one
+  volatility number; and a replacement lot takes no holding period from the lot it
+  replaced. Each is a number in `harvest.json` or a line in `lib/portfolio.js` the person
+  can change, and the suite recomputes whatever they write.
+- The wash sale is the ticker's, as `tax.json` defines it: a set is the pool a
+  replacement comes from, not a second definition of "substantially identical". The
+  check reads "per set" as the scope of the exchange rule — within a set, what is sold
+  and what is bought are disjoint, and a buy belongs to a set something is sold from —
+  not as the identity of the security; the alternative would refuse the very swap the
+  sets exist for. A household that considers two funds identical puts them under one
+  ticker's rule by not pairing them in a set.
+- The fixture dates are load-bearing. `plan-rebalance`, `harvest-losses` and the scripted
+  ingest read "latest" off the committed `positions/` and `prices/`, which end on
+  30 September, so an October period in the committed fixture would move every unit's
+  date and break the September close. The washed-loss scenario is therefore exercised on
+  a copy the test builds, with October's fills, exports and prices added, and never
+  committed. The alternative — committing October and moving the scripted close to it —
+  touches every contract's dates and was not taken.
+- The third reason a candidate may be left, *no replacement available*, is checked and
+  tested on the arithmetic but not met by the shipped data: every set has two tickers and
+  nothing was sold at a loss inside September's window. A set of one, or a replacement
+  sold at a loss the month before, would meet it.
 - The risk tolerance is not identity, and the volatility check on a target does not
   exist: the bound is a number nobody has set and the check needs a covariance input.
 - The price history carries closing prices and no dividends. Cash is the custodian's,
@@ -590,4 +729,9 @@ units, a program that proposes and a session that confirms, and that the domain'
 dangerous action is a tool the workload declares with an effect contract rather than a
 prefix the model writes under: the consent is then derived from the declaration, the
 copy is the tool's, and the advice line that said to ask is deleted, since a rule a gate
-enforces is not restated as advice.
+enforces is not restated as advice. The harvest added two more: when a domain has a
+second kind of output under the same prefix, the output carries its kind and the checks
+judge by it, since a check written for one kind refuses the other for the wrong reason;
+and when a step's judgment is bounded by a rule about a pair of trades, the bound goes in
+the contract as a sentence and in the suite as a check over the pair, with the unit's
+account of what it left as a list the check recomputes rather than prose it believes.
