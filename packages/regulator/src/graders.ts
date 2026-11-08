@@ -99,8 +99,8 @@ export async function memoryFacts(ctx: GraderContext): Promise<GraderVerdict> {
   return { grader: "memoryFacts", kind: "trajectory", value: facts.length, observation: facts.length ? facts.map((f) => `${f.subject} (review ${f.reviewBy.slice(0, 10)})`).join(", ") : "nothing remembered" };
 }
 
-/** Trajectory counts for one unit from the orchestrator's and the regulators' records. */
-export async function unitTrajectory(repo: string, unitId: string): Promise<{ metrics: Record<string, number>; graders: GraderVerdict[] }> {
+/** Trajectory counts for one unit from the orchestrator's and the regulators' records, and the models its ledgers name. */
+export async function unitTrajectory(repo: string, unitId: string): Promise<{ metrics: Record<string, number>; graders: GraderVerdict[]; models: string[] }> {
   const store = new ExecutionStore(repo);
   const unit = await store.getUnit(unitId);
   const attempts = await store.listAttempts(unitId);
@@ -109,10 +109,12 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   const obligations = (await new ObligationLedger(repo).obligations()).filter((o) => o.unit === unitId);
   const signals = (await readSignals(repo)).filter((m) => m.unit === unitId);
   let tokens = 0, turns = 0;
+  const models: string[] = [];
   for (const a of attempts) {
     const b = await store.getBudget(unitId, a.attempt);
     tokens += b?.consumed.tokens ?? 0;
     turns += b?.consumed.turns ?? 0;
+    for (const m of b?.models ?? []) if (!models.includes(m)) models.push(m);
   }
   const wallClockMs = attempts.reduce((sum, a) => sum + Math.max(0, Date.parse(a.endedAt) - Date.parse(a.startedAt)), 0);
   const refusals = attempts.filter((a) => a.outcome === "check-failure" || a.outcome === "invalid-report").length;
@@ -129,6 +131,7 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   return {
     metrics: { closed: unit?.status === "closed" ? 1 : 0, attempts: unit?.attempts ?? 0, tokens, turns, wallClockMs, refusals, retries, escalations, invariantViolations },
     graders,
+    models,
   };
 }
 

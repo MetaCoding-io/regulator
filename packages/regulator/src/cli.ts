@@ -62,7 +62,7 @@
  * Evidence
  *   regulator effects                          the effect journal: every side-effecting tool call, its outcome and its reconciliation
  *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
- *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier|manager|careless>] [--arm <name>]... [--reps <n>] [--out <file>] [--policy <file>] [--writable a/,b/] [--protected x/]
+ *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier|manager|careless>] [--arm <name>]... [--reps <n>] [--out <file>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback]
  *                                 [--interpretation <file>] [--by <who>] [--keep] [--host <package>]   run a suite: scripted units headlessly, or live units through the host's dispatcher
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
@@ -85,7 +85,7 @@ import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
-import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
+import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite, unavailablePrimaries } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
@@ -107,7 +107,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -672,10 +672,23 @@ ${rationale}`]]) {
     if (coverage.unknown.length) throw new Error(`suite ablates ${coverage.unknown.join(", ")}, which the registry does not declare`);
     console.log(`suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s), ${arms.length ? arms.join(", ") : suite.arms.map((a) => a.name).join(", ")} × ${reps ?? suite.repetitions} repetition(s); ${behaviour ? `scripted ${behaviour}` : "live"}; ablation arms cover ${coverage.covered.length} of ${coverage.covered.length + coverage.uncovered.length} regulators`);
     const live = behaviour ? undefined : await loadHost(flag("host"));
+    const evalPolicy = await loadPolicy(evalPolicyPath);
+    if (live) {
+      // A live report is declared on the route's primary. The dispatcher would take the first available fallback and
+      // say nothing; the eval refuses before spending unless the person accepts the fallback, and the report then says so.
+      const available = await live.host.availableModels?.();
+      if (available) {
+        const missing = unavailablePrimaries(await Promise.all(suite.tasks.map((f) => loadContract(path.join(labRoot, f)))), evalPolicy, available);
+        const where = missing.map((m) => `${m.unitType}: ${m.primary} (available fallbacks: ${m.fallbacksAvailable.join(", ") || "none"})`).join("; ");
+        if (missing.length && !rest.includes("--accept-fallback")) throw new Error(`the route's primary is not available — ${where}. A key for its provider is missing from this shell (available: ${available.join(", ") || "none"}). Export it, or pass --accept-fallback to run on the declared fallback and have the report's fingerprint say which model ran`);
+        if (missing.length) console.log(`accepting the fallback — ${where}`);
+        else console.log(`models: every route primary is available (${available.length} model(s) with a key)`);
+      }
+    }
     const report = await runSuite(realExec, {
       suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
       dispatcherFor: behaviour ? (isBehaviour(behaviour) ? scriptedDispatchers(realExec, behaviour) : portfolioDispatchers(realExec, behaviour)) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
-      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy(evalPolicyPath)).models.default.primary,
+      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : evalPolicy.models.default.primary,
       policyPath: evalPolicyPath, ...(evalWritable || evalProtected ? { instance: { ...(evalWritable ? { writablePaths: evalWritable } : {}), ...(evalProtected ? { protectedPaths: evalProtected } : {}) } } : {}),
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
       onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => metricNames(suite.metrics).includes(k)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
@@ -683,6 +696,8 @@ ${rationale}`]]) {
     // A built-in is a count, read to one decimal; a declared rate or score needs its digits.
     for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s, isBuiltInMetric(m) ? 1 : 4)}`).join("; ")}`);
     for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
+    const observedModels = report.fingerprint.modelsObserved ?? [];
+    if (observedModels.length) console.log(`models observed: ${observedModels.join(", ")}${observedModels.length === 1 && observedModels[0] === report.fingerprint.model ? "" : ` — the run was declared on ${report.fingerprint.model}; the interpretation must say so`}`);
     const out = flag("out");
     if (out) {
       await mkdir(path.dirname(path.resolve(out)), { recursive: true });

@@ -53,3 +53,10 @@ test("attemptEnd: a halt recorded in the ledger is not a provider failure; an er
   assert.equal(attemptEnd({ stopReason: "toolUse" }, ledger), "completed");
   assert.equal(attemptEnd(undefined, ledger), "completed", "no assistant message: nothing to fail over from");
 });
+
+test("the host says which models it can run on now, as provider/id, the same lookup the dispatcher chooses from", async () => {
+  const { host } = await import("./dispatcher.js");
+  const available = await host.availableModels!();
+  assert.ok(Array.isArray(available));
+  for (const ref of available) assert.match(ref, /^[a-z0-9-]+\/.+$/, `a provider/id reference: ${ref}`);
+});

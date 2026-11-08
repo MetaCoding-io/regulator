@@ -12,8 +12,16 @@
     "level": "deterministic-gate",
     "implementation": "../regulator-pi/src/dispatcher.ts",
     "enforcementPoints": [
-      {"where": "host", "point": "dispatcher", "note": "piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger"},
-      {"where": "host", "point": "model_select", "note": "ledger"}
+      {
+        "where": "host",
+        "point": "dispatcher",
+        "note": "piDispatcher: model choice, failover; attemptEnd: halt vs provider failure, from the ledger"
+      },
+      {
+        "where": "host",
+        "point": "model_select",
+        "note": "ledger"
+      }
     ]
   },
   "channels": {
@@ -58,7 +66,7 @@
   },
   "limitations": [
     "Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.",
-    "Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.",
+    "Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch. The converse is as silent: with only a fallback's key in the shell the dispatcher runs every unit on that fallback and records it in the ledger alone (the fourth live drift run, 2026-11-08, ran thirty-six units on the last fallback). The dispatcher is right to; the eval harness is the one that refuses, since its report is declared on the primary.",
     "Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route."
   ],
   "ownership": {
