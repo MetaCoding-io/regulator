@@ -8,7 +8,8 @@
     "ls",
     "read_conventions",
     "run_checks",
-    "report_result"
+    "report_result",
+    "propose_policy_change"
   ],
   "writablePaths": [],
   "thinkingLevel": "medium"

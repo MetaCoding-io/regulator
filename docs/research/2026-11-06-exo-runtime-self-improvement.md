@@ -303,9 +303,9 @@ after [#46](https://github.com/MetaCoding-io/regulator/issues/46); item 7 and §
 [#104](https://github.com/MetaCoding-io/regulator/issues/104) and
 [#105](https://github.com/MetaCoding-io/regulator/issues/105) now, as research. Item 3,
 the read-only ledger tool, can be filed on its own under `roadmap:0.2` once a card is
-written for it; item 5 waits for the reflector package. From §8: the advice line that
-asks (§8.2, gap 1) is a change to the shipped advice files and can land now by
-`advice promote`; the self-advice tool (§8.3) is a design item for the reflector thread,
+written for it; item 5 waits for the reflector package. From §8: the asking bullet
+(§8.2, gap 1) landed on the seed with the `research` and `auditor` grant (decided
+2026-11-08, §8.2); the self-advice tool (§8.3) is a design item for the reflector thread,
 probed under the drift suite as the experiment §6 names, after #46. The threads table in
 [`ROADMAP.md`](../../ROADMAP.md) carries this order.
 
@@ -364,6 +364,19 @@ yet deliver what Exo delivers:
 3. **The latency stays.** With both fixed, the unit that noticed the waste still never
    benefits from the fix. That is the timescale claim of §6, and no amount of asking
    closes it. §8.3 is what does, partly.
+
+**Decided (2026-11-08, James).** Gap 1 is closed on the seed: every shipped advice file
+ends with the asking bullet (`packages/regulator/advice/`), varied by what the profile
+can do (a script to `remember` for `implement`; a repeated step or a misfit line to
+`propose_policy_change` for all; the unanswerable question for `intelligence`). The
+`research` and `auditor` profiles gain `propose_policy_change`, so every profile has the
+channel: a proposal is a control-plane record, which `isReadOnlyEffect`
+(`packages/core/src/effects.ts`) admits, so both stay read-only by declared effect and
+the `plan` unit type, which runs without a contract, stays legal. Landed as a change to
+the definition's repository with `regulator check` as the gate, which is the third
+accept path, and recorded in the product changelog's migration note: an instance
+initialized earlier keeps its advice files and takes the bullet by `advice accept` or by
+hand.
 
 ### 8.3 How much of Exo's gain is reachable without crossing the line
 

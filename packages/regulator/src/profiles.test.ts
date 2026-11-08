@@ -8,7 +8,8 @@ import { PROFILES, loadProfilesSync } from "./profiles.js";
 
 /**
  * The five profiles' advice as it was declared inline, before #110 moved it into `advice/<profile>.md`. Frozen here so the
- * move is provably a move: the section a unit of each profile is told renders byte for byte as it did.
+ * move is provably a move: the section a unit of each profile is told begins, byte for byte, with what it was told before.
+ * What follows in the file is what was added since: the asking bullet (the Exo note, §8.2), one per file, and nothing else.
  */
 const INLINE_BEFORE: Record<string, string[]> = {
   "implement": [
@@ -44,7 +45,10 @@ const INLINE_BEFORE: Record<string, string[]> = {
 /** Profiles declared after #110, as a file from the start (#120's manager): there is no inline text to compare, only the rule that none is carried inline. */
 const BORN_AS_FILES = ["manager"];
 
-test("moving the shipped profiles' advice into advice/<profile>.md changes nothing a unit is told (#110): for every profile the section rendered from the file is byte-identical to the one rendered from the inline advice[] it replaced, and no profile carries the text inline any more", async () => {
+/** The one bullet added to every advice file since the move: how the unit was run getting in its way is wanted output (the Exo note, §8.2). */
+const ASKING_BULLET = /^\n- (When how you were run got in your way, say so; it is wanted output\.|If the question could not be answered well with what you were given)[^\n]*$/;
+
+test("moving the shipped profiles' advice into advice/<profile>.md changed nothing a unit is told (#110): for every profile the section rendered from the file begins byte-identical to the one rendered from the inline advice[] it replaced, is followed by the one asking bullet added since, and no profile carries the text inline any more", async () => {
   const profiles = loadProfilesSync();
   assert.deepEqual(Object.keys(profiles).sort(), [...Object.keys(INLINE_BEFORE), ...BORN_AS_FILES].sort(), "every shipped profile has its before-text frozen here, or was born as a file");
   for (const name of BORN_AS_FILES) {
@@ -57,7 +61,8 @@ test("moving the shipped profiles' advice into advice/<profile>.md changes nothi
     const file = await readFile(path.join(ADVICE_SEED_DIR, `${name}.md`), "utf8");
     const before = renderProfileSection({ ...profile, advice: inline });
     const after = renderProfileSection(profile, { advice: file });
-    assert.equal(after, before, `${name}: the rendered section is byte-identical before and after the move`);
+    assert.ok(after.startsWith(before), `${name}: the rendered section begins byte-identical to the one before the move`);
+    assert.match(after.slice(before.length), ASKING_BULLET, `${name}: what follows the moved text is the asking bullet and nothing else`);
     assert.equal(renderProfileSection(profile), before.split("\n").slice(0, before.split("\n").length - inline.length).join("\n"), `${name}: without the file the grant alone renders`);
   }
   assert.equal(PROFILES.implement.advice, undefined);

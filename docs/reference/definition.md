@@ -112,8 +112,9 @@ no entry here (`tools[]`, above).
 
 The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
 `manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
-its `bash` is not gated by path. `research` is read-only, and `intelligence` is
-read-only plus `report_intelligence`. `bookkeeper` and `auditor` are the profiles for
+its `bash` is not gated by path. `research` and `auditor` are read-only, and
+`intelligence` is read-only plus `report_intelligence`; all three may propose, since a
+`propose_policy_change` record is admitted as read-only by effect. `bookkeeper` and `auditor` are the profiles for
 the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
 `manager` is the portfolio's, with no grant of its own: `trades/pending/` is outside its
 writable paths, and the consent on a trade list is derived from `place_trade`'s declared

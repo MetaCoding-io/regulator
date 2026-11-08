@@ -18,9 +18,9 @@ not name is never offered to the model at all, so there is nothing for a gate to
 | [`report_result`](#report_result) | writes the execution store | every contracted session (see the note) | the result report |
 | [`ask_human`](#ask_human) | irreversible: it spends a person's attention | `implement`, `intelligence`, `bookkeeper` | an `interaction` obligation |
 | [`notify_owner`](#notify_owner) | irreversible: it sends a message | `implement`, `bookkeeper` | the effect journal, the outbox |
-| [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper` | a memory entry |
+| [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper`, `manager` | a memory entry |
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
-| [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | `implement`, `intelligence`, `bookkeeper` | a `policy-proposal` |
+| [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | every shipped profile | a `policy-proposal` |
 | [`place_trade`](#tools-a-workload-declares) | irreversible: it writes a commitment (declared by the `portfolio` workload) | `manager` | a `regulator:declared-tool` session entry; the consent it needs, derived from the effect |
 
 ::: tip `report_result` is granted twice
@@ -164,8 +164,11 @@ affected unit. Nothing else changes. See
 `requestedChange`. The call writes a `policy-proposal` to the regulatory log, and under
 the shipped routing policy that proposal is owed to S5 at any severity. The call itself
 changes nothing, because a proposal is not policy (INV-002). A person with `actAsS5`
-decides it with `regulator identity accept` or `identity reject`, and an accepted file
-is the only way an identity file changes.
+decides it with `regulator identity accept` or `identity reject`, or `advice accept` or
+`advice reject` when the subject is a profile's advice file, and an accepted file is the
+only way an identity or advice file changes. Every shipped profile grants the tool: a
+proposal is a control-plane record, which the effect rule admits as read-only, so the
+read-only profiles keep it too.
 
 ## Tools a workload declares
 
