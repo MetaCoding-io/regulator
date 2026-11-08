@@ -23,11 +23,48 @@ behaviour lives.
 | `unitTypes[].profile` | string | the capability profile the unit runs under; it must exist |
 | `unitTypes[].checks` | [host check names](/reference/host-checks), each a name or `{ "name", "options" }` | the checks the host runs at the unit's revision to reach the technical verdict. Only `glossary-lint` takes an option, `commitMessages: "blocking" \| "advisory"`, and an option given to a check that does not take one fails the definition check |
 | `unitTypes[].requiresContract` | boolean | `false` only for a type that may run without a contract; such a type must then run under a read-only profile |
+| `unitTypes[].runner` | optional | how a unit of the type runs: `{ "kind": "session" }`, the default when the field is absent — a model under the profile's grant, opened by the host — or `{ "kind": "command", "argv", "timeoutMs"?, "outputs" }`, a program the control plane runs itself in the unit's worktree with no host and no model |
+| `unitTypes[].runner.argv` | string[] | the program, in the shape a grader command has: the first argument that is a file under the definition is the program's file, made absolute when it runs and hashed into the attempt record so a report can say what produced the revision. A command naming no such file fails the definition check |
+| `unitTypes[].runner.timeoutMs` | integer, optional | the program's own limit; the lesser of it and the policy's `wallClockMs` for the unit type is the timeout the program runs under. Wall-clock is a program's one budget: tokens, cost and turns are zero by construction |
+| `unitTypes[].runner.outputs[]` | project-relative prefixes | the whole of what the program may write: a write anywhere else, found by diffing the worktree against itself before the run, is undone and refused as a dispatch error. Each prefix must fall inside the profile's writable paths and under none of its consent grants (a program cannot ask, so it may not write where a yes is required); the definition check refuses either. Empty means the program writes nothing |
+| `metrics[]` | optional | the metrics this workload declares for the eval harness, each with its grader: a declaration, never an inference. A suite pre-registers a declared name as it does a built-in one |
+| `metrics[].name` | `workload:<this workload>/<metric>` | namespaced to the workload that owns it; a declaration in another workload's name, or in an instrument's, fails the definition check |
+| `metrics[].kind`, `metrics[].direction` | `count` \| `rate` \| `score`; `lower` \| `higher` \| `none` | what the number is, and which way is better |
+| `metrics[].instrument` | optional string | the instrument record whose judgment the metric is. Refused until that record exists with its held-out score; the record kind does not exist yet |
+| `metrics[].grader.argv` | string[] | the command the host runs in the instance after each unit, with the first argument that is a file under the definition made absolute (the file's hash goes into the report's fingerprint; a command naming no such file fails the check). It reads the tree and writes one JSON line per metric, `{ "metric", "value", "observation"? }`; it never reads a unit's report, and it is never a model. `grader.timeoutMs` is optional |
+| `tools[]` | optional | the tools this workload declares, each with its effect contract and the program that implements it: an action of the domain as a typed tool, not a path convention. The host registers a declared tool generically from the definition; a profile grants it by name, as it grants a built-in |
+| `tools[].name` | `^[a-z][a-z0-9_]*$` | the name the model calls; may not be a built-in's, and one workload declares it |
+| `tools[].description` | string | what the tool does, for the model; the host appends the consent rule when it derives one |
+| `tools[].parameters` | JSON Schema, `"type": "object"` | the schema the model sees and the harness validates a call against, as for every tool |
+| `tools[].effect` | `{ filesystem, execution, network, sideEffects }` | what happens in the world when it runs, on the [four axes](/concepts/coordination#profiles-grant-tools-by-effect) every built-in declares. The one thing the control plane derives from an effect: `sideEffects: "irreversible"` means a call needs a person's recorded yes before it runs, with no `consent[]` entry naming it ([Asking a person](/concepts/asking-a-person#the-consent-grant)). `execution: "arbitrary"` is refused: a declared tool is a program whose reach is its outputs |
+| `tools[].program` | `{ argv, timeoutMs?, outputs }` | the program, in the command runner's shape: argv under the definition (hashed into the call's session entry), the prefixes it may write under as its whole reach — a write elsewhere is undone and the call refused — and an optional timeout. The outputs need not lie inside any profile's writable paths; a profile that grants an irreversible declared tool and may write under its outputs directly fails the check, since a plain write there would need no yes. It is run in the unit's worktree with the call's arguments on stdin as JSON, and its last stdout line (`{ "summary", "evidence"? }`, or the tail) is what the model is told |
 
 The shipped `software-development` workload declares the unit types `plan`, `research`,
 `implement`, `verify`, `integrate` and `close`. The `personal-finance` workload declares
-the monthly close over a ledger. A contract is loaded together with the workload it
-names, so one instance may run several workloads.
+the monthly close over a ledger, and the `portfolio` workload the period close of a
+portfolio under management. A contract is loaded together with the workload it names,
+so one instance may run several workloads. [Authoring a workload](/guide/authoring-a-workload)
+says what a new one declares.
+
+A unit type that runs a program keeps a `profile`, and it means something different
+there: not a tool grant, since a program calls no tool, but the *effect declaration* the
+definition check reads — where a unit of the type may write (`outputs` must fall inside
+`writablePaths`), what needs a yes (`outputs` may not fall under `consent`), and that
+nothing arbitrary runs beside it (a profile granting `bash` or any other
+arbitrary-execution tool is refused on a command runner, since a program's reach is its
+declared outputs and nothing wider). A program reports by its exit and its last stdout
+line, so the profile need not grant `report_result`; its contract delegates nothing and
+leaves nothing unresolved, since a program has no judgment to report, and the loop
+refuses one that does. The `portfolio` workload's `plan-rebalance` and `harvest-losses`
+are the shipped command runners; the [command runner](/reference/regulators#reg-control-command-runner-v1)
+record says what the runner trusts and what it does not.
+
+A workload may also declare *tools* (`tools[]`): the domain's own actions, each with an
+effect contract. The `portfolio` workload declares `place_trade`, the one way a trade
+list comes to exist under `trades/pending/`, whose program copies the proposed list byte
+for byte after a person's yes. The [declared tool](/reference/regulators#reg-control-declared-tool-v1)
+record says what the host does with a declaration and what it does not, and
+[session tools](/reference/tools#tools-a-workload-declares) says how one runs.
 
 A unit type and the profile it runs under are named separately on purpose, and the
 names do not line up one to one. In the shipped workload, `implement` and `integrate`
@@ -60,14 +97,56 @@ backstop, so a session that loads a contract can always report.
 | `tools[]` | tool names | the active tool set of the session. Every tool declares its effect: filesystem, execution, network or side effects |
 | `writablePaths[]` | path prefixes | where `write` and `edit` may land. The manifest's `--writable` overrides it for an instance, but never for a read-only profile |
 | `thinkingLevel` | optional | the host's thinking setting for the session |
-| `advice[]` | strings | rendered into the session's context. It is advice and carries no authority |
+| `advice[]` | strings, optional for one release | the profile's advice, inline. It has moved to the [advice file](#advice) beside the profile; the field stays optional for one release so a definition migrates by moving the text, and `regulator check` refuses a profile that carries both the field and a file |
+| `consent[]` | grants, optional | the calls that need a person's recorded yes before they run. Each entry names a `tool`; `paths[]` narrows `write` and `edit` to project-relative prefixes, `pattern` is a regular expression over a `bash` command, and an entry with neither guards every call of the tool. The host's interception refuses a guarded call until the ledger holds an accepted consent for the unit whose recorded call covers it ([Asking a person](/concepts/asking-a-person#the-consent-grant)) |
 
-The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper` and
-`auditor`. `implement` may write and edit under `src/` and `test/`, and its `bash` is
-not gated by path. `research` is read-only, and `intelligence` is read-only plus
-`report_intelligence`. `bookkeeper` and `auditor` are the profiles for the ledger.
+`regulator check` reads a consent grant against the profile's own grant: the guarded
+tool must be one the profile grants, a guarded path must start with one of its writable
+paths, a pattern must be a regular expression on a tool with arbitrary execution, and
+one entry guards one way. A profile that guards a write and also grants `bash` is warned
+about, naming the profile and the path, unless a `bash` entry's pattern covers that
+path: the shell is not path-gated, so without one the grant is enforced on the named
+tool's calls only. A grant is a declaration; the one thing derived from an effect is the
+consent on a tool the workload declares with `sideEffects: "irreversible"`, which needs
+no entry here (`tools[]`, above).
+
+The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
+`manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
+its `bash` is not gated by path. `research` is read-only, and `intelligence` is
+read-only plus `report_intelligence`. `bookkeeper` and `auditor` are the profiles for
+the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
+`manager` is the portfolio's, with no grant of its own: `trades/pending/` is outside its
+writable paths, and the consent on a trade list is derived from `place_trade`'s declared
+effect.
 [Coordination](/concepts/coordination#profiles-grant-tools-by-effect) explains the
 effect axes and what counts as read-only.
+
+## Advice
+
+`advice/<profile>.md` is what every unit of a profile is told beyond its grant, one
+Markdown file per profile, with one `- ` bullet per line. It is advice: a model may
+ignore it, and nothing a gate enforces lives here. It is a file of its own, and not a
+field of the profile, so that a proposal can name it by path and a command can write it
+without being able to write a grant. That is the accept-path split, and
+`DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol` declares it: identity lands
+through `identity accept`, advice through `advice accept`, and everything that executes
+or grants (a profile's tools and writable paths, a unit type, a check, a policy, a
+suite) only through a merged change to the definition's repository. The
+[enforcement boundary](/reference/boundary) renders the three classes as *Who writes the
+definition*.
+
+`regulator check` refuses an advice file that names no declared profile, a profile with
+no advice file and no inline `advice[]`, a profile that carries both, and a definition
+directory in none of the three classes. A profile may have an empty file: it says the
+profile is told nothing beyond its grant. A file longer than the budget policy's
+`advice.maxChars` is a warning, not a problem.
+
+`init` copies the seed into an instance as `regulator/advice/<profile>.md`, beside
+`regulator/identity/`, and from then on the instance's copy is what the profiles
+extension renders into the session and what `advice accept` writes. `advice promote`
+carries an accepted file back from the instance to the definition. The shipped
+definition has one file per shipped profile, with the text the profiles carried inline
+before the move; the rendered section is byte-identical.
 
 ## Budget and model policy
 
@@ -83,6 +162,8 @@ attempts per unit, and the models each unit type may use.
 | `models.byUnitType.<type>` | route | |
 | `coordination.oscillationThreshold` | integer | the number of reversals of the same file within one unit before the thrash detector raises `oscillation` |
 | `identity.maxChars` | integer, optional | the number of characters of rendered identity a unit's prompt carries before the rendering is cut; 12000 unless set. `check`, `doctor` and the session all measure against it and warn once it is passed, and nothing is refused |
+| `identity.canary` | `{ marker, misses }`, optional | the behavioral canary: `marker` is what every reply must begin with (`{unit}` stands for the unit id), `misses` the consecutive replies without it before the host records an advisory `audit-finding`. Unset, nothing is rendered and nothing is read. The shipped `default` declares `[{unit}]` with 2 |
+| `advice.maxChars` | integer, optional | the same for a profile's advice file; 4000 unless set. `check`, `doctor` and the session's status line warn with the size, the limit and the cut, and `advice accept` refuses a file over it rather than accept advice a unit would not see |
 
 A ceiling is made of `tokens`, `cost` (which is optional), `wallClockMs`, `turns` and
 `attempts`. The budget meter counts as the session runs and ends the attempt at the
@@ -193,12 +274,13 @@ against scripted behaviours, or live, through the host.
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
 | `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target |
-| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. The metrics are pre-registered, so the interpretation of the result is a person's |
+| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the fifteen built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
 
 The harness can throw a `check` or `extension` switch without a code change. A `loop`,
 `policy` or `tool` switch on a record means the opposite: an ablation of that regulator
 needs a code change. An eval report carries a fingerprint of the definition, the host pin
-and the suite, together with a person's interpretation. `regulator eval` writes a
+and the suite — and, for each declared metric, the grader's command and the hash of the
+file it ran from — together with a person's interpretation. `regulator eval` writes a
 placeholder in place of the interpretation when it is run without `--interpretation`,
 and `regulator check` refuses a report under `evals/reports/` that still carries that
 placeholder. [Evidence about the
@@ -227,9 +309,11 @@ it too.
 | `ablation.switch`, `ablation.note` | the eval arm that runs with this regulator off |
 | `retirement.condition` | when the regulator may be retired, typically once ablation shows no significant regression across model versions and suites |
 
-The [regulators](/reference/regulators) page and the
-[enforcement boundary](/reference/boundary) are both rendered from these records by
-`regulator docs`.
+The [regulators](/reference/regulators) page, the
+[enforcement boundary](/reference/boundary) and the [viability case](/reference/viability)
+are all rendered from these records by `regulator docs`; the viability case also reads
+`registry/pathologies.json`, the [pathology catalog](/PATHOLOGIES)'s rows, each naming the
+regulators that absorb it by record id.
 
 ## Identity seed
 
@@ -237,7 +321,9 @@ The four S5 files are `identity/IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and
 `BOUNDARIES.md`. A person writes them and the parser reads them. `init` copies the seed
 into an instance, and from then on the instance's copy is what units see and what
 `identity accept` writes. `identity promote` carries an accepted file back from the
-instance to the definition.
+instance to the definition. The [advice files](#advice) are the second seed, with the
+same shape: seeded by `init`, protected in the instance, written by `advice accept`,
+promoted by `advice promote`.
 
 `INVARIANTS.md` declares one invariant per section. The parser refuses a file that
 declares none, and it refuses a malformed heading. A section looks like this:

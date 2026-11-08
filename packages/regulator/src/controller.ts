@@ -34,6 +34,9 @@
  *
  * Pi-free. The one Pi-shaped thing, running a session, is injected as a
  * `Dispatcher`, so the loop is tested without a model and driven with one.
+ * A unit type whose runner is a `command` (#122) goes through the same seam
+ * and the same steps with the control plane's own dispatcher (`runner.ts`),
+ * which runs the declared program in the worktree; no host is needed.
  */
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -41,19 +44,21 @@ import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from 
 import { discoverConventions } from "@metacoding.io/regulator-checks";
 import {
   ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
-  dispositionByDecision, progressionVeto, readIdentity, readSignals, routeBlockedUnit, routeFor, routeMessages,
-  type ContractProblem, type ReportProblem,
+  dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
+  type ContractProblem, type ReportProblem, type Resolved,
 } from "@metacoding.io/regulator-core";
-import { checkNames, checkOptions } from "@metacoding.io/regulator-protocol";
+import { checkNames, checkOptions, isCommandRunner, runnerOf } from "@metacoding.io/regulator-protocol";
 import type {
-  AlgedonicSignal, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
+  AlgedonicSignal, AttemptProgram, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
   TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
 } from "@metacoding.io/regulator-protocol";
 import { deliverPending } from "./deliver.js";
 import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
-import { IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
-import { unitTypeOf } from "./workload.js";
+import { committedReports, unitGrader } from "./predictions.js";
+import { ProgramError, commandDispatcher } from "./runner.js";
+import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
+import { LAB_ROOT, loadWorkloadFor, unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
 export interface DispatchRequest {
@@ -74,7 +79,8 @@ export interface DispatchRequest {
   hint?: string;
 }
 
-export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string }>;
+/** What a dispatch returns: the session it opened, or — for a command unit (#122) — the program it ran, by file, hash and exit. */
+export type Dispatcher = (request: DispatchRequest) => Promise<{ sessionId?: string; program?: AttemptProgram }>;
 
 export interface RunUnitOptions {
   repo: string;
@@ -88,7 +94,10 @@ export interface RunUnitOptions {
   interaction: InteractionPolicy;
   /** The regulator ids the definition declares, so a fixed decision's authority reference can be resolved (lesson 12). */
   regulators?: readonly string[];
+  /** The host's dispatcher for a session unit. A command unit (#122) never reaches it: the loop runs the declared program itself. */
   dispatcher: Dispatcher;
+  /** Where a command runner's program is resolved and hashed (#122): the instance manifest's definition root, else the lab's, when unset. */
+  definitionRoot?: string;
   owner: string;
   now?: () => number;
   ttlMs?: number;
@@ -128,6 +137,13 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   const unitType = unitTypeOf(workload, contract.unitType);
   if (!unitType) problems.push({ path: "unitType", message: `"${contract.unitType}" is not a unit type of workload ${workload.name}` });
   const ceiling = ceilingFor(policy, contract.unitType);
+  const runner = unitType ? runnerOf(unitType) : undefined;
+  // A program has no judgment to report (#122): its report's delegated and unresolved lists are empty by construction, so a
+  // contract that delegates a choice it must report, or leaves a decision unresolved, could never close a command unit.
+  if (runner && isCommandRunner(runner)) {
+    for (const d of contract.delegated) if (d.requiredReport !== false) problems.push({ path: "delegated", message: `delegated decision "${d.id}" (${d.subject}) asks for a reported choice, and unit type "${contract.unitType}" runs a program, which has no judgment to report: fix the decision in the contract, or give the work to a session` });
+    for (const u of contract.unresolved) problems.push({ path: "unresolved", message: `unresolved decision "${u.id}" (${u.subject}) needs an outcome in the report, and unit type "${contract.unitType}" runs a program, which surfaces nothing: leave it to a session, or fix what the program may not touch` });
+  }
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
   // Authority is what exists (lesson 12): a fixed decision cites an invariant the instance's identity declares, a
@@ -181,15 +197,21 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   await store.setStatus(contract.unitId, "dispatched");
   const startedAt = stamp();
   let sessionId: string | undefined;
+  let program: AttemptProgram | undefined;
+  // The same seam for both kinds (#122): a command unit's dispatcher is the control plane's own, over the declared program.
+  const dispatch: Dispatcher = runner && isCommandRunner(runner)
+    ? commandDispatcher(exec, { repo: options.repo, definitionRoot: options.definitionRoot ?? await definitionRootFor(options.repo), runner, ceiling, now })
+    : options.dispatcher;
   try {
-    ({ sessionId } = await options.dispatcher({
+    ({ sessionId, program } = await dispatch({
       unitId: contract.unitId, worktree, contract, contractPath, profile: unitType.profile,
       attempt: attemptNumber, route: routeFor(policy, contract.unitType), policyPath: options.policyPath,
       ...(hint === undefined ? {} : { hint }),
     }));
   } catch (error) {
     const detail = (error as Error).message;
-    await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail });
+    const ran = error instanceof ProgramError ? error.program : undefined;
+    await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail, ...(ran ? { program: ran } : {}) });
     await store.setStatus(contract.unitId, "blocked", `dispatch error: ${detail}`);
     return { status: "blocked", reason: "dispatch-error", detail };
   }
@@ -207,7 +229,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
 
   // close — from the report the unit wrote, never from the domain
-  const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }) };
+  const attempt = { unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }), ...(program === undefined ? {} : { program }) };
   const report = await store.getReport(contract.unitId, contract.version, attemptNumber);
   const budget = await store.getBudget(contract.unitId, attemptNumber);
   if (!report && budget?.exhausted) {
@@ -218,7 +240,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
   if (!report) {
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "no-report" });
-    await store.setStatus(contract.unitId, "blocked", "the unit ended without calling report_result");
+    await store.setStatus(contract.unitId, "blocked", program ? "the program ended without a report" : "the unit ended without calling report_result");
     return { status: "blocked", reason: "no-report" };
   }
   const reportProblems = checkResultReport(contract, report);
@@ -239,10 +261,10 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; workload: WorkloadDefinition; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
   const { contract, report, now } = options;
   const store = new ExecutionStore(options.repo, now);
   await store.setStatus(contract.unitId, "reported");
@@ -265,8 +287,47 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
     return { status: "blocked", reason, ...(detail ? { detail } : {}) };
   }
   await store.setStatus(contract.unitId, "closed");
+  // A closed unit is a reading for every open live horizon that names its type (#138): what the prediction was about has now happened once more.
+  await resolvePredictions(exec, { repo: options.repo, unit: { unitId: contract.unitId, unitType: contract.unitType, status: "closed", workload: contract.workload.name }, workload: options.workload, contract, routing: options.routing, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
   return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
+}
+
+/** The definition an instance runs under: the manifest's root, or the lab's for a repository that was never initialized. */
+async function definitionRootFor(repo: string): Promise<string> {
+  return (await readManifest(repo))?.definition.root ?? LAB_ROOT;
+}
+
+export interface ResolvePredictionsOptions {
+  repo: string;
+  /** The unit that just closed or aborted, as the store records it. */
+  unit: { unitId: string; unitType: string; status: "closed" | "aborted"; workload: string };
+  /** The workload, when the caller has it loaded; otherwise it is loaded from the definition by the unit's record, for the metrics it declares. */
+  workload?: WorkloadDefinition;
+  /** The unit's contract, when the caller has it: its signature expectation is what `signatureDrift` observes. */
+  contract?: WorkContract;
+  routing: RoutingPolicy;
+  now?: () => number;
+}
+
+/**
+ * resolve — a unit's close or abort resolves every open live horizon that names its type (#138), one reading per
+ * unit, with the graders the eval harness uses over the stores; a probe horizon resolves from the committed report it
+ * names. Nothing here reads the unit's report, and nothing here changes an advice file: a disconfirmed live horizon is
+ * a proposal to S5, routed under the routing policy, for a person to revert or re-decide. The step runs after the
+ * status is written and never undoes it; a grader that fails is an inconclusive reading, not a failed close.
+ */
+export async function resolvePredictions(exec: Exec, options: ResolvePredictionsOptions): Promise<Resolved> {
+  const now = options.now ?? Date.now;
+  const { unitId, unitType, status } = options.unit;
+  const definitionRoot = await definitionRootFor(options.repo);
+  const workload = options.workload ?? (await loadWorkloadFor(options.unit.workload, definitionRoot).catch(() => undefined));
+  const signature = options.contract?.expectedEvidence.find((e) => e.check?.kind === "export-signature");
+  return resolveFromStores(options.repo, {
+    unit: { unitId, unitType, status },
+    measure: unitGrader(exec, { repo: options.repo, unitId, definitionRoot, ...(workload ? { workload } : {}), ...(signature ? { signature } : {}) }),
+    reports: await committedReports(definitionRoot), routing: options.routing, now,
+  });
 }
 
 export interface PreMergeOutcome {
@@ -326,12 +387,13 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
   const revision = await headRevision(exec, worktree);
   let records: EvidenceRecord[] = [];
   if (clean) {
-    // INV-001 in code: the protected prefixes — the identity, and whatever the project's conventions protect — are
-    // diffed against the base branch, so a change committed around the write gate is a failing check, not a clean tree.
+    // INV-001 in code: the protected prefixes — the harness-owned directories (identity and advice, from DEFINITION_WRITERS),
+    // and whatever the project's conventions protect — are diffed against the base branch, so a change committed around
+    // the write gate is a failing check, not a clean tree.
     const conventions = await discoverConventions(worktree);
     // The instance manifest (lesson 15) is where a person declared this project's layout; the conventions are what the host discovered.
     const manifest = await readManifest(options.repo);
-    const protectedPaths = [...new Set([IDENTITY_RELATIVE_DIR, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
+    const protectedPaths = [...new Set([...HARNESS_OWNED_INSTANCE_DIRS, ...(manifest?.protectedPaths ?? []), ...conventions.protectedPaths])];
     const identity = await readIdentity(path.join(worktree, IDENTITY_RELATIVE_DIR));
     const results = await runHostChecks(exec, {
       cwd: worktree, checks: checkNames(unitType.checks), checkOptions: checkOptions(unitType.checks), fileRefs: report.evidence.filter((e) => e.class === "file").map((e) => e.ref),
@@ -400,7 +462,7 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
     await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload: options.workload, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
 }
 
 const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;
@@ -487,6 +549,8 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
   if (decision.action === "abort") {
     await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
     await store.setStatus(options.unitId, "aborted", `aborted under ${decision.policy.name} v${decision.policy.version}: ${decision.cause}`);
+    // An aborted unit is a reading too (#138): a prediction about the next N units is about the ones that failed as much as the ones that closed.
+    await resolvePredictions(exec, { repo: options.repo, unit: { unitId: options.unitId, unitType: unit.unitType, status: "aborted", workload: unit.workload.name }, routing: options.routing, now });
   } else if (decision.action === "escalate") {
     const signal: AlgedonicSignal = {
       id: decision.id, timestamp: decision.decidedAt, source: "S3", kind: "algedonic-signal", channel: "algedonic", destination: "S5",

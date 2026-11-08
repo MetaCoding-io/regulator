@@ -1,10 +1,13 @@
 # @metacoding.io/regulator-control-room
 
 The maintainer's control room: one read-only page over the `regulator status` read model
-(`packages/regulator`). It answers three questions and owns no state:
+(`packages/regulator`). It answers four questions and owns no state:
 
 - **Definition** — the registry as a topology (S5 → S1 columns, one card per regulator,
   the channels each record declares it consumes and emits) and the workloads.
+- **Lifecycle** — the unit state machine drawn from `UNIT_TRANSITIONS`, with the
+  instance's units placed on it; select a unit and step through its trajectory, each
+  step lighting its transition and saying why from the records.
 - **Instances** — every instance's units, leases and unrouted signals.
 - **Inspector** — the whole record for a regulator or a unit (contract, result report,
   attempts): the record, not a summary of it.
@@ -15,7 +18,8 @@ node packages/control-room/dist/cli.js --definition packages/regulator --instanc
 ```
 
 Then open `http://127.0.0.1:4321/`. The page refreshes every five seconds; `#reg=<id>` and
-`#unit=<instance index>/<unit id>` deep-link the inspector. Every non-GET request is
+`#unit=<instance index>/<unit id>` deep-link the inspector, and `@<step>` on the latter
+holds the lifecycle view at a step of the unit's trajectory. Every non-GET request is
 refused with 405 — the moment this grows a button that changes anything it has become an
 authority surface, and it will not (the rule is from the archived
 [CONTROL-REGISTRY.md](../../docs/archive/2026-09/CONTROL-REGISTRY.md) §6).

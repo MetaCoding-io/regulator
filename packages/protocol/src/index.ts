@@ -24,6 +24,8 @@ export { SEVERITY_ORDER, SeveritySchema, severityAtLeast, type Severity } from "
 import { EvidenceClassSchema, EvidenceRefSchema } from "./evidence.js";
 export { EvidenceClassSchema, EvidenceRefSchema, type EvidenceClass, type EvidenceRef } from "./evidence.js";
 
+import { PredictionResolutionSchema, PredictionSchema, RequestedChangeSchema } from "./prediction.js";
+
 const EnvelopeFields = {
   id: Type.String({ minLength: 1 }),
   timestamp: Type.String({ minLength: 1 }),
@@ -63,7 +65,8 @@ export const PolicyProposalSchema = Type.Object({
   destination: Type.Literal("S5"),
   severity: SeveritySchema,
   rationale: Type.String({ minLength: 1 }),
-  requestedChange: Type.Unknown(),
+  /** Free for a plain proposal; a `harness-edit` (#138) is the typed payload `HarnessEditSchema`, and one that claims the kind and lacks a part is refused here. */
+  requestedChange: RequestedChangeSchema,
   evidence: Type.Array(EvidenceRefSchema),
 }, { additionalProperties: false });
 export type PolicyProposal = Static<typeof PolicyProposalSchema>;
@@ -151,6 +154,12 @@ export const IntelligenceSignalSchema = Type.Object({
   observedAt: Type.Optional(Type.String({ minLength: 1 })),
   /** Units whose progression the intelligence bears on. */
   affectedUnits: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+  /**
+   * A claim about the future that resolves (#138): the metric it stakes, the baseline, the direction and size, a
+   * probability beside `confidence`, and the horizons at which the loop reads the outcome. Routed exactly as a signal
+   * without it; a block missing any part is refused.
+   */
+  prediction: Type.Optional(PredictionSchema),
 }, { additionalProperties: false });
 export type IntelligenceSignal = Static<typeof IntelligenceSignalSchema>;
 
@@ -249,8 +258,8 @@ export type VsmMessage = Static<typeof VsmMessageSchema>;
 
 import { ObligationEventSchema } from "./obligations.js";
 import { InteractionEventSchema } from "./interaction.js";
-/** One line of the regulatory log (lesson 11): a typed message, an event about its routing, or (lesson 13) an interaction with a person. */
-export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema, InteractionEventSchema]);
+/** One line of the regulatory log (lesson 11): a typed message, an event about its routing, (lesson 13) an interaction with a person, or (#138) a prediction's resolution. */
+export const RegulatoryEntrySchema = Type.Union([VsmMessageSchema, ObligationEventSchema, InteractionEventSchema, PredictionResolutionSchema]);
 export type RegulatoryEntry = Static<typeof RegulatoryEntrySchema>;
 
 /**
@@ -337,7 +346,7 @@ export function assertValid<T extends TSchema>(schema: T, value: unknown, label:
 // Control-plane vocabulary promoted from the course lab (checkpoints 1–3).
 export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
-export { CapabilityProfileSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ReasoningLevel } from "./profiles.js";
+export { CapabilityProfileSchema, ConsentGrantSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ConsentGrant, type ReasoningLevel } from "./profiles.js";
 export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
 export { ENFORCEMENT_POINTS, EnforcementPointSchema, MechanismLevelSchema, RegulatorRecordSchema, enforcementPointName, isRegulatorRecord, unknownEnforcementPoint, type EnforcementPoint, type EnforcementWhere, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
@@ -347,11 +356,11 @@ export {
   type Consequence, type DelegatedDecision, type EvidenceExpectation, type ExpectationCheck, type FixedDecision, type ResultReport, type ResultReportInput,
   type UnresolvedDecision, type UnresolvedHandling, type WorkContract,
 } from "./contracts.js";
-export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, HOST_CHECK_NAMES, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isWorkloadDefinition, type CheckEntry, type CheckOptions, type UnitType, type WorkloadDefinition } from "./workload.js";
+export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchema, DeclaredToolSchema, HOST_CHECK_NAMES, ProgramSchema, RunnerSchema, SESSION_RUNNER, SessionRunnerSchema, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isCommandRunner, isWorkloadDefinition, runnerOf, type CheckEntry, type CheckOptions, type CommandRunner, type DeclaredTool, type Program, type Runner, type SessionRunner, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
-  AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, UnitRecordSchema, UnitStatusSchema,
-  isAttemptRecord, isLease, isUnitRecord,
-  type AttemptOutcome, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus,
+  AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
+  isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
+  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {
@@ -371,15 +380,29 @@ export {
   type RoutingPolicy, type RoutingRule, type WaitingAction,
 } from "./obligations.js";
 export {
-  CONTINUES_WITHOUT_ANSWER, InteractionChannelSchema, InteractionEventSchema, InteractionKindSchema, InteractionOutcomeSchema, InteractionPolicySchema, InteractionRequestSchema, PersonSchema,
+  CONTINUES_WITHOUT_ANSWER, ConsentCallSchema, InteractionChannelSchema, InteractionEventSchema, InteractionKindSchema, InteractionOutcomeSchema, InteractionPolicySchema, InteractionRequestSchema, PersonSchema,
   isInteractionEvent, isInteractionPolicy,
-  type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
+  type ConsentCall, type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
 } from "./interaction.js";
 export {
-  ArmSummarySchema, AblationSwitchSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
-  GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, isEvalReport, isEvalSuite, isUninterpreted,
-  type AblationSwitch, type ArmSummary, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
-  type GraderVerdict, type Lift, type MetricSummary,
+  ArmSummarySchema, AblationSwitchSchema, BuiltInMetricSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
+  GraderFingerprintSchema, GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricEntrySchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER,
+  declaredMetrics, isBuiltInMetric, isEvalReport, isEvalSuite, isUninterpreted, metricName, metricNames, optimisedMetrics,
+  type AblationSwitch, type ArmSummary, type BuiltInMetric, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
+  type GraderFingerprint, type GraderVerdict, type Lift, type MetricEntry, type MetricSummary,
 } from "./evals.js";
+export {
+  DECLARED_METRIC_PATTERN, DeclaredMetricNameSchema, GraderCommandSchema, GraderOutputSchema, MetricDeclarationSchema, MetricDirectionSchema, MetricKindSchema,
+  isDeclaredMetricName, isMetricDeclaration, parseDeclaredMetric,
+  type DeclaredMetricName, type GraderCommand, type GraderOutput, type MetricDeclaration, type MetricDirection, type MetricKind,
+} from "./metrics.js";
 export { GENAI, SpanEventSchema, SpanKindSchema, SpanRecordSchema, SpanStatusSchema, VSM_ATTR, isSpanRecord, type SpanEvent, type SpanRecord } from "./spans.js";
-export { InstanceManifestSchema, isInstanceManifest, type InstanceManifest } from "./instance.js";
+export { DefinitionPointSchema, InstanceManifestSchema, MIGRATION_CLASSES, MIGRATION_GATES, MigrationBulletSchema, MigrationGateSchema, MigrationNoteSchema, UpgradeEntrySchema, isInstanceManifest, isMigrationNote, type DefinitionPoint, type InstanceManifest, type MigrationBullet, type MigrationClass, type MigrationGate, type MigrationGateKind, type MigrationNote, type UpgradeEntry, INSTANCE_STORES, instanceStoreFor, type InstanceStore } from "./instance.js";
+export {
+  DiagnosisRefSchema, HARNESS_EDIT_KIND, HarnessEditSchema, LiveHorizonSchema, PredictionBaselineSchema, PredictionDirectionSchema, PredictionHorizonSchema, PredictionOutcomeSchema,
+  PredictionResolutionSchema, PredictionSchema, ProbeHorizonSchema, ReportFingerprintSchema, RequestedChangeSchema, TrajectoryMomentSchema, claimsHarnessEdit, isHarnessEdit, isPredictionResolution,
+  type DiagnosisRef, type HarnessEdit, type LiveHorizon, type Prediction, type PredictionBaseline, type PredictionDirection, type PredictionHorizon, type PredictionOutcome, type PredictionResolution,
+  type ProbeHorizon, type ReportFingerprint, type TrajectoryMoment,
+} from "./prediction.js";
+export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";
+export { AbsorbedBySchema, CourseModuleSchema, InvariantIdSchema, PATHOLOGY_SECTIONS, PathologiesFileSchema, PathologyRowSchema, PathologySectionSchema, isPathologiesFile, isPathologyRow, type AbsorbedBy, type PathologiesFile, type PathologyRow, type PathologySection } from "./pathologies.js";

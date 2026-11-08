@@ -1,0 +1,1 @@
+{ "asOf": "2026-08-31", "note": "The date the ledger is current to: every executed trade through it is applied, and the open lots reconcile to the custodian's export of that date." }

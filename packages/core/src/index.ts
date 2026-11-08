@@ -4,10 +4,13 @@ export {
 } from "./authority.js";
 export { assertRegulatoryEvent, createRegulatoryEvent } from "./reporting.js";
 export { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH, type StoredRegulatoryEvent } from "./event-store.js";
-export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations } from "./effects.js";
-export { isReadOnlyProfile, isWritableUnder, renderProfileSection } from "./profiles.js";
+export { TOOL_EFFECTS, effectOf, isEffectFree, isReadOnlyEffect, readOnlyViolations, withDeclaredEffects } from "./effects.js";
+export { isReadOnlyProfile, isWritableUnder, renderProfileSection, type RenderProfileOptions } from "./profiles.js";
+export { ADVICE_CONTEXT_MAX_CHARS, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, profileOfAdviceFile, readAdviceSet, renderAdvice, type AdviceContextBudget, type AdviceProblem, type AdviceSet, type DeclaredProfile } from "./advice.js";
 export { TurnTracker, TraceWriter } from "./trace.js";
 export { checkRegistry, formatEnforcementPoint, loadRegistry, renderBoundaryMarkdown, renderRegistryMarkdown, reviewDue, type CheckRegistryOptions, type LoadedRegistry, type RegistryProblem, type ReviewDue } from "./registry.js";
+export { PATHOLOGIES_FILE, PATHOLOGY_END_MARKER, checkPathologies, loadPathologies, pathologyMarker, regulatorShortName, renderAbsorbedBy, renderPathologyTable, splicePathologyTables, type LoadedPathologies } from "./pathologies.js";
+export { renderViabilityMarkdown, type AblationArm, type ViabilityOptions } from "./viability.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
 export { ExecutionStore } from "./execution-store.js";
@@ -25,9 +28,27 @@ export {
 export { EffectJournal, effectKey, type EffectState } from "./effect-journal.js";
 export { AuditLog, type UnitAudit } from "./audit-log.js";
 export { checkFilesystemPath, expandToolPath, isUnderProtectedPath, prepareWritePath, type PrepareWriteOptions, type PreparedWrite, type WriteRefusal } from "./authority.js";
+export { BehavioralCanary, CANARY_UNIT_PLACEHOLDER, canaryMarker, renderCanarySection, type BehavioralCanaryPolicy, type CanaryObservation } from "./canary.js";
 export { IDENTITY_CONTEXT_MAX_CHARS, IDENTITY_FILES, checkAuthorityRefs, identityContextBudget, identityMaxChars, type IdentityContextBudget, parseForbiddenTerms, parseInvariants, readIdentity, renderIdentitySection, type AuthorityContext, type AuthorityProblem, type ForbiddenTerm, type IdentityFile, type IdentitySet, type Invariant } from "./identity.js";
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
+export {
+  PATH_GUARDED_TOOLS, checkConsentGrants, consentBypassWarnings, consentFor, consentGrantFor, consentRequiredFor, describeConsentGrant, describeConsentRequirement, matchesConsentedCall, normalizeConsentCall, normalizeConsentPath,
+  type ConsentGrantProblem, type ConsentRequirement, type ConsentVerdict,
+} from "./consent.js";
+export {
+  checkDeclaredTools, consentDerivedFrom, declaredEffectsOf, declaredEffectsOfWorkloads, declaredToolsOf, derivedConsentGrant, guardedOutputsOf,
+  type CheckDeclaredToolsOptions, type DeclaredToolOf, type DeclaredToolsCheck,
+} from "./declared-tools.js";
+export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
+export { checkCommandRunner, checkProgram, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";
+export {
+  baselineValue, checkHarnessEdit, compareWithPrediction, foldPredictions, isPrediction, isResolution, openLiveHorizons, precisionOf, readPredictions, resolvePredictions,
+  type CheckHarnessEditOptions, type CommittedReport, type Comparison, type HorizonState, type HorizonStatus, type PredictionPrecision, type PredictionProposal, type PredictionSignal, type PredictionState,
+  type ResolvePredictionsOptions, type Resolved,
+} from "./predictions.js";
+export { unitTrajectory, type TrajectoryEvent, type TrajectoryInput, type TrajectoryStep, type UnitTrajectory } from "./trajectory.js";
+export { compareVersions, parseChangelog, planUpgrade, renderMigrationNotes, type ChangelogVersion, type InstanceSnapshot, type PlanUpgradeOptions, type UpgradePlan, type UpgradeStep } from "./upgrade.js";

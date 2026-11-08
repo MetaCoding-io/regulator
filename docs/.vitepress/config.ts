@@ -31,6 +31,7 @@ export default defineConfig({
     "generated/cli.md": "reference/cli.md",
     "generated/regulators.md": "reference/regulators.md",
     "generated/boundary.md": "reference/boundary.md",
+    "generated/viability.md": "reference/viability.md",
     "generated/operating.md": "guide/operating.md",
     "generated/changelog.md": "project/changelog.md",
     "generated/roadmap.md": "project/roadmap.md",
@@ -58,6 +59,8 @@ export default defineConfig({
           { text: "The control room", link: "/guide/control-room" },
           { text: "Operating", link: "/guide/operating" },
           { text: "Worked example: a household ledger", link: "/examples/personal-finance" },
+          { text: "Worked example: a managed portfolio", link: "/examples/portfolio" },
+          { text: "Authoring a workload", link: "/guide/authoring-a-workload" },
         ],
       },
       {
@@ -92,6 +95,7 @@ export default defineConfig({
           { text: "Host checks", link: "/reference/host-checks" },
           { text: "Regulators", link: "/reference/regulators" },
           { text: "Enforcement boundary", link: "/reference/boundary" },
+          { text: "Viability case", link: "/reference/viability" },
         ],
       },
       {

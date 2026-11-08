@@ -166,6 +166,42 @@ test("the algedonic path from the outside (lesson 13): `answer` records a person
   assert.equal(r.code, 0, r.stderr);
 });
 
+test("a consent answered with amended arguments (#60): `answer --amend <json>` rides a yes on a consent that recorded its call, the answer and the disposition both carry the amendment, and anything else — a no, another kind, no recorded call, bad JSON — is refused before anything is written", async (t) => {
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  const open = (subject: string) => ledger.openObligation({ subject, unit: "f5", concern: "interaction", sources: [`ask:${subject}`], severity: "blocking", consumer: "human", blocks: true, question: "May I?", openedBy: "S1" });
+  const withCall = await open("consent: rent");
+  const withoutCall = await open("consent: force-push");
+  const choice = await open("choice: database");
+  await ledger.requestInteraction({ id: "r1", kind: "consent", subject: "rent", question: "May I?", action: "write the payment", call: { tool: "write", arguments: { path: "payments/pending/2026-09-rent.json" } }, severity: "blocking", unit: "f5", attempt: 1, obligationId: withCall.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await ledger.requestInteraction({ id: "r2", kind: "consent", subject: "force-push", question: "May I?", action: "git push --force", severity: "blocking", unit: "f5", attempt: 1, obligationId: withoutCall.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  await ledger.requestInteraction({ id: "r3", kind: "choice", subject: "database", question: "Which?", options: ["sqlite", "postgres"], severity: "blocking", unit: "f5", attempt: 1, obligationId: choice.id, evidence: [], raisedBy: "S1", raisedAt: "t", timeoutMs: 1000, channel: "none" }, "S1");
+  const amend = '{"content":"{ \\"amount\\": \\"1400.00\\" }"}';
+
+  for (const [args, refused] of [
+    [[choice.id.slice(0, 8), "--by", "alice", "--answer", "postgres", "--amend", amend], /--amend amends the arguments of a call a consent authorizes; this question is a choice/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "no", "--amend", amend], /--amend rides a yes: "no" is not one, so there is no call to amend/],
+    [[withoutCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", amend], /the consent question recorded no call \(the unit asked without `call`\), so there are no arguments to amend/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", "not json"], /--amend takes a JSON object of the arguments to change/],
+    [[withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", "[1]"], /--amend takes a JSON object of the arguments to change/],
+    [[withCall.id.slice(0, 8), "--by", "mallory", "--answer", "yes", "--amend", amend], /"mallory" is not a person the interaction policy/],
+  ] as const) {
+    const r = await regulator(repo, "answer", ...args);
+    assert.equal(r.code, 1, args.join(" "));
+    assert.match(r.stderr, refused);
+  }
+  assert.deepEqual((await ledger.obligations()).map((o) => o.status), ["open", "open", "open"], "nothing was written");
+  assert.deepEqual((await ledger.interactions()).map((i) => i.answers), [[], [], []]);
+
+  const r = await regulator(repo, "answer", withCall.id.slice(0, 8), "--by", "alice", "--answer", "yes", "--amend", amend);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.stdout, "consent answered by alice (accepted): yes with content amended; unit f5 may proceed if nothing else is owed on it, and the next attempt carries the answer\n");
+  const [rent] = await ledger.interactions();
+  assert.deepEqual(rent!.answers.map((a) => [a.by, a.outcome, a.channel, a.answer, a.amendedArguments]), [["alice", "answered", "cli", "yes", { content: '{ "amount": "1400.00" }' }]], "the answer carries the amendment");
+  const state = (await ledger.obligations()).find((o) => o.id === withCall.id)!;
+  assert.deepEqual([state.status, state.disposition, state.closedBy, state.rationale], ["resolved", "accepted", "alice", 'yes (arguments amended: {"content":"{ \\"amount\\": \\"1400.00\\" }"})'], "the disposition records it, so the next attempt's hint says what was changed");
+});
+
 test("assurance from the outside (lesson 14): `spans` projects the instance's records as redacted GenAI spans, `review --due` lists what the registry owes a review, and `eval` runs a suite headlessly with a scripted unit and writes a report a person still has to interpret", async (t) => {
   const repo = await initRepo(t);
   await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n").catch(async () => { const { mkdir } = await import("node:fs/promises"); await mkdir(path.join(repo, ".regulator"), { recursive: true }); await writeFile(path.join(repo, ".regulator", "canaries"), "hunter2hunter2\n"); });
@@ -191,16 +227,16 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   r = await regulator(repo, "review");
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /reg\.audit\.behaviour-check\.v1 {2}ablation check:export-signature {2}retire when: Never as a mechanism/);
-  assert.match(r.stdout, /\n42 record\(s\)\n$/, "review lists the active records; the retired first gate is history");
+  assert.match(r.stdout, /\n50 record\(s\)\n$/, "review lists the active records; the retired first gate is history");
   r = await regulator(repo, "review", "--due");
   assert.match(r.stdout, /^0 record\(s\) overdue or due within 0 day\(s\)\n$/, "nothing is overdue at the lesson's date");
   r = await regulator(repo, "review", "--due", "--within", "3650");
-  assert.match(r.stdout, /42 record\(s\) overdue or due within 3650 day\(s\)/);
+  assert.match(r.stdout, /50 record\(s\) overdue or due within 3650 day\(s\)/);
 
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 44 regulators\n/);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 52 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -225,17 +261,17 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) await gitExec("git", args, { cwd: dir });
   let r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, "no manifest yet: only the definition checks run, and the definition is fine");
-  assert.doesNotMatch(r.stdout, /manifest/);
+  assert.doesNotMatch(r.stdout, /^\w+\s+manifest/m);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(44 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(52 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/, regulator\/advice\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
   r = await regulator(dir, "init");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /is already an instance/);
   r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /^ok {6} node/m);
-  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 44 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 52 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
   assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
   assert.match(r.stdout, /\n0 problem\(s\)(, \d+ warning\(s\))?\n$/, "a warning (the seed over its context budget, #51) is not a problem");
   r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");
@@ -364,4 +400,244 @@ test("`unit start` prints the host's session command (#79): every `pi -e` path e
   assert.ok(existsSync(path.join(repo, ".regulator/worktrees/u3")), "the worktree was made");
   const status = await regulator(repo, "unit", "status");
   assert.match(status.stdout, /u3/, "the lease is held");
+});
+
+test("the advice decision path (#110): `advice accept` mirrors `identity accept` — a proposal owed to S5, a person who may act as S5, a clean tree, a declared profile's file, non-empty and under the cap — plus one rule identity lacks: --file is the file the proposal's subject names; it commits on the base branch citing the obligation and resolves it as accepted; `advice reject` changes nothing", async (t) => {
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  await appendSignal(repo, { id: "a1", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: "regulator/advice/implement.md: say to run the inherited suite before reporting", unit: "u1", rationale: "two units reported without running it", requestedChange: "add a line", evidence: [] });
+  await appendSignal(repo, { id: "a2", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "rename src/", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await appendSignal(repo, { id: "a3", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "advice/research.md: drop the line about line numbers", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await appendSignal(repo, { id: "f1", timestamp: "t", source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "blocking", subject: "x", unit: "u1", observation: "o", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const [accept, elsewhere, reject, finding] = (await ledger.obligations()).map((o) => o.id);
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const outside = await mkdtemp(path.join(tmpdir(), "regulator-advice-proposal-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const proposed = path.join(outside, "proposed-implement.md");
+  const current = await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8");
+  await writeFile(proposed, `${current}- Run the inherited suite (inherited-tests) before reporting; a passing new test is not evidence the old ones still pass.\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args);
+
+  // The refusals, in the order the accept-path note gives them (§5). Each leaves the tree and the obligation as they were.
+  let r = await attempt(finding!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is audit-finding owed to S3; `advice accept\|reject` decides proposals owed to S5/);
+  r = await attempt(accept!, "--by", "bob", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  await writeFile(path.join(repo, "scratch.txt"), "dirty\n");
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the base checkout has uncommitted changes; an advice decision is committed on its own/);
+  await rm(path.join(repo, "scratch.txt"));
+  r = await attempt(accept!, "--by", "alice", "--file", "AGENTS.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--file must be a declared profile's advice file \(one of auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\); "AGENTS\.md" is not/);
+  r = await attempt(accept!, "--by", "alice", "--file", "deployer.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /--file must be a declared profile's advice file/, "an undeclared profile");
+  r = await attempt(accept!, "--by", "alice", "--file", "research.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's subject names implement\.md; --file must be that file, not research\.md/);
+  r = await attempt(elsewhere!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's subject \("rename src\/"\) names no advice file/);
+  await writeFile(path.join(outside, "empty.md"), "\n");
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", path.join(outside, "empty.md"), "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposed implement\.md is empty; nothing to accept/);
+  await writeFile(path.join(outside, "long.md"), `- ${"Run the tests. ".repeat(400)}\n`);
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", path.join(outside, "long.md"), "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposed implement\.md renders to \d{4} characters and a unit's prompt carries 4000 \(`advice\.maxChars`\); shorten it, or raise the limit in the budget policy first/);
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), current, "nothing written by a refusal");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before);
+  assert.equal((await ledger.get(accept!))?.status, "open");
+
+  // The decision: the file is written under S5 authority, committed on main citing the obligation, and the obligation is resolved as accepted with the revision.
+  r = await attempt(accept!, "--by", "alice", "--file", "implement.md", "--from", proposed, "--rationale", "two units reported without running the inherited suite");
+  assert.equal(r.code, 0, r.stderr);
+  const after = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  assert.notEqual(after, before);
+  assert.match(r.stdout, new RegExp(`^proposal ${accept!.slice(0, 8)} accepted by alice \\(S5\\): regulator/advice/implement\\.md committed as ${after.slice(0, 7)} on main; the obligation is resolved as accepted`));
+  assert.match((await gitExec("git", ["log", "-1", "--format=%B"], { cwd: repo })).stdout, new RegExp(`^S5: accept proposal ${accept!.slice(0, 8)} into regulator/advice/implement\\.md\\n\\nDecided by alice under S5 authority\\. Obligation ${accept}\\.\\ntwo units reported`));
+  assert.match(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), /\n- Run the inherited suite \(inherited-tests\) before reporting/);
+  const state = await ledger.get(accept!);
+  assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
+  assert.match(state?.rationale ?? "", new RegExp(`regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority`));
+  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: repo })).stdout.trim(), "", "committed, not left in the tree");
+
+  r = await regulator(repo, "advice", "reject", reject!.slice(0, 8), "--by", "alice", "--rationale", "line numbers are how a finding is checked");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /rejected by alice \(S5\): line numbers are how a finding is checked; advice unchanged/);
+  assert.equal((await ledger.get(reject!))?.disposition, "rejected");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), after, "a rejection commits nothing");
+});
+
+test("the release path for advice (#110): `advice promote` carries the instance's accepted file into the definition's seed and refuses identical content, a dirty definition, a person who may not act as S5, and a profile the definition does not declare", async (t) => {
+  const { mkdtemp, rm, cp, readdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const repo = await initRepo(t);
+  const definition = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(definition, { recursive: true, force: true }));
+  for (const dir of ["advice", "profiles"]) await cp(path.join(LAB_ROOT, dir), path.join(definition, dir), { recursive: true });
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "seed"]]) await gitExec("git", args, { cwd: definition });
+  const promote = (...args: string[]) => regulator(repo, "advice", "promote", ...args, "--definition", definition);
+
+  let r = await promote("implement.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /identical to the definition's seed; nothing to promote/);
+  await writeFile(path.join(repo, "regulator/advice/implement.md"), `${await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8")}- Run the inherited suite before reporting.\n`);
+  await gitExec("git", ["commit", "-qam", "S5: accept an advice change (simulated)"], { cwd: repo });
+  r = await promote("implement.md", "--by", "bob", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await promote("deployer.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /deployer\.md names no profile the definition at .* declares \(auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\)/);
+  r = await promote("AGENTS.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 2, "not an advice file name at all: usage");
+  await writeFile(path.join(definition, "scratch.txt"), "dirty\n");
+  r = await promote("implement.md", "--by", "alice", "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the definition at .* has uncommitted changes; a promotion is committed on its own/);
+  await rm(path.join(definition, "scratch.txt"));
+  assert.doesNotMatch(await readFile(path.join(definition, "advice", "implement.md"), "utf8"), /inherited suite/, "the seed is untouched by a refused promotion");
+
+  r = await promote("implement.md", "--by", "alice", "--rationale", "the instance learned to run the inherited suite");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^implement\.md promoted by alice \(S5\): the definition's seed at .* now carries this instance's advice for implement, committed as [0-9a-f]{7}; every instance initialized from now on starts from it\n$/);
+  assert.match(await readFile(path.join(definition, "advice", "implement.md"), "utf8"), /- Run the inherited suite before reporting\.\n$/);
+  assert.deepEqual((await readdir(path.join(definition, "advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"], "one file per profile, as before");
+  assert.match((await gitExec("git", ["log", "-1", "--format=%s%n%b"], { cwd: definition })).stdout, /^S5: promote advice implement\.md from instance .*@[0-9a-f]{7} into the definition\n+Decided by alice under S5 authority\.\nthe instance learned to run the inherited suite/);
+  assert.equal((await gitExec("git", ["status", "--porcelain"], { cwd: definition })).stdout.trim(), "", "the definition is clean: the promotion is one commit");
+});
+
+test("the typed harness-edit on `advice accept` (#138): the host refuses a payload whose diagnosis references do not resolve against the stores and one whose prediction lacks the block; a payload that resolves names its own target, so --file may be omitted and one that disagrees is refused; the disposition's rationale cites the prediction's id, and its live horizon shows as open from the decision; a plain proposal is decided as #110 left it", async (t) => {
+  const { AuditLog, ExecutionStore, readPredictions } = await import("@metacoding.io/regulator-core");
+  const { loadContract } = await import("./contract-file.js");
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  // What the stores hold about u1: one attempt refused at closeout, with the evidence that refused it.
+  const store = new ExecutionStore(repo);
+  await store.createUnit(await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json")));
+  await store.setStatus("u1", "dispatched");
+  await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
+  await store.setStatus("u1", "blocked", "audit refused closeout");
+  await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
+  const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }] };
+  await appendSignal(repo, { id: "i1", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused less", observation: "u1 was refused for a suite it never ran", claim: "fewer refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction } as never);
+  await appendSignal(repo, { id: "i0", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "no block", observation: "o", evidence: [] });
+  const diagnosis = { unit: "u1", attempt: 1, revision: "abc1234", moment: "attempt-failed", evidence: ["e1"], signals: [] };
+  const propose = (id: string, edit: object) => appendSignal(repo, { id, timestamp: "2026-10-26T10:02:00.000Z", source: "S4", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: `advice/implement.md: ${id}`, rationale: "two units were refused for a suite they never ran", requestedChange: edit, evidence: [] } as never);
+  await propose("he-ok", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "implement", diff: "+- Run the inherited suite (inherited-tests) before reporting." }, prediction: "i1" });
+  await propose("he-unresolved", { kind: "harness-edit", diagnosis: [{ ...diagnosis, unit: "u9" }, { ...diagnosis, evidence: ["e7"] }], change: { profile: "implement", diff: "+x" }, prediction: "i1" });
+  await propose("he-no-block", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "implement", diff: "+x" }, prediction: "i0" });
+  await propose("he-undeclared", { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "deployer", diff: "+x" }, prediction: "i1" });
+  await appendSignal(repo, { id: "plain", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "advice/research.md: drop the line about line numbers", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const owed = Object.fromEntries((await ledger.obligations()).filter((o) => o.concern === "policy-proposal").map((o) => [o.sources[0], o.id]));
+  const { mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const outside = await mkdtemp(path.join(tmpdir(), "regulator-harness-edit-"));
+  t.after(() => rm(outside, { recursive: true, force: true }));
+  const proposed = path.join(outside, "proposed-implement.md");
+  const current = await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8");
+  await writeFile(proposed, `${current}- Run the inherited suite (inherited-tests) before reporting.\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args);
+
+  // The host's refusals: the payload is read against the stores before anything is written.
+  let r = await attempt(owed["he-unresolved"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's harness-edit does not resolve against this instance: diagnosis\[0\]: unit "u9" is not in the execution store; diagnosis\[1\]: evidence "e7" is not in the audit log for unit "u1"\. Nothing accepted/);
+  r = await attempt(owed["he-no-block"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /prediction: intelligence signal "i0" carries no prediction block \(metric, baseline, direction, magnitude, probability, horizons\)/);
+  r = await attempt(owed["he-undeclared"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /change: profile "deployer" is not one the definition declares \(auditor, bookkeeper, implement, intelligence, manager, research\)/);
+  r = await attempt(owed["he-ok"]!, "--by", "alice", "--file", "research.md", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the proposal's payload names implement\.md \(its change is against profile "implement"\); --file must be that file, not research\.md/);
+  r = await attempt(owed["plain"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
+  assert.equal(r.code, 2, "a plain proposal still needs --file: its subject names the file, the person names it back");
+  assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), current, "nothing written by a refusal");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before);
+  assert.deepEqual((await readPredictions(repo)).map((p) => [p.signal.id, p.status, p.horizons[0]?.status]), [["i1", "awaiting-decision", "awaiting-decision"]], "before the decision the live horizon is not open: the edit is not in effect");
+
+  // The decision: the target comes from the payload, the rationale cites the prediction, and the live horizon is open from it.
+  r = await attempt(owed["he-ok"]!, "--by", "alice", "--from", proposed, "--rationale", "the diagnosis traces to u1's refused attempt");
+  assert.equal(r.code, 0, r.stderr);
+  const after = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  assert.match(r.stdout, new RegExp(`^proposal ${owed["he-ok"]!.slice(0, 8)} accepted by alice \\(S5\\): regulator/advice/implement\\.md committed as ${after.slice(0, 7)} on main; the obligation is resolved as accepted; prediction i1 live horizon open\\n$`));
+  assert.match(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), /\n- Run the inherited suite \(inherited-tests\) before reporting\.\n$/);
+  const state = await ledger.get(owed["he-ok"]!);
+  assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
+  assert.match(state?.rationale ?? "", new RegExp(`^the diagnosis traces to u1's refused attempt\\. regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority\\. Prediction i1: its live horizon over the next 3 implement unit\\(s\\) is open from this decision; a disconfirming reading is owed to S5\\.$`));
+  const [p1] = await readPredictions(repo);
+  assert.deepEqual([p1?.status, p1?.horizons[0]?.status, p1?.horizons[0]?.openedAt, p1?.proposals[0]?.disposition], ["open", "open", state?.closedAt, "accepted"], "open from the acceptance, read from the obligation and not from the rationale");
+  r = await regulator(repo, "status", "--instance", repo);
+  assert.match(r.stdout, /predictions: 1 open of 1\n {4}open {14}i1 {2}refusals lower by 1 \(p=0\.7\) {2}live open: 0\/3 implement unit\(s\) {2}bet on by he-ok accepted, he-unres open, he-undec open {2}advice\/implement\.md: units told to run the inherited suite are refused less\n/);
+});
+
+test("`regulator upgrade` from the outside (#53): --check prints the plan and changes nothing, applying is checked against the interaction policy as S5 before anything is written, the migration notes are printed under a heading per version crossed, the commit cites from and to, doctor reports the version and the history, and a second run says there is nothing to do", async (t) => {
+  const { mkdtemp, rm, mkdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-upgrade-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await mkdir(path.join(dir, "lib"));
+  await writeFile(path.join(dir, "lib", "a.js"), "export const a = 1;\n");
+  await writeFile(path.join(dir, "package.json"), JSON.stringify({ name: "third", private: true, type: "module" }));
+  for (const args of [["init", "--quiet", "-b", "main"], ["add", "-A"], ["commit", "--quiet", "-m", "init"]]) await gitExec("git", args, { cwd: dir });
+  let r = await regulator(dir, "upgrade", "--check");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /is not an instance \(no \.regulator\/instance\.json\); run `regulator init` first/);
+  r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  // As 0.1.3 left it: no advice directory, a manifest with no package version at an older revision.
+  await gitExec("git", ["rm", "-rq", "regulator/advice"], { cwd: dir });
+  await gitExec("git", ["commit", "-qm", "as 0.1.3 left it"], { cwd: dir });
+  const manifestPath = path.join(dir, ".regulator", "instance.json");
+  const m = JSON.parse(await readFile(manifestPath, "utf8")) as { definition: Record<string, unknown> };
+  delete m.definition.packageVersion;
+  m.definition.harnessRevision = "5115ea2144b89d07a3b943ab2e2f247ea8f896eb";
+  await writeFile(manifestPath, `${JSON.stringify(m, null, 2)}\n`);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim();
+
+  r = await regulator(dir, "doctor");
+  assert.equal(r.code, 1, "drift and the missing advice are problems");
+  assert.match(r.stdout, /^PROBLEM {2}definition-drift {2}initialized under 5115ea2 .* — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/m);
+  r = await regulator(dir, "upgrade", "--check");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^upgrade would carry this instance 0\.1\.3@5115ea2 \(the manifest recorded no package version; read as the migration floor\) → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n {2}nothing to do {2}seed regulator\/identity\/ from the definition's identity seed: every seed file is present; none is overwritten\n {2}would apply {2}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n {2}nothing to do {2}add the \.regulator\/ line to \.gitignore: present\n {2}the migration notes, for a person to read; nothing below is applied by upgrade:\n {2}## unreleased \(head [0-9a-f]{7}\)\n {4}- advice advice\/<profile>\.md \[gate: regulator check only\]\n/);
+  assert.match(r.stdout, /\n {2}WARNING: no committed report under evals\/reports\/ ran at [0-9a-f]{7}; the manifest records "none" as the evidence this upgrade was checked against\n {2}--check: nothing changed; run without it, with --by <who>, to apply\n$/);
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim(), before);
+  assert.equal(await readFile(manifestPath, "utf8"), `${JSON.stringify(m, null, 2)}\n`, "a dry run writes nothing");
+
+  r = await regulator(dir, "upgrade");
+  assert.equal(r.code, 2, "applying needs --by");
+  r = await regulator(dir, "upgrade", "--by", "bob");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /bob may not act as S5/);
+  r = await regulator(dir, "upgrade", "--by", "carol");
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /"carol" is not a person the interaction policy/);
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim(), before, "a refused upgrade writes nothing");
+  r = await regulator(dir, "upgrade", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^upgraded this instance 0\.1\.3@5115ea2 .* → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n/);
+  assert.match(r.stdout, /\n {2}applied {5}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n/);
+  assert.match(r.stdout, /\n {2}committed [0-9a-f]{7} on the base branch by alice; the manifest records the upgrade\n$/);
+  assert.match((await gitExec("git", ["log", "-1", "--format=%s"], { cwd: dir })).stdout, /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n$/);
+  r = await regulator(dir, "doctor");
+  assert.equal(r.code, 0, r.stdout + r.stderr);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 52 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\/; package 0\.1\.3; upgraded 1× — last \d{4}-\d{2}-\d{2} by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/m);
+  assert.match(r.stdout, /^ok {6} definition-drift {2}the instance was initialized under this definition revision$/m);
+  r = await regulator(dir, "upgrade", "--by", "alice");
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /^nothing to upgrade: the instance is at 0\.1\.3 \([0-9a-f]{7}\), which is the installed definition; nothing to do\n$/);
 });

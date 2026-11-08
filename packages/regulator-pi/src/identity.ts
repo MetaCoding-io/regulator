@@ -19,6 +19,14 @@
  *                       expire; nothing here can reach an identity file.
  *   runtime evidence    the audit log (checkpoint 8). Not this checkpoint's.
  *
+ * Plus the behavioral canary (`reg.audit.behavioral-canary.v1`): when the
+ * budget policy declares `identity.canary`, a rule to begin every reply with a
+ * marker is rendered beside the identity, and each assistant reply is read
+ * for it (`message_end`). A run of replies without it is recorded as an
+ * advisory audit finding: the model has stopped following a small rule it is
+ * shown every turn, which is what precedes its dropping a large one. The host
+ * observes; S3 decides what a degraded session is worth.
+ *
  * Load with checkpoints 2–10. The dispatcher (lesson 12) loads no context
  * files from the worktree: this section is the identity a unit sees.
  */
@@ -26,7 +34,7 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ReportedEvidenceSchema } from "@metacoding.io/regulator-protocol";
-import { ExecutionStore, MemoryStore, appendSignal, identityContextBudget, identityMaxChars, readIdentity, renderIdentitySection, renderMemorySection, type IdentitySet } from "@metacoding.io/regulator-core";
+import { BehavioralCanary, ExecutionStore, MemoryStore, appendSignal, canaryMarker, identityContextBudget, identityMaxChars, readIdentity, renderCanarySection, renderIdentitySection, renderMemorySection, type BehavioralCanaryPolicy, type IdentitySet } from "@metacoding.io/regulator-core";
 import { readFile } from "node:fs/promises";
 import { isPolicyDefinition } from "@metacoding.io/regulator-protocol";
 import { randomUUID } from "node:crypto";
@@ -37,11 +45,14 @@ import { baseRoot, headRevision } from "@metacoding.io/regulator";
 export const IDENTITY_SECTION_TAG = "regulator_identity";
 export const MEMORY_SECTION_TAG = "regulator_memory";
 export const MEMORY_ENTRY_TYPE = "regulator:memory";
+export const CANARY_SECTION_TAG = "regulator_canary";
 
 export interface IdentityExtensionOptions {
   now?: () => number;
   /** Days a memory entry may be current for before review. */
   maxReviewDays?: number;
+  /** The behavioral canary to run, overriding the policy's `identity.canary` (tests); `null` runs none whatever the policy says. */
+  canary?: BehavioralCanaryPolicy | null;
 }
 
 export const RememberInputSchema = Type.Object({
@@ -69,6 +80,9 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
     let truncationSignalled = false;
     /** The budget policy's `identity.maxChars`, or the default (#91): read with the policy the budget extension reads. */
     let maxChars = identityMaxChars();
+    /** The policy's `identity.canary`, if any, and the canary built from it for this session. */
+    let canaryPolicy: BehavioralCanaryPolicy | undefined;
+    let canary: BehavioralCanary | undefined;
 
     pi.on("session_start", async (_event, ctx) => {
       unitId = "";
@@ -77,12 +91,18 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
       memory = undefined;
       truncationSignalled = false;
       maxChars = identityMaxChars();
+      canaryPolicy = undefined;
+      canary = undefined;
       try {
         const policyFlag = pi.getFlag("policy");
         const policyPath = (typeof policyFlag === "string" && policyFlag) || process.env.REGULATOR_POLICY || POLICY_PATH;
         const value: unknown = JSON.parse(await readFile(policyPath, "utf8"));
-        if (isPolicyDefinition(value)) maxChars = identityMaxChars(value);
+        if (isPolicyDefinition(value)) {
+          maxChars = identityMaxChars(value);
+          canaryPolicy = value.identity?.canary;
+        }
       } catch { /* no policy readable here: the default limit applies, and the budget extension says so about the policy */ }
+      if (options.canary !== undefined) canaryPolicy = options.canary ?? undefined;
       try {
         base = await baseRoot(exec, ctx.cwd);
       } catch {
@@ -99,6 +119,9 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
         // Memory is scoped by unit type (lesson 15): a fact for research units is not rendered to an implement unit.
         if (unitId) unitType = (await new ExecutionStore(base, now).getUnit(unitId))?.unitType;
       }
+      // The marker is this session's: the unit id is in it, so the rule is one no model has seen before this instance.
+      if (canaryPolicy) canary = new BehavioralCanary(canaryMarker(canaryPolicy.marker, unitId), canaryPolicy.misses);
+      if (canary) ctx.ui.setStatus("canary", `canary: ${canary.marker} (0 replies)`);
       const current = memory ? (await memory.current(unitType)).length : 0;
       const problems = identity.problems.length ? `; ${identity.problems.length} problem(s)` : "";
       const budget = identityContextBudget(identity, maxChars);
@@ -127,7 +150,30 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
         }
       }
       if (memory) event.systemPromptOptions.sections[MEMORY_SECTION_TAG] = renderMemorySection(await memory.current(unitType));
+      // Its own section, so the identity's character limit never cuts the rule the canary depends on.
+      if (canary) event.systemPromptOptions.sections[CANARY_SECTION_TAG] = renderCanarySection(canary.marker);
       return undefined;
+    });
+
+    // The behavioral canary (S3*): read each reply for the marker the rule above asks for. A reply with no text
+    // (tool calls only) is not covered. A run of misses is recorded, advisory, from the host to S3; nothing here
+    // stops the model, and nothing here decides that the session should end. That is S3's, under its policies.
+    pi.on("message_end", async (event, ctx) => {
+      if (!canary || event.message.role !== "assistant") return;
+      const text = event.message.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
+      const observed = canary.observe(text);
+      if (!observed) return;
+      const { seen, hits } = canary.counts();
+      ctx.ui.setStatus("canary", observed.hit ? `canary: ${canary.marker} (${hits}/${seen} replies)` : `canary: ${canary.marker} silent for ${observed.consecutiveMisses} (${hits}/${seen} replies)`);
+      if (!observed.signal) return;
+      const observation = `${observed.consecutiveMisses} consecutive replies did not begin with the marker \`${canary.marker}\` that this session's prompt asks for on every turn (${hits} of ${seen} replies have). The model has stopped following a small rule it is shown each turn; that precedes its dropping a large one. The context may be degraded: a fresh session is the usual remedy, and it is S3's to decide.`;
+      await appendSignal(base || ctx.cwd, {
+        id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "advisory",
+        subject: "behavioral canary silent", ...(unitId ? { unit: unitId } : {}), invariant: "context-degradation", observation,
+        evidence: [{ class: "runtime", ref: "message_end", observation: `${observed.consecutiveMisses} consecutive replies without ${canary.marker}` }],
+        suggestedAction: "Consider ending this attempt and dispatching the unit in a fresh session.",
+      });
+      ctx.ui.notify(`regulator: the behavioral canary is silent — ${observed.consecutiveMisses} replies without ${canary.marker}; recorded as an advisory audit finding`, "warning");
     });
 
     pi.registerTool({

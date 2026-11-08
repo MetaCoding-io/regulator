@@ -60,7 +60,7 @@ the definition already declares, or could:
 | Where the gates sit in a session | the same field on the host's lifecycle; *can refuse* vs *records only* from `mechanism.level` and `authority.may` | the same |
 | Six unit types, one workload | the workload definition (unit types, profiles, closeout checks) | none: already data |
 | The recovery lattice | `policies/recovery.json` | none: already data |
-| Six states (the unit lifecycle) | nothing yet — obligations have a transition table (`packages/core/src/obligations.ts`), units do not | a typed unit transition table in `protocol` that the loop enforces and the figure draws |
+| Six states (the unit lifecycle) | ~~nothing yet — obligations have a transition table (`packages/core/src/obligations.ts`), units do not~~ `UNIT_TRANSITIONS` in `protocol`, enforced by the execution store (2026-10-13) | ~~a typed unit transition table in `protocol` that the loop enforces and the figure draws~~ landed: `renderLifecycleFigure` draws it, and the control room's Lifecycle view steps a unit's trajectory over it |
 | Who writes where | roughly, `scope.resources` and `channels` | resources are free text (`.regulator/signals.ndjson` beside "the instance's .regulator/"); a closed list of stores |
 
 So the generator is one module over `DefinitionView` that emits SVG per figure, and the
@@ -96,6 +96,123 @@ holding each list against the code (the host's subscribed events and registered 
 the loop's functions, the usage line's subcommands, core's exports; `verifyBase` left the list with #48). The tally the figure
 needs is now a group-by: `host:tool_call` carries eight records, `loop:runUnit` seven,
 `loop:auditUnit` six. Next: the generator.
+
+**Landed (2026-10-13).** The unit lifecycle, as the instance overlay the last bullet of
+the proposal asked for, taken as its own slice because the figure it needs was the one
+with no data behind it. The prompt was a post by @ohdearlordylord (2026-10-12): replace
+the prose spec with the reducer, have the agent draw an interactive diagram from the
+real events and the actual reducer code, step through the events, and ask "why" at a
+decision. Here the reducer is the loop, and what was missing was its declaration:
+`UNIT_TRANSITIONS` in `packages/protocol/src/execution.ts` is the closed table (six
+statuses, twelve rows: from, to, the trigger, the loop step that takes it, whether the
+loop takes it on its own), and `ExecutionStore.setStatus` refuses a change that is not a
+row, so the table is enforced rather than described. The events are the records the
+instance already keeps; `unitTrajectory` (`packages/core/src/trajectory.ts`) folds them
+through the table in time order, each step carrying its why as the records state it and
+the registry record it is the work of, and says when the fold and the unit record
+disagree. The figure is `renderLifecycleFigure` (`packages/regulator/src/figures.ts`),
+drawn from the table with `data-` attributes for a page to place records on, and the
+control room's Lifecycle view steps through a unit's trajectory over it (`#unit=<i>/<id>@<step>`).
+The "why" is deterministic: the control room stays read-only (§5) and asks no model;
+*copy as a question for your agent* hands the step, its records and the reducer's
+location to whatever agent the maintainer uses. What the store does not keep — a status
+history — is DEBT row 47; the website's hand-drawn six states is still hand-drawn until
+`regulator docs --write` renders this figure and the website copies it, which is the
+thread's next step.
+
+**Refined (2026-10-26).** The rule as decided binds a figure of what exists: one whose
+every box and edge is a record, an enforcement point, a transition row or a store. Such a
+figure the generator draws from the definition and a hand never does, because a drawn
+copy of what the code states is a second copy and drifts. The reflector pair (the
+[Harness² note §7](2026-10-18-harness2-recursive-harnessing.md#the-two-levels-drawn),
+the docs' [What's coming](../project/whats-coming.md) page) showed two cases the rule did
+not name, and the question came from the maintainer: some figures are not going to be
+generated from a real harness, because they are a level above it.
+
+- *A figure of what is designed and not built.* The "after" figure draws a reflector, an
+  advice seed and a probe arm the definition does not have. No generator can draw it, and
+  it would be wrong for one to: a generated figure asserts that the thing exists. It is a
+  drawing, kept with its research note, shown only on a page that says it is a design,
+  and replaced by the generated figure when the mechanism lands; the drawing becomes
+  history in the note.
+- *A figure that spans more than the definition describes.* The "before" figure's
+  instance box is the one-level map the generator will draw. The frame around it (the
+  definition band and its files, a person as S5, `identity promote`, the eval harness as
+  S3\* one level up, the records column and what reads it) is a claim about the project's
+  shape that no record states. For that part the figure is a drawing; for the part the
+  definition describes it embeds the generated figure once that exists, and draws it by
+  hand until then.
+
+So the rule has three clauses. (1) A figure of what exists is generated from the
+definition, never drawn. (2) A figure of what is designed is a drawing, labelled as a
+design where it is shown, and replaced by the generated figure when the design lands.
+(3) A figure that spans more than the definition describes embeds the generated figure
+for the part it does describe and draws the rest. Clause 3 is what keeps the rule
+honest at the seams: the drift protection sits exactly where drift can happen, and no
+further. Its consequence for the generator is that it emits fragments with stable ids
+(the one-level map as a `<g>` a frame can place, its hotspots carrying their cards) and
+not only whole figures, so an embedding is a composition and not a copy. The
+hand-written script that draws the reflector pair
+([`figures/2026-10-18-reflector-figures.py`](figures/2026-10-18-reflector-figures.py))
+is the first consumer: its instance box becomes the generated fragment when that exists.
+The website copies a composed figure the way it copies a generated one. The fragment
+contract, the cards on generated figures and `docs --write` for the SVGs are
+[#147](https://github.com/MetaCoding-io/regulator/issues/147). "Only author of a
+figure" in the decision above reads, from here, as "only author of a figure of what
+exists".
+
+**Landed (2026-10-27).** The fragment contract (#147). Every figure the generator draws
+comes in two shapes: `lifecycleFragment()` returns a `<g id="unit-lifecycle"
+data-viewbox="0 0 800 480">` with its own `<defs>` under prefixed ids and the list of ids
+it owns, and `renderLifecycleFigure()` is that fragment wrapped in `<svg>`. The ids come
+from the definition, a node's from its status and an edge's from the pair it joins, and
+a test renders twice and holds them identical, unique and drawn only from the table.
+Every node and edge is a hotspot in the shape the docs and the website open cards on
+(`class="gl fig-hot"`, `data-label`, `data-def`, `data-href`), with the card built from
+the row's trigger, the loop step that takes it, whether it waits, and its description, so
+a card cannot say what the table does not. `regulator docs --write` files the figure at
+`packages/regulator/figures/unit-lifecycle.svg` and `docs --check` holds it current under
+`pnpm check`; the definition check knows `figures/` as derived output, beside `dist/`.
+The docs copy the figure into `docs/generated/figures/` with site-relative links and the
+control-room guide embeds it; the website copied it in place of its hand-drawn six
+states for a day and then put the drawing back (below). The reflector pair's script takes `--embed
+instance=<figure.svg>` and places the fragment in the instance box, scaled and centred,
+and refuses a composition that loses an id or a card: the third clause as a mechanism,
+proven with the lifecycle fragment. Next: the one-level map over `ENFORCEMENT_POINTS`,
+the channels and the stores, the fragment the instance box is for
+([#153](https://github.com/MetaCoding-io/regulator/issues/153), which also closes the
+stores as a list).
+
+**Landed (2026-10-27).** The one-level map (#153), and a decision about where it is
+shown. `INSTANCE_STORES` in `protocol` is the closed list of what the harness writes
+under `.regulator/` (eleven records, two workspaces, the manifest), held against the path
+constants and against a run's directory by tests; `regulator check` refuses a record
+whose `scope.resources` names a path under `.regulator/` the list does not, and four
+records were migrated from free text, which closes the "who writes where" row of the
+table above. `instanceMapFragment()` draws one regulated level from the definition view:
+the carried files and their writer classes, a person as their only writer, the loop's
+steps, the workload's unit types under their profiles (S4 where the profile reports
+intelligence), the routing policy, the S2 records, the checks the workload names,
+operational memory and the stores, with every edge an enforcement point or a command and
+every card the record or list entry behind it. `regulator docs --write` files it as
+`figures/instance-map.svg`; the control-plane concept page embeds it; the control room
+shows it as a *Map* view with the instance's units counted onto their unit types.
+
+The decision: the reflector pair stays drawn. The generated box was composed into the
+hand-drawn frame with `--embed`, as clause 3 says, and the composition read worse than
+either part: a grid places what the definition declares, and the definition does not
+declare where things should sit or which words matter most, so the drawn interior's
+emphasis ("the only writer" beside the person, the proposal's path around the edge) had
+no equivalent. The maintainer's call, 2026-10-27: a design figure may stay drawn as a
+whole where a composed version loses the composition, labelled as drawn; the generated
+figure lives where a literal figure earns its place, beside the text that states the
+mechanism and in the control room, where it carries live records. The same call put the
+website's hand-drawn six states back the same day: the generated lifecycle says the same
+twelve transitions, and reads worse on that page. So the thread's "only author" rule
+holds for the docs and the control room, and the website may keep a drawing of a
+generated figure when the drawing reads better, checked against the table when the table
+changes. Clause 3 stands as a mechanism (`--embed` works and is tested) and is not an
+obligation. Next: the sequence view, the gates placed on the unit's path.
 
 ## 2. A person should be able to create S4 intelligence
 
@@ -164,6 +281,14 @@ SHACL run has no session and so no profile that means anything.
   either. It also answers the transcript's product claim directly — the loop coordinates
   deterministic and probabilistic units under one contract shape, and the picture in
   §1 shows both kinds on the same spine.
+
+**Landed (2026-10-27, [#122](https://github.com/MetaCoding-io/regulator/issues/122)).**
+As proposed, with three things the portfolio case settled: the budget is wall-clock
+alone for now (CPU and artifact size are DEBT row 49); the runner's reach is a declared
+`outputs[]` list, refused by the definition check outside the profile's writable paths
+or under a consent grant, since a program cannot ask; and a program's contract fixes
+what a session's would delegate, because the report's delegated and unresolved lists
+are empty by construction. The portfolio note's §3 records the consent decision.
 
 ## 4. Predictive intelligence: S4 as a model of "outside and then"
 
@@ -236,6 +361,8 @@ step. And it can be self-fulfilling: predict escalation, route to the cheaper mo
 save budget, cause the escalation. Calibration catches that only if the resolution
 records the route actually taken beside the outcome.
 
+**Added 2026-10-25.** One more thing the instrument record grades, from Lanham's chapter 10 (*AI Agents in Action*, 2nd ed., §10.2.6–10.4.1; the [agent-engineering books note](2026-10-25-agent-engineering-books.md) §4 item 2): a unit's reported `confidence` on an intelligence signal is itself a model judgment about the future, and today it is recorded and never checked. It is an instrument at the `model-judgment` level like any other, and once predictions resolve it is graded on calibration the same way (the book's "metacognitive calibration", confidence against correctness, is the right metric). Until then nothing routes on it, which is the pathology catalog's new §3 row.
+
 ## 5. Should the control room write?
 
 **Decided for now (2026-09-27): no.** The control room stays read-only; the figures of §1
@@ -301,11 +428,21 @@ Items with no design yet. Each gets a section above when it has one.
 | ~~Enforcement points as a typed field~~ | §1 above | Done ([#76](https://github.com/MetaCoding-io/regulator/issues/76)): `ENFORCEMENT_POINTS` in `protocol` — `host` (the events the Pi host subscribes to, plus `dispatcher`), `tool`, `loop`, `cli`, `check` — each list held by a test against the code; `regulator check` refuses an unknown place or point by name |
 | Sensors as a declared part of the definition | §2 above | |
 | A `command` runner per unit type | §3 above | |
-| Predictions as intelligence signals that resolve; an instrument record kind in the registry with levels, graded on calibration | §4 above | |
-| Eval metrics are a closed list of fifteen trajectory counts (`EVAL_METRICS`); a workload or an instrument cannot declare its own | §4 above; the ArticleMiner note §4.6 | calibration (Brier) and a corpus F₁ both need an open metric with a declared grader |
+| ~~Predictions as intelligence signals that resolve~~; an instrument record kind in the registry with levels, graded on calibration | §4 above | Items 1 and 2 of §4 landed in [#138](https://github.com/MetaCoding-io/regulator/issues/138) (slice 2 of the accept-path split, 2026-10-26): the `prediction` block on the signal, `prediction-resolution` in the regulatory log resolved by the loop from the stores at close and abort (confirmed, disconfirmed, inconclusive; inconclusive counts against), the S5 obligation on a disconfirmed live horizon, the typed `harness-edit` payload, and `regulator status` listing them with a precision. What remains is item 3, the instrument record kind with its levels and calibration report: it stays here until resolved predictions and a live report (#46) exist to calibrate against, and nothing produces a prediction yet (a person appends the signal; the reflector will) |
+| ~~Eval metrics are a closed list of fifteen trajectory counts (`EVAL_METRICS`); a workload or an instrument cannot declare its own~~ | §4 above; the ArticleMiner note §4.6; the Harness² note §9; the portfolio note §5 | Done ([#129](https://github.com/MetaCoding-io/regulator/issues/129)): a `MetricDeclaration` beside the workload that owns it (`workload/<name>.json`'s `metrics[]`): a namespaced name, a kind, a direction, an optional instrument ref and a grader argv the host runs in the instance after each unit, emitting `{ metric, value, observation? }`; the fifteen are the built-in set and the committed drift reports regenerate byte-identical; a suite pre-registers declared names as built-in ones and may mark one as the optimisation target; a judged metric is refused until the instrument record exists with its held-out score. The first consumer is the portfolio's turnover (`evals/portfolio-turnover.json`). What remains of the four consumers: calibration (Brier) and #49's judged metrics wait on the instrument record kind (§4 above); the corpus F₁ on ArticleMiner's fixture; [#125](https://github.com/MetaCoding-io/regulator/issues/125)'s backtester metrics on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)) |
 | ~~The docs do not explain intelligence, memory or evals as concepts~~ | this conversation | Done: [Intelligence and memory](../concepts/intelligence-and-memory.md) and [Evidence about the regulators](../concepts/evidence-about-the-regulators.md), linked from the control-plane page, the glossary, the running-units guide and the definition reference |
+| Two books bought as references, held in the private `MetaCoding-io/library` repository. *Build a Robo-Advisor with Python (From Scratch)* opens a third workload, `portfolio`, under [#61](https://github.com/MetaCoding-io/regulator/issues/61): deterministic domain checks from its chapters 10, 13 and 14 (constraint bounds, threshold bands, the wash-sale window, the backtester), S4 sensors from drift and harvest triggers (§2 above), Monte Carlo success as a prediction (§4 above), risk tolerance as identity, consent derived from a `place_trade` tool's declared effect (`DEBT.md` row 29), and Black–Litterman (chapter 12) as the worked example of a bounded judgment entering an arithmetic pipeline. *Building LLM Applications with DSPy* opens no thread: its instruction optimisers (chapter 6: GEPA, SIMBA, MIPROv2) are the reflector's implementation reference in the [Harness² note](2026-10-18-harness2-recursive-harnessing.md) §4 and §7, its LLM-as-a-judge calibration (chapter 8) goes to [#49](https://github.com/MetaCoding-io/regulator/issues/49), and its metric functions are a third consumer of the open-metric row above | this conversation (2026-10-24) | Decided (2026-10-24, James): the robo-advisor book gets a design note and a threads row once read — written: [the portfolio workload note](2026-10-24-portfolio-workload.md); the DSPy book is additions to the three places named, not a note — landed 2026-10-25: the [Harness² note §9](2026-10-18-harness2-recursive-harnessing.md#9-implementation-reference-the-dspy-book-added-2026-10-25), an addition to #49, and this row's neighbour above. Both need the open-metric row; the portfolio fixture needs either declared checks for non-Node domains (the ArticleMiner row above) or the arithmetic ported to Node. *Build a Multi-Agent System (From Scratch)* was assessed and set aside until its chapter 9, the only one on A2A and multi-agent systems, is written; its Skills chapter (6) and its three human-in-the-loop patterns (8) are field-study foils for lessons 4 and 13. From the same bundle, *Build an AI Agent (From Scratch)* (Hur and Song) and *AI Agents in Action, Second Edition* (Lanham) were bought on their tables of contents and then read in full; neither opens a thread, and their yield is the [agent-engineering books note](2026-10-25-agent-engineering-books.md) and the additions it lists in its §7 (two pathology rows, two pilot cases, five issues, the five rows below) |
+| What the delivered question carries: the outbox writes one line per obligation (`packages/regulator/src/deliver.ts`) and the recovery decision and evidence it cites sit behind `regulator obligation show`, so a person answering from a channel sees the question and not the grounds | Lanham §8.4.6, the second of its four HITL decisions ([books note](2026-10-25-agent-engineering-books.md) §4 item 10) | a bare question yields rubber stamps; the line should carry the evidence refs, or the watcher should render them |
+| A review triggered by a model change: registry review dates are calendar-based (`regulator review --due`), the fingerprint records the model, and a route change re-opens nothing | Lanham §7.3.5 (revalidate the threshold when the rubric, the agent or the model changes); [books note](2026-10-25-agent-engineering-books.md) §4 item 9 | real for instruments (a calibration is against one model), arguable for gates; the instrument record kind above is where it lands |
+| A shared cause recovered once per unit: six units each take `environment → remediate` for one missing dependency and the instance never notices | Lanham §8.3.7's circuit breaker; `recovery-router` limitation 3 (per cause per unit, by design); pathology catalog §2's new row | a level-2 count over recovery decisions that opens an obligation on the instance, no unit, when N units hit one cause in a window; related to [#46](https://github.com/MetaCoding-io/regulator/issues/46) |
+| An idempotency key on `notify_owner` for the deliberate repeat the effect journal refuses | Lanham §8.3.4 (the journal's key, offered as a cache); [books note](2026-10-25-agent-engineering-books.md) §4 item 11 | small; the `effect-journal` card's limitation names the refusal |
+| ~~An answered consent should hold for the unit across its attempts: a person's yes on attempt 1 reaches attempt 2 as the hint, but when attempt 2 fails a check, attempt 3's hint is the recovery router's repair hint and nothing tells the unit it already has consent for the same action, so a live unit would ask again (the scripted portfolio close reads the ledger for an accepted consent obligation on its unit instead; `packages/regulator/src/portfolio-scripted.ts`)~~ | the portfolio workload's scripted close ([#120](https://github.com/MetaCoding-io/regulator/issues/120)) | Done ([#60](https://github.com/MetaCoding-io/regulator/issues/60)): a consent request records the call a yes authorizes, and the host's interception reads the ledger on every guarded call for an accepted consent on the unit whose recorded call covers it — not the hint, not the attempt — so the yes on attempt 1 holds on the repair attempt for the same path and a changed call asks again; the scripted close no longer reads the ledger itself, it writes through the same gate (`packages/regulator/src/consent.ts`) |
+| A forced final tool: if the host's session API can require a tool choice on the last turn, `report_result` could be required rather than its absence routed as `no-report` afterwards | Hur and Song §4.7 (`final_answer` with `tool_choice="required"`); [books note](2026-10-25-agent-engineering-books.md) §4 item 12 | a question, not a decision: nothing in `packages/regulator-pi` uses a forced tool choice, and whether Pi exposes one is unknown |
 | Attention as the scarcest budget, shown as one | the interaction policy | `attention.blockingPerAttempt` exists; nothing shows how much of a person's attention an instance has spent this week |
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link. The figures: §1 (the website copies the generated SVGs) |
 | A typed unit lifecycle transition table | §1 above | the lifecycle figure needs it; obligations already have one |
+| The remaining optional fields in `protocol`, sorted into genuinely optional, dependent on a sibling tag (to become a sum type), and kept for compatibility with records on disk | [ADT note](2026-11-02-algebraic-data-types.md) §3.4 | after [#161](https://github.com/MetaCoding-io/regulator/issues/161) |
+| Branded identifiers (`UnitId`, `ContractId`, `ObligationId`) produced by the schema's decode | [ADT note](2026-11-02-algebraic-data-types.md) §3.5 | only once a mixed-up identifier causes a bug; the cost is a cast at every boundary where a value enters |
 | A closed list of stores for `scope.resources` | §1 above | the who-writes-where figure needs it |
 | ~~The shipped identity seed is over its context budget: it renders to 7005 characters against the 6000 a unit's prompt carries, so the tail of GLOSSARY.md (the refused words among it) has not reached units~~ | found paying DEBT row 25 ([#51](https://github.com/MetaCoding-io/regulator/issues/51)); `regulator check` now warns | Decided (2026-09-29, James): not shortened. [#91](https://github.com/MetaCoding-io/regulator/issues/91) raised the default to 12000 characters and made the limit the budget policy's `identity.maxChars`; `check` passes with no warning |
+| A fourth workload from a free course: David Sumpter's *Agentic AI for Statistics and Data Science* (Uppsala, CC BY 4.0) and its public template `Vivid-Insights/human-agentic-data-analysis`, whose `instructions.md` is a twenty-one-rule, all-prompt contract for a stepwise analysis with the judgement held by a person. Assessed 2026-10-26 on the three released lessons, the companion course's checking and reliability lessons, and the template read in full: nothing to buy, the contract is the source. Opens the [agentic-statistics note](2026-10-26-agentic-statistics-course.md) and [#150](https://github.com/MetaCoding-io/regulator/issues/150) under #61. Two things it gets right that the docs here argue only one side of: a person's attention as the product rather than the scarce budget (the interaction policy's page), and a consent gate on an epistemic effect rather than an irreversible one (the question before the data; the Asher et al. p-hacking-by-rewording result is the case against a prompt). Remaining lessons land 2, 16 and 30 November and are read as they do | this conversation (2026-10-26) | Decided (2026-10-26, James): the note is committed and the issue filed; a weekly scheduled check reads each release and appends to the note |

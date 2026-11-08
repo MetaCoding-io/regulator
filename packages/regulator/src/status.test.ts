@@ -148,6 +148,30 @@ test("status: a definition and an instance are read from files only, and the vie
   assert.match(text, /coordination-signal {2}S2→S3 {2}src\/a\.js {2}\(unit u1\)/);
 
   const empty = await readStatus({ instanceDir: path.join(root, "nothing-here"), now: () => clock });
-  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [], interactions: [], manifest: undefined });
+  assert.deepEqual(empty.instance, { dir: path.join(root, "nothing-here"), units: [], leases: [], signals: [], obligations: [], memory: [], interactions: [], predictions: [], manifest: undefined });
   assert.match(renderStatusText({ generatedAt: "t", definition: undefined, instance: undefined }), /nothing to show/);
+});
+
+test("status folds predictions (#138): open and resolved predictions with their horizons, what bet on them, each reading's outcome and a precision that counts inconclusive against; `regulator status` prints them", async (t) => {
+  const { appendEntry, appendSignal } = await import("@metacoding.io/regulator-core");
+  const root = await mkdtemp(path.join(tmpdir(), "regulator-status-predictions-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const instance = path.join(root, "instance");
+  const report = "a".repeat(64);
+  const signal = (id: string, prediction: object) => appendSignal(instance, { id, timestamp: "2026-10-26T00:00:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: `advice/implement.md: ${id}`, observation: "o", claim: "c", confidence: "medium", evidence: [], prediction } as never);
+  await signal("p-open", { metric: "refusals", baseline: { report, arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }, { kind: "probe", report: "b".repeat(64), arm: "advised", disconfirmedBy: 2 }] });
+  await signal("p-done", { metric: "closed", baseline: { report, arm: "control" }, direction: "higher", magnitude: 0, probability: 0.9, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 0 }] });
+  await appendSignal(instance, { id: "plain", timestamp: "t", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "no block", observation: "o", evidence: [] });
+  const read = (id: string, predictionId: string, horizon: number, unit: string, outcome: "confirmed" | "disconfirmed" | "inconclusive", observed?: number) => appendEntry(instance, { type: "prediction-resolution", id, at: "2026-10-26T01:00:00.000Z", by: "S3", predictionId, horizon, resolvedBy: { unit, unitType: "implement", status: "closed" }, metric: "refusals", outcome, ...(observed === undefined ? {} : { observed }), reason: "r", evidence: [] });
+  await read("r1", "p-open", 0, "u1", "confirmed", 0);
+  await read("r2", "p-open", 0, "u2", "inconclusive");
+  await read("r3", "p-done", 0, "u1", "disconfirmed", 0);
+
+  const view = await readStatus({ instanceDir: instance, now: () => 5_000_000 });
+  assert.deepEqual(view.instance?.predictions.map((p) => [p.signal.id, p.status, p.horizons.map((h) => [h.horizon.kind, h.status, h.resolutions.map((r) => r.outcome)]), p.summary]), [
+    ["p-open", "open", [["live", "open", ["confirmed", "inconclusive"]], ["probe", "open", []]], { confirmed: 1, disconfirmed: 0, inconclusive: 1, resolved: 2, precision: 0.5 }],
+    ["p-done", "resolved", [["live", "met", ["disconfirmed"]]], { confirmed: 0, disconfirmed: 1, inconclusive: 0, resolved: 1, precision: 0 }],
+  ], "a signal without the block is not a prediction; inconclusive is in the denominator and never the numerator");
+  const text = renderStatusText(view);
+  assert.match(text, /\n {2}predictions: 1 open of 2; 1 confirmed, 1 disconfirmed, 1 inconclusive of 3 resolved \(precision 0\.33; inconclusive counts against\)\n {4}open {14}p-open {2}refusals lower by 1 \(p=0\.7\) {2}live open: 2\/3 implement unit\(s\) \(u1 confirmed, u2 inconclusive\); probe open {2}advice\/implement\.md: p-open\n {4}resolved {10}p-done {2}closed higher by 0 \(p=0\.9\) {2}live met: 1\/1 implement unit\(s\) \(u1 disconfirmed\) {2}advice\/implement\.md: p-done\n/);
 });

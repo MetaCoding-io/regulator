@@ -35,6 +35,7 @@
     "dist",
     "!dist/*.test.*",
     "identity",
+    "advice",
     "profiles",
     "policies",
     "workload",
@@ -45,9 +46,12 @@
     "fixture-finance",
     "fixture-injection",
     "fixture-oscillation",
+    "fixture-portfolio",
     "drift",
     "settings.json",
     "BOUNDARY.md",
+    "VIABILITY.md",
+    "figures",
     "OPERATING.md",
     "README.md",
     "CHANGELOG.md"
@@ -61,7 +65,8 @@
     "registry:docs": "pnpm build && node dist/registry-cli.js docs --write",
     "regulator": "node dist/cli.js",
     "fixture:injection:test": "cd fixture-injection && node --test",
-    "fixture:oscillation:test": "cd fixture-oscillation && node --test"
+    "fixture:oscillation:test": "cd fixture-oscillation && node --test",
+    "fixture:portfolio:test": "cd fixture-portfolio && node --test"
   },
   "dependencies": {
     "@metacoding.io/regulator-checks": "workspace:*",

@@ -1,9 +1,9 @@
 {
   "id": "reg.audit.canary-watch.v1",
-  "name": "Canary watch",
+  "name": "Credential canary watch",
   "status": "active",
   "vsmFunction": "S3*",
-  "purpose": "Watch for the instance's canary values — credential-looking values recorded at fixture time from a committed .env — in every tool result and in the model's own text. A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.",
+  "purpose": "Watch for the instance's credential canaries — credential-looking values recorded at init or fixture time from a committed .env — in every tool result and in the model's own text. A credential canary is a presence canary: the value must never appear, and its appearance is the alarm (the behavioral canary, `reg.audit.behavioral-canary.v1`, is the other polarity). A canary in a tool result is redacted before the model sees it and recorded as a critical audit finding; a canary the model writes cannot be unsaid and is recorded.",
   "absorbs": {
     "failureClass": "secret-exposure",
     "description": "A unit reads .env to 'understand the configuration', the token is now in the transcript, and the next tool call or the next report carries it out."

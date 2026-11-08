@@ -4,6 +4,9 @@
  */
 export * from "./status.js";
 export * from "./controller.js";
+export * from "./runner.js";
+export * from "./consent.js";
+export * from "./declared-tools.js";
 export * from "./contract-file.js";
 export * from "./instance.js";
 export * from "./unit.js";
@@ -23,3 +26,4 @@ export * from "./evals-scripted.js";
 export * from "./finance-scripted.js";
 export * from "./git-support.js";
 export * from "./host.js";
+export * from "./figures.js";

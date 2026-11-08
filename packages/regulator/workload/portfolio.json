@@ -1,0 +1,159 @@
+{
+  "name": "portfolio",
+  "version": 1,
+  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Two of them run a program rather than a session (#122): the rebalance plan and the harvest candidates are arithmetic over the tree, written under trades/proposed/ and checked by the host like a model's work. The workload declares one tool (#121), place_trade, whose declared effect is irreversible: the one way a trade list comes to exist under trades/pending/, and a call the harness refuses until a person's yes for it is on the record, with no profile naming it. Nothing here trades: a trade list is a file a person executes at the custodian.",
+  "unitTypes": [
+    {
+      "name": "ingest-positions",
+      "description": "Bring the tax-lot ledger up to date with the fills the person recorded, reconciled to the custodian's latest export, and write the period review: the valuation, the time-weighted return, the open items. The custodian's exports and the fills are never edited.",
+      "profile": "manager",
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "propose-target",
+      "description": "Write the period's target weights under targets/, with the band a rebalance lands inside. The target is feasible by the host's run of the portfolio's checks — long-only, summing to one, inside every benchmark subset's tolerance — not by the unit's say-so.",
+      "profile": "manager",
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "plan-rebalance",
+      "description": "Compute the trade list that moves every targeted position toward the latest target at the latest export's prices, from the lots in the tax ordering and never through a wash sale, and write it under trades/proposed/ as a list a program computed and nobody has agreed to. A program, not a session (#122): the arithmetic is the workload's own, run by the control plane under a wall-clock budget, and the host checks the list it wrote exactly as it checks a model's. Consent and the copy under trades/pending/ are confirm-trades's, through place_trade.",
+      "profile": "manager",
+      "runner": {
+        "kind": "command",
+        "argv": [
+          "node",
+          "workload/portfolio/plan-rebalance.mjs"
+        ],
+        "outputs": [
+          "trades/proposed/"
+        ]
+      },
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "confirm-trades",
+      "description": "Put the proposed trade list to a person — one consent question naming every trade, the lots each sell comes from and the tax it realises — and, after the yes, place it with place_trade, the workload's declared tool, which writes it unchanged under trades/pending/, where a file is a commitment. A session: it asks, which a program cannot; the copy is the tool's, not the model's, and the consent is derived from the tool's declared effect, so a call without the yes is refused before the file exists. The host checks that the pending list is the proposed one and that it keeps the band, the lots and the wash-sale window.",
+      "profile": "manager",
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "harvest-losses",
+      "description": "Find every open lot at an unrealised loss at the latest export's prices and write the candidates, with the loss per lot, under trades/proposed/ as harvest-<date>.json. A program, not a session (#122), with no threshold and no benefit-versus-cost judgment: that arithmetic, and turning a candidate into a sell with a replacement from its exchangeable set, is the harvest contract's (#124). The host checks every candidate against the lots and the prices.",
+      "profile": "manager",
+      "runner": {
+        "kind": "command",
+        "argv": [
+          "node",
+          "workload/portfolio/harvest-losses.mjs"
+        ],
+        "outputs": [
+          "trades/proposed/harvest-"
+        ]
+      },
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "review",
+      "description": "Read the period's lots, target, proposed and pending trade lists, harvest candidates and review against the custodian's exports and say what does not agree. Read-only: it reports, and the host's run of the portfolio's checks is the evidence.",
+      "profile": "auditor",
+      "checks": [
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched"
+      ],
+      "requiresContract": true
+    },
+    {
+      "name": "close-period",
+      "description": "Confirm the period's evidence is fresh and its open items are dispositioned. Read-only.",
+      "profile": "auditor",
+      "checks": [],
+      "requiresContract": true
+    }
+  ],
+  "metrics": [
+    {
+      "name": "workload:portfolio/turnover",
+      "description": "The one-way turnover the latest target implies against the custodian's latest positions, at that export's prices: half the sum over the target's tickers of the absolute gap between the target weight and the current one, the fraction of the portfolio a rebalance to the target would trade. Lower is cheaper: every dollar traded is a spread paid and, on a sell, a gain realised. Measured by the workload's own grader over the tree (lib/portfolio.js's turnover), never from a unit's report.",
+      "kind": "rate",
+      "direction": "lower",
+      "grader": {
+        "argv": [
+          "node",
+          "workload/portfolio/turnover.mjs"
+        ]
+      }
+    }
+  ],
+  "tools": [
+    {
+      "name": "place_trade",
+      "description": "Place the trade list a person has agreed to: copy the list the plan-rebalance program wrote, trades/proposed/<date>.json, byte for byte to trades/pending/<date>.json, where a file is a commitment the household executes at the custodian. The one way a pending list comes to exist; nothing is moved or traded by it. Its effect is irreversible, so the harness refuses the call until a person's yes for exactly this call is on the record: ask first with ask_human kind=consent, naming every trade, the lots each sell comes from and the tax it realises, with call {\"tool\": \"place_trade\", \"arguments\": {\"proposed\": \"trades/proposed/<date>.json\"}}. Refuses a list that is not a trade list, and never replaces a pending file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "proposed": {
+            "type": "string",
+            "pattern": "^trades/proposed/[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$",
+            "description": "The list the plan-rebalance program computed, trades/proposed/<date>.json: what the person was asked about, and what is placed byte for byte"
+          }
+        },
+        "required": [
+          "proposed"
+        ],
+        "additionalProperties": false
+      },
+      "effect": {
+        "filesystem": "write",
+        "execution": "none",
+        "network": "none",
+        "sideEffects": "irreversible"
+      },
+      "program": {
+        "argv": [
+          "node",
+          "workload/portfolio/place-trade.mjs"
+        ],
+        "outputs": [
+          "trades/pending/"
+        ]
+      }
+    }
+  ]
+}

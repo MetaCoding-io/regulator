@@ -196,8 +196,11 @@ export class ObligationLedger {
     await appendEntry(this.root, { type: "interaction-requested", id: randomUUID(), at: this.#stamp(), by, request });
   }
 
-  async answerInteraction(answer: { requestId: string; outcome: InteractionOutcome; answer?: string; by: string; channel: InteractionRequest["channel"] }): Promise<void> {
-    await appendEntry(this.root, { type: "interaction-answered", id: randomUUID(), at: this.#stamp(), by: answer.by, requestId: answer.requestId, outcome: answer.outcome, channel: answer.channel, ...(answer.answer === undefined ? {} : { answer: answer.answer }) });
+  async answerInteraction(answer: { requestId: string; outcome: InteractionOutcome; answer?: string; by: string; channel: InteractionRequest["channel"]; amendedArguments?: Record<string, unknown> }): Promise<void> {
+    await appendEntry(this.root, {
+      type: "interaction-answered", id: randomUUID(), at: this.#stamp(), by: answer.by, requestId: answer.requestId, outcome: answer.outcome, channel: answer.channel,
+      ...(answer.answer === undefined ? {} : { answer: answer.answer }), ...(answer.amendedArguments === undefined ? {} : { amendedArguments: answer.amendedArguments }),
+    });
   }
 
   /** Every request with its answers, oldest first. */
@@ -207,7 +210,7 @@ export class ObligationLedger {
       if (isMessage(entry) || !entry.type.startsWith("interaction-")) continue;
       const e = entry as InteractionEvent;
       if (e.type === "interaction-requested") states.set(e.request.id, { request: e.request, answers: [] });
-      else states.get(e.requestId)?.answers.push({ at: e.at, by: e.by, outcome: e.outcome, channel: e.channel, ...(e.answer === undefined ? {} : { answer: e.answer }) });
+      else states.get(e.requestId)?.answers.push({ at: e.at, by: e.by, outcome: e.outcome, channel: e.channel, ...(e.answer === undefined ? {} : { answer: e.answer }), ...(e.amendedArguments === undefined ? {} : { amendedArguments: e.amendedArguments }) });
     }
     return [...states.values()];
   }
@@ -215,7 +218,7 @@ export class ObligationLedger {
 
 export interface InteractionState {
   request: InteractionRequest;
-  answers: Array<{ at: string; by: string; outcome: InteractionOutcome; channel: InteractionRequest["channel"]; answer?: string }>;
+  answers: Array<{ at: string; by: string; outcome: InteractionOutcome; channel: InteractionRequest["channel"]; answer?: string; amendedArguments?: Record<string, unknown> }>;
 }
 
 /**

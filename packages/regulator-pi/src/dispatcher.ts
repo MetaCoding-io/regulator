@@ -41,7 +41,7 @@ export async function definitionSettings(file: string = SETTINGS_PATH): Promise<
   return SettingsManager.inMemory(value as Parameters<typeof SettingsManager.inMemory>[0]);
 }
 /** The session extensions this host loads for a unit, by name, in load order. */
-export const EXTENSIONS = ["tools", "profiles", "coordination", "contract", "budget", "recovery", "evidence", "authority", "intelligence", "identity", "algedonic"] as const;
+export const EXTENSIONS = ["tools", "declared-tools", "profiles", "coordination", "contract", "budget", "recovery", "evidence", "authority", "intelligence", "identity", "algedonic"] as const;
 /** The absolute path of a named extension's built module. */
 export function extensionPath(name: string): string { return path.join(dist, `${name}.js`); }
 export const CHECKPOINT_EXTENSIONS = EXTENSIONS.map(extensionPath);

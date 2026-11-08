@@ -4,13 +4,17 @@
  *
  * Instance
  *   regulator init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>]   install the definition into an existing repository:
- *                                                         identity seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
+ *                                                         identity and advice seeded and committed, .regulator/ ignored, canaries recorded, the instance manifest written
  *   regulator doctor [--json] [--today <date>]   the operating check: runtime, git, the Pi pin, the definition, review dates, the instance; exit 1 on a problem
+ *   regulator upgrade [--by <who>] [--check] [--definition <dir>]   carry the instance to the installed definition: seed what is absent (never a file that exists),
+ *                                                         add the ignore line, print the migration note of every version crossed, record the committed report the
+ *                                                         target revision was checked against, rewrite the manifest and commit on the base branch; --check prints the plan
  *   regulator status [--definition <dir>] [--instance <dir>] [--json]   a read-only projection of the definition and the instance (what the control room renders)
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
- *   regulator docs [--write | --check]   render REGULATORS.md and BOUNDARY.md from the registry records
+ *   regulator docs [--write | --check]   render REGULATORS.md, BOUNDARY.md and VIABILITY.md from the registry records, and the
+ *                                        pathology catalog's tables from registry/pathologies.json
  *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
- *   regulator fixture <dest> [--oscillation | --injection | --finance]   copy a fixture into its own git repo (identity seeded, canaries recorded)
+ *   regulator fixture <dest> [--oscillation | --injection | --finance | --portfolio]   copy a fixture into its own git repo (identity and advice seeded, canaries recorded)
  *
  * Units
  *   regulator unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>]   the autoloop: run, route, and run again while the policy says so
@@ -31,24 +35,34 @@
  *   regulator obligation ack <id> --by <who> [--note <text>]   acknowledge without resolving
  *   regulator obligation resolve <id> --by <who> --disposition <d> --rationale <text>   close it: no-action, accepted-risk, rework, replan, fixed, verified, rejected, research-requested, audit-requested, policy-clarification-requested
  *   regulator obligation escalate <id> --by <who> --to <consumer> --rationale <text>   hand it to another consumer; the successor inherits the veto
- *   regulator answer <obligation> --by <who> --answer <text>   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it
+ *   regulator answer <obligation> --by <who> --answer <text> [--amend <json>]   answer a question a unit asked: recorded as the person's disposition; the next attempt carries it. --amend, on a consent given with a yes, is the arguments the call runs with in place of the unit's (#60)
  *   regulator remind                           deliver again every obligation owed to a person that has waited longer than the policy's reminder interval
  *   regulator signals route                    route every unrouted message under the routing policy (for sessions run by hand)
  *
- * Identity and memory
+ * Identity, advice and memory
  *   regulator identity accept <obligation> --by <who> --file <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --from <path> --rationale <text>
  *                                                         the S5 decision: write the proposed file into regulator/identity/ under S5 authority,
  *                                                         commit it on the base branch citing the obligation, and resolve the obligation as accepted
  *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
  *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path: copy the instance's accepted identity file into the definition's seed (the manifest's, or --definition) and commit it there
+ *   regulator advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text>
+ *                                                         the advice decision: write the proposed file into regulator/advice/ under S5 authority, commit it on the base
+ *                                                         branch citing the obligation, and resolve the obligation as accepted. A `harness-edit` names its target in its
+ *                                                         typed payload, which the host first checks against the stores (its diagnosis references resolve, its prediction
+ *                                                         carries the block); --file, if given, must agree, the disposition cites the prediction's id and its live horizon
+ *                                                         is open from the decision. A plain proposal names its target in its subject (`advice/<profile>.md`), and --file
+ *                                                         must be that file, for a profile the definition declares
+ *   regulator advice reject <obligation> --by <who> --rationale <text>   decline an advice proposal owed to S5
+ *   regulator advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]
+ *                                                         the release path for advice: copy the instance's accepted advice file into the definition's seed and commit it there
  *   regulator memory [--all]                   operational memory: current facts; --all includes expired and retracted
  *   regulator memory retract <id> --by <who> --reason <text>   retract a fact; the retraction is appended, nothing is deleted
  *
  * Evidence
  *   regulator effects                          the effect journal: every side-effecting tool call, its outcome and its reconciliation
  *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
- *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier>] [--arm <name>]... [--reps <n>] [--out <file>]
+ *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier|manager|careless>] [--arm <name>]... [--reps <n>] [--out <file>] [--policy <file>] [--writable a/,b/] [--protected x/]
  *                                 [--interpretation <file>] [--by <who>] [--keep] [--host <package>]   run a suite: scripted units headlessly, or live units through the host's dispatcher
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
@@ -65,24 +79,26 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, authorizeWrite, checkDispositionAuthority, dispositionForAnswer, formatSummary, loadRegistry, readIdentity, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, type Disposition, type ObligationState, type Severity } from "@metacoding.io/regulator-protocol";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
-import { doctor, initInstance, readManifest } from "./instance.js";
+import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
-import { closeUnit, driveUnit, routeUnit, runUnit } from "./controller.js";
+import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
+import { closeUnit, driveUnit, routeUnit, runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
-import { IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { ADVICE_RELATIVE_DIR, HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
+import { loadProfilesSync } from "./profiles.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
-import { loadWorkloadFor } from "./workload.js";
+import { loadWorkloadFor, unitTypeOf } from "./workload.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const [command, sub, ...rest] = process.argv.slice(2);
@@ -91,10 +107,19 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
+/**
+ * The dispatcher a contract's unit needs: the host's for a session, honouring --host and REGULATOR_HOST; none for a unit
+ * type that runs a program (#122), which the loop runs itself, so no host has to be installed to drive it.
+ */
+const dispatcherFor = async (workload: WorkloadDefinition, contract: WorkContract, echo: boolean): Promise<Dispatcher> => {
+  const type = unitTypeOf(workload, contract.unitType);
+  if (type && isCommandRunner(runnerOf(type))) return async () => { throw new Error(`unit type "${type.name}" runs a program; the loop runs it without a host`); };
+  return (await loadHost(flag("host"))).host.dispatcher({ echo });
+};
 const interactionP = () => loadInteractionPolicy(path.resolve(flag("interaction") ?? INTERACTION_POLICY_PATH));
 /** Who may disposition what: the interaction policy's people. Refuses before anything is written. */
 async function authorized(by: string | undefined, ask: { severity: Severity; disposition?: Disposition; s5?: boolean }): Promise<string> {
@@ -134,8 +159,8 @@ try {
     const result = await initInstance(realExec, { repo: dir, by, ...(writablePaths ? { writablePaths } : {}), ...(protectedPaths ? { protectedPaths } : {}), ...(initFlag("definition") ? { definitionRoot: path.resolve(initFlag("definition")!) } : {}) });
     const m = result.manifest;
     console.log(`instance ready at ${dir}: definition ${m.definition.name} at ${m.definition.harnessRevision.slice(0, 7)} (${m.definition.registry} regulators, pi ${m.definition.pi}), initialized by ${m.initializedBy}`);
-    console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[IDENTITY_RELATIVE_DIR, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
-    console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity seeded, .regulator/ ignored)` : "  nothing to commit: identity and ignore line were already there");
+    console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[...HARNESS_OWNED_INSTANCE_DIRS, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
+    console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity and advice seeded, .regulator/ ignored)` : "  nothing to commit: identity, advice and ignore line were already there");
     console.log("  next: `regulator doctor`, then `regulator unit drive <contract.json>`");
   } else if (command === "status") {
     // A read-only projection of a definition and an instance. There is no subcommand that changes anything, and that
@@ -159,6 +184,32 @@ try {
       console.log(`${report.problems} problem(s)${report.warnings ? `, ${report.warnings} warning(s)` : ""}`);
     }
     process.exit(report.problems ? 1 : 0);
+  } else if (command === "upgrade") {
+    // The definition upgrade (#53): a closed list of mechanical steps, the migration notes printed for the rest, the manifest rewritten citing who and against what.
+    const args = [sub, ...rest].filter((a): a is string => a !== undefined);
+    const upgradeFlag = (name: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : undefined; };
+    const check = args.includes("--check");
+    // Applying is checked the way the accept commands are checked: the person may act as S5, since the seeds land under the harness-owned directories only S5 writes.
+    const by = check ? upgradeFlag("by") : await authorized(upgradeFlag("by"), { severity: "blocking", s5: true });
+    const result = await upgradeInstance(realExec, { repo: process.cwd(), check, ...(by ? { by } : {}), ...(upgradeFlag("definition") ? { definitionRoot: path.resolve(upgradeFlag("definition")!) } : {}) });
+    const plan = result.plan;
+    if (plan.outcome === "current") {
+      console.log(`nothing to upgrade: ${plan.detail}`);
+    } else if (plan.outcome === "upgrade") {
+      const point = (p: { packageVersion: string; harnessRevision: string }) => `${p.packageVersion}@${p.harnessRevision.slice(0, 7)}`;
+      console.log(`${check ? "upgrade would carry" : "upgraded"} this instance ${point(plan.from)}${plan.fromUnversioned ? " (the manifest recorded no package version; read as the migration floor)" : ""} → ${point(plan.to)}, crossing ${plan.crossed.length ? plan.crossed.map((n) => n.version).join(", ") : "no version"}`);
+      for (const step of plan.steps) {
+        const what = step.step === "seed" ? `seed ${step.instance} from the definition's ${step.class} seed` : "add the .regulator/ line to .gitignore";
+        console.log(`  ${step.apply ? (check ? "would apply" : "applied   ") : "nothing to do"}  ${what}${step.step === "seed" ? step.apply ? `: ${step.files.join(", ")}` : ": every seed file is present; none is overwritten" : step.apply ? "" : ": present"}`);
+      }
+      if (result.notes) {
+        console.log("  the migration notes, for a person to read; nothing below is applied by upgrade:");
+        for (const line of result.notes.split("\n")) console.log(`  ${line}`);
+      }
+      console.log(result.evidence.report === "none" ? `  WARNING: no committed report under evals/reports/ ran at ${plan.to.harnessRevision.slice(0, 7)}; the manifest records "none" as the evidence this upgrade was checked against` : `  checked against the ${result.evidence.kind} report ${result.evidence.file ?? result.evidence.report.slice(0, 12)} (${result.evidence.report.slice(0, 12)}…), which ran at this revision`);
+      if (check) console.log("  --check: nothing changed; run without it, with --by <who>, to apply");
+      else console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch by ${by}; the manifest records the upgrade` : `  nothing to commit: the tree already carried everything; the manifest records the upgrade by ${by}`);
+    }
   } else if (command === "watch") {
     const execAt = rest.indexOf("--exec");
     const execCmd = execAt >= 0 ? rest.slice(execAt + 1) : sub === "--exec" ? rest : undefined;
@@ -208,10 +259,52 @@ ${rationale}`]]) {
     }
     const sha = await headRevision(realExec, definitionRoot);
     console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's file, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
+  } else if (command === "advice" && sub === "promote" && rest[0]) {
+    // The release path for advice (#110): an instance's accepted advice file becomes the definition's seed, committed in the definition's repository. Mirrors `identity promote`.
+    const file = rest[0];
+    const rationale = flag("rationale");
+    const profile = profileOfAdviceFile(file);
+    if (!rationale || !profile) { console.error("advice promote needs <profile>.md and --rationale"); usage(); }
+    const by = await authorized(flag("by"), { severity: "blocking", s5: true });
+    const repo = process.cwd();
+    const manifest = await readManifest(repo);
+    const definitionRoot = flag("definition") ? path.resolve(flag("definition")!) : manifest?.definition.root ?? labRoot;
+    const declared = Object.values(loadProfilesSync(path.join(definitionRoot, "profiles"))).map((p) => ({ name: p.name, inline: (p.advice?.length ?? 0) > 0 }));
+    if (!declared.some((p) => p.name === profile)) throw new Error(`${file} names no profile the definition at ${definitionRoot} declares (${declared.map((p) => adviceFileName(p.name)).join(", ")})`);
+    const instanceFile = path.join(repo, ADVICE_RELATIVE_DIR, file);
+    const seedFile = path.join(definitionRoot, "advice", file);
+    if (!(await isClean(realExec, definitionRoot))) throw new Error(`the definition at ${definitionRoot} has uncommitted changes; a promotion is committed on its own`);
+    const content = await readFile(instanceFile, "utf8");
+    if (content === (await readFile(seedFile, "utf8").catch(() => ""))) throw new Error(`${file} in this instance is identical to the definition's seed; nothing to promote`);
+    const decision = authorizeWrite(path.posix.join(ADVICE_RELATIVE_DIR, file), "s5-authority");
+    if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+    const { mkdtemp, cp, rm } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const trial = await mkdtemp(path.join(tmpdir(), "regulator-promote-"));
+    try {
+      await cp(path.join(definitionRoot, "advice"), trial, { recursive: true }).catch(() => undefined);
+      await writeFile(path.join(trial, file), content, "utf8");
+      const set = await readAdviceSet(trial, declared);
+      if (set.problems.length) throw new Error(`promoting ${file} would leave the definition's advice set invalid (${set.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}); nothing changed`);
+    } finally {
+      await rm(trial, { recursive: true, force: true });
+    }
+    await mkdir(path.dirname(seedFile), { recursive: true });
+    await writeFile(seedFile, content, "utf8");
+    const instanceRev = await headRevision(realExec, repo).catch(() => "unknown");
+    for (const args of [["add", "--", path.relative(definitionRoot, seedFile)], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: promote advice ${file} from instance ${path.basename(repo)}@${instanceRev.slice(0, 7)} into the definition
+
+Decided by ${by} under S5 authority.
+${rationale}`]]) {
+      const r = await realExec("git", args, { cwd: definitionRoot });
+      if (r.code !== 0) throw new Error(`git ${args[0]} failed in the definition: ${r.stderr.trim()}`);
+    }
+    const sha = await headRevision(realExec, definitionRoot);
+    console.log(`${file} promoted by ${by} (S5): the definition's seed at ${definitionRoot} now carries this instance's advice for ${profile}, committed as ${sha.slice(0, 7)}; every instance initialized from now on starts from it`);
   } else if (command === "fixture" && sub) {
-    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : rest.includes("--finance") ? "fixture-finance" : "fixture");
+    const source = path.join(labRoot, rest.includes("--oscillation") ? "fixture-oscillation" : rest.includes("--injection") ? "fixture-injection" : rest.includes("--finance") ? "fixture-finance" : rest.includes("--portfolio") ? "fixture-portfolio" : "fixture");
     const dest = await initFixture(realExec, source, path.resolve(sub));
-    console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity seeded at regulator/identity/)`);
+    console.log(`fixture ready at ${dest} (git repo, one commit, on main; identity and advice seeded at ${HARNESS_OWNED_INSTANCE_DIRS.join(", ")})`);
   } else if (command === "unit" && sub === "start" && rest[0]) {
     const unitId = rest[0];
     // A unit started here runs without a contract (lesson 05). A unit type that requires one is refused: dispatch it under
@@ -270,7 +363,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`dispatching unit ${contract.unitId} under ${contract.id} v${contract.version} (${contract.unitType}); policy ${policy.name} v${policy.version}; routing ${routing.name} v${routing.version}`);
-    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
+    const outcome = await runUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: await dispatcherFor(workload, contract, !rest.includes("--quiet")) });
     if (outcome.status === "closed") {
       console.log(`unit ${contract.unitId}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3 — see \`regulator obligations\``);
     } else if (outcome.status === "refused") {
@@ -291,7 +384,7 @@ ${rationale}`]]) {
     const routing = await routingP();
     const owner = `${userInfo().username}@${hostname()}`;
     console.log(`driving unit ${contract.unitId} under ${contract.id} v${contract.version}; budgets ${policy.name} v${policy.version}, recovery ${recovery.name} v${recovery.version}, routing ${routing.name} v${routing.version}`);
-    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: (await loadHost(flag("host"))).host.dispatcher({ echo: !rest.includes("--quiet") }) });
+    const { final, decisions } = await driveUnit(realExec, { repo: process.cwd(), contract, workload, policy, policyPath, recovery, routing, interaction: await interactionP(), regulators: await regulatorsP(), owner, dispatcher: await dispatcherFor(workload, contract, !rest.includes("--quiet")) });
     for (const d of decisions) console.log(`  attempt ${d.attempt}: ${d.cause} → ${d.action} (${d.policy.name} v${d.policy.version}, occurrence ${d.occurrence})${d.question ? `\n    question: ${d.question}` : ""}`);
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
@@ -460,6 +553,72 @@ ${rationale}`]]) {
       await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.` });
       console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted`);
     }
+  } else if (command === "advice" && (sub === "accept" || sub === "reject") && rest[0]) {
+    // The advice decision path (#110): the only writer of an advice file, run by a person, citing the obligation it decides.
+    // Mirrors `identity accept|reject` line for line, with one rule more: the file is the one the proposal names — in its typed
+    // `harness-edit` payload (#138), checked against the stores first, or in its subject for a plain proposal.
+    const rationale = flag("rationale");
+    if (!rationale) usage();
+    const ledger = new ObligationLedger(process.cwd());
+    const o = await findObligation(ledger, rest[0]);
+    if (o.concern !== "policy-proposal" || o.consumer !== "S5") throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.concern} owed to ${o.consumer}; \`advice accept|reject\` decides proposals owed to S5`);
+    const by = await authorized(flag("by"), { severity: o.severity, s5: true });
+    if (sub === "reject") {
+      await ledger.resolve(o.id, { by: by!, disposition: "rejected", rationale: rationale! });
+      console.log(`proposal ${o.id.slice(0, 8)} rejected by ${by} (S5): ${rationale}; advice unchanged`);
+    } else {
+      let file = flag("file");
+      const from = flag("from");
+      if (!from) { console.error("advice accept needs --from <path> (and --file <profile>.md for a plain proposal)"); usage(); }
+      const repo = process.cwd();
+      if (!(await isClean(realExec, repo))) throw new Error("the base checkout has uncommitted changes; an advice decision is committed on its own");
+      const manifest = await readManifest(repo);
+      const definitionRoot = manifest?.definition.root ?? labRoot;
+      const declared = Object.keys(loadProfilesSync(path.join(definitionRoot, "profiles"))).sort();
+      // The proposal's message, for the typed payload (#138). A harness-edit names its target by profile and bets on a prediction;
+      // the host reads it against the stores before anything else, and --file, if given, must agree with it.
+      const message = (await readSignals(repo)).find((m) => m.kind === "policy-proposal" && o.sources.includes(m.id));
+      const edit: HarnessEdit | undefined = message?.kind === "policy-proposal" && isHarnessEdit(message.requestedChange) ? message.requestedChange : undefined;
+      let profile: string;
+      if (edit) {
+        const problems = await checkHarnessEdit(repo, edit, { declaredProfiles: declared });
+        if (problems.length) throw new Error(`the proposal's harness-edit does not resolve against this instance: ${problems.join("; ")}. Nothing accepted`);
+        profile = edit.change.profile;
+        if (file !== undefined && file !== adviceFileName(profile)) throw new Error(`the proposal's payload names ${adviceFileName(profile)} (its change is against profile "${profile}"); --file must be that file, not ${file}`);
+        file = adviceFileName(profile);
+      } else {
+        if (!file) { console.error("advice accept on a plain proposal needs --file <profile>.md: its subject names the file, and the decision writes that file"); usage(); }
+        const named = profileOfAdviceFile(file!);
+        if (!named || !declared.includes(named)) throw new Error(`--file must be a declared profile's advice file (one of ${declared.map(adviceFileName).join(", ")}); "${file}" is not`);
+        const inSubject = adviceProfileNamed(o.subject);
+        if (inSubject !== named) throw new Error(inSubject ? `the proposal's subject names ${adviceFileName(inSubject)}; --file must be that file, not ${file}` : `the proposal's subject ("${o.subject}") names no advice file; an advice proposal names advice/<profile>.md, and the decision writes that file`);
+        profile = named;
+      }
+      const content = await readFile(path.resolve(from!), "utf8");
+      if (!content.trim()) throw new Error(`the proposed ${file} is empty; nothing to accept`);
+      const policy = await loadPolicy(path.resolve(flag("policy") ?? path.join(definitionRoot, "policies", "default.json"))).catch(() => undefined);
+      const budget = adviceContextBudget(profile, content, adviceMaxChars(policy));
+      if (budget.truncated) throw new Error(`the proposed ${file} renders to ${budget.chars} characters and a unit's prompt carries ${budget.max} (\`advice.maxChars\`); shorten it, or raise the limit in the budget policy first`);
+      const target = path.posix.join(ADVICE_RELATIVE_DIR, file!);
+      const decision = authorizeWrite(target, "s5-authority");
+      if (!decision.allowed) throw new Error(decision.reason ?? "refused");
+      await mkdir(path.join(repo, ADVICE_RELATIVE_DIR), { recursive: true });
+      await writeFile(path.join(repo, target), content, "utf8");
+      const branch = await currentBranch(realExec, repo);
+      for (const args of [["add", "--", target], ["-c", "commit.gpgsign=false", "commit", "-q", "-m", `S5: ${sub} proposal ${o.id.slice(0, 8)} into ${target}\n\nDecided by ${by} under S5 authority. Obligation ${o.id}.\n${rationale}`]]) {
+        const r = await realExec("git", args, { cwd: repo });
+        if (r.code !== 0) throw new Error(`git ${args[0]} failed: ${r.stderr.trim()}`);
+      }
+      const sha = await headRevision(realExec, repo);
+      // The decision cites the prediction it was made on (#138): the fifth record of the chain names the third. The live horizon opens
+      // from this disposition — the fold reads the acceptance, so nothing else is written for it — and what it is over is said here.
+      const bet = edit ? (await readSignals(repo)).find((m) => m.id === edit.prediction) : undefined;
+      const live = bet?.kind === "intelligence-signal" ? (bet.prediction?.horizons ?? []).flatMap((h) => (h.kind === "live" ? [h] : [])) : [];
+      const horizonNote = edit ? ` Prediction ${edit.prediction}: ${live.length ? `its live horizon over the next ${live.map((h) => `${h.count} ${h.unitTypes.join("|")}`).join(" and ")} unit(s) is open from this decision` : "it names no live horizon"}; a disconfirming reading is owed to S5.` : "";
+      await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.${horizonNote}` });
+      const opened = edit ? (await readPredictions(repo)).find((p) => p.signal.id === edit.prediction)?.horizons.filter((h) => h.horizon.kind === "live").map((h) => h.status) ?? [] : [];
+      console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted${edit ? `; prediction ${edit.prediction.slice(0, 8)} live horizon ${opened.length ? opened.join(", ") : "none"}` : ""}`);
+    }
   } else if (command === "signals" && sub === "route") {
     const routed = await routeMessages(new ObligationLedger(process.cwd()), { policy: await routingP() });
     for (const o of routed.opened) console.log(`opened  ${describe(o as ObligationState & { status: "open" })}`);
@@ -479,14 +638,32 @@ ${rationale}`]]) {
     if (request.request.options && !request.request.options.includes(answer!)) throw new Error(`the question offers ${request.request.options.join(" | ")}; "${answer}" is not one of them`);
     const by = await authorized(flag("by"), { severity: o.severity });
     const disposition = dispositionForAnswer(request.request.kind, answer!);
-    await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli" });
-    await ledger.resolve(o.id, { by, disposition, rationale: answer! });
-    console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
+    // A consent with amended arguments (#60): a yes for the call as the person changed it. The amendment rides the yes and the
+    // call the request recorded; the interception runs the amended call, and the tool's schema has the last word there.
+    let amendedArguments: Record<string, unknown> | undefined;
+    const amend = flag("amend");
+    if (amend !== undefined) {
+      if (request.request.kind !== "consent") throw new Error(`--amend amends the arguments of a call a consent authorizes; this question is a ${request.request.kind}`);
+      if (disposition !== "accepted") throw new Error(`--amend rides a yes: "${answer}" is not one, so there is no call to amend. Answer no, or answer yes with the amendment`);
+      if (!request.request.call) throw new Error(`the consent question recorded no call (the unit asked without \`call\`), so there are no arguments to amend; answer yes or no`);
+      let parsed: unknown;
+      try { parsed = JSON.parse(amend); } catch { throw new Error(`--amend takes a JSON object of the arguments to change, like '{"content":"..."}'`); }
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed) || !Object.keys(parsed).length) throw new Error(`--amend takes a JSON object of the arguments to change, like '{"content":"..."}'`);
+      amendedArguments = parsed as Record<string, unknown>;
+    }
+    await ledger.answerInteraction({ requestId: request.request.id, outcome: "answered", answer: answer!, by, channel: "cli", ...(amendedArguments === undefined ? {} : { amendedArguments }) });
+    await ledger.resolve(o.id, { by, disposition, rationale: amendedArguments === undefined ? answer! : `${answer} (arguments amended: ${JSON.stringify(amendedArguments)})` });
+    console.log(`${request.request.kind} answered by ${by} (${disposition}): ${answer}${amendedArguments === undefined ? "" : ` with ${Object.keys(amendedArguments).join(", ")} amended`}${o.unit ? `; unit ${o.unit} may proceed if nothing else is owed on it, and the next attempt carries the answer` : ""}`);
   } else if (command === "eval" && sub) {
     // Evidence about the regulators (lesson 14). A behaviour names a scripted unit; without one the Pi dispatcher runs live units under each arm's extensions.
     const suite = await loadSuite(path.resolve(sub));
     const behaviour = flag("behaviour");
-    if (behaviour !== undefined && !isBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy | self-certifier)`);
+    // The drift behaviours script the software-development tasks; the portfolio behaviours script the September close. The suite's tasks say which workload runs.
+    if (behaviour !== undefined && !isBehaviour(behaviour) && !isPortfolioBehaviour(behaviour)) throw new Error(`no scripted behaviour "${behaviour}" (reference | drifter | sloppy | self-certifier | manager | careless)`);
+    const evalPolicyPath = path.resolve(flag("policy") ?? POLICY_PATH);
+    const splitPrefixes = (v: string | undefined) => (v ? v.split(",").map((p) => p.trim()).filter(Boolean) : undefined);
+    const evalWritable = splitPrefixes(flag("writable"));
+    const evalProtected = splitPrefixes(flag("protected"));
     const arms = rest.flatMap((a, i) => (a === "--arm" && rest[i + 1] ? [rest[i + 1]!] : []));
     const reps = flag("reps") ? Number(flag("reps")) : undefined;
     const interpretationFile = flag("interpretation");
@@ -497,12 +674,14 @@ ${rationale}`]]) {
     const live = behaviour ? undefined : await loadHost(flag("host"));
     const report = await runSuite(realExec, {
       suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
-      dispatcherFor: behaviour ? scriptedDispatchers(realExec, behaviour) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
-      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy()).models.default.primary,
+      dispatcherFor: behaviour ? (isBehaviour(behaviour) ? scriptedDispatchers(realExec, behaviour) : portfolioDispatchers(realExec, behaviour)) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
+      owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : (await loadPolicy(evalPolicyPath)).models.default.primary,
+      policyPath: evalPolicyPath, ...(evalWritable || evalProtected ? { instance: { ...(evalWritable ? { writablePaths: evalWritable } : {}), ...(evalProtected ? { protectedPaths: evalProtected } : {}) } } : {}),
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
-      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => suite.metrics.includes(k as never)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
+      onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => metricNames(suite.metrics).includes(k)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
     });
-    for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s)}`).join("; ")}`);
+    // A built-in is a count, read to one decimal; a declared rate or score needs its digits.
+    for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s, isBuiltInMetric(m) ? 1 : 4)}`).join("; ")}`);
     for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
     const out = flag("out");
     if (out) {

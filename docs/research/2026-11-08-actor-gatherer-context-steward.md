@@ -25,9 +25,11 @@ does cite its files. The rest is proposal.
 
 Actor-Gatherer is implementable in regulator, and not as a workload. A workload is a
 closed set of unit types (`packages/protocol/src/workload.ts`, `UnitTypeSchema`:
-`name`, `description`, `profile`, `checks`, `requiresContract`, `additionalProperties:
-false`); a Gatherer is not a kind of work the loop dispatches but a function that runs
-before every model call of every unit. In regulator's vocabulary it is a **regulator over
+`name`, `description`, `profile`, `runner`, `checks`, `requiresContract`,
+`additionalProperties: false`), and a unit, whether a session or the program a command
+runner spawns ([#122](https://github.com/MetaCoding-io/regulator/issues/122)), is
+dispatched, leased and closed once per attempt; a Gatherer is not a kind of work the
+loop dispatches but a function that runs before every model call of every unit. In regulator's vocabulary it is a **regulator over
 the context channel**: a registry card, a policy file, a store under `.regulator/`, and
 an enforcement point at Pi's `context` event, which the pinned Pi has and regulator does
 not yet use. Half of what the framework claims is worth having here and is cheap: a
@@ -142,7 +144,7 @@ another unit records after this unit started is not seen until the next attempt.
 header says information is typed by control semantics rather than treated as generic
 context (`packages/protocol/src/index.ts`).
 
-Two further facts shape the design. Units run **in-process**: the dispatcher opens each
+Two further facts shape the design. Session units run **in-process**: the dispatcher opens each
 session with `createAgentSession` from the pinned `@earendil-works/pi-coding-agent`
 0.87.0, with a loader that refuses the worktree's extensions, context files and settings
 (`dispatcher.ts`, `definitionResourceLoader`; the `project-trust-rule` card). And the
@@ -150,6 +152,15 @@ loop runs **one unit per CLI invocation** (`packages/regulator/src/cli.ts`, `uni
 dispatch` and `unit drive`); parallelism is separate processes sharing `.regulator/`,
 coordinated by leases and one worktree per unit (`docs/concepts/coordination.md`). A
 unit's changes are invisible to every other unit until reintegration.
+
+Two notes on `main` already touch this seam from other sides. The [minimal-harness
+note](2026-11-05-minimal-harness-and-terminal-bench.md) reads a harness's compaction and
+markdown memory against contract-preserving compaction and `remember`, and calls them
+weaker versions of what is here; the [Exo note](2026-11-06-exo-runtime-self-improvement.md)
+places compaction and context assembly among the harness components an agent edits
+mid-task, which regulator refuses. Neither proposes a per-call context function; this
+note does, and it keeps the two refusals (the carried block, the record the agent cannot
+edit).
 
 The span projection states a principle this note has to respect: **the transcript is
 never read** by the orchestrator (`packages/core/src/spans.ts`). The conventions say the
@@ -166,14 +177,20 @@ may return `{ cancel: true }`.
 
 ## 4. Why it is not a workload
 
-A workload in regulator is declarative data with no hooks. The loop reads two things
-from a unit type, the profile to dispatch under and the checks to run at verify
-(`packages/regulator/src/controller.ts`, `runUnit` and `auditUnit`); everything else is
-generic. Nothing in a workload runs code, observes a session, or sits between the model
-and its input. A Gatherer does all three. Declaring it as a unit type would need the
-schema to grow a runner and a per-call hook, and would misdescribe it: a Gatherer is not
-dispatched, leased, contracted or closed. It is on every unit's path, which in this
-system is what a regulator is.
+A workload in regulator is declarative data. The loop reads three things from a unit
+type: the profile to dispatch under, the checks to run at verify
+(`packages/regulator/src/controller.ts`, `runUnit` and `auditUnit`), and, since
+[#122](https://github.com/MetaCoding-io/regulator/issues/122), the runner: a session
+under the profile's grant, or a declared program the control plane runs itself in the
+unit's worktree with no host and no model (`packages/protocol/src/workload.ts`,
+`RunnerSchema`; `packages/regulator/src/runner.ts`; the `portfolio` workload's
+`harvest-losses` and `place-trade` types are the first). Either way what runs is a
+unit: contracted, leased, dispatched, routed and closed, once per attempt, and its
+output is a report. Nothing in a workload observes another unit's session or sits
+between a model and its input. A Gatherer does both, on every call of every unit, and
+is never itself dispatched or closed. Declaring it as a unit type, even a command one,
+would misdescribe it. It is on every unit's path, which in this system is what a
+regulator is.
 
 The one place the workload is touched is sharing (§5, "policy"): *which unit types may
 be shown which other unit types' history* is a property of the kind of work, so it is a

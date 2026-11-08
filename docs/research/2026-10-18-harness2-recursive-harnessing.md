@@ -1,6 +1,6 @@
 # Harness² read through the control plane
 
-- **Status:** open. The component's name is decided (§7); the rest is design.
+- **Status:** open. The component's name is decided (§7); the rest is design. §9 (2026-10-25) records the DSPy book as the reflector's implementation reference and the one design change it argues for.
 - **Source:** *Harness²: Recursive Agent Harnessing for an Open World*, Xu et al., Google
   Cloud AI Research and Northwestern, [arXiv 2610.14224](https://arxiv.org/abs/2610.14224)
   (9 Oct 2026), the code at
@@ -347,24 +347,33 @@ split is now by accept path, as item 5 says, and figure 2's S5 box says the same
 
 ### The two levels, drawn
 
-Hand-drawn, light theme, in the course's figure vocabulary; the research directory is not
-built into the docs site, so these are not subject to the generator rule of [open
-questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
+Drawn by one hand-written script, [`figures/2026-10-18-reflector-figures.py`](figures/2026-10-18-reflector-figures.py),
+not generated from the definition: the second figure is the first with the additions
+overlaid rather than a second composition, every box and edge carries the card a
+tooltip shows, and the research files, the docs page and the website are colour-mapped
+variants of the same output. Light theme, in the course's figure vocabulary. The research
+directory is not built into the docs site, so these are not subject to the generator
+rule of [open questions §1](2026-09-25-open-questions.md#1-the-control-room-should-show-how-the-declared-system-connects).
 When the level above is built, the generator reproduces these from the definition and
 these files become history.
 
 ![Figure 1. Before: the instance is regulated, every channel typed and every writer named; the definition above it is changed only by people, and nothing reads the instance's records back into it.](figures/2026-10-18-reflector-before.svg)
 
 *Figure 1 — before. One recursion level is regulated. The level above has people for
-S3, S3\* and S5, and a checklist for S4. The records flow out and are read for status,
-evals and audit; no mechanism carries what they say back up.*
+S3, S3\* and S5, and the slot for its S4 holds a checklist a person runs. The records
+flow out and are read for status, evals and audit; no mechanism carries what they say
+back up.*
 
 ![Figure 2. After: the definition as a viable system whose operations are instances; the reflector is its S4, reading every instance's records and emitting memory, intelligence and harness-edit proposals; a proposed edit is probed as an eval arm before a person accepts it into an advice file; crossed edges mark what the reflector can never write or schedule.](figures/2026-10-18-reflector-after.svg)
 
-*Figure 2 — after. Four things are new: the reflector, its read of the records, the
-`harness-edit` proposal kind, and an eval arm that may differ in an advice file.
-Everything it emits lands in a record kind that exists, and every write to the
-definition still goes through a person.*
+*Figure 2 — after. The same picture as figure 1 with the additions drawn onto it in
+the accent colour, each marked with a plus: the reflector in the S4 slot, reading the
+records and appending to them; an advice seed in the definition and advice files beside
+identity in the instance, with `advice accept` and `advice promote` beside their
+identity counterparts; predictions in the records, a probe arm in the eval harness, and
+the `harness-edit` kind on the obligation a proposal becomes. The crossed marks are
+what the reflector can never do. Everything it emits lands in a record kind that
+exists, and every write to the definition still goes through a person.*
 
 What changes, at its mechanism level and seam:
 
@@ -380,6 +389,8 @@ What changes, at its mechanism level and seam:
 Order: the boundary split first, because every other row names it. The probe arm and the
 instrument card wait on the first live eval report (#46), since a calibration report
 needs live numbers to calibrate against.
+
+**Added 2026-10-25, from the two agent-engineering books** ([note](2026-10-25-agent-engineering-books.md)). Lanham (*AI Agents in Action*, 2nd ed., §9.1–9.3) names three loop layers: an inner loop in the agent, a task loop whose goal, plan, state and decision are in code, and a meta loop in which an agent controls the loop. The task loop is this project's S3 loop, and the meta loop is what `AGENTS.md` forbids. The reflector is neither: it holds none of decide, state or schedule, and a reader who places it as a "meta loop" has placed it wrong. Hur and Song (*Build an AI Agent (From Scratch)*, §10.4) gate deployment on an automatic pass-rate threshold against the previous version, and their quality flywheel's fourth step edits the evaluator (dataset, rubric, metrics) from production failures. The first is contradicted here and stays contradicted: the probe arm refuses adoption from a report without an interpretation. The second carries a rule this section had not stated: a `harness-edit` and a change to the suite it is probed under cannot be one change, and the probe runs under the suite at the baseline report's fingerprint, or the reflector grades itself on a test it also wrote. That is item 1 of §9 (the held-out slice) from the other side, and it goes into the probe arm's issue with it.
 
 ## 8. Three records: what was seen, what is expected, what was decided
 
@@ -488,4 +499,158 @@ candidate so it is not re-derived.
 change and prediction, and the prediction is the record open questions §4 designs, not a
 field of its own. The change table in §7 says so. The prediction record therefore moves
 ahead of the reflector in the build order: it is the second slice after the accept-path
-split, since the probe arm (§4 item 2) has nothing to resolve without it.
+split, since the probe arm (§4 item 2) has nothing to resolve without it. Filed 2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138).
+
+**Landed (2026-10-26, #138).** Slice 2 as designed here. `IntelligenceSignalSchema`
+carries an optional `prediction` block (`metric`, `baseline` as a committed report's arm by
+the SHA-256 of its file or an arm by name, `direction`, `magnitude`, `probability` in [0, 1]
+beside the three-valued `confidence`, `horizons[]` of kind `probe` or `live` each with
+`disconfirmedBy`); `prediction-resolution` is a line of the regulatory log, three-valued,
+appended by the loop at a unit's close or abort from the eval harness's graders over the
+stores and never from the unit's report, or from the committed report a probe horizon
+names; a disconfirmed live horizon is a proposal from S3 to S5 to revert or re-decide,
+routed under the routing policy, and no file is reverted. `HarnessEditSchema` types the
+three parts, the schema refuses a payload that claims the kind and lacks one, and
+`advice accept` refuses one whose diagnosis references do not resolve in the stores or
+whose prediction carries no block, takes the target from the payload, cites the
+prediction's id in the disposition, and the live horizon opens from that acceptance (read
+structurally from the obligation, so units that closed before the edit took effect are not
+readings). The card is `prediction-resolution`. Two readings this section left open were
+taken there and recorded on the card: a report's fingerprint is the SHA-256 of its
+committed file, and "the next N units" is counted by the fold over the log, not a scan.
+The candidate invariant stays a schema rule and a host check; it is written beside INV-003
+in [evidence about the regulators](../concepts/evidence-about-the-regulators.md) as a
+candidate, not in `INVARIANTS.md`, and promoting it is a person's decision. The probe rule
+(refusing an unprobed `harness-edit`) and the probe arm are slice 3, after #46.
+
+**Added 2026-10-25.** Lanham §8.3.5 promotes a release through offline tests, shadow traffic, a canary and a full rollout "with auto-rollback if SLOs degrade". The first three are the gates a definition change already passes here (`regulator check`, a scripted eval report, a live report), and #53's migration note should say which. The fourth is the step this design leaves to a person on purpose: a disconfirmed live horizon opens an obligation to S5 (above), it does not revert the advice file, because a revert is a change to a definition file and those land through an accept path. Recorded so that automatic rollback is not re-proposed as an omission; shadow traffic and canaries across instances are the deployment's and belong in the roadmap's not-planned table if anyone asks.
+
+## 9. Implementation reference: the DSPy book (added 2026-10-25)
+
+- **Source:** *Building LLM Applications with DSPy*, Serj Smorodinsky and Brett Kennedy,
+  Manning 2026, cited by chapter and section; held in the private `MetaCoding-io/library`
+  repository and not reproduced. The decision to read it for the reflector is the
+  2026-10-24 row of [open questions §6](2026-09-25-open-questions.md#6-backlog--smaller-things-to-think-about).
+- **Why here and not a note of its own:** the book opens no thread. Everything in it that
+  bears on regulator is the implementation of a component this note already designs,
+  or a method an issue already needs. This section records which chapter implements
+  which part of §4, §7 and §8, and the three places the book's discipline is stricter
+  than the design was.
+
+### What each optimiser is, in the reflector's terms
+
+DSPy's instruction optimisers (ch. 6) are loops that edit a prompt against a metric on a
+validation set. Read against §4 and §7, three of them are the reflector with the
+adoption step left in:
+
+| Optimiser | What it does (the book's description) | Which part of the reflector |
+| --- | --- | --- |
+| **GEPA** (6.5) | A genetic loop over a pool of candidate prompts. *Reflective mutation* reads trajectories, the metric's feedback and the program's own source, and proposes an edit with a rationale (6.5.3). *System-aware merge* combines two candidates by combining their rationales. Selection is by a **Pareto front**: a candidate stays in the pool while it is the best on at least one validation example, and is sampled in proportion to how many examples it leads on (6.5.2) | Propose and Compose. The rationale GEPA saves with every candidate is the *diagnosis* part of a `harness-edit` (§8); the Pareto front is a selection rule the interpretation rule has wanted (below) |
+| **SIMBA** (6.4) | One step at a time: pick a candidate from the pool, run it on a minibatch at several temperatures, bucket the results by score and by consistency, then add **one rule or one demonstration** and put the new candidate back. The prompt it gives its own reflector asks it to "rely on contrasting the behavior of the worse trajectory against the better trajectory" (6.4.1), and the metric may return a **feedback** text beside the score (6.4.2) | Propose, with the discipline §4 item 3 asked for as a schema field: a lesson must cite an execution contrast. SIMBA's reflector is told to, in those words. The feedback text is what regulator's graders already produce as observations |
+| **MIPROv2** (6.2) | Grounded candidate instructions, then Bayesian search over combinations of instructions and demonstrations | the baseline the book ranks the other two against (6.8: GEPA, then SIMBA, then MIPROv2) |
+| **InferRules** (6.3) | Extracts "concise and non-redundant natural language rules" from the training examples and writes them into the instructions | **the one to refuse** as a reflector output. A rule written into the prompt is exactly what the `memoryRules` grader counts as drift (memory that became policy, [evidence about the regulators](../concepts/evidence-about-the-regulators.md)). Under §4 item 3, an inferred rule lands as a `remember` entry with scope and expiry, or as a proposal; never as a line in an advice file by the optimiser's own hand |
+
+The book's chapter on custom modules adds one more thing to refuse. **Refine** (7.3.4)
+calls a module up to N times against a reward function and, between calls, asks a model
+for advice on what the module did wrong. That is Propose and Adopt in one call, inside
+the unit, with no record. It is legitimate as advice *within* a unit's own turn (the
+unit may try again); it is the self-certifier pathology if it is offered as
+verification, because the reward function is the unit's and the host never saw it. The
+recovery router's `repair` is the same move with the host holding the reward.
+
+### The saved program is the shape of a `harness-edit`
+
+An optimised DSPy program saves as a JSON file holding the instructions, the
+demonstrations and the fields (6.7, listing 6.17), separate from the code that runs it.
+That is the *change* part of §8's proposal: a diff against one advice file, with the
+instructions as the advice lines and the demonstrations as the examples a profile's
+advice may carry. It settles a question §4 item 1 left open, which is what a proposal
+over an advice file looks like on disk: the optimiser's own serialisation, not a prose
+description of it.
+
+### Where the book is stricter than the design, and the design should follow
+
+1. **Three sets, not one.** The book splits data into training (demonstrations),
+   validation (what the optimiser selects on), development (what the author watches)
+   and a held-out test set used once, at the end, "to get an unbiased estimate"
+   (4.1.2). Its reason is the one §8 gives for two horizons: a score on the set you
+   selected on is not evidence of the effect. Read against the probe arm (§4 item 2),
+   this says the probe must not run on the runs the proposal was derived from. The drift
+   suite is six contracts; a probe that reports the metric on those same six after a
+   reflector read their records is the validation score, not the test. So the probe arm
+   needs either a held-out slice of tasks the reflector never reads, or the live horizon
+   (§8) as the only resolution that counts, with the probe as a screen. The note's
+   two-horizon rule already says the second; the first is cheaper and should be the
+   probe's definition.
+2. **One metric to optimise, many to report.** "When a measure becomes a target, it
+   ceases to be a good measure" (4.2.4). The book optimises on one metric and evaluates
+   the final program on several. Regulator's version is the §5 experiment: optimise
+   advice for task score, report the fifteen boundary and trajectory metrics beside it.
+   The pre-registration rule covers the reporting half; the optimising half should be
+   named in the proposal's prediction (§8) as the one metric the edit was selected on,
+   so a reader can see what it was *not* selected on.
+3. **Aggregate conservatively.** The book prefers the minimum or a low percentile of
+   per-example scores over the mean where a bad response matters more than a good
+   average (4.2.3), and repeats each example to measure consistency, not only accuracy
+   (4.6). The interpretation rule asks a person to say "where the gated arm lost"; GEPA's
+   Pareto front is the mechanical form of that question, kept per task rather than
+   averaged away. A report could carry, beside the per-arm mean and interval it has now,
+   the per-task leader: which arm won each task. That is a small addition to the report
+   schema and a better input to the interpretation than the mean.
+
+### What the judge chapter gives the instrument card
+
+Chapter 8 builds a model-judged metric and will not use it until it is calibrated. The
+method (8.6.4, 8.6.5, 8.6.10) is: a labelled set with **both good and bad** examples,
+because a judge that always says yes scores perfectly on a set of only good ones; a
+metric for the judge that is its error against the labels; evaluation on a validation
+set; optimisation of the judge itself, with feedback (8.6.10 uses SIMBA for this);
+re-evaluation on a held-out set; then the judge is saved and used. The judge is kept on
+separate data from the task program "to ensure that there's no leakage" (8.6.2), and the
+book counts the calls: a judge runs once per candidate per validation example, so it is
+called more than anything else in the loop (8.6.3).
+
+That is the calibration report the instrument record kind
+([open questions §4](2026-09-25-open-questions.md#4-predictive-intelligence-s4-as-a-model-of-outside-and-then))
+requires before a `model-judgment` level instrument is admitted, written as a procedure:
+the labelled set, the judge's error on it, the held-out score, the saved judge. It goes
+to [#49](https://github.com/MetaCoding-io/regulator/issues/49) for the one place a
+planner-quality grader needs judgment rather than a count (whether an emergent decision
+was *consequential*, whether a replan is *attributable to the contract*); the counts
+themselves stay deterministic. The scripted behaviours (`reference`, `drifter`, `sloppy`,
+`self-certifier`) are the labelled set's first rows, since each one's reports are known
+good or known bad on exactly those questions.
+
+### What a DSPy metric function is, and where it lands
+
+A metric function takes an example and a prediction and returns a score, or a score and a
+feedback text (4.2.1, 6.4.2). It is tested like any function, with known-good and
+known-bad pairs (4.2.5). Regulator's graders are the same shape minus the feedback, and
+the harness could not accept one a workload brings. So the open-metric row of open
+questions §6 gained a third consumer beside calibration and a corpus F₁: a workload or
+instrument grader that returns a score and an observation, which is what SIMBA and GEPA
+read. The grader's observation is the feedback; nothing new is needed to produce it.
+*The seam exists* ([#129](https://github.com/MetaCoding-io/regulator/issues/129), 2026-10-26): a declared grader
+is a command the host runs after each unit, emitting `{ metric, value, observation? }`,
+and its verdict carries the observation beside the number; a suite marks at most one
+declared metric as the thing an optimiser may select on (item 2 above), with every other
+metric reported only. The harness stores the flag and optimises nothing.
+
+### The boundary, restated against the book
+
+DSPy is Python; regulator is TypeScript on Pi; the book's workflow is "baseline,
+evaluate, optimise" (1.6) with the optimiser in the loop. None of that changes §4's
+posture. The optimiser runs outside the boundary, as the `reflect` unit of §7 or a CLI
+over a repository of instances, reading committed eval reports and the stores, and
+emitting `harness-edit` proposals through the typed path. It may propose edits to the
+advice set and nothing else ([the accept-path split](2026-10-18-accept-path-split.md)).
+A person accepts. The book's own cost figures say why the loop cannot *be* the probe:
+SIMBA's airline run made about 4,900 model calls and GEPA's budget is set in metric calls
+(6.4.1, 6.5.4), while a probe arm is one candidate run under the suite. So the reflector
+searches, the probe screens the one candidate it proposes, and the live horizon decides.
+
+**Decided (2026-10-25, James).** The DSPy book is additions to this note, to #49 and to
+the open-metric row, not a note or a thread of its own; this section is the record. The
+one design change it argues for, a held-out task slice for the probe arm, is recorded in
+item 1 above and goes into the probe arm's issue when that slice of the reflector is
+filed (slice 3 of [the accept-path split](2026-10-18-accept-path-split.md), after #46).
