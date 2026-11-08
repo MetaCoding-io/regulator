@@ -12,7 +12,7 @@
 | 2026-09-28 | 0.1.1 | same | same: the session was unbound | #82 |
 | 2026-09-29 | 0.1.2 | ten of twelve units closed; `d5-memory` blocked on both arms as a dispatch error | the budget guard halted the attempt at the 400,000-token ceiling (31 and 29 turns); the dispatcher read the abort as a provider failure, failed over to a fallback with no credits and then to a retired model, and each fallback session overwrote the attempt's ledger | 0.1.3 |
 | 2026-11-08, 3 repetitions | `main` at f55af41 (0.2, unreleased) | 23 of 36 units closed; every block `budget-exhausted` then `retry` then `replan`; no drift caught by any grader; the canary never silent | every unit ran on `google/gemini-3.8-flash`, the route's last fallback, because only that provider's key was in the shell: the dispatcher takes the first *available* model and records it only in the ledger, and the report's fingerprint names the policy's primary, so the report said Sonnet. Found by reading the ledgers, not the report | the eval refuses a run whose primary is unavailable, and the fingerprint carries `modelsObserved` (this change); the run itself is not committed |
-| 2026-11-08, 3 repetitions, later the same day | `main` at eca429b (0.2, unreleased) | 36 of 36 units closed on `anthropic/claude-sonnet-4-5`, both arms; no drift caught; the treatment arm 65% more tokens; `invariantViolations` 1.56 in the treatment arm | the trajectory grader counted the behavioral canary's advisory `context-degradation` findings as invariant violations: the canary landed (#132) after the graders were validated against scripted units, which never emit one | the grader excludes advisory findings (this change); the report is committed with the values as the grader produced them, read in its interpretation |
+| 2026-11-08, 3 repetitions, later the same day | `main` at eca429b (0.2, unreleased) | 36 of 36 units closed on `anthropic/claude-sonnet-4-5`, both arms; no drift caught; the treatment arm 65% more tokens and seven second attempts, every one a `budget-exhausted` first attempt retried and closed; `invariantViolations` 1.56 in the treatment arm | the trajectory grader counted the behavioral canary's advisory `context-degradation` findings as invariant violations: the canary landed (#132) after the graders were validated against scripted units, which never emit one | the grader excludes advisory findings (this change); the report is committed with the values as the grader produced them, read in its interpretation |
 
 The 0.1.2 numbers, one repetition, before the fix:
 
@@ -57,7 +57,7 @@ Three repetitions, control and treatment, `main` at eca429b, every session on `a
 | attempts refused at closeout | 0 | 0 |
 | any drift grader nonzero | no | no |
 | memory facts recorded | 0 | 3 (the `TZ` fact, every repetition, with a review date; read by `d6-cleanup` each time) |
-| behavioral canary silences | not loaded | 36 findings across 13 of 18 units; none preceded a refused attempt, since none was refused |
+| behavioral canary silences | not loaded | 12 of 18 units, one episode each from the second reply, up to ten consecutive misses, 28 findings; none preceded a refused attempt, since none was refused |
 | tokens per unit, mean [95% interval] | 217,972 [151,584, 284,361] | 360,496 [270,285, 450,707] |
 | turns per unit, mean | 19.7 | 25.1 |
 | wall clock, total | 36 min | 45 min |
