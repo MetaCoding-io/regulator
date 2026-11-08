@@ -280,7 +280,7 @@ Not covered:
 
 - The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
 - Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.
-- Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
+- Expiry is the unit's estimate. The router notes intelligence that has already expired when it is routed; a signal that expires while an obligation it opened is still open is re-raised once, as an advisory obligation, by the watcher's tick (`sensor-intake`, #123) — so nothing says so in an instance whose watcher is not running, and the advisory releases nothing by itself.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
 ## Interaction contract (ask_human) (`reg.algedonic.interaction-contract.v1`)
@@ -474,6 +474,19 @@ Not covered:
 - Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated.
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to packages/regulator/identity/ by hand.
+
+## Sensor intake (S4 declared in the definition) (`reg.intelligence.sensor-intake.v1`)
+
+Enforced at `cli:watch` (applicableSensors narrows the policy to the sensors of the workloads the instance runs (its units' workloads, or --workload's); runSensors in the tick: a due program runs in the instance with no outputs (a stray write is undone and the run refused), the last line is read against SensorOutputSchema, a firing is appended as an intelligence-signal under the sensor's provenance and deduplicated against the current signals of the same claim, a failure is an advisory operational-signal, an expired held signal is one advisory obligation; then routeMessages), `check:checkDefinition` (checkIntelligencePolicy in core: an undeclared affected unit type, a provenance that is not sensor:<name>, a program with no file under the definition or with outputs, neither trigger or both, a schedule without a program, a glob with one, a glob that is not a pattern, a sensor declared twice), `loop:runUnit` (progressionVeto(ledger, unitId, unitType): an open blocking obligation with unitType and no unit holds every unit of the type at dispatch and at close, named in the refusal) in `src/sensors.ts`; S4, deterministic-gate.
+
+Not covered:
+
+- A sensor's threshold is the definition's claim about what matters, not evidence that it does: the drift band, the harvest minimum, the intervals and the expiries are numbers a person wrote into benchmark.json and the policy, and nothing measures whether a firing was worth a person's attention. The eval harness has no metric over sensor firings.
+- The program is trusted as the command runner's is: the watcher inspects nothing beyond its argv's file (hashed) and the absence of writes in the instance. What it reads, imports or reaches by an absolute path or a network call is unseen, and a program that writes outside the instance is not caught.
+- A glob sensor sees names, not content: a file rewritten under a name the cursor has seen is no event, and the first tick seeds the cursor with what exists and fires on nothing, so an export that landed while the watcher was down and before its first tick is a person's to raise. The schedule is the watcher process's wall-clock: nothing runs while the watcher is not running, and an interval missed several times over runs once. Which sensors apply is read off the instance's units' workloads, so a fresh instance runs none until its first unit or until `--workload` says which it is.
+- Deduplication is by the claim's text under one provenance: a sensor whose claim carries a number that changes every tick raises a signal every tick while the first is current, and a resolved claim stays quiet until its signal expires even if the person wanted to hear it again sooner. The shipped sensors put the export date in the claim so it changes with the data and not with the clock.
+- The harvest-threshold sensor's minimum is a dollar figure on its declaration's argv, standing in for the costs the harvest contract will declare (#124); when that file exists the sensor should read it and the argv go (docs/DEBT.md row 51).
+- Provenance is the declaration's word: `sensor:<name>` says which sensor the watcher ran, not that the program is the sensor the name suggests. A person's `regulator intelligence report` under `human:<name>` provenance, the other half of open questions §2, does not exist yet.
 
 ## Span projection (OpenTelemetry GenAI) (`reg.assurance.span-projection.v1`)
 

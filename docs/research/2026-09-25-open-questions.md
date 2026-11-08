@@ -251,6 +251,34 @@ gap (§5: "No S4. The statement arrives by hand").
   A person who wants to *act* on what they know dispatches a unit or dispositions an
   obligation; reporting it is a separate act, and the separation is the point.
 
+**Landed (2026-11-08).** The sensors half, the proposal's second and third bullets, as
+[#123](https://github.com/MetaCoding-io/regulator/issues/123): `policies/intelligence.json`
+is the fifth policy kind (`IntelligencePolicySchema` in protocol), with `sensors[]` each
+naming a provenance (`sensor:<name>`, its own name, refused otherwise), the unit types it
+`affects`, a `severity`, an `expiresAfterMs`, and one trigger — a `schedule.everyMs` with
+a `program` in the command runner's shape whose `outputs` must be empty, or a `glob` over
+the instance's files. `regulator watch` runs them in its tick through `runProgram` in the
+base checkout, with nothing on stdin; exit 0 with a last line `{ fires, claim, observation,
+evidence, severity?, confidence?, expiresAt? }` raises the research unit's record with the
+sensor's provenance and the program's file and hash as evidence, a glob sensor's signal
+names the files that appeared, and a failed run is an advisory `operational-signal`, never
+a replan. Three decisions were taken here. The signal's `affectedUnits` admits a
+`type:<unitType>` entry beside unit ids, the obligation carries `unitType`, and
+`progressionVeto` matches it at dispatch and close, because the unit a sensor's signal
+concerns is dispatched after the sensor fires and resolving to the open units would have
+made the issue's done-when false. A sensor that still fires raises nothing while an
+earlier signal with the same claim is current (unrouted, holding an open obligation, or
+unexpired), so there is one open obligation per sensor and claim, and a resolved claim
+stays quiet until its signal expires. And the expiry re-raise this section asked for is
+the watcher's: a signal with an `expiresAt` that expires while an obligation it opened is
+still open gets one advisory obligation, for every intelligence signal on the log, which
+amends the `intelligence-intake` card's third limitation. The portfolio declares three
+(`drift-band`, `harvest-threshold`, `new-export`; the portfolio note §3 and §5). The
+record is `sensor-intake`. **Still open:** the first bullet, a person's
+`regulator intelligence report --by <person> …` writing the same record under
+`human:<name>` provenance — the type-hold entry and the `provenance` field are there for
+it — and the `regulator intelligence` listing of what is held, by whom, until when.
+
 ## 3. Must every unit run a Pi session?
 
 **No, and it never did.** The loop dispatches through a `Dispatcher` —

@@ -25,10 +25,10 @@ judgment (a model's judgment or prompt advice). A function held only by judgment
 | **S2** — coordination between units | deterministic-gate: `effect-journal`, `reintegration`, `thrash-detector`, `unit-lease` | — |
 | **S3** — operational control: the loop, its contracts, budgets and routing | deterministic-gate: `budget-guard`, `command-runner`, `evidence-preflight`, `failure-observer`, `model-router`, `obligation-router`, `pause-gate`, `profile-write-grant`, `progression-veto`, `recovery-router`, `result-report-gate`, `unit-lifecycle`, `work-contract-gate` · typed-tool: `declared-tool`, `memory-store` | model-judgment: `contract-preserving-compaction` · prompt: `contract-advice` |
 | **S3\*** — audit: evidence the unit does not control | type: `span-projection` · deterministic-gate: `behavioral-canary`, `behaviour-check`, `canary-watch`, `closeout-gate`, `doctor`, `eval-harness`, `glossary-lint`, `identity-untouched-check`, `inherited-tests-check`, `pre-merge-trial`, `prediction-resolution` | — |
-| **S4** — intelligence: the environment and the future | typed-tool: `intelligence-intake` | — |
+| **S4** — intelligence: the environment and the future | deterministic-gate: `sensor-intake` · typed-tool: `intelligence-intake` | — |
 | **S5** — identity and policy: who may change what the system is | deterministic-gate: `advice-decision`, `algedonic-delivery`, `definition-check`, `definition-writers`, `disposition-authority`, `identity-promotion`, `identity-write-gate`, `instance-manifest`, `outbox-watcher`, `project-trust-rule`, `regulator-lifecycle`, `s5-decision` · typed-tool: `interaction-contract`, `proposal-intake` | prompt: `advice-context`, `identity-context` |
 
-50 active regulators: 46 mechanism, 4 judgment. 2 retired records stay in the registry as history and appear nowhere below.
+51 active regulators: 47 mechanism, 4 judgment. 2 retired records stay in the registry as history and appear nowhere below.
 
 ## 2. Channel table
 
@@ -94,6 +94,7 @@ the reasoning lives, and a team states it here for its own rules.
 | `reintegration` | `hidden-coupling` | deterministic-gate | `loop:finishUnit`, `cli:unit finish` | `none` | 3 |
 | `result-report-gate` | `silent-closure` | deterministic-gate | `tool:report_result`, `loop:runUnit`, `host:session_start` | `extension:contract` | 4 |
 | `s5-decision` | `proposal-with-no-decider` | deterministic-gate | `cli:identity accept`, `cli:identity reject` | `none` | 3 |
+| `sensor-intake` | `environment-watched-by-hand` | deterministic-gate | `cli:watch`, `check:checkDefinition`, `loop:runUnit` | `none` | 6 |
 | `span-projection` | `evidence-nobody-can-join` | type | `cli:spans`, `cli:eval` | `none` | 4 |
 | `thrash-detector` | `oscillation` | deterministic-gate | `host:tool_execution_end` | `extension:coordination` | 3 |
 | `unit-lease` | `write-collision` | deterministic-gate | `host:session_start`, `host:tool_call`, `host:turn_end` | `loop:lease` | 4 |
@@ -132,7 +133,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 - **Identity write gate** (`identity-write-gate`). Ablation: `extension:authority` — Shares the authority extension with the canary watch and proposal intake. Without it the closeout check (identity-untouched) still refuses the change, at the cost of an attempt. Retirement condition: No unit edits an identity file across three model versions and the drift suite with the gate off and the closeout check on, and the attempt cost of catching it late is judged acceptable.
 - **Inherited tests check** (`inherited-tests-check`). Ablation: `check:inherited-tests` — Drop the check from the unit types' lists; the drift suite's no-inherited-tests arm is the treatment without it, and the self-certifier's committed report shows the unit closing green under that arm. Retirement condition: The suiteWeakened grader stays at zero across three model versions and the drift suite with the check off: no unit under this definition edits an inherited test to make it pass.
 - **Instance manifest (regulator init)** (`instance-manifest`). Ablation: `none` — Without init there is no instance; the profile's own prefixes and the discovered conventions are the arm without a declaration, which is what an instance had before `init` declared one. Retirement condition: Never while the harness installs into repositories it did not create; the manifest is how it knows what it was told.
-- **Intelligence intake** (`intelligence-intake`). Ablation: `extension:intelligence` — A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on. Retirement condition: Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read.
+- **Intelligence intake** (`intelligence-intake`). Ablation: `extension:intelligence` — A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on. Retirement condition: S4 has its second intake since #123 (`sensor-intake`, scheduled programs and globs declared in the definition). Retire this tool when its share of intelligence signals falls below what a person would read.
 - **Interaction contract (ask_human)** (`interaction-contract`). Ablation: `extension:algedonic` — Shares the algedonic extension with the pause gate: the tool and the gate ablate together. Without them a unit proceeds on its own judgment, which the drift suite's control arm shows. Retirement condition: Never for consent: an irreversible action without a yes is the failure class itself. The recap kind may retire when units stop offering decisions nobody reads.
 - **Operational memory store** (`memory-store`). Ablation: `extension:identity` — Shares the identity extension with the identity context; the drift suite's control arm runs without it, and the memoryRules grader counts what units write into prose instead. Retirement condition: The memoryRules grader stays at zero across three model versions and the drift suite with the tool off: units no longer write rules into prose when they have nowhere else to put a fact.
 - **Model router** (`model-router`). Ablation: `policy:models.fallback` — An empty fallback list is the ablation; the harness does not throw policy switches, and failover needs a live dispatcher. Retirement condition: No primary-model failure in a quarter of live runs, or a provider-side retry that makes the fallback redundant.
@@ -150,6 +151,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 - **Reintegration guard** (`reintegration`). Ablation: `none` — The merge is the loop's close step; an arm without it never lands work. Conflict handling is exercised by the coordination drills, not ablated. Retirement condition: Never: reintegration is how domain output reaches the base. The conflict-signal path retires when two units cannot share a base.
 - **Result report gate** (`result-report-gate`). Ablation: `extension:contract` — Shares the contract extension with the contract section; without it a unit has no report_result tool and every attempt ends no-report. Retirement condition: Never: the report is the loop's only typed input from a unit. Its checks (unresolved decisions, delegated choices) retire individually when three model versions never trip them.
 - **S5 decision path** (`s5-decision`). Ablation: `none` — A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand. Retirement condition: Never: INV-002 names it as the only writer. Retire with the proposal path, not before.
+- **Sensor intake (S4 declared in the definition)** (`sensor-intake`). Ablation: `none` — An operating process: an instance without a watcher, or with a definition that declares no intelligence policy, is the instance of every release before this one. The scripted evals run no watcher; a live arm with sensors declared would be the first measurement of whether a firing changes what a person does. Retirement condition: Never while a definition declares a sensor: the intake is what makes the declaration mean something, and what gives a firing a provenance, a record and a check. Retire the type-hold half if obligations learn a first-class target beyond a unit id and a unit type.
 - **Span projection (OpenTelemetry GenAI)** (`span-projection`). Ablation: `none` — A read model over the stores; switching it off changes no run. Retirement condition: Retire when the stores themselves are written as spans (one event store with the mapping built in) and the projection has nothing to translate.
 - **Thrash detector** (`thrash-detector`). Ablation: `extension:coordination` — Shares the coordination extension with the lease and worktree mechanics in the session; the oscillation fixture is the suite. The loop's attempt ceiling still stops a thrashing unit, later. Retirement condition: No oscillation in the oscillation fixture across three model versions with the detector off: the models stop alternating on their own, or the ceiling catches it at acceptable cost.
 - **Unit lease gate** (`unit-lease`). Ablation: `loop:lease` — Leases are taken by the loop; not ablatable by the harness. Two concurrent dispatches of one unit is the coordination test, not an eval arm. Retirement condition: Never while two sessions can target one worktree.
@@ -160,7 +162,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 
 The statement is [`BOUNDARY.md`](BOUNDARY.md), rendered from the same records: for every mechanical regulator, where it is
 enforced and the routes around it, with the accept paths of the definition. This case carries the count, not a second
-copy: 187 stated limitations across 50 active regulators, of which 46 enforce and 4 advise or judge,
+copy: 193 stated limitations across 51 active regulators, of which 47 enforce and 4 advise or judge,
 counted per regulator in the ledger's last column. A gate with no stated limitation does not pass `regulator check`, so a
 count of zero there is an advice or judgment record, and a limitation that names later work has a row in
 [`docs/DEBT.md`](../../docs/DEBT.md).
@@ -224,6 +226,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `reintegration` | `src/worktree.test.ts`, `src/unit.test.ts` | not stated | none |
 | `result-report-gate` | `../regulator-pi/src/contract.test.ts`, `src/controller.test.ts`, `../core/src/contracts.test.ts` | not stated | switch `extension:contract`; no arm declares it |
 | `s5-decision` | `src/cli.test.ts` | not stated | none |
+| `sensor-intake` | `src/sensors.test.ts`, `src/portfolio-sensors.test.ts`, `../core/src/sensors.test.ts`, `../core/src/obligations.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/intelligence-policy.test.ts` | not stated | none |
 | `span-projection` | `../core/src/spans.test.ts`, `src/cli.test.ts` | not stated | none |
 | `thrash-detector` | `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts` | not stated | switch `extension:coordination`; no arm declares it |
 | `unit-lease` | `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts` | not stated | switch `loop:lease`; no arm declares it |
@@ -243,7 +246,7 @@ part of this list and are linked, not copied: a debt row is what the build owes,
 | --- | --- |
 | **S3\* that reads what S1 wrote** (structural pathologies) | an expectation rewritten to the current output inside an exempt file (`inherited-tests-check` limitation 1) |
 | **S5 collapsed into S3** (structural pathologies) | a rule written in prose outside the writable prefixes shows up as a grader's number; no check refuses it |
-| **No S4** (structural pathologies) | S4 triggers that would raise a research unit unasked (archived CONTROL-REGISTRY.md §7); in the finance example a statement's arrival is handled by hand |
+| **No S4** (structural pathologies) | S4 triggers that would raise a research unit unasked (archived CONTROL-REGISTRY.md §7): a sensor raises an obligation and never dispatches; in the finance example a statement's arrival is still handled by hand |
 | **Missing recursion** (structural pathologies) | the definition's own S4 (the Pi upgrade path) is a checklist a person runs |
 | **S2 absorbed by S3** (structural pathologies) | semantic commitments between units (issue #14) |
 | **S3 overload / micromanagement** (functional pathologies) | the metrics that would show it (undelegated decisions discovered, replans attributable to the contract) are DEBT row 40 |

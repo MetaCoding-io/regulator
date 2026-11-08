@@ -9,9 +9,11 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { EffectJournal, ObligationLedger, remindable, undelivered } from "@metacoding.io/regulator-core";
-import type { InteractionPolicy, ObligationState } from "@metacoding.io/regulator-protocol";
+import { EffectJournal, ObligationLedger, remindable, routeMessages, undelivered } from "@metacoding.io/regulator-core";
+import type { IntelligencePolicy, InteractionPolicy, ObligationState, RoutingPolicy } from "@metacoding.io/regulator-protocol";
 import { REGULATOR_DIR } from "@metacoding.io/regulator-core";
+import type { Exec } from "./exec.js";
+import { runSensors, type SensorsRun } from "./sensors.js";
 
 /** The outbox: one line per delivery to a person, keyed so reconciliation can read it back (lesson 08). */
 export const OUTBOX_RELATIVE_PATH = path.join(REGULATOR_DIR, "outbox");
@@ -29,7 +31,7 @@ export interface Delivered {
 }
 
 function describe(o: ObligationState): string {
-  return `${o.severity}${o.blocks ? " veto" : ""} ${o.concern} on ${o.unit ?? "no unit"}: ${o.subject}${o.question ? ` — ${o.question}` : ""} (answer with \`regulator answer ${o.id.slice(0, 8)}\` or \`regulator obligation resolve ${o.id.slice(0, 8)}\`)`;
+  return `${o.severity}${o.blocks ? " veto" : ""} ${o.concern} on ${o.unit ?? (o.unitType ? `unit type ${o.unitType}` : "no unit")}: ${o.subject}${o.question ? ` — ${o.question}` : ""} (answer with \`regulator answer ${o.id.slice(0, 8)}\` or \`regulator obligation resolve ${o.id.slice(0, 8)}\`)`;
 }
 
 async function deliverOne(ledger: ObligationLedger, journal: EffectJournal, outbox: string, o: ObligationState, reminder: boolean, now: () => number): Promise<boolean> {
@@ -81,6 +83,11 @@ export interface WatchOptions extends DeliverOptions {
   onTick?: (tick: WatchTick) => void;
   /** A signal that ends the loop. */
   signal?: AbortSignal;
+  /**
+   * The sensors to run each tick (#123): the intelligence policy, the definition root their programs resolve under, the
+   * routing policy what they raise is routed under, and the process runner. Absent, the watcher runs none.
+   */
+  sensors?: { policy: IntelligencePolicy; definitionRoot: string; routing: RoutingPolicy; exec: Exec };
 }
 
 export interface WatchTick {
@@ -90,15 +97,17 @@ export interface WatchTick {
   /** New outbox lines handed to the channel this tick. */
   forwarded: number;
   failed: number;
+  /** What the sensors did this tick (#123), when any are declared. */
+  sensors?: SensorsRun;
 }
 
 const CURSOR_RELATIVE_PATH = path.join(".regulator", "outbox.cursor");
 
 /**
- * The watcher (lesson 15): the process a quiet instance was missing. Each tick delivers what is pending, reminds what
- * is due, and forwards every outbox line it has not forwarded yet to the channel command, remembering how far it got
- * in a cursor file so a restart forwards nothing twice. The outbox stays the record; the channel is whatever the
- * deployment names.
+ * The watcher (lesson 15): the process a quiet instance was missing. Each tick runs the declared sensors and routes
+ * what they raised (#123), delivers what is pending, reminds what is due, and forwards every outbox line it has not
+ * forwarded yet to the channel command, remembering how far it got in a cursor file so a restart forwards nothing
+ * twice. The outbox stays the record; the channel is whatever the deployment names.
  */
 export async function watchOutbox(repo: string, options: WatchOptions): Promise<WatchTick[]> {
   const now = options.now ?? Date.now;
@@ -112,6 +121,12 @@ export async function watchOutbox(repo: string, options: WatchOptions): Promise<
   });
   const ticks: WatchTick[] = [];
   for (;;) {
+    let sensors: SensorsRun | undefined;
+    if (options.sensors) {
+      sensors = await runSensors(options.sensors.exec, { repo, definitionRoot: options.sensors.definitionRoot, policy: options.sensors.policy, routing: options.sensors.routing, now });
+      // The same router a research unit's signal goes through: what fired becomes an obligation, or is noted with the reason.
+      await routeMessages(new ObligationLedger(repo, now), { policy: options.sensors.routing, now });
+    }
     const delivered = await deliverPending(repo, { policy: options.policy, now, outbox });
     const reminded = await remindDue(repo, { policy: options.policy, now, outbox });
     let forwarded = 0, failed = 0;
@@ -130,7 +145,7 @@ export async function watchOutbox(repo: string, options: WatchOptions): Promise<
         await writeFile(cursorFile, `${text.length}\n`, "utf8");
       }
     }
-    const tick: WatchTick = { at: new Date(now()).toISOString(), delivered: delivered.length, reminded: reminded.length, forwarded, failed };
+    const tick: WatchTick = { at: new Date(now()).toISOString(), delivered: delivered.length, reminded: reminded.length, forwarded, failed, ...(sensors ? { sensors } : {}) };
     ticks.push(tick);
     options.onTick?.(tick);
     if (options.once || options.signal?.aborted) return ticks;
