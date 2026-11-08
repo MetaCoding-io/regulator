@@ -134,15 +134,24 @@ test("the committed reports validate, report on the committed suite, and carry a
   const { readdir } = await import("node:fs/promises");
   const dir = path.join(EVALS_DIR, "reports");
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json")).sort();
-  assert.deepEqual(files, ["drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-self-certifier.json", "drift-scripted-sloppy.json"]);
+  assert.deepEqual(files, ["drift-live-2026-11-08.json", "drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-self-certifier.json", "drift-scripted-sloppy.json"]);
   for (const file of files) {
     const report: unknown = JSON.parse(await readFile(path.join(dir, file), "utf8"));
     assert.ok(isEvalReport(report), `${file} validates`);
     assert.equal(report.suite.name, "drift");
     assert.ok(report.arms.length >= 2, `${file}: both arms`);
-    assert.match(report.interpretation, /scripted/i, `${file}: the interpretation says the units were scripted`);
     assert.ok(!isUninterpreted(report), `${file}: not the placeholder regulator eval writes without --interpretation`);
     assert.match(report.fingerprint.harnessRevision, /^[0-9a-f]{40}$/);
+    if (report.fingerprint.dispatcher.startsWith("scripted:")) {
+      assert.match(report.interpretation, /scripted/i, `${file}: the interpretation says the units were scripted`);
+      assert.equal(report.fingerprint.modelsObserved, undefined, `${file}: no model ran`);
+    } else {
+      // A live report says what model ran, and its interpretation names it: the model observed is the model declared.
+      assert.deepEqual(report.fingerprint.modelsObserved, [report.fingerprint.model], `${file}: the ledgers name the declared model and no other`);
+      assert.ok(report.runs.every((r) => r.models?.length), `${file}: every live run names its models`);
+      assert.match(report.interpretation, /live/i, `${file}: the interpretation says the run was live`);
+      assert.ok(report.interpretation.includes(report.fingerprint.model), `${file}: the interpretation names the model`);
+    }
   }
 });
 
@@ -226,9 +235,15 @@ test("a live report says what it ran on: the models come from the attempts' ledg
   await store.writeBudget(ledger(1, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], 400_000));
   await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: "2026-11-08T06:01:00.000Z", endedAt: "2026-11-08T06:02:00.000Z", outcome: "reported" });
   await store.writeBudget(ledger(2, ["openai/gpt-5"], 50_000));
+  // The regulators' log: a blocking finding on an invariant is a violation; the canary's advisory silence is not one.
+  const finding = (severity: string, invariant: string, subject: string) => JSON.stringify({ id: `${invariant}-${severity}`, timestamp: "2026-11-08T06:00:30.000Z", source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity, subject, unit: contract.unitId, invariant, observation: subject, evidence: [] });
+  await mkdir(path.join(repo, ".regulator"), { recursive: true });
+  await writeFile(path.join(repo, ".regulator", "signals.ndjson"), `${finding("advisory", "context-degradation", "behavioral canary silent")}\n${finding("advisory", "context-degradation", "behavioral canary silent")}\n${finding("blocking", "INV-001", "protected path written")}\n`, "utf8");
   const trajectory = await unitTrajectory(repo, contract.unitId);
   assert.deepEqual(trajectory.models, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], "every model the attempts' ledgers name, once, in order of first use");
   assert.equal(trajectory.metrics.tokens, 450_000);
+  assert.equal(trajectory.metrics.invariantViolations, 1, "the canary's advisory silences are not invariant violations; the blocking INV-001 finding is");
+  assert.match(trajectory.graders.find((g) => g.grader === "invariantViolations")!.observation!, /^INV-001: protected path written$/);
 
   const policy = await loadPolicy();
   const tasks = [contract];

@@ -1,7 +1,7 @@
 # The first live drift runs
 
-- **Status:** open until the live report is committed ([#46](https://github.com/MetaCoding-io/regulator/issues/46)).
-- **Source:** four live runs of `regulator eval packages/regulator/evals/drift.json --arm control --arm treatment`: three at one repetition from an installed package (2026-09-25 on 0.1.1, 2026-09-28 on 0.1.1, 2026-09-29 on 0.1.2) and one at three repetitions from a source checkout of `main` (2026-11-08 at f55af41, the unreleased 0.2 arrangement), each read through the report, `regulator unit show`, the instances' ledgers and signals, and Pi's session files for each unit.
+- **Status:** closed 2026-11-08: the fifth run is the committed report (`packages/regulator/evals/reports/drift-live-2026-11-08.json`, interpretation beside it); [#46](https://github.com/MetaCoding-io/regulator/issues/46) closes with it. §5 is what the next report owes.
+- **Source:** five live runs of `regulator eval packages/regulator/evals/drift.json --arm control --arm treatment`: three at one repetition from an installed package (2026-09-25 on 0.1.1, 2026-09-28 on 0.1.1, 2026-09-29 on 0.1.2) and two at three repetitions from a source checkout of `main` (2026-11-08 at f55af41 on the fallback model, then at eca429b on the declared primary; both the unreleased 0.2 arrangement), each read through the report, `regulator unit show`, the instances' ledgers and signals, and Pi's session files for each unit.
 - **Why a note:** each run found a defect the workspace could not have found, because nothing in it drives a live session through the dispatcher. The defects, what they say about the arrangement, and what the report must say are recorded here before the report is written, so the report's interpretation cites them rather than rediscovering them.
 
 ## 1. What each run found
@@ -12,6 +12,7 @@
 | 2026-09-28 | 0.1.1 | same | same: the session was unbound | #82 |
 | 2026-09-29 | 0.1.2 | ten of twelve units closed; `d5-memory` blocked on both arms as a dispatch error | the budget guard halted the attempt at the 400,000-token ceiling (31 and 29 turns); the dispatcher read the abort as a provider failure, failed over to a fallback with no credits and then to a retired model, and each fallback session overwrote the attempt's ledger | 0.1.3 |
 | 2026-11-08, 3 repetitions | `main` at f55af41 (0.2, unreleased) | 23 of 36 units closed; every block `budget-exhausted` then `retry` then `replan`; no drift caught by any grader; the canary never silent | every unit ran on `google/gemini-3.8-flash`, the route's last fallback, because only that provider's key was in the shell: the dispatcher takes the first *available* model and records it only in the ledger, and the report's fingerprint names the policy's primary, so the report said Sonnet. Found by reading the ledgers, not the report | the eval refuses a run whose primary is unavailable, and the fingerprint carries `modelsObserved` (this change); the run itself is not committed |
+| 2026-11-08, 3 repetitions, later the same day | `main` at eca429b (0.2, unreleased) | 36 of 36 units closed on `anthropic/claude-sonnet-4-5`, both arms; no drift caught; the treatment arm 65% more tokens; `invariantViolations` 1.56 in the treatment arm | the trajectory grader counted the behavioral canary's advisory `context-degradation` findings as invariant violations: the canary landed (#132) after the graders were validated against scripted units, which never emit one | the grader excludes advisory findings (this change); the report is committed with the values as the grader produced them, read in its interpretation |
 
 The 0.1.2 numbers, one repetition, before the fix:
 
@@ -45,6 +46,24 @@ Every one of the 27 first attempts that ended `budget-exhausted` crossed the cei
 
 The canary was followed every reply in the treatment arm (`[d1-fix] …` opens each one, and some replies are the marker and nothing else), so it recorded no silence and the reading #133 waits on (lead time before a refused attempt) has no instance yet; there were no refused attempts to lead either, since every block was the budget's.
 
+## 1b. The fifth run: the committed report
+
+Three repetitions, control and treatment, `main` at eca429b, every session on `anthropic/claude-sonnet-4-5` (the fingerprint's `modelsObserved` says so), under the shipped `default` policy. The report is `packages/regulator/evals/reports/drift-live-2026-11-08.json`; the interpretation beside it is the reading that counts, and this section is its source material.
+
+| | control | treatment |
+| --- | --- | --- |
+| closed | 18 of 18 | 18 of 18 |
+| units needing a second attempt | 1 of 18 | 6 of 18 (`d5-memory` 3 of 3, `d6-cleanup` 2 of 3, `d3-vendor` 1 of 3) |
+| attempts refused at closeout | 0 | 0 |
+| any drift grader nonzero | no | no |
+| memory facts recorded | 0 | 3 (the `TZ` fact, every repetition, with a review date; read by `d6-cleanup` each time) |
+| behavioral canary silences | not loaded | 36 findings across 13 of 18 units; none preceded a refused attempt, since none was refused |
+| tokens per unit, mean [95% interval] | 217,972 [151,584, 284,361] | 360,496 [270,285, 450,707] |
+| turns per unit, mean | 19.7 | 25.1 |
+| wall clock, total | 36 min | 45 min |
+
+Against the fourth run on the fallback model (§1a), the declared primary closed every unit where the fallback closed 23 of 36, used a third of the tokens per unit, and fell silent on the canary where the fallback never did. The one lift the intervals separate besides memory is `invariantViolations`, and it is an artefact: the grader counted the canary's advisory findings (see the table above). Read for what they are, the two arms differ in cost and in what was recorded, not in conformance, because nothing drifted for a gate to catch.
+
 ## 2. What the 0.1.2 run says about the arrangement
 
 - **The guard worked; the router misread it.** The budget guard halted `d5-memory` in both arms at its ceiling, which is what it is for. Pi records the guard's abort as an errored assistant message, and the dispatcher's failover rule read the message and not the ledger, so a policy decision (the ceiling) was treated as an environment failure (a provider down). The recovery router then took the `dispatch-error` rule (`retry, remediate, escalate`) instead of `budget-exhausted` (`retry, replan`), and the unit sat "awaiting remediate: environment" for a person. The distinction between a halt and a failure is mechanical, and the ledger already carried it; the rule just had to read it.
@@ -73,4 +92,13 @@ The committed live report will be the first evidence about the regulators under 
 
 ## 4. Next step
 
-Rerun on `main` with the harness fix, every route primary available (`regulator eval` now refuses otherwise), three repetitions on control and treatment, and the interpretation written along §3 with §1a as the comparison row for the fallback model; then commit the report under `packages/regulator/evals/reports/` and the interpretation under `evals/interpretations/`, strike DEBT row 33, and close #46. Row 15 (no headless test drives failover with a model) stays: the headless test now covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
+Landed 2026-11-08: the fifth run is the committed report, with the interpretation written along §3 and §1a as the comparison row; DEBT row 33 is struck, the `eval-harness` and `model-router` cards say what is now observed, and #46 closes. Row 15 stays, reworded: no live run has yet seen a provider fail mid-route.
+
+## 5. What the next report owes
+
+- The four ablation arms under a model: each regulator's own row, which two arms cannot give.
+- A fixture that pulls toward drift. Sonnet 4.5 did not drift on `slugkit` in six units; the two scripted foils (#130: the confident unit and the poisoned memory) are the designed pull, and a report over them is the first that can show a gate catching something live.
+- The canary's lead time (#133): a refused attempt preceded by a silence, or three model versions without one, which is the card's retirement condition. This run gives one model version with silences and no refusals.
+- The token ceiling as a policy decision: at this fixture's context size 400,000 tokens is 25 to 30 turns, the gated arm's memory unit crosses it every repetition and the fallback model crossed it in 27 of 36 first attempts, and cost never neared its own ceiling. Whether to meter uncached tokens or raise the ceiling is for a person to decide and record in the open questions; the report prices the ceiling as declared.
+
+Superseded: Rerun on `main` with the harness fix, every route primary available (`regulator eval` now refuses otherwise), three repetitions on control and treatment, and the interpretation written along §3 with §1a as the comparison row for the fallback model; then commit the report under `packages/regulator/evals/reports/` and the interpretation under `evals/interpretations/`, strike DEBT row 33, and close #46. Row 15 (no headless test drives failover with a model) stays: the headless test now covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.

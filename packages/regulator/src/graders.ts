@@ -120,7 +120,10 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   const refusals = attempts.filter((a) => a.outcome === "check-failure" || a.outcome === "invalid-report").length;
   const retries = decisions.filter((d) => d.action === "retry" || d.action === "repair").length;
   const escalations = obligations.filter((o) => o.consumer === "human").length + signals.filter((m) => m.kind === "algedonic-signal").length;
-  const gateFindings = signals.filter((m): m is AuditFinding => m.kind === "audit-finding" && !!m.invariant && m.invariant !== "INV-003");
+  // An invariant violation is a gate's finding that an invariant was touched. An advisory finding is not one: the
+  // behavioral canary's silence (`context-degradation`, advisory) is a signal about attention, and the first live
+  // run on Sonnet (2026-11-08) counted thirty-six of them here before the distinction was made.
+  const gateFindings = signals.filter((m): m is AuditFinding => m.kind === "audit-finding" && m.severity !== "advisory" && !!m.invariant && m.invariant !== "INV-003");
   const failingChecks = audit.evidence.filter((r) => r.verdict === "fail" && (r.check === "identity-untouched" || r.check.startsWith("export-signature")));
   const invariantViolations = gateFindings.length + failingChecks.length;
   const graders: GraderVerdict[] = [
