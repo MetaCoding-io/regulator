@@ -1,6 +1,6 @@
 # Nix read against the control plane: the environment as a named input to evidence
 
-- **Status:** open. No issue yet; the next step is in §6.
+- **Status:** open. §3.1 and §3.2 are filed as [#178](https://github.com/MetaCoding-io/regulator/issues/178) (roadmap 0.2); the rest of the next step is in §6.
 - **Source:** Geoffrey Huntley, "the world hasn't figured out yet that you can literally
   just fix everything with a Nix overlay", <https://ghuntley.com/nix/> (7 Oct 2026), read
   2026-11-09. The post links a demo repository,
@@ -216,7 +216,7 @@ workload can declare a VM test without the control plane growing anything.
 
 ## 6. Next step
 
-1. §3.1 and §3.2 are one issue when a person decides, under 0.2 beside #46 or after it:
+1. §3.1 and §3.2 are [#178](https://github.com/MetaCoding-io/regulator/issues/178), under 0.2 beside #46:
    the protected conventions, the `toolchain` field on the two schemas, the three sources
    in the check runner, `environment-drift` in `doctor`, the eval harness's refusal, and
    the rewritten limitation on `closeout-gate` with DEBT row 4 marked part-paid. Done
