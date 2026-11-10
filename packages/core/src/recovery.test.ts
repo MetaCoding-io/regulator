@@ -6,7 +6,9 @@ import test from "node:test";
 import type { RecoveryPolicy, UnitRecord, WorkContract } from "@metacoding.io/regulator-protocol";
 import { EffectJournal, effectKey } from "./effect-journal.js";
 import { ExecutionStore } from "./execution-store.js";
-import { causeFromError, classifyFailure, decideRecovery, hintFor, routeBlockedUnit } from "./recovery.js";
+import type { AuditFinding } from "@metacoding.io/regulator-protocol";
+import { CANARY_INVARIANT } from "./canary.js";
+import { carriesLedger, causeFromError, causeUnderPolicy, classifyFailure, decideRecovery, hintFor, routeBlockedUnit } from "./recovery.js";
 
 const policy: RecoveryPolicy = {
   name: "recovery", version: 3, description: "d",
@@ -48,6 +50,61 @@ test("classifyFailure: the orchestrator's record decides first, then S2's signal
   const { evidence } = classifyFailure({ unit: unit({ reason: "budget exhausted: tokens" }), attempts: [attempt("budget-exhausted", "tokens ceiling crossed at t")], observations: [{ unitId: "u1", attempt: 1, at: "t", source: "tool", toolName: "bash", cause: "tool-error", message: "exit 1" }], signals: [] });
   assert.deepEqual(evidence, ["attempt 1: budget-exhausted — tokens ceiling crossed at t", "unit: budget exhausted: tokens", "tool bash: tool-error — exit 1"]);
   assert.equal(causeFromError("ECONNREFUSED 127.0.0.1:443"), "environment");
+});
+
+// The behavioral canary's finding as the identity extension records it (`regulator-pi/src/identity.ts`): advisory, S3* to S3, on the audit channel.
+const silence = (timestamp: string, over: Partial<AuditFinding> = {}): AuditFinding => ({
+  id: `f-${timestamp}`, timestamp, source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "advisory",
+  subject: "behavioral canary silent", unit: "u1", invariant: CANARY_INVARIANT, observation: "prose the classifier never reads",
+  evidence: [{ class: "runtime", ref: "message_end", observation: "2 consecutive replies without [u1]" }], ...over,
+});
+const during = (outcome: Parameters<typeof attempt>[0], detail?: string, n = 1) => ({ ...attempt(outcome, detail, n), startedAt: "2026-11-10T10:00:00.000Z", endedAt: "2026-11-10T10:30:00.000Z" });
+
+test("classifyFailure (#133): the behavioral canary's finding on the attempt classifies a silent end as context-degradation, last in the precedence; on any other cause it is evidence on the decision and not the cause", () => {
+  const c = (over: Partial<Parameters<typeof classifyFailure>[0]>) => classifyFailure({ unit: unit(), attempts: [during("no-report")], observations: [], signals: [silence("2026-11-10T10:05:00.000Z")], ...over });
+  const silent = c({});
+  assert.equal(silent.cause, "context-degradation", "no report, and the canary fell silent during the attempt");
+  assert.equal(silent.otherwise, "no-report", "what the same records say without the finding: the cause a policy with no rule for it routes under");
+  assert.deepEqual(silent.evidence, ["attempt 1: no-report", "S3* audit: context-degradation — the behavioral canary recorded 1 finding(s) during attempt 1, the first at 2026-11-10T10:05:00.000Z (2 consecutive replies without [u1])"]);
+  assert.match(c({ signals: [silence("2026-11-10T10:05:00.000Z"), silence("2026-11-10T10:09:00.000Z", { evidence: [{ class: "runtime", ref: "message_end", observation: "4 consecutive replies without [u1]" }] })] }).evidence.at(-1) ?? "", /recorded 2 finding\(s\) .*first at 2026-11-10T10:05:00.000Z \(4 consecutive replies without \[u1\]\)/, "the re-fired finding is the same episode: the count and the latest run length");
+
+  // Read by the invariant, the unit and the attempt's window — nothing else.
+  assert.equal(c({ signals: [silence("2026-11-10T10:05:00.000Z", { observation: "the context may be degraded", subject: "context-degradation" , invariant: "INV-001" })] }).cause, "no-report", "the prose and the subject do not classify: the invariant does");
+  assert.equal(c({ signals: [silence("2026-11-10T10:05:00.000Z", { unit: "u2" })] }).cause, "no-report", "another unit's silence");
+  assert.equal(c({ signals: [silence("2026-11-10T09:59:59.000Z")] }).cause, "no-report", "a finding from before this attempt began: an earlier attempt's session, whose count is gone");
+  assert.equal(c({ attempts: [during("no-report"), { ...attempt("no-report", undefined, 2), startedAt: "2026-11-10T10:31:00.000Z", endedAt: "2026-11-10T10:50:00.000Z" }], unit: unit({ attempts: 2 }) }).cause, "no-report", "attempt 1's silence does not classify attempt 2");
+  assert.equal(c({ signals: [silence("2026-11-10T10:05:00.000Z", { severity: "blocking" })] }).cause, "context-degradation", "the severity is the routing policy's concern, not the classifier's");
+
+  // The precedence is a rule: everything that names a failure a fresh context does not fix wins, and the silence stays evidence.
+  const exhausted = c({ attempts: [during("budget-exhausted", "tokens ceiling crossed")] });
+  assert.equal(exhausted.cause, "budget-exhausted", "nothing is left on the ledger a carried retry would spend");
+  assert.equal(exhausted.otherwise, undefined);
+  assert.match(exhausted.evidence.at(-1) ?? "", /^S3\* audit: context-degradation/, "a second observation, on the record");
+  const refused = c({ attempts: [{ ...during("no-report"), outcome: "check-failure" as const, detail: "fail — run_tests" }] });
+  assert.equal(refused.cause, "check-failure", "the closeout's refusal is routed as itself");
+  assert.match(refused.evidence.at(-1) ?? "", /^S3\* audit: context-degradation/, "and its decision records that the canary was silent first: the lead-time instance the card asks for");
+  assert.equal(c({ attempts: [during("invalid-report", "u-unicode missing")] }).cause, "invalid-report");
+  assert.equal(c({ attempts: [during("error", "something odd")] }).cause, "tool-error");
+  assert.equal(c({ unit: unit({ reason: "reintegration: conflict" }), attempts: [during("reported")] }).cause, "conflict");
+  assert.equal(c({ signals: [silence("2026-11-10T10:05:00.000Z"), { id: "s", timestamp: "t", source: "S2", kind: "coordination-signal", channel: "signal", destination: "S3", severity: "advisory", subject: "src/a.js", unit: "u1", coordination: "oscillation", observation: "4 edits", evidence: [] }] }).cause, "oscillation", "S2's signal wins: an undecided requirement is not a tired context");
+  assert.equal(c({ observations: [{ unitId: "u1", attempt: 1, at: "t", source: "tool", toolName: "run_tests", cause: "environment", message: "Cannot find module 'left-pad'" }] }).cause, "environment", "what the session observed wins: a missing dependency is still missing in a fresh session");
+  assert.equal(c({ attempts: [during("reported")] }).cause, "unknown", "an attempt that reported is not a silent end");
+});
+
+test("causeUnderPolicy (#133): a cause that rests on an advisory finding is routed only under a rule the policy declares; a policy that names no rule for it routes the unit as if the finding were not there, never by its fallback", () => {
+  const classified = { cause: "context-degradation" as const, evidence: [], otherwise: "no-report" as const };
+  assert.equal(causeUnderPolicy(classified, policy), "no-report", "no rule for context-degradation: the silent end is a silent end");
+  const adopting: RecoveryPolicy = { ...policy, rules: [...policy.rules, { cause: "context-degradation", actions: ["retry", "escalate"] }] };
+  assert.equal(causeUnderPolicy(classified, adopting), "context-degradation", "one rule adopts the cause");
+  assert.equal(causeUnderPolicy({ cause: "timeout", evidence: [] }, policy), "timeout", "any other unruled cause still takes the fallback: only an advisory cause has an otherwise");
+  assert.equal(decideRecovery({ policy: adopting, cause: "context-degradation", occurrence: 1, attemptsUsed: 1, attemptCeiling: 3 }).action, "retry");
+  assert.equal(decideRecovery({ policy: adopting, cause: "context-degradation", occurrence: 2, attemptsUsed: 2, attemptCeiling: 3 }).action, "escalate", "a second silent end under the cause is a person's");
+  assert.equal(decideRecovery({ policy: adopting, cause: "context-degradation", occurrence: 1, attemptsUsed: 3, attemptCeiling: 3 }).action, "escalate", "the attempt ceiling caps it like any retry");
+  assert.match(hintFor("context-degradation", "retry", ["attempt 1: no-report"]) ?? "", /fresh session on the same budget: what that attempt spent already counts against this one/);
+  assert.equal(carriesLedger({ cause: "context-degradation", action: "retry" }), true, "the retry continues the degraded attempt's ledger");
+  assert.equal(carriesLedger({ cause: "context-degradation", action: "escalate" }), false, "no attempt, nothing to carry");
+  assert.equal(carriesLedger({ cause: "no-report", action: "retry" }), false, "every other retry opens a new ledger, as before");
+  assert.equal(carriesLedger({ cause: "budget-exhausted", action: "retry" }), false);
 });
 
 test("decideRecovery: the Nth occurrence takes the Nth action and the last repeats; an attempt-spending action with no attempts left becomes escalate; an unruled cause takes the fallback", () => {
@@ -107,6 +164,33 @@ test("routeBlockedUnit: records one immutable decision per routed failure, count
   const decisions = await store.listDecisions("u1");
   assert.deepEqual(decisions.map((d) => [d.cause, d.action, d.occurrence]), [["no-report", "retry", 1], ["environment", "remediate", 1], ["no-report", "escalate", 2]]);
   assert.equal(new Set(decisions.map((d) => d.id)).size, 3);
+});
+
+test("routeBlockedUnit (#133): a silent attempt that carries the canary's finding is routed as no-report under a policy with no rule for the cause and as context-degradation under one that declares it; either decision carries the finding as evidence", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "regulator-route-canary-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const store = new ExecutionStore(root, () => Date.parse("2026-11-10T10:30:00.000Z"));
+  const contract: WorkContract = {
+    kind: "task", id: "tc-1", version: 1, unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 },
+    objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" },
+  };
+  await store.createUnit(contract);
+  await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-11-10T10:00:00.000Z", endedAt: "2026-11-10T10:30:00.000Z", outcome: "no-report" });
+  await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
+  const signals = [silence("2026-11-10T10:05:00.000Z")];
+
+  const shipped = await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals });
+  assert.deepEqual([shipped?.cause, shipped?.action, shipped?.occurrence], ["no-report", "retry", 1], "no rule names the cause: routed as before, not paused by the fallback");
+  assert.match(shipped?.evidence.at(-1) ?? "", /^S3\* audit: context-degradation/, "the silence is on the decision whichever cause routed it");
+  assert.equal(carriesLedger(shipped!), false);
+
+  const adopting: RecoveryPolicy = { ...policy, version: 4, rules: [...policy.rules, { cause: "context-degradation", actions: ["retry", "escalate"] }] };
+  const routed = await routeBlockedUnit(store, { policy: adopting, unitId: "u1", attemptCeiling: 3, signals });
+  assert.deepEqual([routed?.cause, routed?.action, routed?.occurrence, routed?.attempt], ["context-degradation", "retry", 1, 1]);
+  assert.deepEqual(routed?.policy, { name: "recovery", version: 4 });
+  assert.match(routed?.rationale ?? "", /recovery v4 rule for context-degradation, occurrence 1 → retry/);
+  assert.match(routed?.hint ?? "", /fresh session on the same budget/);
+  assert.equal(carriesLedger(routed!), true);
 });
 
 test("effect journal: intend before acting, commit after; a committed key is never acted on again; a crash between the two is reconciled against the world, not assumed", async (t) => {

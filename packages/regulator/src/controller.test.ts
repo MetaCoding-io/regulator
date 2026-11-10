@@ -256,6 +256,52 @@ test("recovery: the autoloop retries a silent unit under the policy, repairs a r
   assert.equal((await unitStatus(gitExec, repo)).length, 1, "an escalated unit keeps its claim until S5 decides");
 });
 
+test("context-degradation (#133): S3 opens the retry it decided under the cause on the degraded attempt's ledger before the session starts, once, whoever applies the retry; any other retry opens on nothing; the unit's tokens are counted once", async (t) => {
+  const { loadRecoveryPolicy } = await import("./recovery-policy.js");
+  const { routeUnit } = await import("./controller.js");
+  const { unitTrajectory } = await import("./graders.js");
+  const { appendSignal } = await import("@metacoding.io/regulator-core");
+  const repo = await initRepo(t);
+  const contract = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const shipped = await loadRecoveryPolicy();
+  const recovery = { ...shipped, rules: [...shipped.rules, { cause: "context-degradation" as const, actions: ["retry" as const, "escalate" as const] }] };
+  const base = await withPolicy();
+  const store = new ExecutionStore(repo);
+  const opened: Array<Awaited<ReturnType<ExecutionStore["getBudget"]>>> = [];
+  const dispatcher: Dispatcher = async (request) => {
+    // What S3 put in the store before the session: the meter resumes a ledger it finds on its attempt.
+    const ledger = await store.getBudget(request.unitId, request.attempt);
+    opened.push(ledger);
+    const at = new Date().toISOString();
+    if (request.attempt === 1) {
+      await store.writeBudget({ unitId: "u1", attempt: 1, ceiling: { tokens: 400_000, wallClockMs: 1_200_000, turns: 60 }, consumed: { tokens: 150_000, cost: 0.5, wallClockMs: 90_000, turns: 12 }, startedAt: at, updatedAt: at, models: ["anthropic/claude-sonnet-4-5"], compactions: [] });
+      await appendSignal(repo, { id: "canary-1", timestamp: at, source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "advisory", subject: "behavioral canary silent", unit: "u1", invariant: "context-degradation", observation: "2 consecutive replies did not begin with the marker", evidence: [{ class: "runtime", ref: "message_end", observation: "2 consecutive replies without [u1]" }] });
+      return { sessionId: "s1" };
+    }
+    assert.ok(ledger, "attempt 2 opens on a ledger");
+    await store.writeBudget({ ...ledger, consumed: { ...ledger.consumed, tokens: ledger.consumed.tokens + 30_000, turns: ledger.consumed.turns + 3 }, models: ["anthropic/claude-sonnet-4-5"], updatedAt: at });
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract, { attempt: 2 }));
+    return { sessionId: "s2" };
+  };
+  // Applied by hand rather than by the autoloop: run, route, run. The carry is read from the decision on record.
+  const blocked = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", dispatcher });
+  assert.deepEqual([blocked.status, blocked.status === "blocked" && blocked.reason], ["blocked", "no-report"]);
+  const decision = await routeUnit(gitExec, { repo, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction });
+  assert.deepEqual([decision?.cause, decision?.action, decision?.attempt], ["context-degradation", "retry", 1]);
+  assert.equal(await store.getBudget("u1", 2), undefined, "the decision opens nothing: the ledger is opened at dispatch");
+  const closed = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", dispatcher, ...(decision?.hint ? { hint: decision.hint } : {}) });
+  assert.equal(closed.status, "closed");
+  assert.equal(opened[0], undefined, "a first attempt opens on nothing");
+  assert.deepEqual(opened[1]?.carried, { attempt: 1, consumed: { tokens: 150_000, cost: 0.5, wallClockMs: 90_000, turns: 12 } });
+  assert.deepEqual([opened[1]?.attempt, opened[1]?.consumed.tokens, opened[1]?.ceiling.tokens, opened[1]?.models, opened[1]?.exhausted], [2, 150_000, 400_000, [], undefined]);
+  const trajectory = await unitTrajectory(repo, "u1");
+  assert.deepEqual([trajectory.metrics.tokens, trajectory.metrics.turns], [180_000, 15], "150,000 and 30,000: the carried consumption is attempt 1's and is counted there");
+  assert.match((await import("@metacoding.io/regulator-core")).summarizeLedger((await store.getBudget("u1", 2))!), /^180000\/400000 tok \(45%\), 15\/60 turns, 150000 tok and 12 turns carried from attempt 1$/);
+});
+
 test("recovery: oscillation routes to clarify with a question and stops; environment routes to remediate; abort releases the claim and the unit is aborted, not deleted", async (t) => {
   const { loadRecoveryPolicy } = await import("./recovery-policy.js");
   const { driveUnit, routeUnit } = await import("./controller.js");

@@ -34,7 +34,7 @@ import path from "node:path";
 import { Type } from "typebox";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { ReportedEvidenceSchema } from "@metacoding.io/regulator-protocol";
-import { BehavioralCanary, ExecutionStore, MemoryStore, appendSignal, canaryMarker, identityContextBudget, identityMaxChars, readIdentity, renderCanarySection, renderIdentitySection, renderMemorySection, type BehavioralCanaryPolicy, type IdentitySet } from "@metacoding.io/regulator-core";
+import { BehavioralCanary, CANARY_INVARIANT, ExecutionStore, MemoryStore, appendSignal, canaryMarker, identityContextBudget, identityMaxChars, readIdentity, renderCanarySection, renderIdentitySection, renderMemorySection, type BehavioralCanaryPolicy, type IdentitySet } from "@metacoding.io/regulator-core";
 import { readFile } from "node:fs/promises";
 import { isPolicyDefinition } from "@metacoding.io/regulator-protocol";
 import { randomUUID } from "node:crypto";
@@ -169,7 +169,7 @@ export function createIdentityExtension(options: IdentityExtensionOptions = {}):
       const observation = `${observed.consecutiveMisses} consecutive replies did not begin with the marker \`${canary.marker}\` that this session's prompt asks for on every turn (${hits} of ${seen} replies have). The model has stopped following a small rule it is shown each turn; that precedes its dropping a large one. The context may be degraded: a fresh session is the usual remedy, and it is S3's to decide.`;
       await appendSignal(base || ctx.cwd, {
         id: randomUUID(), timestamp: new Date(now()).toISOString(), source: "S3*", kind: "audit-finding", channel: "audit", destination: "S3", severity: "advisory",
-        subject: "behavioral canary silent", ...(unitId ? { unit: unitId } : {}), invariant: "context-degradation", observation,
+        subject: "behavioral canary silent", ...(unitId ? { unit: unitId } : {}), invariant: CANARY_INVARIANT, observation,
         evidence: [{ class: "runtime", ref: "message_end", observation: `${observed.consecutiveMisses} consecutive replies without ${canary.marker}` }],
         suggestedAction: "Consider ending this attempt and dispatching the unit in a fresh session.",
       });
