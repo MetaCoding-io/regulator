@@ -36,7 +36,7 @@ if (command === "check") {
   const definition = await checkDefinition(labRoot);
   for (const problem of definition.problems) console.error(`✖ ${problem.file}: ${problem.message}`);
   for (const warning of definition.warnings) console.error(`⚠ ${warning.file}: ${warning.message}`);
-  console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)${definition.warnings.length ? `, ${definition.warnings.length} warning(s)` : ""}`);
+  console.log(`definition: ${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length + definition.intelligence.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.problems.length} problem(s)${definition.warnings.length ? `, ${definition.warnings.length} warning(s)` : ""}`);
   process.exit(registry.problems.length + definition.problems.length === 0 ? 0 : 1);
 } else if (command === "docs") {
   const arms: AblationArm[] = (await checkDefinition(labRoot)).evals.flatMap((suite) => suite.arms.map((arm) => ({ suite: suite.name, arm: arm.name, ...(arm.ablates ? { ablates: arm.ablates } : {}), ...(arm.switch ? { switch: arm.switch } : {}) })));

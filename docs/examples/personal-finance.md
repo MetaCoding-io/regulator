@@ -418,9 +418,12 @@ Every registry record states its limitations, and this example does the same:
 - The finance invariants are a person's fixed decisions here; they have not been made
   identity. They belong in the fork described in §2, and the lab's own identity stays
   the software harness's.
-- There is no S4. The statement arrives by hand. A watcher that raises an obligation
-  when a new file lands under `statements/` would be a short extension of
-  `regulator watch`.
+- There is no S4 in this workload. The statement arrives by hand. The watcher that
+  raises an obligation when a new file lands exists since
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123) — a sensor declared in
+  `policies/intelligence.json` with a glob, run by `regulator watch` — and the
+  [portfolio](portfolio.md) declares three; the ledger declares none, and a glob over
+  `statements/` affecting `ingest-statement` would be the one declaration.
 - The unknown merchant is carried as an open item and never resolved. Resolving it would
   take a `clarification` question to a person, which this close does not ask; the open
   item is owed instead.

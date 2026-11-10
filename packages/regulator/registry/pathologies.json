@@ -94,19 +94,25 @@
         "regulators": [
           {
             "id": "reg.intelligence.intelligence-intake.v1"
+          },
+          {
+            "id": "reg.intelligence.sensor-intake.v1",
+            "note": "sensors declared in `policies/intelligence.json`, run by `regulator watch`: a program on a schedule or a glob over the instance's files, raising the same signal under its own provenance"
           }
         ],
         "invariants": [],
         "modules": [
-          "M11"
+          "M11",
+          "M15"
         ],
         "notes": [
           "the `research` unit type",
-          "in the finance workload, nothing yet"
+          "in the portfolio workload, three declared sensors (#123): the drift band, the harvest threshold, a new export",
+          "in the finance workload, nothing yet: a glob over `statements/` would be one declaration"
         ]
       },
       "reproducedBy": "`contracts/research-vendored-helper.json`",
-      "notAbsorbed": "S4 triggers that would raise a research unit unasked (archived CONTROL-REGISTRY.md §7); in the finance example a statement's arrival is handled by hand"
+      "notAbsorbed": "S4 triggers that would raise a research unit unasked (archived CONTROL-REGISTRY.md §7): a sensor raises an obligation and never dispatches; in the finance example a statement's arrival is still handled by hand"
     },
     {
       "id": "missing-recursion",
@@ -206,6 +212,10 @@
           {
             "id": "reg.intelligence.intelligence-intake.v1",
             "note": "an obligation that holds the units it names until it is dispositioned"
+          },
+          {
+            "id": "reg.intelligence.sensor-intake.v1",
+            "note": "a signal may hold a unit *type*, so intelligence reaches a unit dispatched after it was raised; an expired signal still holding something is re-raised once"
           },
           {
             "id": "reg.control.progression-veto.v1"

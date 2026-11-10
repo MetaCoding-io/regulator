@@ -1,7 +1,7 @@
 {
   "name": "portfolio",
   "version": 1,
-  "description": "Budgets and model routes for the portfolio workload. A close is small work and most of it is arithmetic: low ceilings, one attempt for the read-only types, three for the confirmation (the first is spent asking for consent), and the cheaper route for the review. The two program types are budgeted in wall-clock alone, with a second attempt in case the first is refused; their tokens and turns are zero by construction and the ceilings here are never reached. Ceilings are per attempt; attempts are per unit.",
+  "description": "Budgets and model routes for the portfolio workload. A close is small work and most of it is arithmetic: low ceilings, one attempt for the read-only types, three for the confirmation (the first is spent asking for consent), two for the harvest plan (a refused list deserves one repair), and the cheaper route for the review. The two program types are budgeted in wall-clock alone, with a second attempt in case the first is refused; their tokens and turns are zero by construction and the ceilings here are never reached. Ceilings are per attempt; attempts are per unit.",
   "budgets": {
     "default": {
       "tokens": 120000,
@@ -32,6 +32,11 @@
       },
       "harvest-losses": {
         "wallClockMs": 60000,
+        "attempts": 2
+      },
+      "plan-harvest": {
+        "tokens": 80000,
+        "turns": 20,
         "attempts": 2
       },
       "review": {

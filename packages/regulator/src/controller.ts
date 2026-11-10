@@ -111,11 +111,11 @@ async function routeAndDeliver(repo: string, ledger: ObligationLedger, routing: 
   await deliverPending(repo, { policy: interaction, now });
 }
 
-/** The problems the veto raises: one per open blocking obligation on the unit. */
-async function vetoProblems(ledger: ObligationLedger, unitId: string, step: "dispatch" | "close"): Promise<ContractProblem[]> {
-  return (await progressionVeto(ledger, unitId)).map((o) => ({
+/** The problems the veto raises: one per open blocking obligation on the unit, on its type (#123), or on the instance. */
+async function vetoProblems(ledger: ObligationLedger, unitId: string, unitType: string | undefined, step: "dispatch" | "close"): Promise<ContractProblem[]> {
+  return (await progressionVeto(ledger, unitId, unitType)).map((o) => ({
     path: "obligations",
-    message: `obligation ${o.id.slice(0, 8)} (${o.consumer}, ${o.severity}, ${o.concern}) is open on ${o.unit ? `unit "${unitId}"` : "the instance itself (no unit: the base failed its checks after a merge)"}: ${o.subject}; it must be dispositioned before ${step} (\`regulator obligation resolve\`)`,
+    message: `obligation ${o.id.slice(0, 8)} (${o.consumer}, ${o.severity}, ${o.concern}) is open on ${o.unit ? `unit "${unitId}"` : o.unitType ? `unit type "${o.unitType}" (raised before this unit existed; it holds every unit of the type)` : "the instance itself (no unit: the base failed its checks after a merge)"}: ${o.subject}; it must be dispositioned before ${step} (\`regulator obligation resolve\`)`,
   }));
 }
 
@@ -163,7 +163,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     }
   }
   // The veto: what is owed on the unit is settled outside the loop before the loop moves it.
-  problems.push(...(await vetoProblems(ledger, contract.unitId, "dispatch")));
+  problems.push(...(await vetoProblems(ledger, contract.unitId, contract.unitType, "dispatch")));
   if (problems.length || !unitType) return { status: "refused", problems };
 
   // dispatch
@@ -446,7 +446,7 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
   const ledger = new ObligationLedger(options.repo, now);
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
-  const problems: ContractProblem[] = await vetoProblems(ledger, options.unitId, "close");
+  const problems: ContractProblem[] = await vetoProblems(ledger, options.unitId, unit.unitType, "close");
   if (unit.status !== "blocked") problems.push({ path: "status", message: `unit "${unit.unitId}" is ${unit.status}; only a blocked unit is re-audited` });
   const contract = await store.getContract(unit.unitId, unit.contract.version);
   const report = await store.getReport(unit.unitId, unit.contract.version, unit.attempts);

@@ -65,6 +65,7 @@ test("the committed registry passes check: every record is well-formed, implemen
     "reg.identity.instance-manifest.v1",
     "reg.identity.regulator-lifecycle.v1",
     "reg.intelligence.intelligence-intake.v1",
+    "reg.intelligence.sensor-intake.v1",
   ]);
 });
 

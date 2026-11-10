@@ -45,7 +45,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "workload/sd.json: unit type \"sketch\" runs without a contract but its profile \"research\" grants run_tests, whose effects are not read-only: a unit no contract bounds may not write",
     "workload/sd.json: unit type \"build\" runs under a contract but its profile \"builder\" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
-    "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",
+    "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing, interaction or intelligence policy): payload does not match the closed runtime schema.",
     "policies/routing.json: floor pattern \"(\" is not a regular expression",
     "policies/: no recovery policy declared",
     "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
@@ -303,4 +303,49 @@ test("the declared effect reaches the profile checks: a read-only profile grante
   assert.deepEqual(shell.warnings, ['workload/pf.json: tool "place_trade" needs consent, derived from its irreversible effect, and profile "manager" grants bash, which is not path-gated: a shell command can write under "trades/pending/" with no consent asked. Declare {"tool":"bash","pattern":"trades\\/pending\\/"} beside it, or the derived consent is enforced on place_trade calls only']);
   assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "bash", "place_trade", "report_result"], consent: [{ tool: "bash", pattern: "trades/pending/" }] } })).warnings, [], "a bash pattern covering the output closes the hole");
   assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "report_result"] } })), { problems: [], warnings: [] }, "a profile that does not grant the tool is not judged by it");
+});
+
+/** Sensors (#123): a definition with one workload, `pf`, and an intelligence policy whose problems are the ones its sensors earn. */
+async function sensorsDefinition(t: { after(fn: () => Promise<void>): void }, sensors: unknown[], options: { programFile?: boolean; policy?: Record<string, unknown> } = {}): Promise<string[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-sensors-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "report_result"], writablePaths: ["trades/proposed/"] });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.programFile !== false) await write(dir, "workload/pf/sensors/drift.mjs", "process.stdout.write('{\"fires\":false}\\n');\n");
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes: [{ name: "plan", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true }] });
+  await write(dir, "policies/intelligence.json", { name: "intelligence", version: 1, description: "d", programTimeoutMs: 60000, sensors, ...options.policy });
+  const checked = await checkDefinition(dir);
+  return checked.problems.filter((p) => p.file === "policies/intelligence.json").map((p) => p.message);
+}
+const DRIFT = { name: "drift", description: "d", provenance: "sensor:drift", affects: ["plan"], severity: "blocking", expiresAfterMs: 60000, schedule: { everyMs: 1000 }, program: { argv: ["node", "workload/pf/sensors/drift.mjs"], outputs: [] } };
+const GLOB = { name: "export", description: "d", provenance: "sensor:export", affects: ["plan"], severity: "advisory", expiresAfterMs: 60000, glob: "{positions,prices}/*" };
+
+test("an intelligence policy (#123) is the fifth policy kind: a scheduled sensor with a program under the definition and no outputs, and a glob sensor, each affecting a declared unit type under its own provenance, pass the definition check", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT, GLOB]), []);
+  assert.deepEqual(await sensorsDefinition(t, []), [], "a policy that declares no sensor watches nothing and refuses nothing");
+});
+
+test("refused: a sensor whose affected unit type no workload declares, whose provenance is not its own name, or that is declared twice", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, affects: ["plan", "rebalance"] }]), ['sensor "drift" affects unit type "rebalance", which no workload declares']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, provenance: "sensor:band" }]), ['sensor "drift" writes under provenance "sensor:band"; a sensor\'s provenance is its own name, "sensor:drift"']);
+  assert.match((await sensorsDefinition(t, [{ ...DRIFT, provenance: "" }]))[0] ?? "", /^Invalid policy intelligence\.json \(not a budget, recovery, routing, interaction or intelligence policy\)/, "an unnamed provenance is refused by the schema, before the check reads the sensor");
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT, DRIFT]), ['sensor "drift" is declared twice']);
+});
+
+test("refused: a sensor whose program names no file under the definition, or that declares outputs — a sensor reads and never writes the tree", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT], { programFile: false }), [
+    'sensor "drift" runs the program `node workload/pf/sensors/drift.mjs`, and no argument of it is a file under the definition: the program\'s file is what the signal\'s evidence hashes, and it is missing',
+  ]);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, program: { ...DRIFT.program, outputs: ["trades/proposed/"] } }]), [
+    'sensor "drift" declares outputs (trades/proposed/); a sensor reads the instance and never writes it, so its program declares none',
+  ]);
+});
+
+test("refused: a sensor with neither trigger or both, a schedule without a program, a glob with one, and a glob that is not a pattern", async (t) => {
+  const { schedule: _s, program: _p, ...bare } = DRIFT;
+  assert.deepEqual(await sensorsDefinition(t, [bare]), ['sensor "drift" has no trigger: declare a glob over the instance\'s files or a schedule with a program']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, glob: "prices/*" }]), ['sensor "drift" declares both a glob and a schedule; a sensor has one trigger', 'sensor "drift" declares a glob and a program; a glob sensor\'s event is the file, and nothing runs']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...bare, schedule: { everyMs: 1000 } }]), ['sensor "drift" is scheduled but names no program: a schedule says when to run, and there is nothing to run']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...GLOB, program: DRIFT.program }]), ['sensor "export" declares a glob and a program; a glob sensor\'s event is the file, and nothing runs']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...GLOB, glob: "{positions,prices/*" }]), ['sensor "export" declares glob "{positions,prices/*", which is not a pattern: unmatched "{"']);
 });

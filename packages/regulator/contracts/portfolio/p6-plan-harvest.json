@@ -1,0 +1,101 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p6-plan-harvest",
+  "unitId": "p6-plan-harvest",
+  "unitType": "plan-harvest",
+  "objective": "Plan September's harvest: read trades/proposed/harvest-2026-09-30.json, the candidates the harvest-losses program found, and write trades/proposed/harvest-plan-2026-09-30.json — a list of kind harvest, planned over the positions after the agreed rebalance list trades/pending/2026-09-30.json: for every candidate worth taking by harvest.json's arithmetic and not blocked by a recent buy, a sell of the whole lot with its loss, its tax benefit, its trading cost and its opportunity cost, and a buy of its replacement from the ticker's exchangeable set with the proceeds — and account for every candidate not taken and why.",
+  "contribution": "The second half of a harvest, which is judgment inside arithmetic: the program said where the losses are; this unit says which are worth taking, what replaces each, and why the rest are left. Nothing here is agreed: consent and the copy under trades/pending/ are confirm-trades's, through place_trade.",
+  "constraintRefs": [
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-sets",
+      "subject": "the exchangeable sets",
+      "decision": "The ETFs the portfolio may hold and the sets the household considers exchangeable but not substantially identical are universe.json, and are not extended by this unit; a replacement comes from the sold ticker's set.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-tax",
+      "subject": "the tax parameters",
+      "decision": "The rates, the long-term cutoff and the wash-sale window are tax.json; the jurisdiction is the one it declares, and the rules are its rules. A sale at a loss is a wash sale when shares of the same ticker were acquired inside the window — a lot the ledger holds, a buy in a list of the window, a fill — and no sell in the list creates one.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-inputs",
+      "subject": "the harvest inputs",
+      "decision": "The trading cost of a leg and the tracking volatility the opportunity cost is priced from are harvest.json's numbers, and the arithmetic is the one lib/portfolio.js states: the benefit is the loss at the rate the lot's holding period earns; the costs are two legs at the rate on the lot's value, and an at-the-money option on the tracking difference over the window. A candidate is worth taking when the benefit exceeds both costs.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-candidates",
+      "subject": "the candidates",
+      "decision": "The candidates are trades/proposed/harvest-2026-09-30.json, the program's, and the lots are lots/lots.csv, current to 2026-09-30; neither is changed by this unit. A sell takes a whole candidate lot; nothing else is sold.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-baseline",
+      "subject": "what the list is planned over",
+      "decision": "The positions of 2026-09-30 after the agreed rebalance list, trades/pending/2026-09-30.json, which this unit does not change: a harvest exchanges within a set and keeps every set inside the band of its target, and it buys only with what its sells free.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-proposed",
+      "subject": "nothing is agreed",
+      "decision": "The list is written under trades/proposed/ as harvest-plan-2026-09-30.json, with kind harvest, and nowhere else. Nothing is written under trades/pending/: a file there is a commitment, and consent is confirm-trades's to ask, naming every leg, before place_trade copies the list.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [
+    {
+      "id": "d-harvest",
+      "subject": "which eligible candidates to harvest",
+      "bounds": "Only candidates of the program's file, each a whole lot; only those whose benefit exceeds both costs by harvest.json's arithmetic and whose ticker has no shares acquired inside the window beyond what the day's lists sell; ordered in the list by benefit net of costs, each sell reported with the benefit and the two costs. Every candidate not harvested is accounted for in the list's dispositions and in the report, with its reason — benefit below costs, blocked by a recent buy, or no replacement available — which the suite holds against the arithmetic and the result-report check reads as this decision's completion.",
+      "requiredReport": true
+    },
+    {
+      "id": "d-replacement",
+      "subject": "which ETF replaces a sold one",
+      "bounds": "Another ticker of the sold ticker's set in universe.json, never the same ticker, never a ticker the list also sells, never one sold at a loss inside the window; bought with the sell's proceeds in whole shares and not past them. Reported per sell.",
+      "requiredReport": true
+    }
+  ],
+  "unresolved": [
+    {
+      "id": "u-unnamed",
+      "subject": "a candidate lot whose ticker no set in universe.json names",
+      "reason": "The household has not said what would replace it; a harvest without a replacement is a sale, not an exchange.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — every sell in the harvest list is a whole candidate lot at a loss worth taking, every buy is from the sold ticker's set and never a ticker the list sells, no trade creates a wash sale against the lots, the fills or the other lists of the window, every set stays inside the band after the day's trades, and every candidate not taken is accounted for with a reason the arithmetic confirms",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}
