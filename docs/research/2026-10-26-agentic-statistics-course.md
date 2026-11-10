@@ -3,7 +3,7 @@
 - **Status:** open; filed as [#150](https://github.com/MetaCoding-io/regulator/issues/150) under
   [#61](https://github.com/MetaCoding-io/regulator/issues/61). Written as a table-of-contents
   assessment in the shape the [open questions backlog](2026-09-25-open-questions.md#6-backlog--smaller-things-to-think-about)
-  used for the Manning books (the 2026-10-24 row); ten of the course's sixteen lessons are still
+  used for the Manning books (the 2026-10-24 row); nine of the course's sixteen lessons are still
   to come (§8 and the dated sections before it), and each release is read and appended here.
 - **Sources:** the course, <https://wordalisation.com/courses/agentic-ai-for-statistics-and-data-science/overview/>
   (David Sumpter, Uppsala University, CC BY 4.0, free); its companion
@@ -247,6 +247,46 @@ traceability count.
 
 Net effect on the sections above: §4 row 3 (the ordering check) is refined as described; §5
 gains an eighth refusal; §6 gains one article. Nothing in §1's verdict changes.
+
+## 2026-11-10 — Lesson 1.7
+
+Read on the second scheduled check. Lesson 1.8, dated 9 November a week ago, is now a
+placeholder dated 16 November, the same day as 2.1 to 2.5. The template repository is still
+unchanged since the assessment.
+
+**1.7 Turning analysis into a report** is the write-up of contract steps 5 to 8 (§2) and
+confirms three rows of §3 from the author's side rather than the contract's. The report is "a
+clear record of what was done and what came out", for the author and co-workers, "an example
+of a statistical test rather than a research report", which is the reader the record in §3
+item 3 was written for. The background is written after the results on purpose: "knowing how
+the analysis came out is what tells you which literature matters", with the prose still
+forbidden to carry the result, as the contract's step 6 says. And the export stops on the
+disclaimer: "the agent asks you to confirm you have read it before it will make the PDF", the
+one hard stop in the whole course, which is the consent row in §3 as the author uses it.
+
+The one new thing is the shape of the read-through when the person has rewritten the text.
+"Large language models are verbose, and much of your work is cutting them down": the author
+cut the analogies, the methods detail restated in the discussion, the caution about
+non-problems and the re-emphasis, moved the limitations into their own section, and then
+handed the rewrite back with the instruction to "read rather than rewrite". The agent "found
+eight problems in mine, including a sentence that had lost its sense while I was editing"; the
+author accepted the ones that were right and said which to leave, and "two of these were
+trying to reinstate a limitation I had deliberately taken out". That is §3's audit row
+(list, never fix) with the person's disposition on each finding, which exists: a finding is an
+obligation a person dispositions, and the authority to do so is declared per person in the
+interaction policy. What does not exist is the memory of the disposition. The two findings
+that re-raised a removed limitation were raised against a decision the person had already
+made and recorded, and nothing in the audit path reads the earlier disposition before
+raising the same finding again. This is an S2 anti-oscillation case in the regulatory log
+rather than the domain: a finding whose subject is a decision already dispositioned by a
+person should attach to that disposition as a repeat, with the person's reason rendered
+beside it, not reopen it. Small, and a backlog row rather than a §4 row, because it is a rule
+over records the log already holds. The same lesson is the worked case for §3's "the person's
+text is checked, errors reported, never corrected": the eight problems were in the author's
+own prose, and the check reported them.
+
+Net effect: §3's audit row gains the re-raised-finding case as a backlog candidate; nothing in
+§4 or §5 changes; the verdict in §1 stands.
 
 ## 8. Next step
 
