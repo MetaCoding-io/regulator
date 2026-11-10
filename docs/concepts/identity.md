@@ -160,8 +160,13 @@ session's status line says how long the silence is. The shipped `default` policy
 `[{unit}]` with two misses.
 
 The canary decides nothing. Under the shipped routing policy an advisory finding is noted
-as trace, and no recovery cause names a degraded session yet, so the fresh session the
-signal argues for is a person's call after reading the unit's record
+as trace. S3 can act on it: the recovery router classifies an attempt that ended without a
+report and carries the finding as `context-degradation`, and a recovery policy that
+declares a rule for that cause answers with a retry in a fresh session on the same
+budget ([Recovery](/concepts/recovery#from-failure-to-cause)). The shipped recovery policy
+declares no such rule, because the first live report shows the canary silent in units
+that went on to close and no failure for a silence to precede. So the fresh session the
+signal argues for is still a person's call after reading the unit's record
 ([`docs/DEBT.md`](../DEBT.md) row 42). The marker is a proxy: a model that keeps it and
 still hallucinates is not seen, and one that drops it for a harmless reason is. That is
 why the finding is advisory and why the registry record states what it does not catch.
@@ -205,4 +210,4 @@ ones that matter most:
   not watched at all.
 - The behavioral canary reads a prefix and records. A marker inside a code fence or after
   a heading is a miss, a kept marker says nothing about the rest of the reply, and S3
-  does not act on the finding yet.
+  acts on the finding only under a recovery rule that no shipped policy declares.
