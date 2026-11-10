@@ -172,7 +172,7 @@ count of zero there is an advice or judgment record, and a limitation that names
 Two kinds of evidence stand behind the registry. The tests a card cites run under `pnpm check` at every revision and show
 the mechanism does what the card says, without a model. The eval harness compares arms over a scenario — control
 against treatment, and a treatment with one regulator off against the full treatment — and that is the evidence that a
-regulator helps. In the definition, the `drift` suite declares 6 arms, 4 of them ablation arms; the `portfolio-turnover` suite declares 2 arms, 0 of them ablation arms.
+regulator helps. In the definition, the `drift-poisoned-memory` suite declares 2 arms, 0 of them ablation arms; the `drift` suite declares 6 arms, 4 of them ablation arms; the `portfolio-turnover` suite declares 2 arms, 0 of them ablation arms.
 
 **No ablation result is reported here.** The live report over the drift scenario is [#46](https://github.com/MetaCoding-io/regulator/issues/46)'s
 work and is not yet committed. The committed reports ran scripted units, so they validate the graders and say nothing
@@ -184,7 +184,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `advice-context` | `../regulator-pi/src/profiles.test.ts`, `src/profiles.test.ts`, `../core/src/advice.test.ts` | not stated | switch `extension:profiles`; no arm declares it |
 | `advice-decision` | `src/cli.test.ts`, `../core/src/advice.test.ts`, `../core/src/predictions.test.ts` | not stated | none |
 | `algedonic-delivery` | `src/controller.test.ts`, `src/cli.test.ts`, `../core/src/interaction.test.ts` | not stated | switch `loop:deliver-pending`; no arm declares it |
-| `behavioral-canary` | `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts` | not stated | switch `extension:identity`; no arm declares it |
+| `behavioral-canary` | `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `extension:identity`; no arm declares it |
 | `behaviour-check` | `../checks/src/verify.test.ts`, `src/evals.test.ts` | not stated | `no-behaviour-check` (drift) |
 | `budget-guard` | `../regulator-pi/src/budget.test.ts`, `src/controller.test.ts`, `../core/src/policy.test.ts` | not stated | switch `extension:budget`; no arm declares it |
 | `canary-watch` | `../regulator-pi/src/authority.test.ts` | not stated | switch `extension:authority`; no arm declares it |
@@ -221,7 +221,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `progression-veto` | `src/controller.test.ts`, `../core/src/obligations.test.ts` | not stated | switch `loop:progression-veto`; no arm declares it |
 | `project-trust-rule` | `../regulator-pi/src/authority.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `loop:definition-loader`; no arm declares it |
 | `proposal-intake` | `../regulator-pi/src/authority.test.ts` | not stated | switch `extension:authority`; no arm declares it |
-| `recovery-router` | `../core/src/recovery.test.ts`, `src/controller.test.ts` | not stated | switch `policy:recovery.rules`; no arm declares it |
+| `recovery-router` | `../core/src/recovery.test.ts`, `src/controller.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `policy:recovery.rules`; no arm declares it |
 | `regulator-lifecycle` | `../core/src/control-plane.test.ts`, `src/cli.test.ts`, `src/registry.test.ts` | not stated | none |
 | `reintegration` | `src/worktree.test.ts`, `src/unit.test.ts` | not stated | none |
 | `result-report-gate` | `../regulator-pi/src/contract.test.ts`, `src/controller.test.ts`, `../core/src/contracts.test.ts` | not stated | switch `extension:contract`; no arm declares it |
@@ -256,13 +256,13 @@ part of this list and are linked, not copied: a debt row is what the build owes,
 | **Budget without a limit behaviour** (functional pathologies) | a reserve for verification and recovery at the instance level is not declared (the viability-theory framing; unscheduled) |
 | **Recovery per unit hides a shared cause** (functional pathologies) | a level-2 count over recovery decisions that opens an obligation on the instance when N units hit one cause in a window (the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §4 item 8, after Lanham §8.3.7's circuit breaker); recorded as a backlog row, not debt, because the card names the per-unit count as a limit |
 | **The undeclared action** (functional pathologies) | the derivation reads one value of one axis, and an irreversibility outside the tree (a network call the program makes) is declared, not observed (`declared-tool` limitations 2 and 4) |
-| **Attention decay** (information and channel pathologies) | what S3 does with the finding: no recovery cause names it (DEBT row 42), and a model that keeps the marker and still drifts is not seen |
+| **Attention decay** (information and channel pathologies) | the shipped recovery policy declares no rule for the cause, so the fresh session is still a person's decision until a live run shows the silence leading a failure (DEBT row 42), and a model that keeps the marker and still drifts is not seen |
 | **Compaction discards the constraint** (information and channel pathologies) | a model summary can still be wrong, and only the deterministic block is guaranteed (a permanent limit) |
 | **Summary discards the uncertainty** (information and channel pathologies) | observation versus inference is not a typed distinction on evidence, and retraction dependencies are not tracked |
-| **Data absorbed as control** (information and channel pathologies) | poisoned operational memory driving a later unit is untested. Memory is rendered as facts and never as instructions, and that rendering is the whole defence; the candidate fixture is `fixture-poisoned-memory`, one false environment fact under valid provenance and a near review date ([#130](https://github.com/MetaCoding-io/regulator/issues/130), after #46; the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §6) |
+| **Data absorbed as control** (information and channel pathologies) | whether a model acts on a false remembered fact is unmeasured. The scripted reference on `fixture-poisoned-memory` showed the seeded fact stored under its provenance, rendered as a fact to implement units and to no other type, counted by `memoryFacts`, and reaching no report, decision or commit; a scripted unit reads no context, so it cannot be tempted. The rendering as a fact is still the whole defence at the point of reading, and the closeout's `identity-untouched` is what would refuse the vendor edit this fact invites; the live reading is the next live report's ([live drift runs note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-29-live-drift-run.md) §5) |
 | **Vocabulary drift** (information and channel pathologies) | the attenuation of the commit-message half (DEBT row 36) |
 | **Feedback delay** (information and channel pathologies) | a coupling that `run_tests` and `run_checks` do not exercise lands (`pre-merge-trial` limitation 1); the trial itself was DEBT row 37, paid by #48 |
-| **Self-report as control variety** (information and channel pathologies) | `confidence` on an intelligence signal is recorded and never calibrated; it is a `model-judgment` instrument once the prediction record exists (open questions §4) |
+| **Self-report as control variety** (information and channel pathologies) | `confidence` on an intelligence signal is recorded and never calibrated; it is a `model-judgment` instrument once the prediction record exists (open questions §4). A self-assessed `info` on a signal that names no invariant and no identity path is taken at its word: the confident unit's third signal was noted below the routing policy's line, as the policy declares |
 
 One row has no regulator at all: **Recovery per unit hides a shared cause**. By the catalog's reading order that is a failure the lab can name and reproduce but has not built the mechanism for.
 

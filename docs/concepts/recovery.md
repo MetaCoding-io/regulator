@@ -28,20 +28,36 @@ turns the next step into a lookup:
 | `dispatch-error` | the dispatch itself failed |
 | `conflict` | reintegration conflicted with the base |
 | `oscillation` | S2's thrash detector signalled that the unit is rewriting the same files |
+| `context-degradation` | the [behavioral canary](/concepts/identity#the-behavioral-canary) fell silent during an attempt that then ended without a report. Routed under this cause only when the policy declares a rule for it, and the shipped policy does not |
 | `unknown` | none of the above |
 | `ambiguity` | nothing yet. The vocabulary and the shipped policy name it, but the router never classifies a failure this way |
 
-The router reads three sources: the orchestrator's records (the attempt's outcome and
-the unit's block reason), S2's coordination signals, and the **failure observations**
-the session wrote. The failure observer normalizes every tool error and provider error
+The router reads four sources: the orchestrator's records (the attempt's outcome and
+the unit's block reason), S2's coordination signals, the **failure observations**
+the session wrote, and the behavioral canary's finding on the attempt. The failure observer normalizes every tool error and provider error
 in a session to a cause as it happens, so the record exists before the attempt ends.
 That is why an attempt that ends silently can still be routed by what went wrong, and
 never only by the fact that it went quiet.
 
 When more than one source applies, a fixed precedence decides. Reintegration problems
 come first, then the attempt's recorded outcome, then an oscillation signal, then the
-session's last observation. The orchestrator's record wins over the session's, so a
-check failure caused by a missing tool is routed as `check-failure`.
+session's last observation, and last the canary's finding. The orchestrator's record wins
+over the session's, so a check failure caused by a missing tool is routed as
+`check-failure`.
+
+The canary comes last by rule. Its marker is a proxy for attention, and each source
+above it names something a fresh context does not fix: a halted budget, a refused
+report, a failed closeout, an undecided requirement, a missing dependency. So the finding
+classifies only an attempt that ended without a report and that nothing else explains.
+It is read by the finding's `invariant`, within the attempt's own start and end, and a
+finding from an earlier attempt does not count. On every other cause the finding is
+added to the decision's evidence, so a refused attempt that the canary was silent in
+says so on its record.
+
+One more rule applies to this cause alone. The finding is advisory, so the router routes
+under `context-degradation` only when the recovery policy declares a rule for it. A
+policy that says nothing about it routes the attempt as `no-report`. The fallback is
+never used for it.
 
 ## From cause to action
 
@@ -63,6 +79,24 @@ reads as follows:
 | `ambiguity` | clarify | | |
 | `dispatch-error` | retry | remediate | escalate |
 | anything else | pause (the fallback) | | |
+
+`context-degradation` has no row. The shipped policy leaves it out on purpose, and its
+description says why: in the first live report the canary fell silent in 12 of 18 gated
+units, each of which closed on the attempt in which it fell silent, and no attempt was
+refused, so no silence has yet come before a failure. A deployment that wants the cause
+adds one rule to its own recovery policy:
+
+```json
+{ "cause": "context-degradation", "actions": ["retry", "escalate"] }
+```
+
+Under that rule the retry is a new attempt in a new session, like any retry, with one
+difference. It opens on the ledger the degraded attempt left, so it spends what remained
+of that attempt's budget and gets no second allowance. The remedy for a tired context is
+a fresh context. It is not a fresh budget. The ledger records what it carried and from
+which attempt, and a unit's cost still counts each token once. The
+[design note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-22-behavioral-canary.md) has the reading of the live report and
+the decision.
 
 Three rules shape how the table is read. Occurrences count per cause, per unit, so the
 third `check-failure` on a unit takes the third action, however many other failures
@@ -177,5 +211,8 @@ short:
   it sees evidence from `run_tests` and `run_checks` only, never from `bash`.
 - `ambiguity` has a rule and no source. The shipped policy routes it to `clarify`, but
   no classification produces it yet.
+- `context-degradation` has a source and no rule. The router classifies it, and the
+  shipped policy declares nothing for it, so the fresh session on the same budget is
+  still a person's decision ([`docs/DEBT.md`](../DEBT.md) row 42).
 - Nothing performs a waiting action. Remediate, replan, clarify and pause are recorded
   and owed to someone, and the loop waits until that someone acts.

@@ -376,7 +376,7 @@ export function assertValid<T extends TSchema>(schema: T, value: unknown, label:
 export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
 export { CapabilityProfileSchema, ConsentGrantSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ConsentGrant, type ReasoningLevel } from "./profiles.js";
-export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
+export { MemoryEntrySchema, MemoryEventSchema, MemorySeedSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent, type MemorySeed } from "./memory.js";
 export { ENFORCEMENT_POINTS, EnforcementPointSchema, MechanismLevelSchema, RegulatorRecordSchema, enforcementPointName, isRegulatorRecord, unknownEnforcementPoint, type EnforcementPoint, type EnforcementWhere, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
   ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, ExpectationCheckSchema, FixedDecisionSchema,
@@ -389,7 +389,7 @@ export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchem
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
   isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
-  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
+  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetConsumed, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {

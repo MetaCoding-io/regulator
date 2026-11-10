@@ -13,7 +13,7 @@
  */
 import path from "node:path";
 import { countTestLines, runHostChecks } from "@metacoding.io/regulator-checks";
-import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, readSignals } from "@metacoding.io/regulator-core";
+import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, ownConsumption, readSignals } from "@metacoding.io/regulator-core";
 import { GraderOutputSchema, type AuditFinding, type EvidenceExpectation, type GraderVerdict, type MetricDeclaration } from "@metacoding.io/regulator-protocol";
 import { Value } from "typebox/value";
 import type { Exec } from "./exec.js";
@@ -112,8 +112,9 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   const models: string[] = [];
   for (const a of attempts) {
     const b = await store.getBudget(unitId, a.attempt);
-    tokens += b?.consumed.tokens ?? 0;
-    turns += b?.consumed.turns ?? 0;
+    // An attempt that continues an earlier attempt's ledger (#133) carries that consumption: the unit's cost counts it once.
+    tokens += b ? ownConsumption(b).tokens : 0;
+    turns += b ? ownConsumption(b).turns : 0;
     for (const m of b?.models ?? []) if (!models.includes(m)) models.push(m);
   }
   const wallClockMs = attempts.reduce((sum, a) => sum + Math.max(0, Date.parse(a.endedAt) - Date.parse(a.startedAt)), 0);
