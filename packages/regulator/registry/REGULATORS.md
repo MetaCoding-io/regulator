@@ -60,6 +60,7 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.s5-decision.v1` | S5 decision path | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.intelligence.sensor-intake.v1` | Sensor intake (S4 declared in the definition) | S4 | deterministic-gate | active | 2026-12-01 |
 | `reg.assurance.span-projection.v1` | Span projection (OpenTelemetry GenAI) | S3* | type | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
@@ -1196,14 +1197,14 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
 - Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.
-- Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
+- Expiry is the unit's estimate. The router notes intelligence that has already expired when it is routed; a signal that expires while an obligation it opened is still open is re-raised once, as an advisory obligation, by the watcher's tick (`sensor-intake`, #123) — so nothing says so in an instance whose watcher is not running, and the advisory releases nothing by itself.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:intelligence` — A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on.
 
-**Retirement condition.** Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read.
+**Retirement condition.** S4 has its second intake since #123 (`sensor-intake`, scheduled programs and globs declared in the definition). Retire this tool when its share of intelligence signals falls below what a person would read.
 
 
 ## Interaction contract (ask_human)
@@ -1940,6 +1941,51 @@ does not do. `since` is the package version that first shipped the record.
 **Ablation.** `none` — A CLI command a person runs; there is no arm in which a person changes identity without it, only the drill that edits a file by hand.
 
 **Retirement condition.** Never: INV-002 names it as the only writer. Retire with the proposal path, not before.
+
+
+## Sensor intake (S4 declared in the definition)
+
+`reg.intelligence.sensor-intake.v1` · S4 · deterministic-gate · active · unreleased
+
+**Purpose.** Give the definition a second way to raise intelligence, without a model: sensors declared in `policies/intelligence.json` and run by `regulator watch` in its tick. A scheduled sensor's program — a `Program` in the command runner's shape, with no outputs — runs in the instance through `runProgram` with nothing on stdin, and its last stdout line says whether it fires; a glob sensor fires when a file matching its glob appears that the watcher's cursor has not seen. A firing is the same `intelligence-signal` a research unit raises through `report_intelligence`: `source: S4`, the sensor's provenance (`sensor:<name>`) where the unit would be, the program's file and hash as evidence beside what it read, the claim, the observation, the declared severity and expiry unless the program says otherwise for one firing, and the affected unit *types* as `type:<unitType>` entries. The router opens one obligation per entry, holding the type; the progression veto matches a type hold at dispatch, so a unit dispatched after the sensor fired waits until a person dispositions it. A sensor that still fires on the next tick raises nothing while an earlier signal with the same claim is current (unrouted, holding an open obligation, or not yet expired), so there is one open obligation per sensor and claim. A signal with an expiry that expires while an obligation it opened is still open gets one advisory obligation saying so, for every intelligence signal the log holds — the re-raise the intelligence-intake card left undone. A non-zero exit, a timeout, a stray write (undone) or a last line that is not a report is an advisory `operational-signal` naming the sensor, once per distinct failure, below the operational line: noted, never an obligation, never a replan. `regulator check` refuses a sensor whose affected unit type no workload declares, whose provenance is not its own name under `sensor:`, whose program names no file under the definition or declares outputs, that has neither trigger or both, a schedule without a program, or a glob with one. Nothing here dispatches: a sensor raises an obligation and never replans.
+
+**Absorbs.** `environment-watched-by-hand` — Nothing watches the environment the instance works in, so the system learns of a change by failing or by a person noticing: a drift past the band sits unplanned until someone looks, a loss worth harvesting is found at the next close, a new export lands and nobody ingests it. Or a watcher exists and is a script beside the instance, outside the definition — unchecked, with no provenance on what it raises, and free to dispatch.
+
+**Mechanism.** `src/sensors.ts` at `cli:watch` (applicableSensors narrows the policy to the sensors of the workloads the instance runs (its units' workloads, or --workload's); runSensors in the tick: a due program runs in the instance with no outputs (a stray write is undone and the run refused), the last line is read against SensorOutputSchema, a firing is appended as an intelligence-signal under the sensor's provenance and deduplicated against the current signals of the same claim, a failure is an advisory operational-signal, an expired held signal is one advisory obligation; then routeMessages), `check:checkDefinition` (checkIntelligencePolicy in core: an undeclared affected unit type, a provenance that is not sensor:<name>, a program with no file under the definition or with outputs, neither trigger or both, a schedule without a program, a glob with one, a glob that is not a pattern, a sensor declared twice), `loop:runUnit` (progressionVeto(ledger, unitId, unitType): an open blocking obligation with unitType and no unit holds every unit of the type at dispatch and at close, named in the refusal)
+
+**Channels.** consumes `policies/intelligence.json (the sensors)`, `the routing policy (what a firing is routed under; the consumer of the expiry advisory)`, `the instance's files (a glob) and the program's exit, stdout and stderr (a schedule)`, `.regulator/sensors.json (the cursor: files seen per glob sensor, last run per scheduled one)`, `the regulatory log (deduplication and expiry)` · emits `intelligence-signal → S3 (provenance sensor:<name>, affectedUnits type:<unitType>)`, `operational-signal → S3 (advisory; a failed sensor)`, `obligation-opened (advisory; an expired signal still holding an open obligation)`
+
+**Scope.** subjects intelligence, unit type · resources .regulator/signals.ndjson, .regulator/sensors.json, the instance's files, read-only
+
+**Cost.** One program run per scheduled sensor per interval, in the instance, under the policy's programTimeoutMs; one directory walk per tick while a glob sensor is declared; two git status reads per program run; one log read per tick. No model calls. The portfolio's three sensors are arithmetic over the fixture.
+
+**May.**
+- run a declared program in the instance under the policy's ceiling and read its last line
+- record a firing as an intelligence-signal under the sensor's provenance, naming unit types
+- raise one advisory obligation when a held signal expires
+- record a failed run as an operational-signal
+
+**May not.**
+- dispatch, route or disposition anything: the router opens the obligation and a person dispositions it
+- set the severity the router acts on (the declaration reports; the router derives)
+- write to the instance: a program's outputs are empty by the check, and a write is undone and refused
+- raise the same claim twice while the first is current
+
+**Evidence.** `src/sensors.test.ts`, `src/portfolio-sensors.test.ts`, `../core/src/sensors.test.ts`, `../core/src/obligations.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/intelligence-policy.test.ts`
+
+**Limitations.**
+- A sensor's threshold is the definition's claim about what matters, not evidence that it does: the drift band, the harvest minimum, the intervals and the expiries are numbers a person wrote into benchmark.json and the policy, and nothing measures whether a firing was worth a person's attention. The eval harness has no metric over sensor firings.
+- The program is trusted as the command runner's is: the watcher inspects nothing beyond its argv's file (hashed) and the absence of writes in the instance. What it reads, imports or reaches by an absolute path or a network call is unseen, and a program that writes outside the instance is not caught.
+- A glob sensor sees names, not content: a file rewritten under a name the cursor has seen is no event, and the first tick seeds the cursor with what exists and fires on nothing, so an export that landed while the watcher was down and before its first tick is a person's to raise. The schedule is the watcher process's wall-clock: nothing runs while the watcher is not running, and an interval missed several times over runs once. Which sensors apply is read off the instance's units' workloads, so a fresh instance runs none until its first unit or until `--workload` says which it is.
+- Deduplication is by the claim's text under one provenance: a sensor whose claim carries a number that changes every tick raises a signal every tick while the first is current, and a resolved claim stays quiet until its signal expires even if the person wanted to hear it again sooner. The shipped sensors put the export date in the claim so it changes with the data and not with the clock.
+- The harvest-threshold sensor's minimum is a dollar figure on its declaration's argv, standing in for the costs the harvest contract will declare (#124); when that file exists the sensor should read it and the argv go (docs/DEBT.md row 51).
+- Provenance is the declaration's word: `sensor:<name>` says which sensor the watcher ran, not that the program is the sensor the name suggests. A person's `regulator intelligence report` under `human:<name>` provenance, the other half of open questions §2, does not exist yet.
+
+**Ownership.** regulator-maintainers · introduced 2026-11-08 · review by 2026-12-01
+
+**Ablation.** `none` — An operating process: an instance without a watcher, or with a definition that declares no intelligence policy, is the instance of every release before this one. The scripted evals run no watcher; a live arm with sensors declared would be the first measurement of whether a firing changes what a person does.
+
+**Retirement condition.** Never while a definition declares a sensor: the intake is what makes the declaration mean something, and what gives a firing a provenance, a record and a check. Retire the type-hold half if obligations learn a first-class target beyond a unit id and a unit type.
 
 
 ## Span projection (OpenTelemetry GenAI)

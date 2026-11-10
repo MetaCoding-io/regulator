@@ -226,15 +226,34 @@ a suite ([#125](https://github.com/MetaCoding-io/regulator/issues/125)).
 
 ### S4 — What changes in the environment matter?
 
-This is where the portfolio earns its place, and none of it is in this phase. A drift
-band crossed, a lot's unrealised loss crossing the harvest threshold, a new export
-landing under `positions/`: each is a sensor that raises an intelligence signal with an
-affected unit and an expiry, and the router opens the obligation
-([#123](https://github.com/MetaCoding-io/regulator/issues/123)). Capital-market
-assumptions with a publication date are what `remember` with an expiry was built for.
-A view with a confidence is a prediction, consumed by `propose-target` under a fixed
-decision that caps its weight. In this phase the exports arrive by hand, as the
-statement did.
+This is where the portfolio earns its place, and the first slice of it is here. A drift
+band crossed, a lot's unrealised loss worth more than a minimum, a new export landing
+under `positions/` or `prices/`: each is a *sensor*, declared in
+[`policies/intelligence.json`](../../packages/regulator/policies/intelligence.json) and
+run by `regulator watch` in its tick
+([#123](https://github.com/MetaCoding-io/regulator/issues/123)). Two are programs on a
+schedule under [`workload/portfolio/sensors/`](../../packages/regulator/workload/portfolio/sensors/),
+reading the tree through `lib/portfolio.js` and writing nothing; the third is a glob. A
+sensor that fires raises the same `intelligence-signal` a `research` unit raises, with
+`sensor:<name>` as its provenance and the program's file and hash as evidence, naming
+the unit *type* it concerns (`type:plan-rebalance`, `type:harvest-losses`,
+`type:ingest-positions`); the router opens an obligation that holds the type, and the
+veto matches it when a unit of the type is dispatched, which is after the sensor fired.
+A person dispositions the obligation; nothing replans. The thresholds are the
+definition's: the band is `benchmark.json`'s, the harvest minimum is a number on the
+sensor's declaration until the harvest contract's costs file
+([#124](https://github.com/MetaCoding-io/regulator/issues/124)) is the place to read it
+from, and a sensor's threshold is a claim about what matters, not evidence that it does.
+
+On the shipped data the drift sensor fires at once: at the 30 September prices VTI is
+2.33% over the August target, past the 2% band, which is the rebalance September's
+close plans. So with the watcher running, `plan-rebalance` waits on that obligation
+until someone dispositions it, and the drift the close is about is on the record before
+the close begins.
+
+The rest is still to come. Capital-market assumptions with a publication date are what
+`remember` with an expiry was built for. A view with a confidence is a prediction,
+consumed by `propose-target` under a fixed decision that caps its weight.
 
 ### S5 — What must the system never be able to do?
 
@@ -400,6 +419,22 @@ wall-clock and two attempts) and model routes (the read-only types on the cheape
 route; a program has none). Recovery, routing and interaction are the lab's own
 policies, unchanged.
 
+### The sensors: [`packages/regulator/policies/intelligence.json`](../../packages/regulator/policies/intelligence.json), with [`workload/portfolio/sensors/`](../../packages/regulator/workload/portfolio/sensors/)
+
+Three sensors, the first the definition has: `drift-band`, a program every hour over
+`positions/`, `prices/`, `targets/` and `benchmark.json`, firing when a targeted weight
+at the latest export is further from the latest target than the band, affecting
+`plan-rebalance`; `harvest-threshold`, a program every hour over the lots and the latest
+prices, firing when an open lot's unrealised loss is worth more than `--minimum 150`
+dollars at the rate `tax.json` applies to it, affecting `harvest-losses`; and
+`new-export`, a glob `{positions,prices}/*`, firing when a file the watcher has not seen
+appears, affecting `ingest-positions`. The two over the domain are raised at `blocking`,
+so the obligation holds the type until a person dispositions it; `new-export` is
+`advisory`, since the export is what `ingest-positions` consumes and a hold would hold
+the one unit that answers it. A signal stays current for thirty days (a week for the
+export); an expired signal still holding something raises one advisory. The
+programs declare no outputs, and the definition check refuses one that does.
+
 ### The contracts: [`packages/regulator/contracts/portfolio/`](../../packages/regulator/contracts/portfolio/)
 
 There are eight, one per unit of the September close. The program's contract fixes
@@ -552,6 +587,24 @@ regulator unit show p3-plan-rebalance          # the attempt: the program's file
 regulator status --definition packages/regulator --instance .
 ```
 
+The sensors run in the watcher's tick, and on the shipped data the drift sensor fires
+before any unit has run:
+
+```sh
+regulator watch --once --workload portfolio    # runs the three sensors, routes what fired, delivers what is owed
+regulator obligations                          # drift-band: VTI is 2.33% over its target … — S3, blocking veto, on unit type plan-rebalance
+regulator unit drive $L/p3-plan-rebalance.json --policy $P    # refused: the obligation holds every unit of the type
+regulator obligation resolve <obligation> --by alice --disposition replan --rationale "plan the rebalance"
+regulator unit drive $L/p3-plan-rebalance.json --policy $P    # past the veto; the program runs
+```
+
+A new export copied under `positions/` and `prices/` fires `new-export` on the next
+tick and opens an advisory obligation naming the files, holding nothing; a sensor that
+still fires raises nothing
+while its earlier signal is current, and `regulator watch` without `--once` keeps
+ticking. `--workload portfolio` is needed only before the first unit has run: after
+that the watcher reads the instance's workload off its units.
+
 Without a model, the same close runs scripted. `node --test packages/regulator/dist/portfolio.test.js`
 drives it with two behaviours for the sessions — the `manager`, which does what the
 contracts ask, and the `careless`, which calls `place_trade` without asking anyone and, in its harvest,
@@ -677,8 +730,17 @@ of the ledger instance; this one reads the same way.
   the outputs; what a program imports or reaches by an absolute path is unseen, and a
   program cannot ask, which is why the rebalance is a program followed by a session
   rather than one unit.
-- There is no S4. The exports arrive by hand. The three sensors the design names are
-  [#123](https://github.com/MetaCoding-io/regulator/issues/123).
+- S4 is three sensors and nothing more ([#123](https://github.com/MetaCoding-io/regulator/issues/123)).
+  They read the tree and raise an obligation; the exports still arrive by hand, and a
+  sensor's threshold is the definition's claim about what matters, not evidence that it
+  does — nothing measures whether a firing was worth a person's attention. The harvest
+  minimum is a number on the sensor's declaration until the sensor reads `harvest.json`'s
+  costs (DEBT row 51). A glob
+  sensor sees names, not content, and the first tick of the watcher seeds its cursor
+  with what exists, so an export that landed before the watcher first ran is a person's
+  to raise. The [sensor intake](../../packages/regulator/registry/regulators/sensor-intake.json)
+  record lists the rest. The design's other three kinds of intelligence — assumptions
+  with a shelf life, a view, a prediction that resolves — are not here.
 - The harvest's arithmetic is the household's model, not a tax authority's. The benefit
   is the loss at the lot's rate, with no account of the deferral (a lower basis is taxed
   later) or of the capital-loss limits; the opportunity cost is one option price on one
