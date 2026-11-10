@@ -1,7 +1,7 @@
 {
   "name": "intelligence",
-  "version": 1,
-  "description": "The sensors regulator watch runs (#123): S4 without a model. Each is a declared part of the definition — a program over the instance on a schedule, or a glob over its files — that raises the same intelligence-signal a research unit raises through report_intelligence, under its own provenance, naming the unit types it bears on; the router opens the obligation, the veto holds the type at dispatch, and nothing replans. The three here are the portfolio workload's. Every threshold and interval below is the definition's claim about what matters, not evidence that it does: the drift band is benchmark.json's, the harvest minimum is this file's, the expiries are a guess at how long a reading stays current.",
+  "version": 2,
+  "description": "The sensors regulator watch runs (#123): S4 without a model. Each is a declared part of the definition — a program over the instance on a schedule, or a glob over its files — that raises the same intelligence-signal a research unit raises through report_intelligence, under its own provenance, naming the unit types it bears on; the router opens the obligation, the veto holds the type at dispatch, and nothing replans. The three here are the portfolio workload's. Every threshold and interval below is the definition's claim about what matters, not evidence that it does: the drift band is benchmark.json's, the harvest threshold is the household's own arithmetic over harvest.json and tax.json, the intervals and the expiries are this file's, a guess at how long a reading stays current.",
   "programTimeoutMs": 60000,
   "sensors": [
     {
@@ -16,13 +16,13 @@
     },
     {
       "name": "harvest-threshold",
-      "description": "An open lot whose unrealised loss at the latest prices, valued at the rate tax.json applies to it (long-term after the cutoff, short-term before), exceeds the minimum the argv declares in dollars. The minimum lives here until the harvest contract's costs file (#124) is the place to read it from. Reads lots/, positions/, prices/ and tax.json and writes nothing.",
+      "description": "An open lot worth harvesting at the latest prices by the household's own arithmetic (#181): the tax benefit of its unrealised loss at the rate tax.json applies to it (long-term after the cutoff, short-term before), less two legs of trading cost and the opportunity cost of holding a replacement through the wash-sale window, both priced from harvest.json, is positive. The threshold is not a number of the definition's: it is harvestEvaluation in lib/portfolio.js, the arithmetic the plan-harvest contract fixes and the suite recomputes, over files the person owns. Reads lots/, positions/, prices/, tax.json and harvest.json through lib/portfolio.js, takes no arguments and writes nothing. The portfolio note's S4 item 1, second case.",
       "provenance": "sensor:harvest-threshold",
       "affects": ["harvest-losses"],
       "severity": "blocking",
       "expiresAfterMs": 2592000000,
       "schedule": { "everyMs": 3600000 },
-      "program": { "argv": ["node", "workload/portfolio/sensors/harvest-threshold.mjs", "--minimum", "150"], "outputs": [] }
+      "program": { "argv": ["node", "workload/portfolio/sensors/harvest-threshold.mjs"], "outputs": [] }
     },
     {
       "name": "new-export",

@@ -5,10 +5,12 @@
  * the way `regulator watch` does.
  */
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
+import { promisify } from "node:util";
 import { ObligationLedger, checkDefinition, checkDispositionAuthority, progressionVeto, readSignals, routeMessages } from "@metacoding.io/regulator-core";
 import { runUnit } from "./controller.js";
 import { loadContract } from "./contract-file.js";
@@ -81,27 +83,28 @@ test("the definition declares the three portfolio sensors (#123): two scheduled 
   const policy = await loadIntelligencePolicy(INTELLIGENCE_POLICY_PATH);
   assert.deepEqual(policy.sensors.map((s) => [s.name, s.provenance, s.affects, s.severity, s.glob ?? s.program?.argv]), [
     ["drift-band", "sensor:drift-band", ["plan-rebalance"], "blocking", ["node", SENSORS.drift]],
-    ["harvest-threshold", "sensor:harvest-threshold", ["harvest-losses"], "blocking", ["node", SENSORS.harvest, "--minimum", "150"]],
+    ["harvest-threshold", "sensor:harvest-threshold", ["harvest-losses"], "blocking", ["node", SENSORS.harvest]],
     ["new-export", "sensor:new-export", ["ingest-positions"], "advisory", "{positions,prices}/*"],
   ]);
   for (const s of policy.sensors) if (s.program) assert.deepEqual(s.program.outputs, [], `${s.name} writes nothing`);
+  assert.equal(policy.version, 2, "version 2 (#181): the harvest sensor's threshold left the declaration for the household's arithmetic");
   const recovery = await loadRecoveryPolicy();
   assert.ok(recovery.rules.length, "the sensors never reach the recovery policy: nothing here is a unit");
 });
 
-test("drift-band: the September rebalance executed, a quiet export inside the band raises nothing; an export where a rally moves VTI 2.16% from its target, past the 2% band, fires once, and a plan-rebalance dispatch is held by the obligation until a person dispositions it; the sensor still firing on the next tick raises nothing more", async (t) => {
+test("drift-band: the September rebalance executed, an export inside the band raises no drift; an export where a rally moves VTI 2.16% from its target, past the 2% band, fires once, and a plan-rebalance dispatch is held by the obligation until a person dispositions it; the sensor still firing on the next tick raises nothing more", async (t) => {
   const repo = await portfolioCopy(t);
   // 7 October: the holdings the September list implies, at the September prices — every weight inside the band.
   await addExport(repo, "2026-10-07", SEPTEMBER_PRICES);
   let { run, routed } = await sensorsTick(repo);
   assert.deepEqual(run.ran, ["drift-band", "harvest-threshold", "new-export"], "every sensor runs on the first tick; the glob seeds its cursor");
-  assert.deepEqual([run.fired, run.failed, routed.opened], [[], [], []], "inside the band, no loss worth 150, and the files that exist are the baseline");
+  assert.deepEqual([run.fired.map((s) => s.provenance), run.failed, routed.opened.map((o) => o.unitType)], [["sensor:harvest-threshold"], [], ["harvest-losses"]], "inside the band, and the files that exist are the baseline; the harvest sensor fires on its own arithmetic (BND's loss at 73.90 nets 70.69), which holds harvest-losses and nothing of the rebalance");
   // 15 October: VTI rallies to 325; VTI lands at 38.16% against a 36% target, 2.16% over; BND at 76 is 1.75% under, inside.
   const files = await addExport(repo, "2026-10-15", { ...SEPTEMBER_PRICES, VTI: "325.00", VXUS: "58.00", BND: "76.00", VNQ: "84.00" });
   ({ run, routed } = await sensorsTick(repo));
   assert.deepEqual(run.failed, []);
-  assert.deepEqual(run.fired.map((s) => s.provenance), ["sensor:drift-band", "sensor:new-export"], "the drift sensor and the glob; the harvest sensor is quiet (BND's loss is worth 57.00 at the long-term rate)");
-  const [drift, fresh] = run.fired;
+  assert.deepEqual(run.fired.map((s) => s.provenance), ["sensor:drift-band", "sensor:harvest-threshold", "sensor:new-export"], "the drift sensor and the glob; the harvest sensor fires again on a claim that names the new prices (BND nets 9.53, VXUS 16.40)");
+  const [drift, , fresh] = run.fired;
   assert.equal(drift!.claim, "VTI is 2.16% over its target at the 2026-10-15 export, past the 2.00% band of targets/2026-08-31.json");
   assert.match(drift!.observation, /^targets\/2026-08-31\.json against positions\/2026-10-15\.csv at prices\/2026-10-15\.csv, band 2\.00%: VTI 38\.16% vs 36\.00% \(2\.16% over\), VXUS 28\.18% vs 29\.00% \(0\.82% under\), BND 33\.25% vs 35\.00% \(1\.75% under\)$/);
   assert.deepEqual([drift!.source, drift!.severity, drift!.affectedUnits, drift!.unit], ["S4", "blocking", ["type:plan-rebalance"], undefined]);
@@ -110,7 +113,7 @@ test("drift-band: the September rebalance executed, a quiet export inside the ba
   assert.equal(drift!.expiresAt, new Date(Date.parse(drift!.observedAt!) + 2_592_000_000).toISOString(), "current for the declared thirty days");
   assert.equal(fresh!.claim, `3 new file(s) matched {positions,prices}/*: ${files.join(", ")}`);
   assert.deepEqual(fresh!.affectedUnits, ["type:ingest-positions"]);
-  assert.deepEqual(routed.opened.map((o) => [o.unitType, o.unit, o.blocks, o.consumer, o.severity]), [["plan-rebalance", undefined, true, "S3", "blocking"], ["ingest-positions", undefined, false, "S3", "advisory"]], "the same router and the same obligation a research unit's signal gets, holding the type");
+  assert.deepEqual(routed.opened.map((o) => [o.unitType, o.unit, o.blocks, o.consumer, o.severity]), [["plan-rebalance", undefined, true, "S3", "blocking"], ["harvest-losses", undefined, true, "S3", "blocking"], ["ingest-positions", undefined, false, "S3", "advisory"]], "the same router and the same obligation a research unit's signal gets, holding the type");
 
   // The hold: plan-rebalance is dispatched after the sensor fired, and the veto matches the type.
   const ledger = new ObligationLedger(repo, clock);
@@ -124,8 +127,8 @@ test("drift-band: the September rebalance executed, a quiet export inside the ba
 
   // Still past the band on the next tick: nothing more is raised while the obligation is open.
   ({ run, routed } = await sensorsTick(repo));
-  assert.deepEqual([run.ran, run.fired, run.deduplicated, routed.opened], [["drift-band", "harvest-threshold", "new-export"], [], ["drift-band"], []], "an hour on, the programs ran again; the drift sensor fired on the same claim and raised nothing");
-  assert.equal((await readSignals(repo)).filter((s) => s.kind === "intelligence-signal").length, 2, "two signals on the log, not three");
+  assert.deepEqual([run.ran, run.fired, run.deduplicated, routed.opened], [["drift-band", "harvest-threshold", "new-export"], [], ["drift-band", "harvest-threshold"], []], "an hour on, the programs ran again; each fired on the same claim and raised nothing");
+  assert.equal((await readSignals(repo)).filter((s) => s.kind === "intelligence-signal").length, 4, "four signals on the log (the harvest's first, then the three of the October export), not six");
 
   // A person dispositions it, and the dispatch goes ahead: the next attempt is the program's, no longer the veto's.
   const interaction = await loadInteractionPolicy();
@@ -138,27 +141,63 @@ test("drift-band: the September rebalance executed, a quiet export inside the ba
   for (const f of ["positions/2026-09-30.csv", "prices/2026-09-30.csv", "lots/lots.csv"]) assert.equal(await readFile(path.join(repo, f), "utf8"), await readFile(path.join(FIXTURE, f), "utf8"));
 });
 
-test("harvest-threshold: an export where BND falls to 72.50 puts the 2025 BND lot's loss at 1045.00, worth 156.75 at the long-term rate, over the 150.00 minimum the sensor's argv declares; the sensor fires, holds harvest-losses until a person dispositions it, and the drift sensor stays quiet since every weight is inside the band", async (t) => {
+/** The harvest sensor's program run in a copy as the watcher runs it, for the report a quiet run leaves on no log. */
+async function harvestReport(repo: string): Promise<{ fires: boolean; observation: string }> {
+  const { stdout } = await promisify(execFile)(process.execPath, [path.join(LAB_ROOT, SENSORS.harvest)], { cwd: repo });
+  return JSON.parse(stdout.trim().split("\n").at(-1)!);
+}
+
+test("harvest-threshold (#181): the sensor fires on the harvest arithmetic and on no number of its own. An export where BND sits at 76.50 leaves the 2025 BND lot's loss of 285.00 worth 42.75 at the long-term rate, under the 14.54 of trading and the 33.25 of opportunity cost harvest.json prices: quiet, and the observation says why. An export where BND falls to 72.50 puts the loss at 1045.00, worth 156.75, against 13.78 and 31.51: the sensor fires with the three figures and the net in its claim, holds harvest-losses until a person dispositions it, and the drift sensor stays quiet since every weight is inside the band", async (t) => {
   const repo = await portfolioCopy(t);
-  await addExport(repo, "2026-10-07", SEPTEMBER_PRICES);
-  let { run } = await sensorsTick(repo);
-  assert.deepEqual(run.fired, [], "at the September prices BND's loss is worth 116.85 and VXUS's 24.75: under the minimum");
+  // The costs, recomputed here from the person's files and not through the library: two legs at the trading rate, and
+  // an at-the-money option on the tracking difference over the wash-sale window, each on the lot's value in cents.
+  const inputs = JSON.parse(await readFile(path.join(FIXTURE, "harvest.json"), "utf8")) as { tradingCostRate: number; trackingVolatility: number };
+  const taxRules = JSON.parse(await readFile(path.join(FIXTURE, "tax.json"), "utf8")) as { longTermRate: number; washSaleWindowDays: number };
+  assert.equal(taxRules.washSaleWindowDays, 30);
+  const money = (cents: number) => `${cents < 0 ? "-" : ""}${(Math.abs(cents) / 100).toFixed(2)}`;
+  const costs = (priceCents: number, shares: number, costCents: number) => {
+    const value = priceCents * shares;
+    const benefit = Math.round((costCents - priceCents) * shares * taxRules.longTermRate);
+    const trading = 2 * Math.round(value * inputs.tradingCostRate);
+    const opportunity = Math.round(value * inputs.trackingVolatility * Math.sqrt(taxRules.washSaleWindowDays / 365) / Math.sqrt(2 * Math.PI));
+    return { benefit: money(benefit), trading: money(trading), opportunity: money(opportunity), net: money(benefit - trading - opportunity) };
+  };
+  const vxus = costs(5890, 150, 6000);
+  assert.deepEqual(vxus, { benefit: "24.75", trading: "8.84", opportunity: "20.21", net: "-4.30" });
+  const inputsRead = "by harvest.json (trading cost 0.0005 a leg, tracking volatility 0.02) over tax.json's 30-day window";
+  const vxusLine = `2025-03-14-VXUS loss 165.00, benefit ${vxus.benefit} long-term less trading cost ${vxus.trading} and opportunity cost ${vxus.opportunity} = net ${vxus.net}`;
+
+  // The quiet case: 190 BND bought at 78.00, now 76.50. A loss, with a benefit below its two costs.
+  const quiet = costs(7650, 190, 7800);
+  assert.deepEqual(quiet, { benefit: "42.75", trading: "14.54", opportunity: "33.25", net: "-5.04" });
+  await addExport(repo, "2026-10-07", { ...SEPTEMBER_PRICES, BND: "76.50" });
+  let { run, routed } = await sensorsTick(repo);
+  assert.deepEqual([run.ran, run.fired, run.failed, routed.opened], [["drift-band", "harvest-threshold", "new-export"], [], [], []], "the sensor ran and raised nothing: two lots at a loss, neither worth its costs");
+  assert.deepEqual(await harvestReport(repo), {
+    fires: false,
+    observation: `lots/lots.csv (current to 2026-08-31) at prices/2026-10-07.csv, ${inputsRead}: 2025-03-14-BND loss 285.00, benefit ${quiet.benefit} long-term less trading cost ${quiet.trading} and opportunity cost ${quiet.opportunity} = net ${quiet.net}; ${vxusLine}; no loss's benefit exceeds its costs`,
+  });
+  assert.deepEqual(await progressionVeto(new ObligationLedger(repo, clock), "p5-harvest-losses", "harvest-losses"), [], "nothing holds the harvest");
+  await assert.rejects(promisify(execFile)(process.execPath, [path.join(LAB_ROOT, SENSORS.harvest), "--minimum", "150"], { cwd: repo }), /usage: harvest-threshold\.mjs \(no arguments\).*got --minimum 150/s, "the argument is gone, and a leftover one is an error, not a number quietly ignored");
+
+  // The firing case: BND at 72.50.
+  const worked = costs(7250, 190, 7800);
+  assert.deepEqual(worked, { benefit: "156.75", trading: "13.78", opportunity: "31.51", net: "111.46" });
   await addExport(repo, "2026-10-15", { ...SEPTEMBER_PRICES, BND: "72.50" });
-  let routed;
   ({ run, routed } = await sensorsTick(repo));
   assert.deepEqual(run.failed, []);
   assert.deepEqual(run.fired.map((s) => s.provenance), ["sensor:harvest-threshold", "sensor:new-export"]);
   const [harvest] = run.fired;
-  assert.equal(harvest!.claim, "2025-03-14-BND carries an unrealised loss worth 156.75 at the long-term rate at the 2026-10-15 prices, over the 150.00 minimum");
-  assert.equal(harvest!.observation, "lots/lots.csv (current to 2026-08-31) at prices/2026-10-15.csv, minimum 150.00: 2025-03-14-BND loss 1045.00 × 0.15 long-term = 156.75, 2025-03-14-VXUS loss 165.00 × 0.15 long-term = 24.75");
+  assert.equal(harvest!.claim, `2025-03-14-BND is worth harvesting at the 2026-10-15 prices: benefit ${worked.benefit} at the long-term rate against trading cost ${worked.trading} and opportunity cost ${worked.opportunity}, net ${worked.net}`);
+  assert.equal(harvest!.observation, `lots/lots.csv (current to 2026-08-31) at prices/2026-10-15.csv, ${inputsRead}: 2025-03-14-BND loss 1045.00, benefit ${worked.benefit} long-term less trading cost ${worked.trading} and opportunity cost ${worked.opportunity} = net ${worked.net}; ${vxusLine}`);
   assert.deepEqual(harvest!.affectedUnits, ["type:harvest-losses"]);
-  assert.deepEqual(harvest!.evidence.map((e) => e.ref), [SENSORS.harvest, "lots/lots.csv", "prices/2026-10-15.csv", "tax.json"]);
+  assert.deepEqual(harvest!.evidence.map((e) => e.ref), [SENSORS.harvest, "lots/lots.csv", "prices/2026-10-15.csv", "tax.json", "harvest.json"]);
   const ledger = new ObligationLedger(repo, clock);
   const hold = routed.opened.find((o) => o.unitType === "harvest-losses")!;
   let outcome = await dispatch(repo, "p5-harvest-losses");
   assert.equal(outcome.status, "refused");
   assert.match(outcome.status === "refused" ? outcome.problems.map((p) => p.message).join("\n") : "", /is open on unit type "harvest-losses"/);
-  assert.deepEqual(await progressionVeto(ledger, "p3-plan-rebalance", "plan-rebalance"), [], "the drift sensor said nothing: VTI 36.43%, VXUS 29.94%, BND 33.19%");
+  assert.deepEqual(await progressionVeto(ledger, "p3-plan-rebalance", "plan-rebalance"), [], "the drift sensor said nothing: every weight is inside the band");
   await ledger.resolve(hold.id, { by: "alice", disposition: "replan", rationale: "harvest it" });
   outcome = await dispatch(repo, "p5-harvest-losses");
   assert.notEqual(outcome.status, "refused", JSON.stringify(outcome));
