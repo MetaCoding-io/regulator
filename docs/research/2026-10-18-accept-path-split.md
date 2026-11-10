@@ -298,6 +298,17 @@ Slice 1 is one issue in 0.2 and pays nothing in `DEBT.md`; it opens the four row
   for one unit. It is per unit and ephemeral, so it is not in the proposable set; a
   reflector that wants a contract shape changed proposes against the workload, which is
   path 3. Record this so nobody files it as a gap.
+- **Added 2026-11-10.** Should a declared *acceptance policy* disposition some proposals
+  with no person on them? The design is the [Evolving Agent Teams note §8](2026-11-10-evolving-agent-teams.md#8-the-middle-ground-an-acceptance-policy-added-2026-11-10):
+  a versioned policy in the recovery policy's shape, applied at the point where
+  `advice accept` or a merged change would wait, resolving the obligation as
+  `accepted-by-policy` with the version; floors in `protocol` (never the policy itself
+  or identity; only monotone changes, a narrowed grant, an added check, an added fixed
+  decision, added advice; conditions over host records only); conditions the policy may
+  set (the probe past the disconfirming value under the baseline's fingerprint, the live
+  horizon with revert on disconfirmation, a rate per class, reversibility as a file
+  change). It is a disposition rule over the three paths, not a fourth path, and the
+  probe arm (slice 3) is its prerequisite. Not decided.
 - Whether `regulator/advice/` should be per unit type as well as per profile when a
   workload has two unit types on one profile with different needs. Not today: the
   shipped workloads have no such pair.

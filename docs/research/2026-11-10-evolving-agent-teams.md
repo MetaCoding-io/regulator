@@ -310,3 +310,134 @@ and the three arms of §6 are its first suite. Item 6 waits for item 5. §6's fi
 bullet goes into [#105](https://github.com/MetaCoding-io/regulator/issues/105) as a
 proposition with its protocol, now, as research. The threads table in
 [`ROADMAP.md`](../../ROADMAP.md) carries this order.
+
+## 8. The middle ground: an acceptance policy (added 2026-11-10)
+
+§5 refuses the supervisor's move, a model changing what another model may do, mid-run,
+on its own authority, and §6 names the price as latency: every change waits for a
+person. A reader asked whether there is a middle. Could S5 hold a policy that accepts
+some changes without a person, a policy S5 can change at any time, or one that accepts a
+change when stated conditions about it are met? Yes to both, with one reading of "S5"
+and one rule about the conditions, and most of the parts exist.
+
+### 8.1 The shape: a disposition rule, not a fourth path
+
+The recovery policy is the model. Nobody is asked what to do with the third check
+failure on a unit: a person wrote `packages/regulator/policies/recovery.json` once, the
+router applies it, and every decision cites the policy version that produced it
+(`RecoveryDecisionSchema.policy`, `packages/protocol/src/recovery.ts`). An *acceptance
+policy* is the same shape over proposals: a declared, versioned file that says, per class
+of change, what evidence is enough for the change to take effect with no person on it,
+and what happens at its horizon. The loop applies it at the point where `advice accept`
+or a merged change would otherwise wait; the obligation the proposal became is resolved
+with a new disposition, `accepted-by-policy`, carrying the policy name and version
+(`DispositionSchema`, `packages/protocol/src/obligations.ts`, beside `accepted`); and
+the acceptance is a line of the regulatory log like any other. It is not a fourth accept
+path. The three paths of `DEFINITION_WRITERS` stay, and the policy is a rule over who
+dispositions them, the way the routing policy's `floors` sit over a reported severity
+(`packages/regulator/policies/routing.json`).
+
+"A policy S5 can change at any time" holds with S5 read as this project reads it: not an
+agent. A person changes the acceptance policy through the identity path, and the loop
+cannot. A model may propose a change to it, as it may propose a change to anything
+(INV-002), and may never accept one. That is the floor that makes the rest safe, because
+without it the first change a model would auto-accept is a wider auto-accept rule.
+
+### 8.2 The floors, in `protocol`
+
+Some of the policy is not the policy's to set. These are constants, held like
+`DEFINITION_WRITERS`, and the definition check refuses a policy that contradicts them:
+
+- **The acceptance policy itself, and identity.** Never accepted by policy. Identity is
+  already the closed file list of `identity accept`; the acceptance policy joins it.
+- **Direction.** A change is classified by what it can do to the system's strictness,
+  and only a *monotone* change is eligible: narrowing a grant (a writable prefix
+  removed, a tool removed from a profile), adding a check to a unit type, adding a
+  fixed decision to a contract, adding advice. Widening a grant, removing a check,
+  loosening a budget ceiling, and any change the classifier cannot place, wait for a
+  person whatever the policy says. The accept-path split sorted files by what they can
+  do; this sorts changes by which way they move.
+- **Evidence is the host's.** Every condition the policy may state is over records the
+  host wrote: a probe report's fingerprint and its grader values, the regulatory log,
+  the execution store. A condition over the proposer's description of the change, its
+  reported confidence, or its rationale is refused by the check. Same rule as the
+  closeout: a report satisfies nothing.
+
+### 8.3 What the policy may set
+
+Within the floors, per class and direction:
+
+1. **Probe evidence.** The reflector's design already runs a proposed edit as an eval
+   arm before a decision (accept-path split §8, slice 3). The policy names what the
+   probe must show: the predicted metric past the prediction's disconfirming value
+   (`ProbeHorizonSchema`, `packages/protocol/src/prediction.ts`), the interval not
+   crossing the baseline, under the suite at the baseline report's fingerprint so the
+   proposer is not graded on a test it also wrote (Harness² note §7's rule). An advice
+   edit with no probe is not eligible; a narrowed grant or an added check may be, since
+   neither can make a unit do more.
+2. **A horizon, and revert.** A `harness-edit` carries a prediction with a live horizon
+   (`LiveHorizonSchema`): the next `N` units, a metric, a value that counts against.
+   An acceptance by policy is *provisional* until that horizon resolves. Today a
+   disconfirmed live horizon opens an obligation to S5 (#138). The policy adds the
+   answer for an acceptance it made itself: revert the change, the same path in
+   reverse, and open the obligation with the resolution as evidence. This is the thing
+   a person's accept does not do and a policy can: undo itself on evidence.
+3. **A rate.** So many acceptances per class per window, declared beside the rule. The
+   failure this guards is many small accepted edits adding up to a system nobody
+   decided; the drift suite's `memoryRules` and `vocabularyDrift` graders are the
+   instruments that would show it, and the rate is the ceiling until they do.
+4. **Reversibility.** Eligible only when the reverse is a file change under the same
+   path. A declaration whose landing has an effect outside the tree (a declared tool
+   with an irreversible effect, a sensor) waits for a person.
+
+### 8.4 What it is not
+
+Not silence. The interaction policy's rule is that silence is never consent
+(`interaction-contract`), and an acceptance by policy is not a person failing to answer;
+it is a yes given in advance, by class and evidence, by the person who wrote the policy,
+and the record says the policy gave it. The attention it saves is spent elsewhere: the
+person reviews the policy, the rate, and every disconfirmation, which is what the
+attention budget (`packages/regulator/policies/interaction.json`) is for.
+
+### 8.5 Against the paper's trajectory
+
+Sorting §1's case study by §8.2's floors says how much of the supervisor's cadence this
+recovers. V1→V2, the Disciplinarian, is an added check and an added fixed decision:
+eligible. V5→V6, the debugger and the optimiser on isolated branches with forbidden
+paths, is two narrowed grants and two contracts: eligible, and the contracts are S3's
+anyway. V7→V8, the synthesis document and the mandate to read it, is advice and memory:
+eligible with a probe. V9→V10, a fresh profile-first unit on the new architecture, is a
+contract. The one move that waits is the one the paper never made: giving a role wider
+access than its predecessor had. The cadence also comes out closer than §6 suggested.
+The supervisor restructures per team version, after a whole team has run, which is
+hours (§3.2, appendix C's iteration counts); a probe arm is one suite run. Same order.
+
+### 8.6 Hazards, for the card
+
+- **Goodhart.** Once a probe metric accepts edits, the reflector optimises the number.
+  The policy's own instrument is the held-out slice the Harness² note asks for (§9
+  item 1) and the live horizon, which measures the units after acceptance and not the
+  probe.
+- **Collusion.** A probe graded by the model that proposed the edit (the Exo note §4
+  item 4's model-tier arm; Lanham's evaluator-collusion sidebar in the books note). The
+  policy may require the probe's arm to run on a route other than the proposer's.
+- **Accumulation.** Each acceptance is small and monotone and the sum is a different
+  system. The rate, and the drift suite run with the policy on and off.
+- **Capture.** A change that is monotone by the classifier and not in effect (a check
+  added with an empty command; advice that narrows one rule and widens another in
+  prose). The classifier is a parser over diffs and will be wrong at the edges, which
+  is why it is a floor on eligibility and never a sufficient condition.
+
+### 8.7 What it would take
+
+A policy file, `policies/acceptance.json`, under `regulator check`; the floors and the
+direction classes as constants in `protocol` beside `DEFINITION_WRITERS`; the
+`accepted-by-policy` disposition with its version; the classifier over a proposal's
+diff; revert as a horizon outcome in the loop; the acceptance rendered into
+`BOUNDARY.md`'s "Who writes the definition" as the fourth column of each path. The real
+prerequisite is the probe arm, the accept-path split's slice 3, which waits on
+[#46](https://github.com/MetaCoding-io/regulator/issues/46). Nothing here moves the line
+§5 drew: a model proposes, the definition changes by a declared path, and the person is
+on it, once, when they write the rule instead of every time it is applied. Recorded as an
+open question in the [accept-path split note §9](2026-10-18-accept-path-split.md#9-open-questions),
+where the decision belongs; not decided.
