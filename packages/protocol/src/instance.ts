@@ -141,6 +141,7 @@ export const INSTANCE_STORES: readonly InstanceStore[] = [
   { path: ".regulator/trace.ndjson", name: "the trace", kind: "record", description: "the session's gated events as the extension records them" },
   { path: ".regulator/outbox", name: "the outbox", kind: "record", description: "what is owed to a person, one delivery per line, forwarded by the watcher" },
   { path: ".regulator/outbox.cursor", name: "the outbox cursor", kind: "record", description: "how far the watcher has forwarded the outbox" },
+  { path: ".regulator/sensors.json", name: "the sensor cursor", kind: "record", description: "what the watcher's sensors have seen (#123): the files per glob sensor, the last run per scheduled one" },
   { path: ".regulator/events.db", name: "the event store", kind: "record", description: "the SQLite regulatory event store" },
   { path: ".regulator/worktrees/", name: "the worktrees", kind: "workspace", description: "a unit's isolated checkout: domain output, not a record" },
   { path: ".regulator/trials/", name: "the trial merges", kind: "workspace", description: "the pre-merge trial's checkout of the merged tree, verified before a reintegration lands" },

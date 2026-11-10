@@ -32,6 +32,7 @@ list from there.
 | `memory.ndjson` | regulatory | operational memory: facts with provenance and expiry, and their retractions, scoped by unit type |
 | `outbox` | delivery | one line per delivery of an obligation owed to a person. `watch` forwards new lines to a channel command, and `REGULATOR_OUTBOX` moves the file |
 | `outbox.cursor` | delivery | how far `watch` has forwarded, so that a restart forwards nothing twice |
+| `sensors.json` | delivery | what `watch`'s sensors have seen: the files each glob sensor has matched and the last run of each scheduled one, so that a restart fires on nothing twice and runs nothing early |
 | `canaries` | manifest | the credential canaries: the credential-looking values `init` found in a committed `.env`, one per line. They are watched for in every tool result and redacted from spans |
 
 Execution state and regulatory state live in different stores on purpose. The loop

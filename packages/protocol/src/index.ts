@@ -152,8 +152,13 @@ export const IntelligenceSignalSchema = Type.Object({
   confidence: Type.Optional(ConfidenceSchema),
   /** When the environment was observed; recency is what makes intelligence usable. */
   observedAt: Type.Optional(Type.String({ minLength: 1 })),
-  /** Units whose progression the intelligence bears on. */
+  /** Units whose progression the intelligence bears on: unit ids, or `type:<unitType>` (#123) for a unit of the type dispatched after the signal, which the progression veto matches at dispatch. */
   affectedUnits: Type.Optional(Type.Array(Type.String({ minLength: 1 }))),
+  /**
+   * Who raised it, when it was not a unit (#123): `sensor:<name>` for a declared sensor run by the watcher. A research
+   * unit's signal carries `unit` and no provenance; the two together say where every signal came from.
+   */
+  provenance: Type.Optional(Type.String({ minLength: 1 })),
   /**
    * A claim about the future that resolves (#138): the metric it stakes, the baseline, the direction and size, a
    * probability beside `confidence`, and the horizons at which the loop reads the outcome. Routed exactly as a signal
@@ -190,6 +195,30 @@ export const ReportedEvidenceSchema = Type.Object({
   ref: NonEmptyText,
   observation: Type.Optional(NonEmptyText),
 }, { additionalProperties: false });
+
+/**
+ * A sensor's report (#123; the policy is `intelligence-policy.ts`). What a sensor's program says on its last stdout line. `fires: false` raises nothing; `fires: true` raises a signal
+ * with the claim, the observation and the evidence it names, at the declared severity unless it says otherwise, and
+ * with the declared expiry unless it names one. Anything else is a failed run.
+ */
+export const SensorOutputSchema = Type.Union([
+  Type.Object({ fires: Type.Literal(false), observation: Type.Optional(NonEmptyText) }, { additionalProperties: false }),
+  Type.Object({
+    fires: Type.Literal(true),
+    claim: Type.String({ minLength: 1, maxLength: 2000 }),
+    observation: Type.String({ minLength: 1, maxLength: 4000 }),
+    evidence: Type.Array(ReportedEvidenceSchema),
+    severity: Type.Optional(SeveritySchema),
+    confidence: Type.Optional(ConfidenceSchema),
+    /** ISO 8601. */
+    expiresAt: Type.Optional(NonEmptyText),
+  }, { additionalProperties: false }),
+]);
+export type SensorOutput = Static<typeof SensorOutputSchema>;
+
+export function isSensorOutput(value: unknown): value is SensorOutput {
+  return Value.Check(SensorOutputSchema, value);
+}
 
 export const PolicyProposalInputSchema = Type.Object({
   subject: NonEmptyText,
@@ -404,5 +433,9 @@ export {
   type DiagnosisRef, type HarnessEdit, type LiveHorizon, type Prediction, type PredictionBaseline, type PredictionDirection, type PredictionHorizon, type PredictionOutcome, type PredictionResolution,
   type ProbeHorizon, type ReportFingerprint, type TrajectoryMoment,
 } from "./prediction.js";
+export {
+  AFFECTED_UNIT_TYPE_PREFIX, IntelligencePolicySchema, SENSOR_PROVENANCE_PREFIX, SensorScheduleSchema, SensorSchema, affectedUnitType, affectsUnitType, isIntelligencePolicy, isSensorProvenance,
+  type IntelligencePolicy, type Sensor, type SensorSchedule,
+} from "./intelligence-policy.js";
 export { DEFINITION_WRITERS, HARNESS_OWNED_INSTANCE_DIRS, definitionClassOf, definitionWriter, definitionWriterCommands, seedDirFor, type DefinitionWriter, type DefinitionWriterClass } from "./definition-writers.js";
 export { AbsorbedBySchema, CourseModuleSchema, InvariantIdSchema, PATHOLOGY_SECTIONS, PathologiesFileSchema, PathologyRowSchema, PathologySectionSchema, isPathologiesFile, isPathologyRow, type AbsorbedBy, type PathologiesFile, type PathologyRow, type PathologySection } from "./pathologies.js";

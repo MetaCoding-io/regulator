@@ -99,7 +99,9 @@ is written:
 Obligations owed to a person are delivered to `.regulator/outbox`, one line each. To
 get them somewhere a person will see them, `regulator watch --exec <cmd>` forwards each
 new line to a channel command and repeats the delivery after the policy's reminder
-interval; `regulator remind` performs one such tick.
+interval; `regulator remind` performs one such tick. The same tick runs the sensors the
+definition's [intelligence policy](/reference/definition#intelligence-policy) declares,
+if it declares any, and routes what they raise.
 
 ## Evidence
 

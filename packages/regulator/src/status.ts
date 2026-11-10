@@ -17,9 +17,9 @@ import {
   type IdentitySet, type InteractionState, type MemoryState, type PredictionState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   InstanceManifestSchema,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type IntelligencePolicy, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
 
@@ -32,6 +32,8 @@ export interface DefinitionView {
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
+  /** The intelligence policies (#123): the sensors `regulator watch` runs. */
+  intelligence: IntelligencePolicy[];
   /** Capability profiles, declared as files since lesson 12. */
   profiles: CapabilityProfile[];
   /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
@@ -133,6 +135,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   const recovery: RecoveryPolicy[] = [];
   const routing: RoutingPolicy[] = [];
   const interaction: InteractionPolicy[] = [];
+  const intelligence: IntelligencePolicy[] = [];
   let policyFiles: string[] = [];
   try {
     policyFiles = (await readdir(path.join(dir, "policies"))).filter((f) => f.endsWith(".json")).sort();
@@ -142,12 +145,13 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   for (const file of policyFiles) {
     try {
       const value: unknown = JSON.parse(await readFile(path.join(dir, "policies", file), "utf8"));
-      // Four policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
+      // Five policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
       if (isPolicyDefinition(value)) policies.push(value);
       else if (isRecoveryPolicy(value)) recovery.push(value);
       else if (isRoutingPolicy(value)) routing.push(value);
       else if (isInteractionPolicy(value)) interaction.push(value);
-      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
+      else if (isIntelligencePolicy(value)) intelligence.push(value);
+      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing, interaction or intelligence policy)`);
     } catch (error) {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
@@ -214,6 +218,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     recovery,
     routing,
     interaction,
+    intelligence,
     profiles,
     identity,
     evals,
@@ -304,6 +309,10 @@ export function renderStatusText(view: StatusView): string {
     for (const policy of d.interaction) {
       lines.push(`  interaction ${policy.name} v${policy.version}: waits ${Object.entries(policy.timeoutsMs).map(([k, ms]) => `${k} ${Math.round(ms / 1000)}s`).join(", ")}; ${policy.attention.blockingPerAttempt} blocking interrupt(s) per attempt; remind after ${Math.round(policy.reminderAfterMs / 60_000)} min`);
       for (const p of policy.people) lines.push(`    ${p.name}: up to ${p.resolveUpTo}${p.acceptRisk ? ", may accept risk" : ""}${p.actAsS5 ? ", may act as S5" : ""}`);
+    }
+    for (const policy of d.intelligence) {
+      lines.push(`  intelligence ${policy.name} v${policy.version}: ${policy.sensors.length} sensor(s); programs under ${Math.round(policy.programTimeoutMs / 1000)}s`);
+      for (const s of policy.sensors) lines.push(`    ${s.name} (${s.provenance}): ${s.glob !== undefined ? `glob ${s.glob}` : `every ${Math.round((s.schedule?.everyMs ?? 0) / 1000)}s, ${s.program?.argv.join(" ")}`}; affects ${s.affects.join(", ")} at ${s.severity}; current ${Math.round(s.expiresAfterMs / 3_600_000)}h`);
     }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {

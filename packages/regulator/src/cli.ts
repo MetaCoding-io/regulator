@@ -13,7 +13,9 @@
  *   regulator check [--today <date>]   validate the registry and the rest of the definition; exit 1 on a problem or an overdue review date
  *   regulator docs [--write | --check]   render REGULATORS.md, BOUNDARY.md and VIABILITY.md from the registry records, and the
  *                                        pathology catalog's tables from registry/pathologies.json
- *   regulator watch [--once] [--interval <ms>] [--exec <cmd> [args…]]   the outbox watcher: deliver, remind, forward each new line to a channel command
+ *   regulator watch [--once] [--interval <ms>] [--workload <name>] [--intelligence <file>] [--exec <cmd> [args…]]   the outbox watcher: run the declared sensors
+ *                                                         (policies/intelligence.json; those of the instance's workload, or --workload's) on their schedule or glob and route what fires;
+ *                                                         raise an advisory when a held signal expires; deliver, remind, forward each new outbox line to the channel command after --exec
  *   regulator fixture <dest> [--oscillation | --injection | --finance | --portfolio]   copy a fixture into its own git repo (identity and advice seeded, canaries recorded)
  *
  * Units
@@ -85,6 +87,7 @@ import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
+import { INTELLIGENCE_POLICY_PATH, loadIntelligencePolicy, loadIntelligencePolicyIfPresent } from "./intelligence-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite, unavailablePrimaries } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
@@ -98,7 +101,8 @@ import { currentBranch, headRevision, isClean } from "./worktree.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { RECOVERY_POLICY_PATH, loadRecoveryPolicy } from "./recovery-policy.js";
 import { ROUTING_POLICY_PATH, loadRoutingPolicy } from "./routing-policy.js";
-import { loadWorkloadFor, unitTypeOf } from "./workload.js";
+import { loadWorkload, loadWorkloadFor, unitTypeOf } from "./workload.js";
+import { applicableSensors } from "./sensors.js";
 
 const labRoot = fileURLToPath(new URL("../", import.meta.url));
 const [command, sub, ...rest] = process.argv.slice(2);
@@ -107,7 +111,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--workload <name>] [--intelligence <file>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -211,13 +215,36 @@ try {
       else console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch by ${by}; the manifest records the upgrade` : `  nothing to commit: the tree already carried everything; the manifest records the upgrade by ${by}`);
     }
   } else if (command === "watch") {
-    const execAt = rest.indexOf("--exec");
-    const execCmd = execAt >= 0 ? rest.slice(execAt + 1) : sub === "--exec" ? rest : undefined;
-    const once = rest.includes("--once") || sub === "--once";
-    const intervalMs = flag("interval") ? Number(flag("interval")) : undefined;
-    const ticks = await watchOutbox(process.cwd(), {
-      policy: await interactionP(), once, ...(intervalMs === undefined ? {} : { intervalMs }), ...(execCmd?.length ? { exec: execCmd.filter((a) => a !== "--once") } : {}),
-      onTick: (t) => console.log(`${t.at}  delivered ${t.delivered}, reminded ${t.reminded}, forwarded ${t.forwarded}${t.failed ? `, FAILED ${t.failed} (cursor not advanced)` : ""}`),
+    // Everything after --exec is the channel command's; the watcher's own flags come before it.
+    const all = [sub, ...rest].filter((a): a is string => a !== undefined);
+    const execAt = all.indexOf("--exec");
+    const own = execAt >= 0 ? all.slice(0, execAt) : all;
+    const execCmd = execAt >= 0 ? all.slice(execAt + 1) : undefined;
+    const wflag = (name: string): string | undefined => { const i = own.indexOf(`--${name}`); return i >= 0 ? own[i + 1] : undefined; };
+    const once = own.includes("--once");
+    const intervalMs = wflag("interval") ? Number(wflag("interval")) : undefined;
+    // The sensors (#123): the definition's intelligence policy, when it declares one, narrowed to the sensors of the workloads this
+    // instance runs — named by --workload, else the workloads of its units — since a sensor over one workload's domain has nothing to
+    // read in another's instance. Their programs resolve under the instance manifest's definition root, else the lab's.
+    const watching = process.cwd();
+    const intelligenceFile = wflag("intelligence") ? path.resolve(wflag("intelligence")!) : INTELLIGENCE_POLICY_PATH;
+    const declaredIntelligence = wflag("intelligence") ? await loadIntelligencePolicy(intelligenceFile) : await loadIntelligencePolicyIfPresent(intelligenceFile);
+    const definitionRoot = (await readManifest(watching).catch(() => undefined))?.definition.root ?? labRoot;
+    let intelligence: typeof declaredIntelligence;
+    if (declaredIntelligence) {
+      const workloadNames = wflag("workload") ? new Set([wflag("workload")!]) : new Set((await new ExecutionStore(watching).listUnits()).map((u) => u.workload.name));
+      const { readdir } = await import("node:fs/promises");
+      const workloads = await Promise.all((await readdir(path.join(definitionRoot, "workload")).catch(() => [] as string[])).filter((f) => f.endsWith(".json")).sort().map((f) => loadWorkload(path.join(definitionRoot, "workload", f))));
+      const applicable = applicableSensors(declaredIntelligence, workloads, workloadNames);
+      intelligence = applicable.policy.sensors.length ? applicable.policy : undefined;
+      console.log(intelligence
+        ? `sensors: ${intelligence.sensors.map((s) => `${s.name} (${s.glob !== undefined ? `glob ${s.glob}` : `every ${Math.round((s.schedule?.everyMs ?? 0) / 1000)}s`}; affects ${s.affects.join(", ")})`).join(", ")}${applicable.skipped.length ? `; not this instance's workload: ${applicable.skipped.map((s) => s.sensor).join(", ")}` : ""}`
+        : `sensors: none apply — ${declaredIntelligence.sensors.length} declared (${applicable.skipped.map((s) => `${s.sensor} for ${s.workloads.join("/") || "no workload"}`).join(", ")}), and this instance ${workloadNames.size ? `runs ${[...workloadNames].join(", ")}` : "has run no unit yet; pass --workload <name> to say which workload it is"}`);
+    }
+    const ticks = await watchOutbox(watching, {
+      policy: await interactionP(), once, ...(intervalMs === undefined ? {} : { intervalMs }), ...(execCmd?.length ? { exec: execCmd } : {}),
+      ...(intelligence ? { sensors: { policy: intelligence, definitionRoot, routing: await routingP(), exec: realExec } } : {}),
+      onTick: (t) => console.log(`${t.at}  delivered ${t.delivered}, reminded ${t.reminded}, forwarded ${t.forwarded}${t.failed ? `, FAILED ${t.failed} (cursor not advanced)` : ""}${t.sensors ? `; sensors: ${t.sensors.ran.length} ran, ${t.sensors.fired.length} fired${t.sensors.deduplicated.length ? ` (${t.sensors.deduplicated.length} still firing, already raised)` : ""}, ${t.sensors.failed.length} failed, ${t.sensors.expired.length} expired${t.sensors.fired.map((s) => `\n  raised ${s.id.slice(0, 8)} ${s.provenance}: ${s.claim} (${s.severity}; affects ${s.affectedUnits?.join(", ")})`).join("")}${t.sensors.failed.map((f) => `\n  FAILED ${f.sensor}: ${f.detail}`).join("")}${t.sensors.expired.map((o) => `\n  expired ${o.id.slice(0, 8)}: ${o.subject}`).join("")}` : ""}`),
     });
     if (once && ticks.some((t) => t.failed)) process.exit(1);
   } else if (command === "identity" && sub === "promote" && rest[0]) {
