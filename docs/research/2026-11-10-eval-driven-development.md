@@ -95,9 +95,11 @@ regulator having been tested at all. Nothing in the report or the lifecycle view
 the difference between "the regulator was off and nothing got worse" and "there was
 nothing for it to catch".
 
-[#130](https://github.com/MetaCoding-io/regulator/issues/130) supplies the pull (the
-`confident` behaviour and the poisoned-memory fixture). It does not supply the rule that
-says when a report counts.
+[#130](https://github.com/MetaCoding-io/regulator/issues/130) supplies the designed pull
+(the `confident` behaviour and the poisoned-memory fixture, both scripted, in review as
+[#184](https://github.com/MetaCoding-io/regulator/pull/184)). The live report over them
+is owed by the [live-run note](2026-09-29-live-drift-run.md#5-what-the-next-report-owes)
+and has no issue of its own. Neither supplies the rule that says when a report counts.
 
 ### 3.3 Tasks are designed, never taken from a run
 
@@ -126,8 +128,8 @@ arm. It applies equally to a person changing a gate by hand, and nothing says so
 ## 4. Proposals
 
 In the order to take them, which is cheapest first and not the order of value. §4.3 is
-the one that changes what the project can learn; §4.1 and §4.2 make the next report
-(#130) worth more and should land before it runs. Each is stated at a
+the one that changes what the project can learn; §4.1 and §4.2 make the next live
+report worth more and should land before it runs. Each is stated at a
 [mechanism level](../ARCHITECTURE.md#mechanism-hierarchy) and against an existing seam.
 
 ### 4.1 A per-task table in the report
@@ -168,7 +170,8 @@ To settle before an issue:
   live one was. The proposal is a label and an exclusion from retirement evidence, not a
   refusal by `regulator check`.
 
-This belongs with #130 and is a candidate addition to its acceptance criteria.
+This is not added to #130: that issue is the two scripted foils and closes with #184.
+It is owed, with §4.1, before the next live run, and the two would be one issue in 0.2.
 
 ### 4.3 From a record to a task
 
@@ -231,7 +234,7 @@ Two consequences now:
   The pass-or-fail point is worth carrying into #49 when it is picked up.
 - **Single-fault foils.** The drifter trips several checks at once, so every ablation
   arm closes nothing and no regulator gets a row of its own. A foil per regulator would
-  fix that. It is a candidate for #130's scope and is not tracked separately.
+  fix that. It would be a follow-up to #130's two foils and is not tracked separately.
 - **Tiered runs** (fast checks on every merge, slow evals before a release). The
   committed reports are validated under `pnpm check` (`evals.test.ts`); whether the
   scripted reports should also be regenerated and compared in CI was not looked into.
@@ -244,5 +247,6 @@ Two consequences now:
 ## 6. Where this lands
 
 A threads row in `ROADMAP.md` with §4.1 as the next step. No `DEBT.md` row: no card's
-limitation changes until one of these is built. §4.1 and §4.2 fit beside #130 in 0.2;
+limitation changes until one of these is built. §4.1 and §4.2 fit in 0.2, before the next live
+report;
 §4.3 and §4.4 are unscheduled.
