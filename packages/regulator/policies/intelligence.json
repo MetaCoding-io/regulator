@@ -26,10 +26,10 @@
     },
     {
       "name": "new-export",
-      "description": "A new file under positions/ or prices/: the custodian's export landed, and the lots and the review are behind it. The event the finance example named as the short extension of regulator watch.",
+      "description": "A new file under positions/ or prices/: the custodian's export landed, and the lots and the review are behind it. The event the finance example named as the short extension of regulator watch. Advisory, not blocking: the export is what ingest-positions consumes, so a hold on the type would hold the one unit that answers the signal; the obligation tells a person the export landed and holds nothing.",
       "provenance": "sensor:new-export",
       "affects": ["ingest-positions"],
-      "severity": "blocking",
+      "severity": "advisory",
       "expiresAfterMs": 604800000,
       "glob": "{positions,prices}/*"
     }

@@ -82,7 +82,7 @@ test("the definition declares the three portfolio sensors (#123): two scheduled 
   assert.deepEqual(policy.sensors.map((s) => [s.name, s.provenance, s.affects, s.severity, s.glob ?? s.program?.argv]), [
     ["drift-band", "sensor:drift-band", ["plan-rebalance"], "blocking", ["node", SENSORS.drift]],
     ["harvest-threshold", "sensor:harvest-threshold", ["harvest-losses"], "blocking", ["node", SENSORS.harvest, "--minimum", "150"]],
-    ["new-export", "sensor:new-export", ["ingest-positions"], "blocking", "{positions,prices}/*"],
+    ["new-export", "sensor:new-export", ["ingest-positions"], "advisory", "{positions,prices}/*"],
   ]);
   for (const s of policy.sensors) if (s.program) assert.deepEqual(s.program.outputs, [], `${s.name} writes nothing`);
   const recovery = await loadRecoveryPolicy();
@@ -110,7 +110,7 @@ test("drift-band: the September rebalance executed, a quiet export inside the ba
   assert.equal(drift!.expiresAt, new Date(Date.parse(drift!.observedAt!) + 2_592_000_000).toISOString(), "current for the declared thirty days");
   assert.equal(fresh!.claim, `3 new file(s) matched {positions,prices}/*: ${files.join(", ")}`);
   assert.deepEqual(fresh!.affectedUnits, ["type:ingest-positions"]);
-  assert.deepEqual(routed.opened.map((o) => [o.unitType, o.unit, o.blocks, o.consumer, o.severity]), [["plan-rebalance", undefined, true, "S3", "blocking"], ["ingest-positions", undefined, true, "S3", "blocking"]], "the same router and the same obligation a research unit's signal gets, holding the type");
+  assert.deepEqual(routed.opened.map((o) => [o.unitType, o.unit, o.blocks, o.consumer, o.severity]), [["plan-rebalance", undefined, true, "S3", "blocking"], ["ingest-positions", undefined, false, "S3", "advisory"]], "the same router and the same obligation a research unit's signal gets, holding the type");
 
   // The hold: plan-rebalance is dispatched after the sensor fired, and the veto matches the type.
   const ledger = new ObligationLedger(repo, clock);
@@ -120,7 +120,7 @@ test("drift-band: the September rebalance executed, a quiet export inside the ba
   assert.equal(outcome.status, "refused");
   assert.match(outcome.status === "refused" ? outcome.problems.map((p) => p.message).join("\n") : "", new RegExp(`^obligation ${hold.id.slice(0, 8)} \\(S3, blocking, intelligence-signal\\) is open on unit type "plan-rebalance" \\(raised before this unit existed; it holds every unit of the type\\): drift-band: VTI is 2\\.16% over its target.*; it must be dispositioned before dispatch`));
   assert.deepEqual(await progressionVeto(ledger, "p2-propose-target", "propose-target"), [], "another type is not held by the drift");
-  assert.deepEqual((await progressionVeto(ledger, "p1-ingest-positions", "ingest-positions")).map((o) => o.unitType), ["ingest-positions"], "the new export holds the ingest until someone says so");
+  assert.deepEqual(await progressionVeto(ledger, "p1-ingest-positions", "ingest-positions"), [], "the new export is advisory: a person is told, and the ingest it is for is not held");
 
   // Still past the band on the next tick: nothing more is raised while the obligation is open.
   ({ run, routed } = await sensorsTick(repo));
@@ -164,7 +164,7 @@ test("harvest-threshold: an export where BND falls to 72.50 puts the 2025 BND lo
   assert.notEqual(outcome.status, "refused", JSON.stringify(outcome));
 });
 
-test("new-export: the glob over positions/ and prices/ fires on the files of an export the cursor has not seen, names them, and holds ingest-positions until a person dispositions it; an export that was there at the first tick is the baseline and never fires", async (t) => {
+test("new-export: the glob over positions/ and prices/ fires on the files of an export the cursor has not seen, names them, and opens an advisory obligation that holds nothing — the export is what ingest-positions consumes; an export that was there at the first tick is the baseline and never fires", async (t) => {
   const repo = await portfolioCopy(t);
   let { run, routed } = await sensorsTick(repo);
   assert.deepEqual(run.fired.filter((s) => s.provenance === "sensor:new-export"), [], "the four shipped exports are the baseline");
@@ -175,14 +175,10 @@ test("new-export: the glob over positions/ and prices/ fires on the files of an 
   assert.equal(fresh.claim, `3 new file(s) matched {positions,prices}/*: ${files.join(", ")}`);
   assert.deepEqual(fresh.evidence.map((e) => [e.class, e.ref]), files.map((f) => ["file", f]));
   assert.equal(fresh.expiresAt, new Date(Date.parse(fresh.observedAt!) + 604_800_000).toISOString(), "current for the declared week");
-  const hold = routed.opened.find((o) => o.unitType === "ingest-positions")!;
-  assert.deepEqual([hold.blocks, hold.consumer], [true, "S3"]);
-  let outcome = await dispatch(repo, "p1-ingest-positions");
-  assert.equal(outcome.status, "refused");
-  assert.match(outcome.status === "refused" ? outcome.problems.map((p) => p.message).join("\n") : "", /is open on unit type "ingest-positions" .*: new-export: 3 new file\(s\) matched/);
+  const note = routed.opened.find((o) => o.unitType === "ingest-positions")!;
+  assert.deepEqual([note.blocks, note.consumer, note.severity], [false, "S3", "advisory"], "an advisory obligation on the type: a person is told the export landed, and nothing is held");
+  const outcome = await dispatch(repo, "p1-ingest-positions");
+  assert.notEqual(outcome.status, "refused", `ingest-positions is what the export is for, so the signal must not hold it: ${JSON.stringify(outcome)}`);
   ({ run } = await sensorsTick(repo));
   assert.deepEqual(run.fired.filter((s) => s.provenance === "sensor:new-export"), [], "seen");
-  await new ObligationLedger(repo, clock).resolve(hold.id, { by: "alice", disposition: "replan", rationale: "ingest October" });
-  outcome = await dispatch(repo, "p1-ingest-positions");
-  assert.notEqual(outcome.status, "refused", JSON.stringify(outcome));
 });

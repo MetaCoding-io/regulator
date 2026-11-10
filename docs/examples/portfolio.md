@@ -370,9 +370,11 @@ at the latest export is further from the latest target than the band, affecting
 prices, firing when an open lot's unrealised loss is worth more than `--minimum 150`
 dollars at the rate `tax.json` applies to it, affecting `harvest-losses`; and
 `new-export`, a glob `{positions,prices}/*`, firing when a file the watcher has not seen
-appears, affecting `ingest-positions`. Each is raised at `blocking`, so the obligation
-holds the type until a person dispositions it, and stays current for thirty days (a week
-for the export); an expired signal still holding something raises one advisory. The
+appears, affecting `ingest-positions`. The two over the domain are raised at `blocking`,
+so the obligation holds the type until a person dispositions it; `new-export` is
+`advisory`, since the export is what `ingest-positions` consumes and a hold would hold
+the one unit that answers it. A signal stays current for thirty days (a week for the
+export); an expired signal still holding something raises one advisory. The
 programs declare no outputs, and the definition check refuses one that does.
 
 ### The contracts: [`packages/regulator/contracts/portfolio/`](../../packages/regulator/contracts/portfolio/)
@@ -513,7 +515,8 @@ regulator unit drive $L/p3-plan-rebalance.json --policy $P    # past the veto; t
 ```
 
 A new export copied under `positions/` and `prices/` fires `new-export` on the next
-tick and holds `ingest-positions` the same way; a sensor that still fires raises nothing
+tick and opens an advisory obligation naming the files, holding nothing; a sensor that
+still fires raises nothing
 while its earlier signal is current, and `regulator watch` without `--once` keeps
 ticking. `--workload portfolio` is needed only before the first unit has run: after
 that the watcher reads the instance's workload off its units.
