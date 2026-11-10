@@ -87,6 +87,7 @@ repository; what it shares with the product is public in `docs/`: the
 [worked example](docs/examples/personal-finance.md) of a household ledger under the
 same control plane, the [second](docs/examples/portfolio.md) of a managed portfolio, and
 the [authoring guide](docs/guide/authoring-a-workload.md) written from them.
+
 ## Status
 
 Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,

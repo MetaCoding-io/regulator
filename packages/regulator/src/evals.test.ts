@@ -57,6 +57,8 @@ test("the harness validates its graders against four scripted learner-style unit
     assert.equal(report.fingerprint.pi, "0.87.0");
     assert.equal(report.fingerprint.registry, (await loadRegistry(path.join(LAB_ROOT, "registry"))).records.length);
     assert.deepEqual(Object.keys(report.arms[0]!.metrics), metricNames(suite.metrics), "pre-registered metrics only");
+    assert.equal(report.fingerprint.modelsObserved, undefined, `${behaviour}: a scripted unit runs no session, so no ledger names a model`);
+    assert.ok(report.runs.every((r) => r.models === undefined), `${behaviour}: no run claims a model`);
   }
 
   // Reference: everything closes, nothing drifts, under both arms. The treatment costs nothing extra because nothing was refused.
@@ -203,4 +205,34 @@ test("regulator check refuses a committed report that still carries the placehol
   const problems = (await checkDefinition(dir)).problems.filter((p) => p.file.startsWith("evals/reports/"));
   assert.deepEqual(problems.map((p) => p.file).sort(), ["evals/reports/named.json", "evals/reports/unread.json"], "--by without --interpretation is still the placeholder; the interpreted report passes");
   assert.match(problems[0]!.message, /placeholder interpretation.*--interpretation <file> --by <who>/);
+});
+
+// The fourth live drift run (2026-11-08) ran every unit on the route's last fallback: only that provider's key was in
+// the shell, the dispatcher took the first available model, and the report's fingerprint still named the declared
+// primary. The ledgers say what ran; the harness records it, and an eval refuses to start on a fallback by default.
+test("a live report says what it ran on: the models come from the attempts' ledgers into the run and the fingerprint, and a route whose primary is unavailable is named before anything is spent", async (t) => {
+  const { ExecutionStore } = await import("@metacoding.io/regulator-core");
+  const { unitTrajectory } = await import("./graders.js");
+  const { unavailablePrimaries } = await import("./evals.js");
+  const { loadContract } = await import("./contract-file.js");
+  const { loadPolicy } = await import("./policy.js");
+  const repo = await mkdtemp(path.join(tmpdir(), "regulator-models-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const contract = await loadContract(path.join(LAB_ROOT, "contracts", "drift", "d1-fix.json"));
+  const store = new ExecutionStore(repo);
+  await store.createUnit(contract);
+  const ledger = (attempt: number, models: string[], tokens: number) => ({ unitId: contract.unitId, attempt, ceiling: { tokens: 400_000, wallClockMs: 1_200_000, turns: 60 }, consumed: { tokens, cost: 0.1, wallClockMs: 1000, turns: 10 }, startedAt: "2026-11-08T06:00:00.000Z", updatedAt: "2026-11-08T06:01:00.000Z", models, compactions: [] });
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: "2026-11-08T06:00:00.000Z", endedAt: "2026-11-08T06:01:00.000Z", outcome: "budget-exhausted" });
+  await store.writeBudget(ledger(1, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], 400_000));
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: "2026-11-08T06:01:00.000Z", endedAt: "2026-11-08T06:02:00.000Z", outcome: "reported" });
+  await store.writeBudget(ledger(2, ["openai/gpt-5"], 50_000));
+  const trajectory = await unitTrajectory(repo, contract.unitId);
+  assert.deepEqual(trajectory.models, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"], "every model the attempts' ledgers name, once, in order of first use");
+  assert.equal(trajectory.metrics.tokens, 450_000);
+
+  const policy = await loadPolicy();
+  const tasks = [contract];
+  assert.deepEqual(unavailablePrimaries(tasks, policy, ["anthropic/claude-sonnet-4-5", "google/gemini-3.8-flash"]), [], "the primary has a key: nothing to refuse");
+  assert.deepEqual(unavailablePrimaries(tasks, policy, ["google/gemini-3.8-flash"]), [{ unitType: "implement", primary: "anthropic/claude-sonnet-4-5", fallbacksAvailable: ["google/gemini-3.8-flash"] }], "only the last fallback has a key: the run would silently be on it");
+  assert.deepEqual(unavailablePrimaries(tasks, policy, []), [{ unitType: "implement", primary: "anthropic/claude-sonnet-4-5", fallbacksAvailable: [] }]);
 });
