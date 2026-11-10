@@ -27,6 +27,12 @@ export const FailureCauseSchema = Type.Union([
   Type.Literal("environment"),
   Type.Literal("conflict"),
   Type.Literal("oscillation"),
+  /**
+   * The behavioral canary fell silent during an attempt that then ended without a report (#133). Classified from the
+   * canary's advisory audit finding, and routed only under a policy that declares a rule for it: the finding is a
+   * proxy, so a policy that says nothing about it routes the silent end as `no-report`, never by its fallback.
+   */
+  Type.Literal("context-degradation"),
   Type.Literal("dispatch-error"),
   Type.Literal("unknown"),
 ]);

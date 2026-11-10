@@ -389,7 +389,7 @@ export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchem
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
   isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
-  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
+  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetConsumed, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {

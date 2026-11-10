@@ -442,6 +442,10 @@
             "note": "reads every reply and records the silence, advisory"
           },
           {
+            "id": "reg.control.recovery-router.v1",
+            "note": "classifies a silent end that carries the finding as `context-degradation`, whose retry is a fresh session on the same ledger, under a recovery policy that declares the rule; the shipped one does not"
+          },
+          {
             "id": "reg.control.budget-guard.v1",
             "note": "the turn and token ceilings end the attempt eventually"
           },
@@ -454,8 +458,8 @@
         "modules": [],
         "notes": []
       },
-      "reproducedBy": "the canary case in `identity.test.ts` (scripted replies; no model)",
-      "notAbsorbed": "what S3 does with the finding: no recovery cause names it (DEBT row 42), and a model that keeps the marker and still drifts is not seen"
+      "reproducedBy": "the canary case in `identity.test.ts` and the context-degradation cases in `dispatcher.test.ts` (scripted replies; no model)",
+      "notAbsorbed": "the shipped recovery policy declares no rule for the cause, so the fresh session is still a person's decision until a live run shows the silence leading a failure (DEBT row 42), and a model that keeps the marker and still drifts is not seen"
     },
     {
       "id": "compaction-discards-constraint",

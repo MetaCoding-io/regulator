@@ -217,12 +217,12 @@ does not do. `since` is the package version that first shipped the record.
 - end the attempt or open a fresh session (S3 decides: the recovery router under its policy)
 - infer anything from a single miss
 
-**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
 - The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
 - It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
-- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- S3 can act on the finding under a declared rule, and no shipped policy declares one. The recovery router classifies an attempt that ended without a report and carries the finding as `context-degradation`, and a recovery policy with a rule for the cause answers with a retry in a fresh session on the degraded attempt's ledger. The cause is last in the router's precedence by rule: a recorded outcome (a budget halt, a refused report, a failed closeout, an error), an oscillation signal and a failure the session observed each win, and the finding is then evidence on the decision and not its cause. The shipped recovery policy names no rule for it, so such an attempt is routed as `no-report`, and under the shipped routing policy the advisory finding is noted as trace and opens no obligation: the fresh session on the same budget is still a person's decision (docs/DEBT.md row 42). The first live report (evals/reports/drift-live-2026-11-08.json) is why: the canary fell silent in 12 of 18 treatment units, each closed on the attempt in which it fell silent, and no attempt was refused, so no silence has yet preceded a failure. Under either policy nothing stops the model mid-attempt.
 - Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
 
 **Ownership.** regulator-maintainers · introduced 2026-10-22 · review by 2026-12-01
@@ -275,7 +275,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.budget-guard.v1` · S3 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.
+**Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it. An attempt the recovery router retries under `context-degradation` opens on the earlier attempt's consumption, which the ledger records as `carried`: one ceiling is spent across both sessions, and each attempt's own consumption is its ledger less what it carried.
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
@@ -1744,17 +1744,17 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.recovery-router.v1` · S3 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
+**Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals, the session's observations and, last, the behavioral canary's finding on the attempt; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
 
 **Absorbs.** `naive-retry` — A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why.
 
 **Mechanism.** `src/controller.ts` at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the autoloop)
 
-**Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
+**Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `audit-finding (context-degradation, the behavioral canary's)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
 
 **Scope.** subjects unit, attempt · resources attempts, lease, worktree
 
-**Cost.** No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them.
+**Cost.** No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them. A retry under `context-degradation` opens that attempt on the failed attempt's ledger (`carried`), so it spends what was left and not a second allowance.
 
 **May.**
 - classify a failure
@@ -1769,10 +1769,10 @@ does not do. `since` is the package version that first shipped the record.
 - answer a clarification (that is the owner's)
 - resolve an obligation on the unit's behalf
 
-**Evidence.** `../core/src/recovery.test.ts`, `src/controller.test.ts`
+**Evidence.** `../core/src/recovery.test.ts`, `src/controller.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
-- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
+- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation. `context-degradation` is last in the precedence, and that is a rule: the behavioral canary's finding classifies only an attempt that ended without a report and that no recorded outcome, oscillation signal or session observation explains, since each of those names something a fresh context does not fix and the canary's marker is a proxy. It is read by the finding's invariant inside the attempt's own start and end (any S3* finding naming the invariant counts), never by its prose and never from an earlier attempt. A cause that rests on an advisory finding is routed only under a rule the policy declares; with none, the unit is routed as `no-report`, never by the fallback, and on every cause the finding is evidence on the decision. The shipped policy declares no rule (docs/DEBT.md row 42).
 - Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names; nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people but not authenticated.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
 - Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab.
