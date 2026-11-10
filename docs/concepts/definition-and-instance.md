@@ -29,7 +29,7 @@ second source of truth beside the definition.
     <g font-size="9.5" opacity="0.85">
       <text x="36" y="264">unit.json — status, attempt count</text>
       <text x="36" y="281">contract.v&lt;N&gt;.json · report.v&lt;N&gt;.a&lt;M&gt;.json — immutable</text>
-      <text x="36" y="298">attempts · observations · decisions — append-only</text>
+      <text x="36" y="298">status · attempts · observations · decisions — append-only</text>
       <text x="36" y="315">budget.a&lt;M&gt;.json — a counter</text>
       <text x="36" y="332">leases/&lt;unit&gt;.json — TTL, owner, resource</text>
       <text x="36" y="370" font-size="10" opacity="0.75">owner: the orchestrator. Regulators never write here.</text>

@@ -49,10 +49,15 @@ export interface UnitTransition {
 
 /**
  * The unit lifecycle, as a closed table: every transition the S3 loop takes, and no other. The execution store
- * refuses a status change that is not a row here, so a unit's status history is a path through this table and a
- * figure drawn from it shows every path a unit can take. A new row is a change to the loop, made in the same change.
+ * writes a unit's status only by naming a trigger of this table (`ExecutionStore.transition`), so a unit's status
+ * history is a path through it and a figure drawn from it shows every path a unit can take. A new row is a change
+ * to the loop, made in the same change.
+ *
+ * The table is a value and a type (#162). `as const` keeps each row's literals, `satisfies` checks every row
+ * against `UnitTransition`, and `TriggerFrom`, `TargetOf` and the store's signature are derived from the rows: a
+ * caller that knows a unit's status at compile time cannot name a trigger the table does not declare from it.
  */
-export const UNIT_TRANSITIONS: readonly UnitTransition[] = [
+export const UNIT_TRANSITIONS = [
   { from: "contracted", to: "dispatched", on: "dispatch", by: "runUnit", automatic: true, description: "the contract passed the gate and the progression veto; the lease is held, the worktree is open, attempt 1 runs" },
   { from: "contracted", to: "blocked", on: "dispatch-refused", by: "runUnit", automatic: true, description: "the lease is held by another owner, or the worktree could not be started; no attempt was spent" },
   { from: "blocked", to: "dispatched", on: "dispatch", by: "runUnit", automatic: false, description: "a further attempt under the same contract version: the router said retry or repair, or a person answered what the unit waited on" },
@@ -65,16 +70,75 @@ export const UNIT_TRANSITIONS: readonly UnitTransition[] = [
   { from: "reported", to: "blocked", on: "reintegration-refused", by: "finishUnit", automatic: true, description: "the trial merge failed its checks or conflicted, the base was dirty or moved, or the checkout was on the wrong branch; nothing landed" },
   { from: "blocked", to: "blocked", on: "routed-waiting", by: "routeUnit", automatic: true, description: "the recovery policy named an action the loop cannot apply (remediate, replan, clarify, pause) or was exhausted (escalate): an obligation is opened for the consumer the routing policy names, and the unit waits on it" },
   { from: "blocked", to: "aborted", on: "abort", by: "routeUnit", automatic: true, description: "the recovery policy said abort: the lease is released and the worktree removed; the history stays" },
-];
+] as const satisfies readonly UnitTransition[];
+
+/** One row of the table, with its literals. */
+export type UnitTransitionRow = (typeof UNIT_TRANSITIONS)[number];
+
+/**
+ * The triggers the table declares from status `S`. For a union of statuses it is the triggers declared from any of
+ * them, which is what a reader wants ("what can happen to a unit that is blocked or contracted?"); a writer wants
+ * `TriggerFromEvery`.
+ */
+export type TriggerFrom<S extends UnitStatus> = Extract<UnitTransitionRow, { from: S }>["on"];
+
+/** The statuses a trigger is declared from. */
+export type SourceOf<T extends UnitTrigger> = Extract<UnitTransitionRow, { on: T }>["from"];
+
+/**
+ * The triggers declared from every status in `S`: what a caller may name when all it knows is that the unit is in
+ * one of them. For a single status it is `TriggerFrom<S>`; for a status the caller has not narrowed (`UnitStatus`)
+ * it is `never`, because no trigger is legal from everywhere.
+ */
+export type TriggerFromEvery<S extends UnitStatus> = { [T in UnitTrigger]: [S] extends [SourceOf<T>] ? T : never }[UnitTrigger];
+
+/** Where trigger `T` takes a unit from status `S`: looked up in the table, never passed by the caller. */
+export type TargetOf<S extends UnitStatus, T extends UnitTrigger> = Extract<UnitTransitionRow, { from: S; on: T }>["to"];
+
+/** The trigger list and the table name the same triggers: a trigger no row takes, or a row whose trigger is not on the list, fails here. */
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _everyTriggerIsARow: Same<UnitTrigger, UnitTransitionRow["on"]> = true;
+/** The terminal statuses declare nothing: a row out of `closed` or `aborted` fails here. */
+const _terminalsAreTerminal: Same<TriggerFrom<"closed" | "aborted">, never> = true;
+void _everyTriggerIsARow; void _terminalsAreTerminal;
 
 /** The rows from one status to another: several when the loop has more than one reason to take the same edge. */
 export function unitTransitions(from: UnitStatus, to: UnitStatus): UnitTransition[] {
   return UNIT_TRANSITIONS.filter((t) => t.from === from && t.to === to);
 }
 
-/** The row a trigger names from a status, if the table has one. */
+/** The row a trigger names from a status, if the table has one: the runtime lookup, for a status read from disk. */
 export function unitTransition(from: UnitStatus, on: UnitTrigger): UnitTransition | undefined {
   return UNIT_TRANSITIONS.find((t) => t.from === from && t.on === on);
+}
+
+/**
+ * One line of a unit's status history (#162): the transition the store wrote, with its trigger. The line is the
+ * row's `from`, `to` and `on` and the time it was written, and the reason where the target is `blocked`: the same
+ * reason the unit record carries, kept after the record moves on. Only a row of the table is a line.
+ */
+export type UnitTransitionRecord = UnitTransitionRow extends infer R
+  ? R extends UnitTransitionRow
+    ? { from: R["from"]; to: R["to"]; on: R["on"]; at: string } & (R["to"] extends ReasonedUnitStatus ? { reason: string } : unknown)
+    : never
+  : never;
+
+/**
+ * The schema of a line: one object per row of the table, so a line that is not a transition the loop declares does
+ * not validate. A row that does not block declares `reason` as a property nothing satisfies, and does not leave
+ * the refusal to `additionalProperties`: under the pinned typebox (1.0.0) `Value.Check` tests an undeclared key
+ * against an unanchored pattern of the declared ones, so `reason`, which contains `on`, would pass as additional.
+ */
+export const UnitTransitionRecordSchema = Type.Union(UNIT_TRANSITIONS.map((row) => Type.Object({
+  from: Type.Literal(row.from),
+  to: Type.Literal(row.to),
+  on: Type.Literal(row.on),
+  at: NonEmpty,
+  reason: row.to === "blocked" ? NonEmpty : Type.Optional(Type.Never()),
+}, { additionalProperties: false })));
+
+export function isUnitTransitionRecord(value: unknown): value is UnitTransitionRecord {
+  return Value.Check(UnitTransitionRecordSchema, value);
 }
 
 /** What every unit record carries, whatever its status. */

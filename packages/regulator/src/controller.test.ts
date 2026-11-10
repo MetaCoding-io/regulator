@@ -8,6 +8,7 @@ import { unitReason, type ResultReport, type UnitRecord, type WorkContract } fro
 import { blockedDetail, runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { gitExec, initRepo } from "./git-support.js";
+import { readInstance, unitWhy } from "./status.js";
 import { unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
@@ -354,6 +355,14 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
   assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
   assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction }), undefined, "an aborted unit is not routed again");
+  // The abort is the last line of the history, and the record carries no reason (#161, #162): why is the decision, and the read model says it from there.
+  assert.deepEqual((await store3.listTransitions("u1")).map((l) => [l.on, l.to]), [["dispatch", "dispatched"], ["attempt-failed", "blocked"], ["abort", "aborted"]]);
+  const abortedUnit = (await readInstance(repo3)).units[0]!;
+  assert.equal("reason" in abortedUnit.unit, false);
+  assert.equal(unitWhy(abortedUnit.unit, abortedUnit.decisions), "aborted under recovery v2: no-report");
+  assert.deepEqual([abortedUnit.trajectory.basis, abortedUnit.trajectory.final, abortedUnit.trajectory.problem], ["history", "aborted", undefined]);
+  // The waiting decisions earlier in this test are blocked → blocked on `routed-waiting`, by the store's own line.
+  assert.deepEqual((await store.listTransitions("u1")).filter((l) => l.from === "blocked" && l.to === "blocked").map((l) => l.on), ["routed-waiting"]);
 });
 
 test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
@@ -445,6 +454,11 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   const again = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(again.status, "refused");
   assert.match(again.status === "refused" ? again.problems[0]?.message ?? "" : "", /is closed; only a blocked unit is re-audited/);
+  // A re-audit is a transition of its own (#162): refused, it is blocked → blocked on `re-audit-refused`; passed, `re-verified`.
+  assert.deepEqual((await store.listTransitions("u1")).map((l) => l.on), ["dispatch", "attempt-failed", "re-audit-refused", "re-audit-refused", "re-verified", "reintegrated"]);
+  const trajectory = (await readInstance(repo)).units[0]!.trajectory;
+  assert.deepEqual([trajectory.basis, trajectory.final, trajectory.problem], ["history", "closed", undefined]);
+  assert.deepEqual(trajectory.steps.filter((s) => s.event === "re-audit").map((s) => [s.transition, s.by]), [["re-audit-refused", "closeUnit"], ["re-audit-refused", "closeUnit"], ["re-verified", "closeUnit"]]);
 });
 
 test("obligations: what a unit records is routed at the loop's steps under the routing policy; S3's recovery decision dispositions what S3 was routed; a waiting action becomes an obligation owed to a person that vetoes re-dispatch until it is resolved, and the resolution reaches the next attempt as the hint", async (t) => {
@@ -808,6 +822,25 @@ test("the pre-merge trial (#48): two units change disjoint files and break each 
   assert.equal(repaired.status, "closed", JSON.stringify(repaired));
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.verdict : undefined, "pass");
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.sha : undefined, await head());
+
+  // The store wrote each of B's moves with its trigger (#162): the refused reintegration and the landing are lines of their own,
+  // and the trajectory is those lines with the records' why beside them. Nothing is reconstructed and nothing disagrees.
+  const moves = await new ExecutionStore(repo).listTransitions("b");
+  assert.deepEqual(moves.map((l) => [l.from, l.on, l.to]), [
+    ["contracted", "dispatch", "dispatched"], ["dispatched", "verified", "reported"], ["reported", "reintegration-refused", "blocked"],
+    ["blocked", "dispatch", "dispatched"], ["dispatched", "verified", "reported"], ["reported", "reintegrated", "closed"],
+  ]);
+  assert.match(moves[2] && "reason" in moves[2] ? moves[2].reason : "", /^reintegration: conflict — Reintegrating unit\/b into main merges cleanly and the merged tree fails its checks/);
+  const trajectory = (await readInstance(repo)).units.find((u) => u.unit.unitId === "b")!.trajectory;
+  assert.deepEqual([trajectory.basis, trajectory.final, trajectory.problem], ["history", "closed", undefined]);
+  assert.deepEqual(trajectory.steps.filter((s) => s.transition).map((s) => [s.transition, s.source, s.event]), [
+    ["dispatch", "history", "attempt-started"], ["verified", "history", "attempt-ended"], ["reintegration-refused", "history", "reintegration"],
+    ["dispatch", "history", "attempt-started"], ["verified", "history", "attempt-ended"], ["reintegrated", "history", "reintegration"],
+  ]);
+  const refusedStep = trajectory.steps.find((s) => s.transition === "reintegration-refused")!;
+  const routedStep = trajectory.steps.find((s) => s.event === "decision")!;
+  assert.deepEqual(refusedStep.cites, ["status.ndjson"]);
+  assert.ok(refusedStep.index < routedStep.index && refusedStep.at <= routedStep.at, "the refusal is placed where the store wrote it, before the decision that routed it");
 });
 
 test("advice is harness-owned at closeout too (#110): a unit that commits a change under regulator/advice/ on its branch fails the identity-untouched check, which diffs every harness-owned directory DEFINITION_WRITERS names, and nothing reintegrates", async (t) => {

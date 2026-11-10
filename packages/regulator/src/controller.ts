@@ -45,7 +45,7 @@ import { discoverConventions } from "@metacoding.io/regulator-checks";
 import {
   ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, carriedLedger, carriesLedger, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
   dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
-  type ContractProblem, type ReportProblem, type Resolved,
+  type ContractProblem, type ReportProblem, type Resolved, type UnitAt,
 } from "@metacoding.io/regulator-core";
 import { assertNever, checkNames, checkOptions, isCommandRunner, runnerOf } from "@metacoding.io/regulator-protocol";
 import type {
@@ -192,10 +192,12 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   }
   // The veto: what is owed on the unit is settled outside the loop before the loop moves it.
   problems.push(...(await vetoProblems(ledger, contract.unitId, contract.unitType, "dispatch")));
-  if (problems.length || !unitType) return { status: "refused", problems };
+  // The second test restates the first for the compiler: a unit that exists and is not blocked has a problem above, so from here the unit is
+  // blocked or new, and every transition below is checked against the table for exactly those statuses (#162).
+  if (problems.length || !unitType || (existing && existing.status !== "blocked")) return { status: "refused", problems };
 
   // dispatch
-  if (!existing) await store.createUnit(contract);
+  const held = existing ?? await store.createUnit(contract);
   const attemptNumber = (existing?.attempts ?? 0) + 1;
   // A re-dispatch after a person answered what the unit waited on carries the answer.
   let hint = options.hint;
@@ -219,10 +221,10 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     worktree = started.worktree.path;
   } catch (error) {
     const detail = (error as Error).message;
-    await store.setStatus(contract.unitId, "blocked", detail);
+    await store.transition(held, "dispatch-refused", detail);
     return { status: "blocked", reason: error instanceof LeaseHeldError ? "lease-held" : "dispatch-error", detail };
   }
-  await store.setStatus(contract.unitId, "dispatched");
+  const running = await store.transition(held, "dispatch");
   // A retry the router decided under a ledger-carrying cause (`context-degradation`, #133) is a fresh session on the
   // budget the degraded attempt left, not a new allowance: S3 opens this attempt's ledger on that attempt's
   // consumption, and the session's meter resumes it as a fallback session resumes an attempt's. Read from the
@@ -251,7 +253,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     const detail = (error as Error).message;
     const ran = error instanceof ProgramError ? error.program : undefined;
     await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, endedAt: stamp(), outcome: "error", detail, ...(ran ? { program: ran } : {}) });
-    await store.setStatus(contract.unitId, "blocked", `dispatch error: ${detail}`);
+    await store.transition(running, "attempt-failed", `dispatch error: ${detail}`);
     return { status: "blocked", reason: "dispatch-error", detail };
   }
   // What the session recorded — proposals, findings, coordination signals, intelligence — is routed now, not left in the log.
@@ -263,7 +265,7 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     const first = unanswered[0]!;
     const detail = `${first.subject}${first.question ? ` — ${first.question}` : ""} (obligation ${first.id.slice(0, 8)}${unanswered.length > 1 ? `, +${unanswered.length - 1}` : ""})`;
     await store.recordAttempt({ unitId: contract.unitId, contractVersion: contract.version, startedAt, ...(sessionId === undefined ? {} : { sessionId }), endedAt: stamp(), outcome: "paused", detail });
-    await store.setStatus(contract.unitId, "blocked", `paused: awaiting a person — ${detail}`);
+    await store.transition(running, "attempt-failed", `paused: awaiting a person — ${detail}`);
     return { status: "blocked", reason: "paused", detail };
   }
 
@@ -274,18 +276,18 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   if (!report && budget?.exhausted) {
     const detail = `${budget.exhausted.dimension} ceiling crossed at ${budget.exhausted.at} (${budget.consumed.tokens} tokens, ${budget.consumed.turns} turns)`;
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "budget-exhausted", detail });
-    await store.setStatus(contract.unitId, "blocked", `budget exhausted: ${budget.exhausted.dimension}`);
+    await store.transition(running, "attempt-failed", `budget exhausted: ${budget.exhausted.dimension}`);
     return { status: "blocked", reason: "budget-exhausted", detail };
   }
   if (!report) {
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "no-report" });
-    await store.setStatus(contract.unitId, "blocked", program ? "the program ended without a report" : "the unit ended without calling report_result");
+    await store.transition(running, "attempt-failed", program ? "the program ended without a report" : "the unit ended without calling report_result");
     return { status: "blocked", reason: "no-report" };
   }
   const reportProblems = checkResultReport(contract, report);
   if (reportProblems.length) {
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "invalid-report", detail: reportProblems.map((p) => p.message).join("; ") });
-    await store.setStatus(contract.unitId, "blocked", "the result report does not honour the contract");
+    await store.transition(running, "attempt-failed", "the result report does not honour the contract");
     return { status: "blocked", reason: "invalid-report", problems: reportProblems };
   }
   // verify — the harness's own checks against the committed revision; the report's claims satisfy nothing
@@ -295,18 +297,25 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     const summary = summarizeVerdict(audit.verdict);
     const detail = `${summary} — ${audit.verdict.reasons.join("; ")}`;
     await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "check-failure", detail });
-    await store.setStatus(contract.unitId, "blocked", `audit refused closeout: ${summary}`);
+    await store.transition(running, "attempt-failed", `audit refused closeout: ${summary}`);
     await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
   await store.recordAttempt({ ...attempt, endedAt: stamp(), outcome: "reported" });
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload, unitType, attempt: attemptNumber, report, routing: options.routing, interaction: options.interaction, now, verified: { unit: running, on: "verified" } });
 }
 
-async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; workload: WorkloadDefinition; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number }): Promise<RunUnitOutcome> {
-  const { contract, report, now } = options;
+/**
+ * How a unit comes to be verified: an attempt that passed its audit (`verified`, from dispatched), or a re-audit of a
+ * blocked unit that now passes (`re-verified`, from blocked). The pair is the caller's to state, with the record it
+ * holds, so the trigger is checked against the status it is taken from.
+ */
+type Verified = { unit: UnitAt<"dispatched">; on: "verified" } | { unit: UnitAt<"blocked">; on: "re-verified" };
+
+async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: WorkContract; workload: WorkloadDefinition; unitType: UnitType; attempt: number; report: ResultReport; routing: RoutingPolicy; interaction: InteractionPolicy; now: () => number; verified: Verified }): Promise<RunUnitOutcome> {
+  const { contract, report, now, verified } = options;
   const store = new ExecutionStore(options.repo, now);
-  await store.setStatus(contract.unitId, "reported");
+  const reported = verified.on === "verified" ? await store.transition(verified.unit, verified.on) : await store.transition(verified.unit, verified.on);
   const signals = await emitReportSignals(options.repo, contract, report, now);
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
 
@@ -322,10 +331,10 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
   if (!finished.result.merged) {
     const blocked = reintegrationRefused(finished, preMerge);
     const detail = blockedDetail(blocked);
-    await store.setStatus(contract.unitId, "blocked", `reintegration: ${blocked.reason}${detail ? ` — ${detail}` : ""}`);
+    await store.transition(reported, "reintegration-refused", `reintegration: ${blocked.reason}${detail ? ` — ${detail}` : ""}`);
     return blocked;
   }
-  await store.setStatus(contract.unitId, "closed");
+  await store.transition(reported, "reintegrated");
   // A closed unit is a reading for every open live horizon that names its type (#138): what the prediction was about has now happened once more.
   await resolvePredictions(exec, { repo: options.repo, unit: { unitId: contract.unitId, unitType: contract.unitType, status: "closed", workload: contract.workload.name }, workload: options.workload, contract, routing: options.routing, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
@@ -512,22 +521,23 @@ export async function closeUnit(exec: Exec, options: { repo: string; unitId: str
   const unit = await store.getUnit(options.unitId);
   if (!unit) throw new Error(`no unit "${options.unitId}"`);
   const problems: ContractProblem[] = await vetoProblems(ledger, options.unitId, unit.unitType, "close");
-  if (unit.status !== "blocked") problems.push({ path: "status", message: `unit "${unit.unitId}" is ${unit.status}; only a blocked unit is re-audited` });
+  const blocked = unit.status === "blocked" ? unit : undefined;
+  if (!blocked) problems.push({ path: "status", message: `unit "${unit.unitId}" is ${unit.status}; only a blocked unit is re-audited` });
   const contract = await store.getContract(unit.unitId, unit.contract.version);
   const report = await store.getReport(unit.unitId, unit.contract.version, unit.attempts);
   const unitType = unitTypeOf(options.workload, unit.unitType);
   if (!contract) problems.push({ path: "contract", message: `contract ${unit.contract.id} v${unit.contract.version} is missing from the store` });
   if (!report) problems.push({ path: "report", message: `attempt ${unit.attempts} wrote no report; there is nothing to audit` });
   if (!unitType) problems.push({ path: "unitType", message: `"${unit.unitType}" is not a unit type of workload ${options.workload.name}` });
-  if (problems.length || !contract || !report || !unitType) return { status: "refused", problems };
+  if (problems.length || !contract || !report || !unitType || !blocked) return { status: "refused", problems };
   const audit = await auditUnit(exec, { repo: options.repo, contract, unitType, report, attempt: unit.attempts, now });
   if (audit.verdict.verdict !== "pass") {
     const detail = summarizeVerdict(audit.verdict);
-    await store.setStatus(unit.unitId, "blocked", `audit refused closeout: ${detail}`);
+    await store.transition(blocked, "re-audit-refused", `audit refused closeout: ${detail}`);
     await routeAndDeliver(options.repo, ledger, options.routing, options.interaction, now);
     return { status: "blocked", reason: "check-failure", detail, verdict: audit.verdict };
   }
-  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload: options.workload, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now });
+  return closeVerifiedUnit(exec, { repo: options.repo, contract, workload: options.workload, unitType, attempt: Math.max(1, unit.attempts), report, routing: options.routing, interaction: options.interaction, now, verified: { unit: blocked, on: "re-verified" } });
 }
 
 const CONSEQUENCE_SEVERITY = { low: "info", medium: "advisory", high: "blocking" } as const;
@@ -610,11 +620,14 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
     for (const q of questions) await ledger.acknowledge(q.id, "S3", `${pastCeiling.evidence[0]}: routed under timeout → ${decision.action} (occurrence ${decision.occurrence}); lease ${released ? "released" : "was not held"}; the question stays open`);
   }
   if (!decision) return undefined;
+  // The router decides only for a blocked unit (`routeBlockedUnit` returns nothing otherwise), and nothing since the read above writes
+  // the unit: the record held here is the blocked one the decision is about, which is what the two triggers below are declared from.
+  if (unit.status !== "blocked") throw new Error(`unit "${options.unitId}" was routed (${decision.cause} → ${decision.action}) and is ${unit.status}: the router decides for blocked units only`);
   const cites: string[] = [];
   if (decision.action === "abort") {
     await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
     // An aborted unit's record carries no reason (#161): why is this decision, in decisions.ndjson, with the policy version that made it.
-    await store.setStatus(options.unitId, "aborted");
+    await store.transition(unit, "abort");
     // An aborted unit is a reading too (#138): a prediction about the next N units is about the ones that failed as much as the ones that closed.
     await resolvePredictions(exec, { repo: options.repo, unit: { unitId: options.unitId, unitType: unit.unitType, status: "aborted", workload: unit.workload.name }, routing: options.routing, now });
   } else if (decision.action === "escalate") {
@@ -627,9 +640,9 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
     };
     await appendSignal(options.repo, signal);
     cites.push(signal.id);
-    await store.setStatus(options.unitId, "blocked", `escalated to S5: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
+    await store.transition(unit, "routed-waiting", `escalated to S5: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
   } else if (!ATTEMPT_ACTIONS.has(decision.action)) {
-    await store.setStatus(options.unitId, "blocked", `awaiting ${decision.action}: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
+    await store.transition(unit, "routed-waiting", `awaiting ${decision.action}: ${decision.cause} (${decision.policy.name} v${decision.policy.version})`);
   }
   await dispositionByDecision(ledger, decision, options.routing, { cites });
   await deliverPending(options.repo, { policy: options.interaction, now });

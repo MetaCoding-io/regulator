@@ -3,7 +3,7 @@ import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { isUnitRecord, unitReason, type ResultReport, type UnitStatus, type WorkContract } from "@metacoding.io/regulator-protocol";
+import { isUnitRecord, isUnitTransitionRecord, unitReason, type ResultReport, type UnitTrigger, type WorkContract } from "@metacoding.io/regulator-protocol";
 import { checkContract, checkResultReport, renderContractSection } from "./contracts.js";
 import { ExecutionStore } from "./execution-store.js";
 
@@ -103,7 +103,7 @@ test("execution store: contract and report versions are immutable; attempts appe
   await assert.rejects(store.getUnit("../evil"), /invalid unit id/);
 
   clock = 2_000;
-  await store.setStatus("u1", "dispatched");
+  await store.transition("u1", "dispatch");
   const attempt = await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "reported", sessionId: "s1" });
   assert.equal(attempt.attempt, 1);
   assert.equal((await store.getUnit("u1"))?.attempts, 1);
@@ -117,60 +117,128 @@ test("execution store: contract and report versions are immutable; attempts appe
   assert.equal((await store.getReport("u1", 1, 1))?.summary, sampleReport().summary);
   assert.equal(await store.getReport("u1", 2), undefined);
 
-  await store.setStatus("u1", "reported");
-  const blocked = await store.setStatus("u1", "blocked", "reintegration: conflict");
+  await store.transition("u1", "verified");
+  const blocked = await store.transition("u1", "reintegration-refused", "reintegration: conflict");
   assert.equal(blocked.reason, "reintegration: conflict");
-  // The lifecycle is a closed table: a status the loop never writes from here is refused by name, and the record is untouched.
-  await assert.rejects(store.setStatus("u1", "closed"), /unit "u1" is blocked; blocked → closed is not a transition the loop declares \(UNIT_TRANSITIONS\); from blocked it declares dispatched, blocked, reported, aborted/);
-  await assert.rejects(store.setStatus("u1", "contracted"), /blocked → contracted is not a transition/);
+  // The lifecycle is a closed table: a trigger the loop never takes from here is refused by name, and the record is untouched.
+  await assert.rejects(store.transition("u1", "reintegrated"), /unit "u1" is blocked; reintegrated is not a trigger the loop declares from blocked \(UNIT_TRANSITIONS\); from blocked it declares dispatch \(→ dispatched\), dispatch-refused \(→ blocked\), re-verified \(→ reported\), re-audit-refused \(→ blocked\), routed-waiting \(→ blocked\), abort \(→ aborted\)/);
+  await assert.rejects(store.transition("u1", "verified"), /verified is not a trigger the loop declares from blocked/);
   assert.equal(unitReason((await store.getUnit("u1"))!), "reintegration: conflict", "a refused change writes nothing");
-  await store.setStatus("u1", "reported");
-  const closed = await store.setStatus("u1", "closed");
+  await store.transition("u1", "re-verified");
+  const closed = await store.transition("u1", "reintegrated");
   assert.equal("reason" in closed, false, "a reason does not outlive the status it explained");
   assert.equal(unitReason(closed), undefined);
   assert.deepEqual((await store.listUnits()).map((u) => [u.unitId, u.status]), [["u1", "closed"]]);
-  await assert.rejects(store.setStatus("u1", "dispatched"), /from closed it declares nothing: the status is terminal/);
+  await assert.rejects(store.transition("u1", "dispatch"), /from closed it declares nothing: the status is terminal/);
+  // Every transition the store wrote is a line of the unit's status history, with its trigger; a refused one is not.
+  assert.deepEqual(await store.listTransitions("u1"), [
+    { from: "contracted", to: "dispatched", on: "dispatch", at: "1970-01-01T00:00:02.000Z" },
+    { from: "dispatched", to: "reported", on: "verified", at: "1970-01-01T00:00:02.000Z" },
+    { from: "reported", to: "blocked", on: "reintegration-refused", at: "1970-01-01T00:00:02.000Z", reason: "reintegration: conflict" },
+    { from: "blocked", to: "reported", on: "re-verified", at: "1970-01-01T00:00:02.000Z" },
+    { from: "reported", to: "closed", on: "reintegrated", at: "1970-01-01T00:00:02.000Z" },
+  ]);
+  assert.equal((await readFile(path.join(root, ".regulator", "units", "u1", "status.ndjson"), "utf8")).trim().split("\n").length, 5, "one line per transition, append-only");
+
 
   const onDisk = JSON.parse(await readFile(path.join(root, ".regulator", "units", "u1", "contract.v1.json"), "utf8"));
   assert.deepEqual(onDisk, contract);
 });
 
-test("the unit record is keyed on its status: a reason is written with blocked and with nothing else, by the signature and by the store (#161)", async (t) => {
+test("the unit record is keyed on its status: a reason is written with a transition into blocked and with no other, by the signature and by the store (#161)", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "regulator-keyed-"));
   t.after(() => rm(root, { recursive: true, force: true }));
   const store = new ExecutionStore(root, () => 1_000);
-  await store.createUnit(sampleContract());
+  const contracted = await store.createUnit(sampleContract());
 
-  // By the signature: the reason is a required argument of blocked and no argument of any other status.
-  // @ts-expect-error blocked takes its reason.
-  const noReason = store.setStatus("u1", "blocked");
-  await assert.rejects(noReason, /a blocked unit says why it is blocked; contracted → blocked was asked with no reason/);
-  // @ts-expect-error dispatched carries none.
-  const withReason = store.setStatus("u1", "dispatched", "because");
+  // By the signature: the reason is a required argument of a trigger whose target is blocked, and no argument of any other.
+  // @ts-expect-error dispatch-refused blocks the unit, and a blocked unit says why.
+  const noReason = store.transition(contracted, "dispatch-refused");
+  await assert.rejects(noReason, /a blocked unit says why it is blocked; dispatch-refused \(contracted → blocked\) was asked with no reason/);
+  // @ts-expect-error dispatch does not block, so it takes none.
+  const withReason = store.transition(contracted, "dispatch", "because");
   await assert.rejects(withReason, /dispatched carries no reason \(only a blocked unit's record does\)/);
   assert.equal((await store.getUnit("u1"))?.status, "contracted", "a refused write changes nothing");
+  assert.deepEqual(await store.listTransitions("u1"), [], "and appends nothing");
 
-  // By the store, for a caller whose status is not known until it runs.
-  const status: UnitStatus = "dispatched";
-  await assert.rejects((store.setStatus as (id: string, s: UnitStatus, reason?: string) => Promise<unknown>)("u1", status, "because"), /carries no reason/);
-  await assert.rejects((store.setStatus as (id: string, s: UnitStatus, reason?: string) => Promise<unknown>)("u1", "blocked", ""), /says why it is blocked/);
+  // By the store, for a caller whose trigger is not known until it runs.
+  const loose = store.transition.bind(store) as (id: string, on: UnitTrigger, reason?: string) => Promise<unknown>;
+  const on: UnitTrigger = "dispatch";
+  await assert.rejects(loose("u1", on, "because"), /carries no reason/);
+  await assert.rejects(loose("u1", "dispatch-refused", ""), /says why it is blocked/);
 
-  const blocked = await store.setStatus("u1", "blocked", "the lease is held");
-  // The return is the record in that status: `reason` is a string here, not an optional one.
+  const blocked = await store.transition(contracted, "dispatch-refused", "the lease is held");
+  // The return is the record in the target status: `reason` is a string here, not an optional one.
   const why: string = blocked.reason;
   assert.equal(why, "the lease is held");
-  const dispatched = await store.setStatus("u1", "dispatched");
+  const dispatched = await store.transition(blocked, "dispatch");
   // @ts-expect-error a dispatched unit's record has no reason to read.
   assert.equal(dispatched.reason, undefined);
   // recordAttempt rewrites the record and keeps its shape.
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
-  const after = await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
-  await store.recordDecision({ id: "d1", unitId: "u1", attempt: 1, cause: "no-report", occurrence: 1, evidence: [], action: "abort", policy: { name: "recovery", version: 1 }, rationale: "r", decidedAt: "t", decidedBy: "S3" });
+  const after = await store.transition(dispatched, "attempt-failed", "the unit ended without calling report_result");
   assert.equal(after.attempts, 1);
-  const aborted = await store.setStatus("u1", "aborted");
+  const aborted = await store.transition(after, "abort");
   assert.equal("reason" in aborted, false, "an aborted unit's record carries no reason: the decision record says why");
   const onDisk: unknown = JSON.parse(await readFile(path.join(root, ".regulator", "units", "u1", "unit.json"), "utf8"));
   assert.ok(isUnitRecord(onDisk));
+});
+
+test("the store writes the transition, by its trigger: an illegal (from, on) pair fails typecheck where the caller knows the status, and is refused at runtime where it does not (#162)", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "regulator-transition-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  let clock = Date.parse("2026-11-10T10:00:00.000Z");
+  const store = new ExecutionStore(root, () => clock);
+  const contracted = await store.createUnit(sampleContract());
+
+  // The caller holds the unit as contracted. Only what the table declares from contracted compiles.
+  // @ts-expect-error contracted → closed: `reintegrated` is declared from reported only.
+  const skip = store.transition(contracted, "reintegrated");
+  await assert.rejects(skip, /unit "u1" is contracted; reintegrated is not a trigger the loop declares from contracted \(UNIT_TRANSITIONS\); from contracted it declares dispatch \(→ dispatched\), dispatch-refused \(→ blocked\)/);
+  // @ts-expect-error `verified` is declared from dispatched only.
+  await assert.rejects(store.transition(contracted, "verified"), /verified is not a trigger the loop declares from contracted/);
+  // @ts-expect-error a target status is not a trigger: the caller says what happened, and the table says where that leads.
+  await assert.rejects(store.transition(contracted, "dispatched"), /dispatched is not a trigger the loop declares from contracted/);
+
+  clock += 1_000;
+  const dispatched = await store.transition(contracted, "dispatch");
+  const status: "dispatched" = dispatched.status;
+  assert.equal(status, "dispatched", "the target is looked up, and the return type says it");
+  // @ts-expect-error dispatched → dispatched is no row.
+  await assert.rejects(store.transition(dispatched, "dispatch"), /dispatch is not a trigger the loop declares from dispatched/);
+  // @ts-expect-error a terminal move from a running unit.
+  await assert.rejects(store.transition(dispatched, "abort"), /abort is not a trigger the loop declares from dispatched/);
+
+  // A handle that is stale is refused: the status on disk decides, not the one the caller remembers.
+  clock += 1_000;
+  const reported = await store.transition(dispatched, "verified");
+  await assert.rejects(store.transition(dispatched, "attempt-failed", "late"), /unit "u1" is reported; the caller holds it as dispatched, so attempt-failed was decided on a record that has moved since it was read/);
+
+  // A caller that holds one of several statuses may name only what is declared from every one of them.
+  const either = reported as typeof reported | typeof contracted;
+  // @ts-expect-error `reintegrated` is declared from reported and not from contracted.
+  await store.transition(either, "reintegrated");
+  assert.equal((await store.getUnit("u1"))?.status, "closed", "at runtime the status on disk was reported, so the row exists: the type is stricter than the gate, never looser");
+
+  // A record whose status the caller has not narrowed is not a handle: nothing is declared from every status.
+  const unknown = (await store.getUnit("u1"))!;
+  // @ts-expect-error narrow on `status` first, or pass the id and let the runtime check decide.
+  await assert.rejects(store.transition(unknown, "dispatch"), /from closed it declares nothing: the status is terminal/);
+  // By id: any trigger compiles, and the table is checked against the record read from disk.
+  await assert.rejects(store.transition("u1", "dispatch"), /unit "u1" is closed; dispatch is not a trigger the loop declares from closed/);
+  await assert.rejects(store.transition("nope", "dispatch"), /no unit "nope"/);
+
+  const history = await store.listTransitions("u1");
+  assert.deepEqual(history.map((l) => [l.from, l.to, l.on, l.at]), [
+    ["contracted", "dispatched", "dispatch", "2026-11-10T10:00:01.000Z"],
+    ["dispatched", "reported", "verified", "2026-11-10T10:00:02.000Z"],
+    ["reported", "closed", "reintegrated", "2026-11-10T10:00:02.000Z"],
+  ], "a refused transition appends nothing; a taken one appends exactly its row");
+  for (const line of history) assert.ok(isUnitTransitionRecord(line));
+
+  // The history's schema is the table: a line that is not a row does not read back.
+  await writeFile(path.join(root, ".regulator", "units", "u1", "status.ndjson"), `${JSON.stringify({ from: "contracted", to: "closed", on: "reintegrated", at: "t" })}\n`);
+  await assert.rejects(store.listTransitions("u1"), /unit transition/);
 });
 
 test("a unit record written before #161 is read, named and rewritten: a reason beside aborted is dropped on read, and a record in neither shape is refused (#161)", async (t) => {

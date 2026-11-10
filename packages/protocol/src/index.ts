@@ -393,7 +393,8 @@ export {
 export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchema, DeclaredToolSchema, HOST_CHECK_NAMES, ProgramSchema, RunnerSchema, SESSION_RUNNER, SessionRunnerSchema, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isCommandRunner, isWorkloadDefinition, runnerOf, type CheckEntry, type CheckOptions, type CommandRunner, type DeclaredTool, type Program, type Runner, type SessionRunner, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
-  isAttemptRecord, isLease, isUnitRecord, readUnitRecord, unitReason, unitTransition, unitTransitions,
+  UnitTransitionRecordSchema, isAttemptRecord, isLease, isUnitRecord, isUnitTransitionRecord, readUnitRecord, unitReason, unitTransition, unitTransitions,
+  type SourceOf, type TargetOf, type TriggerFrom, type TriggerFromEvery, type UnitTransitionRecord, type UnitTransitionRow,
   type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetConsumed, type BudgetDimension, type BudgetLedger, type Lease, type ReadUnitRecord, type ReasonedUnitStatus, type UnitRecord, type UnitRecordIn, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";

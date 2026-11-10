@@ -524,9 +524,9 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   // What the stores hold about u1: one attempt refused at closeout, with the evidence that refused it.
   const store = new ExecutionStore(repo);
   await store.createUnit(await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json")));
-  await store.setStatus("u1", "dispatched");
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
-  await store.setStatus("u1", "blocked", "audit refused closeout");
+  await store.transition("u1", "attempt-failed", "audit refused closeout");
   await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
   const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }] };
   await appendSignal(repo, { id: "i1", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused less", observation: "u1 was refused for a suite it never ran", claim: "fewer refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction } as never);

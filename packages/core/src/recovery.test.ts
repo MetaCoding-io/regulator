@@ -158,8 +158,9 @@ test("routeBlockedUnit: records one immutable decision per routed failure, count
   await store.createUnit(contract);
   assert.equal(await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals: [] }), undefined, "contracted, not blocked");
 
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
-  await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
+  await store.transition("u1", "attempt-failed", "the unit ended without calling report_result");
   const first = await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals: [], now: () => 1_700_000_000_000 });
   assert.equal(first?.cause, "no-report");
   assert.equal(first?.action, "retry");
@@ -195,8 +196,9 @@ test("routeBlockedUnit (#133): a silent attempt that carries the canary's findin
     objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" },
   };
   await store.createUnit(contract);
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-11-10T10:00:00.000Z", endedAt: "2026-11-10T10:30:00.000Z", outcome: "no-report" });
-  await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
+  await store.transition("u1", "attempt-failed", "the unit ended without calling report_result");
   const signals = [silence("2026-11-10T10:05:00.000Z")];
 
   const shipped = await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals });

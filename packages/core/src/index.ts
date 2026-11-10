@@ -13,13 +13,13 @@ export { PATHOLOGIES_FILE, PATHOLOGY_END_MARKER, checkPathologies, loadPathologi
 export { renderViabilityMarkdown, type AblationArm, type ViabilityOptions } from "./viability.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
-export { ExecutionStore } from "./execution-store.js";
+export { ExecutionStore, type ReasonFor, type UnitAt } from "./execution-store.js";
 export { appendEntry, appendSignal, isMessage, readEntries, readSignals } from "./signals.js";
 export {
   ObligationLedger, dispositionByDecision, effectiveSeverity, foldObligations, isOpen, progressionVeto, routeMessages, unroutedMessages,
   type InteractionState, type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
 } from "./obligations.js";
-export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, INSTANCE_MANIFEST_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
+export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, INSTANCE_MANIFEST_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, UNIT_STATUS_HISTORY_FILE, WORKTREES_RELATIVE_DIR } from "./paths.js";
 export { BudgetMeter, carriedLedger, ceilingFor, chooseModels, ownConsumption, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
 export {
   ATTEMPT_ACTIONS, LEDGER_CARRYING_CAUSES, TERMINAL_ACTIONS, carriesLedger, causeFromError, causeUnderPolicy, classifyFailure, decideRecovery, hintFor, questionFor, routeBlockedUnit,

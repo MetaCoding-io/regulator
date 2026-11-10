@@ -22,6 +22,7 @@ list from there.
 | --- | --- | --- |
 | `instance.json` | manifest | the [manifest](#the-manifest) |
 | `units/` | execution | one record per unit, holding the contract version, the attempts, the budgets consumed, the decisions and the report. Only the loop writes it. `unit.json` is keyed on the unit's status: a `blocked` unit's record carries its `reason`, and no other status can carry one. A record written by 0.1.4 or earlier with a reason beside another status is read without it, named by `doctor`, and rewritten by `upgrade`. For a unit type that runs a program, the attempt record carries the program's file under the definition, its SHA-256 and its exit, and the budget ledger carries the wall-clock it consumed with tokens, cost and turns at zero |
+| `units/<unit>/status.ndjson` | execution | the unit's status history, append-only: one line per transition the store wrote, with `from`, `to`, the trigger `on`, the time `at`, and the `reason` where the unit blocked. Every line is a row of `UNIT_TRANSITIONS`. `regulator status` and the control room read a unit's path from it. A unit whose moves were written by 0.1.4 or earlier has no such file, or one that begins partway; its path is reconstructed from its other records, and the trajectory says so |
 | `leases/` | execution | one lease per running unit, with its TTL and liveness |
 | `worktrees/<unit>/` | execution | the unit's git worktree on its own branch, removed on reintegration |
 | `trace.ndjson` | regulatory | every schema-validated trace event, append-only |

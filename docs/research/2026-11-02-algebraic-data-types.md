@@ -1,6 +1,6 @@
 # Algebraic data types read against "Types describe"
 
-- **Status:** graduated, and §3.1 and §3.2 have landed (see their **Landed** lines): §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
+- **Status:** landed for §3.1 to §3.3 (see the **Landed** line under each); §3.4 and §3.5 stay open: §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
   §3.2 is [#161](https://github.com/MetaCoding-io/regulator/issues/161), and §3.3 is
   [#162](https://github.com/MetaCoding-io/regulator/issues/162) (all `roadmap:0.2`; #162 pays
   DEBT row 47). §3.4 (the optional-field survey) and §3.5 (branded identifiers) are open and
@@ -127,6 +127,21 @@ table `as const`, derive `TriggerFrom<S>` from it, write a transition by trigger
 by status, and append the transition to a history. This moves the lifecycle from a gate
 (level 2) to a type (level 1) where the caller's status is known, keeps the gate for
 records read from disk, and meets the card's retirement condition.
+
+**Landed (2026-11-10, [#162](https://github.com/MetaCoding-io/regulator/issues/162),
+PR [#190](https://github.com/MetaCoding-io/regulator/pull/190)).** `UNIT_TRANSITIONS` is
+`as const satisfies readonly UnitTransition[]`, and `TriggerFrom<S>` is derived from it.
+The store's write is `transition(unit, on)`. A caller that holds the unit's record in a
+known status is checked by the compiler; a caller that passes an id, and the record read
+from disk in every case, is checked by the store. Each transition appends a line to
+`status.ndjson` in the unit's directory, and `unitTrajectory` reads the path from it.
+Two things turned out differently from this section. First, a writer that knows only
+that a unit is in one of several statuses needs the triggers legal from *all* of them,
+which is `TriggerFromEvery<S>`; `TriggerFrom` of a union is the triggers legal from
+*any*. Second, the card's retirement condition is met only in its first half. The store
+is given the trigger, and the history's schema is the table. The gate remains for
+records read from disk, and a unit older than the history is still reconstructed, so
+the card stays with a new condition. DEBT row 47 is struck.
 
 ### 3.4 Open: a survey of the remaining optional fields
 
