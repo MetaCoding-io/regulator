@@ -15,7 +15,7 @@
   tracked. The rest of the article's advice is covered or dropped, and §5 says which.
 
 Claims about what the code does today cite the file. They were read on `main` at
-`7ffe6dd`.
+`f4630f5`.
 
 ## 1. What the article says
 
@@ -55,7 +55,7 @@ beyond "a handful".
 | Don't trust an unchecked judge | A judged metric is refused by `regulator check` until its instrument record has a held-out score | DEBT row 48 |
 | Check the end state in a clean environment | Outcome graders read the resulting repository; one fresh instance per arm and repetition | `runSuite` (`packages/regulator/src/evals.ts:154`) |
 | Change one thing and compare experiments | Arms differ only in what the definition declares; an ablation arm switches off one regulator | [Arms](../concepts/evidence-about-the-regulators.md#arms) |
-| Confirm the evaluator fails on the broken version | The four scripted behaviours validate the graders: the reference closes clean and each foil trips what it should | the `drift-scripted-*` reports |
+| Confirm the evaluator fails on the broken version | The scripted behaviours validate the graders: the reference closes clean and each foil trips what it should | the `drift-scripted-*` reports |
 | Tie each eval to a failure | Every regulator's card names the failure it absorbs, with a review date and a retirement condition | the registry |
 
 The harness is also stricter than the article in three places the article does not
@@ -95,8 +95,8 @@ regulator having been tested at all. Nothing in the report or the lifecycle view
 the difference between "the regulator was off and nothing got worse" and "there was
 nothing for it to catch".
 
-[#130](https://github.com/MetaCoding-io/regulator/issues/130) supplies the designed pull
-(the `confident` behaviour and the poisoned-memory fixture, both scripted, in review as
+[#130](https://github.com/MetaCoding-io/regulator/issues/130) supplied the designed pull
+(the `confident` behaviour and the poisoned-memory fixture, both scripted, landed in
 [#184](https://github.com/MetaCoding-io/regulator/pull/184)). The live report over them
 is owed by the [live-run note](2026-09-29-live-drift-run.md#5-what-the-next-report-owes)
 and has no issue of its own. Neither supplies the rule that says when a report counts.
@@ -137,7 +137,7 @@ report worth more and should land before it runs. Each is stated at a
 Add to the report, beside `arms` and `lifts`, a summary per task: for each task, arm and
 metric, the mean over repetitions, and for each non-baseline arm the difference from the
 baseline's mean on that task and which arm leads. Computed in `core/src/evals.ts` from
-the runs the report already keeps; an optional field on `EvalReportSchema`, so the five
+the runs the report already keeps; an optional field on `EvalReportSchema`, so the
 committed reports stay valid. Level 1 for the schema, level 2 for the computation.
 
 `regulator eval` and the control room's Assurance view print it under the arm table. The
@@ -170,7 +170,7 @@ To settle before an issue:
   live one was. The proposal is a label and an exclusion from retirement evidence, not a
   refusal by `regulator check`.
 
-This is not added to #130: that issue is the two scripted foils and closes with #184.
+This was not added to #130: that issue was the two scripted foils and closed with #184.
 It is owed, with §4.1, before the next live run, and the two would be one issue in 0.2.
 
 ### 4.3 From a record to a task
