@@ -111,7 +111,7 @@ unit type, with a default:
 
 | Ceiling | Per | Shipped default |
 | --- | --- | --- |
-| tokens | attempt | 400,000 |
+| tokens | attempt | 800,000 |
 | cost | attempt | 2 |
 | wall-clock | attempt | 20 minutes |
 | turns | attempt | 60 |

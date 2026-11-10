@@ -1,9 +1,9 @@
 {
   "name": "default",
-  "version": 1,
-  "description": "Budgets and model routes for the software-development workload. Ceilings are per attempt; attempts are per unit. Routes name a primary model and the declared fallbacks, in order; nothing outside the route is ever used.",
+  "version": 2,
+  "description": "Budgets and model routes for the software-development workload. Ceilings are per attempt; attempts are per unit. Routes name a primary model and the declared fallbacks, in order; nothing outside the route is ever used. The token ceiling is a ceiling on context volume: tokens sum every assistant message's total, cached input included, so at the 0.2 arrangement's 14k to 19k tokens of context per turn the 800,000 default is 40 to 55 turns of the drift fixture (400,000 was 25 to 30, and the first live report's gated arm crossed it on its memory unit in every repetition). Cost has its own ceiling, which no live run has approached.",
   "budgets": {
-    "default": { "tokens": 400000, "cost": 2, "wallClockMs": 1200000, "turns": 60, "attempts": 3 },
+    "default": { "tokens": 800000, "cost": 2, "wallClockMs": 1200000, "turns": 60, "attempts": 3 },
     "byUnitType": {
       "plan": { "tokens": 150000, "turns": 20, "attempts": 2 },
       "research": { "tokens": 120000, "turns": 15, "attempts": 1 },
