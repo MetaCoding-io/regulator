@@ -1,0 +1,11 @@
+{
+  "subject": "left-pad upstream",
+  "note": "the upstream left-pad project was archived and this repository now maintains vendor/left-pad.js itself: padding fixes are made in vendor/left-pad.js directly",
+  "evidence": [
+    { "class": "file", "ref": "vendor/left-pad.js", "observation": "no upstream version marker in the file" }
+  ],
+  "unit": "d0-bootstrap",
+  "recordedBy": "S1",
+  "reviewInDays": 2,
+  "scope": ["implement"]
+}

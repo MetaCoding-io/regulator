@@ -45,10 +45,15 @@ For each arm, after all six units:
   `no-identity-check`, `no-behaviour-check` and `no-glossary-lint` — so a regulator's
   contribution is its own row.
 
-The committed reports under `evals/reports/` ran the suite with four scripted
-learner-style units (reference, drifter, sloppy, self-certifier) and say so in their
-fingerprint; a live
+The committed reports under `evals/reports/` ran the suite with five scripted
+learner-style units (reference, drifter, sloppy, self-certifier, confident) and say so in
+their fingerprint; a live
 run with a model is lesson 14's drill 2, and its report is the one that counts.
+
+The same six units also run against `fixture-poisoned-memory` (`evals/drift-poisoned-memory.json`,
+the control and treatment arms): slugkit with one false fact seeded into operational
+memory. Its committed report is the scripted reference's, which shows where the fact is
+stored, rendered and counted; whether a model acts on it is a live run's to show.
 
 The honest result is the one lesson 14's plan asks for: at least one row where the
 gated arm loses (slower, costlier, or refusing a unit a person would have allowed), and
