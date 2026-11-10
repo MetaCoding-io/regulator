@@ -144,6 +144,14 @@ export const BudgetDimensionSchema = Type.Union([
 ]);
 export type BudgetDimension = Static<typeof BudgetDimensionSchema>;
 
+const BudgetConsumedSchema = Type.Object({
+  tokens: Type.Integer({ minimum: 0 }),
+  cost: Type.Number({ minimum: 0 }),
+  wallClockMs: Type.Integer({ minimum: 0 }),
+  turns: Type.Integer({ minimum: 0 }),
+}, { additionalProperties: false });
+export type BudgetConsumed = Static<typeof BudgetConsumedSchema>;
+
 /**
  * The running account of what one attempt has consumed against its ceiling.
  * Written by the budget guard in the session, read by the orchestrator at
@@ -159,12 +167,7 @@ export const BudgetLedgerSchema = Type.Object({
     wallClockMs: Type.Integer({ minimum: 1 }),
     turns: Type.Integer({ minimum: 1 }),
   }, { additionalProperties: false }),
-  consumed: Type.Object({
-    tokens: Type.Integer({ minimum: 0 }),
-    cost: Type.Number({ minimum: 0 }),
-    wallClockMs: Type.Integer({ minimum: 0 }),
-    turns: Type.Integer({ minimum: 0 }),
-  }, { additionalProperties: false }),
+  consumed: BudgetConsumedSchema,
   startedAt: NonEmpty,
   updatedAt: NonEmpty,
   /** The model(s) the attempt ran on, in order; a second entry means a switch or a fallback. */
@@ -173,6 +176,15 @@ export const BudgetLedgerSchema = Type.Object({
   exhausted: Type.Optional(Type.Object({ dimension: BudgetDimensionSchema, at: NonEmpty }, { additionalProperties: false })),
   /** Compactions that happened during the attempt, with whether the contract block was carried. */
   compactions: Type.Array(Type.Object({ at: NonEmpty, reason: NonEmpty, preserved: Type.Boolean() }, { additionalProperties: false })),
+  /**
+   * Set when the attempt continues an earlier attempt's ledger (#133): a retry under `context-degradation` is a fresh
+   * session, not a fresh budget, so `consumed` starts from what that attempt had spent. `carried.consumed` is the
+   * part of `consumed` that is the earlier attempt's, so a sum over a unit's ledgers counts each token once.
+   */
+  carried: Type.Optional(Type.Object({
+    attempt: Type.Integer({ minimum: 1 }),
+    consumed: BudgetConsumedSchema,
+  }, { additionalProperties: false })),
 }, { additionalProperties: false });
 export type BudgetLedger = Static<typeof BudgetLedgerSchema>;
 

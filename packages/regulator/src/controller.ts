@@ -43,7 +43,7 @@ import path from "node:path";
 import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding.io/regulator-checks";
 import { discoverConventions } from "@metacoding.io/regulator-checks";
 import {
-  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
+  ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, carriedLedger, carriesLedger, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
   dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem, type Resolved,
 } from "@metacoding.io/regulator-core";
@@ -195,6 +195,17 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
     return { status: "blocked", reason: error instanceof LeaseHeldError ? "lease-held" : "dispatch-error", detail };
   }
   await store.setStatus(contract.unitId, "dispatched");
+  // A retry the router decided under a ledger-carrying cause (`context-degradation`, #133) is a fresh session on the
+  // budget the degraded attempt left, not a new allowance: S3 opens this attempt's ledger on that attempt's
+  // consumption, and the session's meter resumes it as a fallback session resumes an attempt's. Read from the
+  // execution store's own decision record, so the carry is the same whoever applies the retry, the autoloop or a person.
+  if (existing) {
+    const decided = (await store.listDecisions(contract.unitId)).at(-1);
+    if (decided && decided.attempt === existing.attempts && carriesLedger(decided) && !(await store.getBudget(contract.unitId, attemptNumber))) {
+      const prior = await store.getBudget(contract.unitId, existing.attempts);
+      if (prior) await store.writeBudget(carriedLedger(prior, attemptNumber, now));
+    }
+  }
   const startedAt = stamp();
   let sessionId: string | undefined;
   let program: AttemptProgram | undefined;

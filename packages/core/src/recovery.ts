@@ -4,7 +4,8 @@
  *   classifyFailure    what happened, normalized to one cause from what the
  *                      orchestrator recorded (attempt outcome, block reason),
  *                      what the session observed (tool and provider failures),
- *                      and what S2 signalled (oscillation, conflict)
+ *                      what S2 signalled (oscillation, conflict), and what
+ *                      S3* found (the behavioral canary's silence, last)
  *   decideRecovery     which action the versioned policy names for this cause
  *                      on its Nth occurrence — with the attempt ceiling as the
  *                      hard stop: an action that needs another attempt when
@@ -16,8 +17,9 @@
  */
 import { randomUUID } from "node:crypto";
 import type {
-  AttemptRecord, FailureCause, FailureObservation, RecoveryAction, RecoveryDecision, RecoveryPolicy, UnitRecord, VsmMessage,
+  AttemptRecord, AuditFinding, FailureCause, FailureObservation, RecoveryAction, RecoveryDecision, RecoveryPolicy, UnitRecord, VsmMessage,
 } from "@metacoding.io/regulator-protocol";
+import { CANARY_INVARIANT } from "./canary.js";
 import type { ExecutionStore } from "./execution-store.js";
 
 export interface FailureContext {
@@ -31,6 +33,11 @@ export interface FailureContext {
 export interface Classification {
   cause: FailureCause;
   evidence: string[];
+  /**
+   * Set when `cause` rests on an advisory finding (the behavioral canary's): the cause the same records give without
+   * it. The router routes under `cause` only when the policy declares a rule for it (`causeUnderPolicy`).
+   */
+  otherwise?: FailureCause;
 }
 
 /** Normalize an error message the way the session's observer does: environment, timeout, or a plain tool error. */
@@ -50,6 +57,15 @@ export function classifyFailure(context: FailureContext): Classification {
   const mine = signals.filter((s) => "unit" in s && s.unit === unit.unitId);
   const observed = observations.filter((o) => o.attempt === (last?.attempt ?? 0));
   for (const o of observed.slice(-3)) evidence.push(`${o.source}${o.toolName ? ` ${o.toolName}` : ""}: ${o.cause} — ${o.message}`);
+  // The behavioral canary's findings on this attempt (#133): read by the finding's invariant and the attempt's own
+  // window, never by its prose, and never from an earlier attempt, whose session and count are gone. Whatever the
+  // cause turns out to be, the silence is evidence on the decision: a refused attempt that carries it is the
+  // lead-time instance the canary's card asks for.
+  const silences = last ? mine.filter((s): s is AuditFinding => s.kind === "audit-finding" && s.invariant === CANARY_INVARIANT && s.timestamp >= last.startedAt && s.timestamp <= last.endedAt) : [];
+  if (last && silences.length) {
+    const latest = silences.at(-1)!.evidence.find((e) => e.class === "runtime")?.observation;
+    evidence.push(`S3* audit: ${CANARY_INVARIANT} — the behavioral canary recorded ${silences.length} finding(s) during attempt ${last.attempt}, the first at ${silences[0]!.timestamp}${latest ? ` (${latest})` : ""}`);
+  }
 
   if (unit.reason?.startsWith("reintegration: conflict")) return { cause: "conflict", evidence };
   if (unit.reason?.startsWith("reintegration:")) return { cause: "environment", evidence };
@@ -62,14 +78,37 @@ export function classifyFailure(context: FailureContext): Classification {
     // The session's own observations refine a silent end: the last normalized failure wins.
     const refined = observed.at(-1)?.cause;
     if (refined === "environment" || refined === "timeout" || refined === "tool-error" || refined === "check-failure" || refined === "invalid-report") return { cause: refined, evidence };
+    // Last in the precedence, by rule: the canary classifies only an attempt that ended silently with nothing else to
+    // say why. A recorded outcome, an oscillation signal and a failure the session observed each name something a
+    // fresh context does not fix, and the canary's marker is a proxy, so each of them wins and the silence stays evidence.
+    if (silences.length) return { cause: "context-degradation", evidence, otherwise: "no-report" };
     return { cause: "no-report", evidence };
   }
   if (!last && unit.reason) return { cause: causeFromError(unit.reason) === "environment" ? "environment" : "dispatch-error", evidence };
   return { cause: "unknown", evidence };
 }
 
+/**
+ * The cause a classification is routed under. A cause that rests on an advisory finding is the policy's to adopt:
+ * with a rule declared for it, it is the cause; without one, the unit is routed by what the records say without the
+ * finding, and never by the policy's fallback. Adopting the canary's silence is one rule in the recovery policy.
+ */
+export function causeUnderPolicy(classification: Classification, policy: RecoveryPolicy): FailureCause {
+  if (classification.otherwise === undefined) return classification.cause;
+  return policy.rules.some((r) => r.cause === classification.cause) ? classification.cause : classification.otherwise;
+}
+
 /** Actions that spend another attempt. */
 export const ATTEMPT_ACTIONS: ReadonlySet<RecoveryAction> = new Set(["retry", "repair"]);
+/**
+ * Causes whose retry continues the failed attempt's ledger instead of opening a new one: the remedy is a fresh
+ * context, not a fresh budget, so the next attempt spends what the last one left (`carriedLedger`).
+ */
+export const LEDGER_CARRYING_CAUSES: ReadonlySet<FailureCause> = new Set(["context-degradation"]);
+/** Whether the attempt a decision dispatches opens on the failed attempt's ledger. */
+export function carriesLedger(decision: Pick<RecoveryDecision, "cause" | "action">): boolean {
+  return ATTEMPT_ACTIONS.has(decision.action) && LEDGER_CARRYING_CAUSES.has(decision.cause);
+}
 /** Actions after which nothing further runs without a decision from outside the loop. */
 export const TERMINAL_ACTIONS: ReadonlySet<RecoveryAction> = new Set(["abort", "escalate", "pause"]);
 
@@ -118,6 +157,8 @@ export function hintFor(cause: FailureCause, action: RecoveryAction, evidence: r
       return `The previous attempt ran out of budget: ${detail}. Do not repeat work that is already committed in the worktree; go straight to what is missing and report.`;
     case "timeout":
       return `The previous attempt timed out: ${detail}. Prefer narrower commands and bounded test runs.`;
+    case "context-degradation":
+      return `The previous session stopped keeping a small rule its prompt repeats every turn and then ended without a report: ${detail}. This is a fresh session on the same budget: what that attempt spent already counts against this one. The work in the worktree stands; read what is committed before changing anything, do what is missing, and call report_result.`;
     default:
       return `The previous attempt ended without a report (${cause}): ${detail}. Continue from the worktree as you find it and call report_result before you finish.`;
   }
@@ -147,7 +188,9 @@ export async function routeBlockedUnit(store: ExecutionStore, options: RouteOpti
   const attempts = await store.listAttempts(unit.unitId);
   const observations = await store.listObservations(unit.unitId);
   const prior = await store.listDecisions(unit.unitId);
-  const { cause, evidence } = options.cause ?? classifyFailure({ unit, attempts, observations, signals: options.signals });
+  const classified: Classification = options.cause ?? classifyFailure({ unit, attempts, observations, signals: options.signals });
+  const cause = causeUnderPolicy(classified, options.policy);
+  const { evidence } = classified;
   const occurrence = prior.filter((d) => d.cause === cause).length + 1;
   const decided = decideRecovery({ policy: options.policy, cause, occurrence, attemptsUsed: unit.attempts, attemptCeiling: options.attemptCeiling });
   const hint = hintFor(cause, decided.action, evidence);

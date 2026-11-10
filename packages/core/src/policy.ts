@@ -10,7 +10,7 @@
  * contract's identity and allocation, the evidence gathered so far, and the
  * files touched — losing any of these breaks the loop.
  */
-import type { BudgetCeiling, BudgetDimension, BudgetLedger, ModelRoute, PolicyDefinition, TokenUsage, WorkContract } from "@metacoding.io/regulator-protocol";
+import type { BudgetCeiling, BudgetConsumed, BudgetDimension, BudgetLedger, ModelRoute, PolicyDefinition, TokenUsage, WorkContract } from "@metacoding.io/regulator-protocol";
 
 export function ceilingFor(policy: PolicyDefinition, unitType: string): BudgetCeiling {
   return { ...policy.budgets.default, ...(policy.budgets.byUnitType?.[unitType] ?? {}) };
@@ -24,6 +24,33 @@ export function routeFor(policy: PolicyDefinition, unitType: string): ModelRoute
 export function chooseModels(route: ModelRoute, available: readonly string[]): string[] {
   const set = new Set(available);
   return [route.primary, ...route.fallback].filter((ref, i, all) => set.has(ref) && all.indexOf(ref) === i);
+}
+
+/**
+ * The ledger an attempt opens on when it continues an earlier attempt's budget (#133): a retry under
+ * `context-degradation` is a fresh session, not a fresh allowance. Consumption starts from what the earlier attempt
+ * spent, under the same ceiling; `carried` says how much of it is that attempt's and which attempt, so the ledger
+ * shows where the attempt stands against the ceiling and a sum over a unit's ledgers still counts each token once
+ * (`ownConsumption`). The halt marker, the models and the compactions are the earlier attempt's and are not carried:
+ * if nothing is left, the guard halts the new session at its first check. S3 writes this before dispatch; the
+ * session's meter resumes it the way a fallback session resumes an attempt's ledger.
+ */
+export function carriedLedger(prior: BudgetLedger, attempt: number, now: () => number = Date.now): BudgetLedger {
+  const at = new Date(now()).toISOString();
+  return {
+    unitId: prior.unitId, attempt, ceiling: { ...prior.ceiling }, consumed: { ...prior.consumed }, startedAt: at, updatedAt: at,
+    models: [], compactions: [], carried: { attempt: prior.attempt, consumed: { ...prior.consumed } },
+  };
+}
+
+/** What an attempt consumed itself: its ledger less what it carried from an earlier attempt. The unit's cost is the sum of these. */
+export function ownConsumption(ledger: BudgetLedger): BudgetConsumed {
+  const carried = ledger.carried?.consumed;
+  if (!carried) return { ...ledger.consumed };
+  return {
+    tokens: Math.max(0, ledger.consumed.tokens - carried.tokens), cost: Math.max(0, ledger.consumed.cost - carried.cost),
+    wallClockMs: Math.max(0, ledger.consumed.wallClockMs - carried.wallClockMs), turns: Math.max(0, ledger.consumed.turns - carried.turns),
+  };
 }
 
 export interface EvidencePointer {
@@ -40,8 +67,9 @@ export interface BudgetMeterOptions {
   model?: string;
   /**
    * The attempt's ledger so far, when a session opens on an attempt another session already metered (a fallback
-   * after a provider failure). Consumption, models, compactions and an exhausted marker carry over: the attempt
-   * is one attempt whichever session runs it, and a halted attempt stays halted.
+   * after a provider failure) or that S3 opened on an earlier attempt's consumption (`carriedLedger`). Consumption,
+   * models, compactions and an exhausted marker carry over: the attempt is one attempt whichever session runs it,
+   * and a halted attempt stays halted.
    */
   resume?: BudgetLedger;
 }
@@ -72,7 +100,8 @@ export class BudgetMeter {
   }
 
   get ledger(): BudgetLedger {
-    this.#ledger.consumed.wallClockMs = Math.max(0, this.#now() - Date.parse(this.#ledger.startedAt));
+    // A carried ledger's clock starts when this attempt's ledger was opened; the earlier attempt's time is added, not re-measured.
+    this.#ledger.consumed.wallClockMs = (this.#ledger.carried?.consumed.wallClockMs ?? 0) + Math.max(0, this.#now() - Date.parse(this.#ledger.startedAt));
     this.#ledger.updatedAt = new Date(this.#now()).toISOString();
     return structuredClone(this.#ledger);
   }
@@ -150,5 +179,5 @@ export function renderPreservedContext(contract: WorkContract, ledger: BudgetLed
 /** What the `regulator status` read model and the control room show per unit. */
 export function summarizeLedger(ledger: BudgetLedger): string {
   const pct = (a: number, b: number) => `${Math.min(999, Math.round((a / b) * 100))}%`;
-  return `${ledger.consumed.tokens}/${ledger.ceiling.tokens} tok (${pct(ledger.consumed.tokens, ledger.ceiling.tokens)}), ${ledger.consumed.turns}/${ledger.ceiling.turns} turns${ledger.exhausted ? `, exhausted: ${ledger.exhausted.dimension}` : ""}`;
+  return `${ledger.consumed.tokens}/${ledger.ceiling.tokens} tok (${pct(ledger.consumed.tokens, ledger.ceiling.tokens)}), ${ledger.consumed.turns}/${ledger.ceiling.turns} turns${ledger.carried ? `, ${ledger.carried.consumed.tokens} tok and ${ledger.carried.consumed.turns} turns carried from attempt ${ledger.carried.attempt}` : ""}${ledger.exhausted ? `, exhausted: ${ledger.exhausted.dimension}` : ""}`;
 }
