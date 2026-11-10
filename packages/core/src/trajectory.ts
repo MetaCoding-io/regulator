@@ -15,7 +15,7 @@
 import type {
   AttemptRecord, BudgetLedger, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus, UnitTransition, UnitTransitionStep, UnitTrigger,
 } from "@metacoding.io/regulator-protocol";
-import { UNIT_TRANSITIONS, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
+import { UNIT_TRANSITIONS, assertNever, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
 import { REGULATOR_FOR } from "./spans.js";
 
 export interface TrajectoryInput {
@@ -208,6 +208,8 @@ export function unitTrajectory(input: TrajectoryInput): UnitTrajectory {
         case "error":
           why.push(`the dispatch failed${a.detail ? `: ${a.detail}` : ""}`);
           break;
+        default:
+          assertNever(a.outcome, "attempt outcome");
       }
       push({ at: a.endedAt, event: "attempt-ended", title: `attempt ${a.attempt} ended: ${a.outcome}`, on: a.outcome === "reported" ? "verified" : "attempt-failed", attempt: a.attempt, ...(regulator ? { regulator } : {}), why, cites });
     } });

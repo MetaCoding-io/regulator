@@ -19,6 +19,7 @@ import { randomUUID } from "node:crypto";
 import type {
   AttemptRecord, AuditFinding, FailureCause, FailureObservation, RecoveryAction, RecoveryDecision, RecoveryPolicy, UnitRecord, VsmMessage,
 } from "@metacoding.io/regulator-protocol";
+import { assertNever } from "@metacoding.io/regulator-protocol";
 import { CANARY_INVARIANT } from "./canary.js";
 import type { ExecutionStore } from "./execution-store.js";
 
@@ -159,8 +160,22 @@ export function hintFor(cause: FailureCause, action: RecoveryAction, evidence: r
       return `The previous attempt timed out: ${detail}. Prefer narrower commands and bounded test runs.`;
     case "context-degradation":
       return `The previous session stopped keeping a small rule its prompt repeats every turn and then ended without a report: ${detail}. This is a fresh session on the same budget: what that attempt spent already counts against this one. The work in the worktree stands; read what is committed before changing anything, do what is missing, and call report_result.`;
-    default:
+    case "no-report":
       return `The previous attempt ended without a report (${cause}): ${detail}. Continue from the worktree as you find it and call report_result before you finish.`;
+    case "tool-error":
+      return `The previous attempt stopped on a failed tool call or session error and reported nothing: ${detail}. Read the error before you repeat the call that raised it: change its arguments or take another route. The work in the worktree stands; continue from it and call report_result before you finish.`;
+    case "environment":
+      return `The previous attempt failed on its environment, not on the work: ${detail}. Something the attempt needed (a file, a command, a dependency, a permission, a model) was missing. Check that what the error names is there now before you rely on it. If it is still missing, do not build a substitute for it: say what is missing in your report.`;
+    case "dispatch-error":
+      return `The previous attempt could not be started, or its session failed before it reported: ${detail}. That attempt may have done nothing at all, so do not assume any of the work exists: read what is committed in the worktree, do what is missing, and call report_result before you finish.`;
+    case "ambiguity":
+      return `The previous attempt stopped on a requirement it could not decide: ${detail}. Do not guess. Where the contract fixes the decision, follow it; where it delegates the decision, choose and report the choice; where it leaves it unresolved, say so in the report and leave the behaviour as the contract found it.`;
+    case "oscillation":
+      return `S2 signalled that this unit is oscillating, with successive changes undoing each other: ${detail}. Do not apply the previous fix again. Read what is committed in the worktree, find the two behaviours the changes alternate between, and keep the one the contract fixes; if the contract does not decide between them, report that as unresolved and do not pick one.`;
+    case "unknown":
+      return `The previous attempt did not close, and the records do not say why: ${detail}. Nothing here tells you what to avoid, so verify what is committed in the worktree before you build on it, do what is missing, and call report_result before you finish.`;
+    default:
+      return assertNever(cause, "failure cause");
   }
 }
 

@@ -3,6 +3,7 @@ import { Value } from "typebox/value";
 
 import { VsmSystemSchema } from "./vsm-systems.js";
 export { VsmSystemSchema, type VsmSystem } from "./vsm-systems.js";
+export { assertNever } from "./exhaustive.js";
 
 /**
  * Information is typed by control semantics rather than treated as generic
@@ -336,6 +337,10 @@ export const ReportingToolNameSchema = Type.Union([
   Type.Literal("vsm_report_uncertainty"),
 ]);
 export type ReportingToolName = Static<typeof ReportingToolNameSchema>;
+/** Narrow a tool name that arrived at runtime to the closed set before anything switches over it (#160). */
+export function isReportingToolName(value: unknown): value is ReportingToolName {
+  return Value.Check(ReportingToolNameSchema, value);
+}
 
 // The tool produces a JSON-safe string change request, a subset of the general proposal protocol.
 export const RegulatoryMessageSchema = Type.Union([

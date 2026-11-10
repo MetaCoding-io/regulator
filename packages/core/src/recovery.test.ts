@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { RecoveryPolicy, UnitRecord, WorkContract } from "@metacoding.io/regulator-protocol";
+import { FailureCauseSchema, type FailureCause, type RecoveryPolicy, type UnitRecord, type WorkContract } from "@metacoding.io/regulator-protocol";
 import { EffectJournal, effectKey } from "./effect-journal.js";
 import { ExecutionStore } from "./execution-store.js";
 import type { AuditFinding } from "@metacoding.io/regulator-protocol";
@@ -125,6 +125,25 @@ test("decideRecovery: the Nth occurrence takes the Nth action and the last repea
   assert.match(d("no-report", 1).rationale, /recovery v3 rule for no-report, occurrence 1 → retry/);
   assert.match(hintFor("invalid-report", "repair", ["u-unicode missing"]) ?? "", /report_result was refused: u-unicode missing/);
   assert.equal(hintFor("oscillation", "clarify", []), undefined, "only attempt-spending actions carry a hint");
+});
+
+test("hintFor: every cause has a hint of its own, and only a silent end is told it ended without a report (#160)", () => {
+  const causes = FailureCauseSchema.anyOf.map((s) => s.const);
+  assert.equal(causes.length, 13);
+  const hints = new Map(causes.map((c) => [c, hintFor(c, "retry", ["the evidence"]) ?? ""]));
+  for (const [cause, hint] of hints) assert.match(hint, /the evidence/, `${cause}: the hint carries the evidence`);
+  assert.equal(new Set(hints.values()).size, causes.length, "no two causes share a hint");
+  // The seven that fell into one `default:` before: what each is told is true of it.
+  assert.match(hints.get("no-report")!, /ended without a report \(no-report\)/);
+  assert.match(hints.get("tool-error")!, /failed tool call or session error/);
+  assert.match(hints.get("environment")!, /failed on its environment, not on the work/);
+  assert.match(hints.get("dispatch-error")!, /could not be started, or its session failed before it reported/);
+  assert.match(hints.get("ambiguity")!, /a requirement it could not decide/);
+  assert.match(hints.get("oscillation")!, /Do not apply the previous fix again/);
+  assert.match(hints.get("unknown")!, /the records do not say why/);
+  for (const cause of ["tool-error", "environment", "dispatch-error", "ambiguity", "oscillation", "unknown"] as const) assert.doesNotMatch(hints.get(cause)!, /ended without a report/, `${cause} is not described as a silent end`);
+  // A cause that never went through the schema is refused, not given the nearest hint.
+  assert.throws(() => hintFor("gremlins" as FailureCause, "retry", []), /unhandled failure cause: "gremlins"/);
 });
 
 test("routeBlockedUnit: records one immutable decision per routed failure, counting occurrences per cause, citing the policy version; a unit that is not blocked is not routed", async (t) => {

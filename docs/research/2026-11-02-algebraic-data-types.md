@@ -1,6 +1,6 @@
 # Algebraic data types read against "Types describe"
 
-- **Status:** graduated: §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
+- **Status:** graduated, and §3.1 has landed (see its **Landed** line): §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
   §3.2 is [#161](https://github.com/MetaCoding-io/regulator/issues/161), and §3.3 is
   [#162](https://github.com/MetaCoding-io/regulator/issues/162) (all `roadmap:0.2`; #162 pays
   DEBT row 47). §3.4 (the optional-field survey) and §3.5 (branded identifiers) are open and
@@ -78,6 +78,17 @@ have no `default` and no exhaustiveness check:
 **Proposal ([#160](https://github.com/MetaCoding-io/regulator/issues/160)):** export
 `assertNever` from `protocol`, list every case, and prefer a `Record<Union, …>` table where
 the switch only maps one value to another. Mechanism level: type.
+
+**Landed (2026-11-10, [#160](https://github.com/MetaCoding-io/regulator/issues/160)).**
+`assertNever` is `protocol/src/exhaustive.ts`. The five switches list every member and end
+in it, and so does a sixth this section missed: `regulator/src/predictions.ts` switched
+over the built-in metrics with the nine trajectory metrics in `default:`. `reporting.ts`
+narrows the name with `isReportingToolName` first and keeps its refusal. `hintFor` had seven
+causes in its `default:`, not eight (the union has thirteen members with
+`context-degradation`), and each now has a hint that is true of it. No switch became a
+`Record` table: each of the six computes from more than the tag. The other `default:`
+matches in `packages/*/src` are object keys (a policy's `budgets.default`, a flag's
+default value), not switch branches.
 
 ### 3.2 Products with optional fields that admit states the loop never means
 

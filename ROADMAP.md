@@ -35,7 +35,6 @@ measured ones and closes the debt that a card's own retirement condition points 
 | `inherited-tests`: per-assertion diff, a test-layout convention, a cached base run | row 41 | [#50](https://github.com/MetaCoding-io/regulator/issues/50) |
 | Behaviour checks beyond `Function.length`: a probe a contract can carry | row 35 | [#54](https://github.com/MetaCoding-io/regulator/issues/54) |
 | Fixture: the flaky test and the migration that must not be re-run | row 13 | [#55](https://github.com/MetaCoding-io/regulator/issues/55) |
-| Exhaustive matches over closed unions: `assertNever`, and no `default:` that absorbs a new case ([ADT note §3.1](docs/research/2026-11-02-algebraic-data-types.md#31-matches-that-a-new-case-passes-through-silently)) | — | [#160](https://github.com/MetaCoding-io/regulator/issues/160) |
 | Unit records and loop outcomes keyed on status, so each state carries only its own fields ([ADT note §3.2](docs/research/2026-11-02-algebraic-data-types.md#32-products-with-optional-fields-that-admit-states-the-loop-never-means)) | — | [#161](https://github.com/MetaCoding-io/regulator/issues/161) |
 | The store writes the transition with its trigger: `UNIT_TRANSITIONS` as a type the compiler holds, after #161 ([ADT note §3.3](docs/research/2026-11-02-algebraic-data-types.md#33-the-lifecycle-is-a-state-machine-held-as-data-not-as-a-type)) | row 47 | [#162](https://github.com/MetaCoding-io/regulator/issues/162) |
 

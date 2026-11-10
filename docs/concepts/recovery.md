@@ -110,6 +110,15 @@ action, the policy's name and version, and a rationale. For `retry` and `repair`
 also records the **hint** the next attempt is told. For `clarify` it records the
 **question** someone must answer.
 
+The hint is written per cause, because it is the only thing the next attempt hears about
+the last one. An attempt that failed on its environment is told to check that what was
+missing is there now and not to build a substitute for it. An oscillating unit is told
+not to apply the previous fix again. A dispatch that failed is told that the earlier
+attempt may have done nothing. Only an attempt that really ended silently is told that it
+ended without a report. Every cause has a hint of its own, and the router's switch over
+the causes is checked by the compiler: a cause added to the vocabulary does not build
+until someone writes what the next attempt should be told about it.
+
 ## The actions
 
 | Action | What happens | Who acts |
