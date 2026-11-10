@@ -23,10 +23,11 @@ const policy: RecoveryPolicy = {
   fallback: ["pause"],
 };
 
-const unit = (over: Partial<UnitRecord> = {}): UnitRecord => ({
-  unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 },
-  status: "blocked", attempts: 1, createdAt: "t", updatedAt: "t", ...over,
-});
+/** A unit as the classifier is handed one: blocked, with the reason the loop wrote; with no reason given, a record whose status carries none (#161). */
+const unit = (over: { attempts?: number; reason?: string } = {}): UnitRecord => {
+  const base = { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, attempts: over.attempts ?? 1, createdAt: "t", updatedAt: "t" };
+  return over.reason === undefined ? { ...base, status: "dispatched" } : { ...base, status: "blocked", reason: over.reason };
+};
 const attempt = (outcome: "reported" | "no-report" | "invalid-report" | "budget-exhausted" | "error", detail?: string, n = 1) =>
   ({ unitId: "u1", attempt: n, contractVersion: 1, startedAt: "a", endedAt: "b", outcome, ...(detail === undefined ? {} : { detail }) });
 

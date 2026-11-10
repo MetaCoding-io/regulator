@@ -19,7 +19,7 @@ import { randomUUID } from "node:crypto";
 import type {
   AttemptRecord, AuditFinding, FailureCause, FailureObservation, RecoveryAction, RecoveryDecision, RecoveryPolicy, UnitRecord, VsmMessage,
 } from "@metacoding.io/regulator-protocol";
-import { assertNever } from "@metacoding.io/regulator-protocol";
+import { assertNever, unitReason } from "@metacoding.io/regulator-protocol";
 import { CANARY_INVARIANT } from "./canary.js";
 import type { ExecutionStore } from "./execution-store.js";
 
@@ -54,7 +54,9 @@ export function classifyFailure(context: FailureContext): Classification {
   const evidence: string[] = [];
   if (last?.detail) evidence.push(`attempt ${last.attempt}: ${last.outcome} — ${last.detail}`);
   else if (last) evidence.push(`attempt ${last.attempt}: ${last.outcome}`);
-  if (unit.reason) evidence.push(`unit: ${unit.reason}`);
+  // Only a blocked unit's record says why (#161); the router is asked about blocked units, and a caller's fixture may hand it another.
+  const reason = unitReason(unit);
+  if (reason) evidence.push(`unit: ${reason}`);
   const mine = signals.filter((s) => "unit" in s && s.unit === unit.unitId);
   const observed = observations.filter((o) => o.attempt === (last?.attempt ?? 0));
   for (const o of observed.slice(-3)) evidence.push(`${o.source}${o.toolName ? ` ${o.toolName}` : ""}: ${o.cause} — ${o.message}`);
@@ -68,8 +70,8 @@ export function classifyFailure(context: FailureContext): Classification {
     evidence.push(`S3* audit: ${CANARY_INVARIANT} — the behavioral canary recorded ${silences.length} finding(s) during attempt ${last.attempt}, the first at ${silences[0]!.timestamp}${latest ? ` (${latest})` : ""}`);
   }
 
-  if (unit.reason?.startsWith("reintegration: conflict")) return { cause: "conflict", evidence };
-  if (unit.reason?.startsWith("reintegration:")) return { cause: "environment", evidence };
+  if (reason?.startsWith("reintegration: conflict")) return { cause: "conflict", evidence };
+  if (reason?.startsWith("reintegration:")) return { cause: "environment", evidence };
   if (last?.outcome === "budget-exhausted") return { cause: "budget-exhausted", evidence };
   if (last?.outcome === "invalid-report") return { cause: "invalid-report", evidence };
   if (last?.outcome === "check-failure") return { cause: "check-failure", evidence };
@@ -85,7 +87,7 @@ export function classifyFailure(context: FailureContext): Classification {
     if (silences.length) return { cause: "context-degradation", evidence, otherwise: "no-report" };
     return { cause: "no-report", evidence };
   }
-  if (!last && unit.reason) return { cause: causeFromError(unit.reason) === "environment" ? "environment" : "dispatch-error", evidence };
+  if (!last && reason) return { cause: causeFromError(reason) === "environment" ? "environment" : "dispatch-error", evidence };
   return { cause: "unknown", evidence };
 }
 

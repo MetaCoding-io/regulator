@@ -1,6 +1,6 @@
 # Algebraic data types read against "Types describe"
 
-- **Status:** graduated, and §3.1 has landed (see its **Landed** line): §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
+- **Status:** graduated, and §3.1 and §3.2 have landed (see their **Landed** lines): §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
   §3.2 is [#161](https://github.com/MetaCoding-io/regulator/issues/161), and §3.3 is
   [#162](https://github.com/MetaCoding-io/regulator/issues/162) (all `roadmap:0.2`; #162 pays
   DEBT row 47). §3.4 (the optional-field survey) and §3.5 (branded identifiers) are open and
@@ -102,6 +102,16 @@ and most of those combinations mean nothing.
 **Proposal ([#161](https://github.com/MetaCoding-io/regulator/issues/161)):** key both types
 on status, so each case carries exactly what it means and nothing else. Mechanism level:
 type, with the schema kept as the check on records read from disk.
+
+**Landed (2026-11-10, [#161](https://github.com/MetaCoding-io/regulator/issues/161)).**
+`UnitRecordSchema` is a union of one object per status, and `reason` is required on
+`blocked` and absent elsewhere. The store's status write takes the reason as a required
+argument for `blocked` and takes none for any other status. `RunUnitOutcome`'s blocked
+case is `BlockedOutcome`, six members partitioned by the loop's own `return` sites, and
+the partition is written on the type. One thing this section did not anticipate: the
+build wrote a reason beside `aborted` ("aborted under recovery v3: …"), which restated
+the decision record. The abort no longer writes it, `readUnitRecord` reads the older
+shape without it, `doctor` names such units, and `upgrade` rewrites them.
 
 ### 3.3 The lifecycle is a state machine held as data, not as a type
 

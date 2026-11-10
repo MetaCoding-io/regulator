@@ -238,6 +238,18 @@ async function jsonFilesIn(dir: string): Promise<string[]> {
   }
 }
 
+/**
+ * Why a unit is where it is, in one line, as its records say it: a blocked unit's own reason, and for a unit the
+ * router aborted the decision that did. Only a blocked record carries a reason (#161); an aborted unit's why was
+ * always the decision, which the record used to restate.
+ */
+export function unitWhy(unit: UnitRecord, decisions: readonly RecoveryDecision[]): string | undefined {
+  if (unit.status === "blocked") return unit.reason;
+  if (unit.status !== "aborted") return undefined;
+  const abort = [...decisions].reverse().find((d) => d.action === "abort");
+  return abort ? `aborted under ${abort.policy.name} v${abort.policy.version}: ${abort.cause}` : undefined;
+}
+
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
   const store = new ExecutionStore(dir, now);
   const auditLog = new AuditLog(dir);
@@ -334,7 +346,7 @@ export function renderStatusText(view: StatusView): string {
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
       const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unitWhy(unit, decisions) ? `  — ${unitWhy(unit, decisions)}` : ""}`);
       if (trajectory.problem) lines.push(`      ! replay: ${trajectory.problem}`);
     }
     lines.push(`  leases: ${i.leases.length}`);

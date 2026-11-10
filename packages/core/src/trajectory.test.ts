@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AttemptRecord, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord } from "@metacoding.io/regulator-protocol";
+import type { AttemptRecord, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus } from "@metacoding.io/regulator-protocol";
 import { UNIT_TRANSITIONS, UNIT_TRIGGERS } from "@metacoding.io/regulator-protocol";
 import { unitTrajectory } from "./trajectory.js";
 
 const T = (n: number) => `2026-10-13T10:${String(n).padStart(2, "0")}:00.000Z`;
 
-function unit(overrides: Partial<UnitRecord> = {}): UnitRecord {
-  return { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, status: "closed", attempts: 2, createdAt: T(0), updatedAt: T(30), ...overrides };
+function unit(overrides: { status?: UnitStatus; attempts?: number; updatedAt?: string; reason?: string } = {}): UnitRecord {
+  const base = { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, attempts: overrides.attempts ?? 2, createdAt: T(0), updatedAt: overrides.updatedAt ?? T(30) };
+  const status = overrides.status ?? "closed";
+  // Only a blocked unit's record says why (#161).
+  return status === "blocked" ? { ...base, status, reason: overrides.reason ?? "the unit ended without calling report_result" } : { ...base, status };
 }
 function attempt(n: number, startedAt: string, endedAt: string, outcome: AttemptRecord["outcome"], detail?: string): AttemptRecord {
   return { unitId: "u1", attempt: n, contractVersion: 1, startedAt, endedAt, outcome, sessionId: `s${n}`, ...(detail ? { detail } : {}) };

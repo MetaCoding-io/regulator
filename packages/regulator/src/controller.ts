@@ -47,7 +47,7 @@ import {
   dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
   type ContractProblem, type ReportProblem, type Resolved,
 } from "@metacoding.io/regulator-core";
-import { checkNames, checkOptions, isCommandRunner, runnerOf } from "@metacoding.io/regulator-protocol";
+import { assertNever, checkNames, checkOptions, isCommandRunner, runnerOf } from "@metacoding.io/regulator-protocol";
 import type {
   AlgedonicSignal, AttemptProgram, AuditFinding, EvidenceRecord, InteractionPolicy, ModelRoute, OperationalSignal, PolicyDefinition, RecoveryDecision, RecoveryPolicy, ResultReport, RoutingPolicy,
   TechnicalVerdict, UncertaintySignal, UnitType, WorkContract, WorkloadDefinition, FailureCause,
@@ -57,7 +57,7 @@ import type { Exec } from "./exec.js";
 import { readManifest } from "./instance.js";
 import { committedReports, unitGrader } from "./predictions.js";
 import { ProgramError, commandDispatcher } from "./runner.js";
-import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit } from "./unit.js";
+import { HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, abandonUnit, finishUnit, leaseStoreFor, resumeUnit, startUnit, type FinishedUnit } from "./unit.js";
 import { LAB_ROOT, loadWorkloadFor, unitTypeOf } from "./workload.js";
 import { currentBranch, headRevision, isClean } from "./worktree.js";
 
@@ -119,10 +119,38 @@ async function vetoProblems(ledger: ObligationLedger, unitId: string, unitType: 
   }));
 }
 
+/**
+ * A unit that did not close, keyed on why (#161): each reason carries what the loop has at that `return` and nothing
+ * else, as a required field, so a reader that has narrowed on `reason` reads the payload without asking whether it
+ * is there. The partition is the loop's own return sites:
+ *
+ *   lease-held, dispatch-error      the unit never ran, or its dispatch threw: the error, as `detail`
+ *   paused, budget-exhausted        the attempt ended on one thing to say (the open question; the ceiling crossed): `detail`
+ *   no-report                       nothing: the attempt record's absence of a report is the whole of it
+ *   invalid-report                  the report gate's `problems`
+ *   check-failure                   the technical `verdict`, and its summary as `detail`
+ *   conflict                        S2's observation as `detail`, and by `via` either the `conflicts` of a textual
+ *                                   merge or the pre-merge `trial` that the merged tree failed
+ *   base-moved                      which revisions, as `detail`
+ *   dirty-base, wrong-branch        nothing: reintegration refused before it tried anything
+ */
+export type BlockedOutcome =
+  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "paused" | "budget-exhausted" | "base-moved"; detail: string }
+  | { status: "blocked"; reason: "no-report" | "dirty-base" | "wrong-branch" }
+  | { status: "blocked"; reason: "invalid-report"; problems: ReportProblem[] }
+  | { status: "blocked"; reason: "check-failure"; detail: string; verdict: TechnicalVerdict }
+  | { status: "blocked"; reason: "conflict"; via: "merge"; detail: string; conflicts: string[] }
+  | { status: "blocked"; reason: "conflict"; via: "trial"; detail: string; trial: PreMergeOutcome };
+
 export type RunUnitOutcome =
   | { status: "refused"; problems: ContractProblem[] }
   | { status: "closed"; report: ResultReport; sha: string; signals: number; preMerge?: PreMergeOutcome }
-  | { status: "blocked"; reason: "lease-held" | "dispatch-error" | "no-report" | "invalid-report" | "budget-exhausted" | "check-failure" | "paused" | "conflict" | "dirty-base" | "wrong-branch" | "base-moved"; problems?: ReportProblem[]; detail?: string; verdict?: TechnicalVerdict };
+  | BlockedOutcome;
+
+/** The one line a blocked outcome has to say beyond its reason, when its case carries one. */
+export function blockedDetail(outcome: BlockedOutcome): string | undefined {
+  return "detail" in outcome ? outcome.detail : undefined;
+}
 
 export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunUnitOutcome> {
   const now = options.now ?? Date.now;
@@ -292,16 +320,42 @@ async function closeVerifiedUnit(exec: Exec, options: { repo: string; contract: 
     trial: async (trial) => { preMerge = await trialMerge(exec, { cwd: trial.cwd, sha: trial.sha, repo: options.repo, contract, unitType: options.unitType, attempt: options.attempt, now }); return { ok: preMerge.verdict !== "fail", reasons: preMerge.reasons }; },
   });
   if (!finished.result.merged) {
-    const reason = finished.result.reason === "trial-failed" ? "conflict" : finished.result.reason;
-    const detail = finished.signal?.observation ?? (finished.result.reason === "base-moved" ? `the base moved from ${finished.result.from.slice(0, 7)} to ${finished.result.to.slice(0, 7)} during the trial; nothing landed` : undefined);
-    await store.setStatus(contract.unitId, "blocked", `reintegration: ${reason}${detail ? ` — ${detail}` : ""}`);
-    return { status: "blocked", reason, ...(detail ? { detail } : {}) };
+    const blocked = reintegrationRefused(finished, preMerge);
+    const detail = blockedDetail(blocked);
+    await store.setStatus(contract.unitId, "blocked", `reintegration: ${blocked.reason}${detail ? ` — ${detail}` : ""}`);
+    return blocked;
   }
   await store.setStatus(contract.unitId, "closed");
   // A closed unit is a reading for every open live horizon that names its type (#138): what the prediction was about has now happened once more.
   await resolvePredictions(exec, { repo: options.repo, unit: { unitId: contract.unitId, unitType: contract.unitType, status: "closed", workload: contract.workload.name }, workload: options.workload, contract, routing: options.routing, now });
   await routeAndDeliver(options.repo, new ObligationLedger(options.repo, now), options.routing, options.interaction, now);
   return { status: "closed", report, sha: finished.result.sha, signals, ...(preMerge ? { preMerge } : {}) };
+}
+
+/**
+ * What a refused reintegration is to the loop, by what `finishUnit` returned. A textual conflict and a failing trial
+ * are one reason to S3 (two units' work does not combine) and two payloads: the files that conflict, or the trial
+ * the merged tree failed. S2's signal is the detail of both; `finishUnit` raises it for exactly these two.
+ */
+function reintegrationRefused(finished: FinishedUnit, trial: PreMergeOutcome | undefined): BlockedOutcome {
+  const { result } = finished;
+  if (result.merged) throw new Error("reintegrationRefused: the branch landed");
+  switch (result.reason) {
+    case "conflict":
+      return { status: "blocked", reason: "conflict", via: "merge", detail: finished.signal?.observation ?? `conflicts in ${result.conflicts.join(", ")}; the merge was aborted and nothing was resolved`, conflicts: result.conflicts };
+    case "trial-failed":
+      return {
+        status: "blocked", reason: "conflict", via: "trial", detail: finished.signal?.observation ?? `the merged tree fails its checks at ${result.sha.slice(0, 7)}: ${result.reasons.join("; ")}`,
+        trial: trial ?? { verdict: "fail", sha: result.sha, reasons: result.reasons },
+      };
+    case "base-moved":
+      return { status: "blocked", reason: "base-moved", detail: `the base moved from ${result.from.slice(0, 7)} to ${result.to.slice(0, 7)} during the trial; nothing landed` };
+    case "dirty-base":
+    case "wrong-branch":
+      return { status: "blocked", reason: result.reason };
+    default:
+      return assertNever(result, "reintegration result");
+  }
 }
 
 /** The definition an instance runs under: the manifest's root, or the lab's for a repository that was never initialized. */
@@ -559,7 +613,8 @@ export async function routeUnit(exec: Exec, options: { repo: string; unitId: str
   const cites: string[] = [];
   if (decision.action === "abort") {
     await abandonUnit(exec, { repo: options.repo, unitId: options.unitId, now });
-    await store.setStatus(options.unitId, "aborted", `aborted under ${decision.policy.name} v${decision.policy.version}: ${decision.cause}`);
+    // An aborted unit's record carries no reason (#161): why is this decision, in decisions.ndjson, with the policy version that made it.
+    await store.setStatus(options.unitId, "aborted");
     // An aborted unit is a reading too (#138): a prediction about the next N units is about the ones that failed as much as the ones that closed.
     await resolvePredictions(exec, { repo: options.repo, unit: { unitId: options.unitId, unitType: unit.unitType, status: "aborted", workload: unit.workload.name }, routing: options.routing, now });
   } else if (decision.action === "escalate") {

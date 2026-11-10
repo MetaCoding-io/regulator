@@ -1125,7 +1125,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Install the definition into a repository as a declaration, and carry the instance forward when the definition moves. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity and the advice, ignores `.regulator/`, records canaries from a committed `.env`, commits the seeds on the base branch, and writes `.regulator/instance.json`: which definition, at which package version and harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. `regulator upgrade` (#53) is the manifest's only other writer: it plans under `planUpgrade` (core) from the manifest, the installed version and the changelog's typed migration notes, refuses a definition that fails its check, a dirty base and an instance ahead of the package, applies a closed list of mechanical steps — seed a harness-owned file the instance lacks, never one that exists; the ignore line — prints the note of every version crossed for the person, records the committed report whose fingerprint names the target revision (or `none`, with a warning), rewrites the manifest with the version and one history entry, and commits on the base branch citing from and to. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
+**Purpose.** Install the definition into a repository as a declaration, and carry the instance forward when the definition moves. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity and the advice, ignores `.regulator/`, records canaries from a committed `.env`, commits the seeds on the base branch, and writes `.regulator/instance.json`: which definition, at which package version and harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. `regulator upgrade` (#53) is the manifest's only other writer: it plans under `planUpgrade` (core) from the manifest, the installed version and the changelog's typed migration notes, refuses a definition that fails its check, a dirty base and an instance ahead of the package, applies a closed list of mechanical steps — seed a harness-owned file the instance lacks, never one that exists; the ignore line; a unit record written before the record was keyed on its status, rewritten without the reason its status cannot carry (#161) — prints the note of every version crossed for the person, records the committed report whose fingerprint names the target revision (or `none`, with a warning), rewrites the manifest with the version and one history entry, and commits on the base branch citing from and to. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
@@ -1141,13 +1141,13 @@ does not do. `since` is the package version that first shipped the record.
 - seed the identity and the advice and commit them
 - record what a person declared about the layout
 - refuse an init the definition or the tree does not allow
-- seed a harness-owned file the instance lacks at upgrade, add the ignore line, and rewrite the manifest citing who ran it and against which report
+- seed a harness-owned file the instance lacks at upgrade, add the ignore line, rewrite a unit record that is in the older shape as the store already reads it, and rewrite the manifest citing who ran it and against which report
 
 **May not.**
 - create a repository
 - re-init an instance
 - overwrite a file that exists under regulator/identity/ or regulator/advice/, however it differs from the seed
-- apply anything a migration note says beyond the two mechanical steps
+- apply anything a migration note says beyond the three mechanical steps
 - run an eval to produce the fingerprint it records
 - read project settings, context files or extensions
 - widen a read-only profile
@@ -1156,7 +1156,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
-- `regulator upgrade` applies two mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
+- `regulator upgrade` applies three mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
@@ -2108,7 +2108,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.unit-lifecycle.v1` · S3 · deterministic-gate · active · unreleased
 
-**Purpose.** The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, and the execution store refuses a status change that is not a row of it. The table is what the figure of the lifecycle is drawn from and what a unit's history is replayed through: `unitTrajectory` (core) folds the attempt records, the verdicts, the recovery decisions and the obligations through the table in time order, gives each step its why as the records state it — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the fold and the record disagree. The control room's Lifecycle view steps through it.
+**Purpose.** The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, and the execution store refuses a status change that is not a row of it. The unit's record is keyed on that status (`UnitRecordSchema`, a union of one object per status): a blocked unit states its reason and no other status can carry one, by the type the store's write takes and by the schema a record read from disk is checked against. The table is what the figure of the lifecycle is drawn from and what a unit's history is replayed through: `unitTrajectory` (core) folds the attempt records, the verdicts, the recovery decisions and the obligations through the table in time order, gives each step its why as the records state it — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the fold and the record disagree. The control room's Lifecycle view steps through it.
 
 **Absorbs.** `status-written-around-the-loop` — A unit marked closed by a hand edit, a test fixture or a branch of the loop nobody drew; a 'why did this unit stop?' answered by reading six logs by hand; a state diagram on the website the code had already outgrown.
 
@@ -2130,7 +2130,7 @@ does not do. `since` is the package version that first shipped the record.
 - infer a status from the repository or the transcript
 - state a why the records do not carry
 
-**Evidence.** `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts`
+**Evidence.** `../protocol/src/execution.test.ts`, `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts`
 
 **Limitations.**
 - The gate is on the pair (from, to), not on the trigger: which row the loop took is read back from the records, not written down with the status. Three rows share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) and are told apart by the record beside them.

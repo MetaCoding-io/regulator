@@ -2,7 +2,7 @@
  * The orchestrator's execution store (lesson 06). Files under
  * `<root>/.regulator/units/<unitId>/`, one directory per unit:
  *
- *   unit.json              the unit record (status, attempts) — the only mutable file
+ *   unit.json              the unit record (status, attempts, and why when it is blocked) — the only mutable file
  *   contract.v<N>.json     the contract version that governs execution; never overwritten
  *   report.v<N>.a<M>.json  the result report attempt M wrote against version N; never overwritten
  *   attempts.ndjson        one immutable record per attempt
@@ -17,8 +17,8 @@
 import { mkdir, readdir, readFile, appendFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UNIT_TRANSITIONS, UnitRecordSchema, WorkContractSchema, assertValid, unitTransitions,
-  type AttemptRecord, type BudgetLedger, type FailureObservation, type RecoveryDecision, type ResultReport, type UnitRecord, type UnitStatus, type WorkContract,
+  AttemptRecordSchema, BudgetLedgerSchema, FailureObservationSchema, RecoveryDecisionSchema, ResultReportSchema, UNIT_TRANSITIONS, UnitRecordSchema, WorkContractSchema, assertValid, readUnitRecord, unitTransitions,
+  type AttemptRecord, type BudgetLedger, type FailureObservation, type ReasonedUnitStatus, type RecoveryDecision, type ResultReport, type UnitRecord, type UnitRecordIn, type UnitStatus, type WorkContract,
 } from "@metacoding.io/regulator-protocol";
 import { UNITS_RELATIVE_DIR } from "./paths.js";
 
@@ -51,12 +51,12 @@ export class ExecutionStore {
   }
 
   /** Record a new unit under its governing contract. Refuses if the unit or the contract version exists. */
-  async createUnit(contract: WorkContract): Promise<UnitRecord> {
+  async createUnit(contract: WorkContract): Promise<UnitRecordIn<"contracted">> {
     assertValid(WorkContractSchema, contract, "work contract");
     const dir = this.#unitDir(contract.unitId);
     if (await this.getUnit(contract.unitId)) throw new Error(`unit "${contract.unitId}" already exists`);
     await writeNew(path.join(dir, `contract.v${contract.version}.json`), contract);
-    const record: UnitRecord = {
+    const record: UnitRecordIn<"contracted"> = {
       unitId: contract.unitId,
       unitType: contract.unitType,
       workload: contract.workload,
@@ -66,19 +66,36 @@ export class ExecutionStore {
       createdAt: this.#stamp(),
       updatedAt: this.#stamp(),
     };
-    await writeFile(path.join(dir, "unit.json"), `${JSON.stringify(record, null, 2)}\n`, "utf8");
+    await this.#writeUnit(record);
     return record;
   }
 
-  async getUnit(unitId: string): Promise<UnitRecord | undefined> {
+  /** The one write of `unit.json`: nothing that is not a unit record in its status's own shape reaches the disk. */
+  async #writeUnit(record: UnitRecord): Promise<void> {
+    assertValid(UnitRecordSchema, record, "unit record");
+    await writeFile(path.join(this.#unitDir(record.unitId), "unit.json"), `${JSON.stringify(record, null, 2)}\n`, "utf8");
+  }
+
+  async #readUnit(unitId: string): Promise<{ record: UnitRecord; legacyReason?: string } | undefined> {
+    let value: unknown;
     try {
-      const value: unknown = JSON.parse(await readFile(path.join(this.#unitDir(unitId), "unit.json"), "utf8"));
-      assertValid(UnitRecordSchema, value, "unit record");
-      return value;
+      value = JSON.parse(await readFile(path.join(this.#unitDir(unitId), "unit.json"), "utf8"));
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
       throw error;
     }
+    const read = readUnitRecord(value);
+    // Not a record in either shape: the schema says what is wrong with it.
+    if (!read) assertValid(UnitRecordSchema, value, "unit record");
+    return read;
+  }
+
+  /**
+   * The unit's record. A file written before the record was keyed on its status (#161) may carry a reason beside a
+   * status that has none (an aborted unit did): it is read without it, and `legacyUnits` says which files those are.
+   */
+  async getUnit(unitId: string): Promise<UnitRecord | undefined> {
+    return (await this.#readUnit(unitId))?.record;
   }
 
   async listUnits(): Promise<UnitRecord[]> {
@@ -97,10 +114,48 @@ export class ExecutionStore {
   }
 
   /**
+   * The units whose file on disk is in the older shape, each with the reason its status cannot carry: what
+   * `regulator doctor` names and `regulator upgrade` rewrites. A file that is a record in neither shape is listed
+   * under `unreadable` with what the schema says, so a caller can report it and go on.
+   */
+  async legacyUnits(): Promise<{ total: number; legacy: Array<{ unitId: string; status: UnitStatus; reason: string }>; unreadable: Array<{ unitId: string; problem: string }> }> {
+    const names = await readdir(this.dir).catch(() => [] as string[]);
+    const legacy: Array<{ unitId: string; status: UnitStatus; reason: string }> = [];
+    const unreadable: Array<{ unitId: string; problem: string }> = [];
+    let total = 0;
+    for (const name of names.sort()) {
+      try {
+        const read = await this.#readUnit(name);
+        if (!read) continue;
+        total += 1;
+        if (read.legacyReason !== undefined) legacy.push({ unitId: name, status: read.record.status, reason: read.legacyReason });
+      } catch (error) {
+        total += 1;
+        unreadable.push({ unitId: name, problem: (error as Error).message.split("\n")[0] ?? "not a unit record" });
+      }
+    }
+    return { total, legacy, unreadable };
+  }
+
+  /** Rewrite a unit's file in the current shape, as it is read: the reason its status cannot carry goes, and nothing else changes. Returns whether the file was in the older shape. */
+  async rewriteLegacyUnit(unitId: string): Promise<boolean> {
+    const read = await this.#readUnit(unitId);
+    if (!read || read.legacyReason === undefined) return false;
+    await this.#writeUnit(read.record);
+    return true;
+  }
+
+  /**
    * Move the unit along the lifecycle. The change must be a row of `UNIT_TRANSITIONS`: the table is the loop's
    * declaration of every path a unit can take, and a status written around it would make the unit's history
    * something the table does not draw. The gate is on the pair; which trigger took it is the loop's record to keep.
+   *
+   * A reason is written with a status that carries one, and only with it (#161): `blocked` takes its reason as a
+   * required argument and every other status takes none, by the signature for a caller that names the status and by
+   * the check below for one that does not.
    */
+  async setStatus<S extends ReasonedUnitStatus>(unitId: string, status: S, reason: string): Promise<UnitRecordIn<S>>;
+  async setStatus<S extends Exclude<UnitStatus, ReasonedUnitStatus>>(unitId: string, status: S): Promise<UnitRecordIn<S>>;
   async setStatus(unitId: string, status: UnitStatus, reason?: string): Promise<UnitRecord> {
     const unit = await this.getUnit(unitId);
     if (!unit) throw new Error(`no unit "${unitId}"`);
@@ -108,9 +163,17 @@ export class ExecutionStore {
       const from = UNIT_TRANSITIONS.filter((t) => t.from === unit.status).map((t) => t.to);
       throw new Error(`unit "${unitId}" is ${unit.status}; ${unit.status} → ${status} is not a transition the loop declares (UNIT_TRANSITIONS); from ${unit.status} it declares ${from.length ? [...new Set(from)].join(", ") : "nothing: the status is terminal"}`);
     }
-    const { reason: _dropped, ...rest } = unit;
-    const next: UnitRecord = { ...rest, status, updatedAt: this.#stamp(), ...(reason === undefined ? {} : { reason }) };
-    await writeFile(path.join(this.#unitDir(unitId), "unit.json"), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    const { unitId: id, unitType, workload, contract, attempts, createdAt } = unit;
+    const rest = { unitId: id, unitType, workload, contract, attempts, createdAt, updatedAt: this.#stamp() };
+    let next: UnitRecord;
+    if (status === "blocked") {
+      if (reason === undefined || reason === "") throw new Error(`unit "${unitId}": a blocked unit says why it is blocked; ${unit.status} → blocked was asked with no reason`);
+      next = { ...rest, status, reason };
+    } else {
+      if (reason !== undefined) throw new Error(`unit "${unitId}": ${status} carries no reason (only a blocked unit's record does); ${unit.status} → ${status} was asked with "${reason}"`);
+      next = { ...rest, status };
+    }
+    await this.#writeUnit(next);
     return next;
   }
 
@@ -138,9 +201,7 @@ export class ExecutionStore {
     const record: AttemptRecord = { ...attempt, attempt: unit.attempts + 1 };
     assertValid(AttemptRecordSchema, record, "attempt record");
     await appendFile(path.join(this.#unitDir(attempt.unitId), "attempts.ndjson"), `${JSON.stringify(record)}\n`, "utf8");
-    const { reason, ...rest } = unit;
-    const next: UnitRecord = { ...rest, attempts: record.attempt, updatedAt: this.#stamp(), ...(reason === undefined ? {} : { reason }) };
-    await writeFile(path.join(this.#unitDir(attempt.unitId), "unit.json"), `${JSON.stringify(next, null, 2)}\n`, "utf8");
+    await this.#writeUnit({ ...unit, attempts: record.attempt, updatedAt: this.#stamp() });
     return record;
   }
 

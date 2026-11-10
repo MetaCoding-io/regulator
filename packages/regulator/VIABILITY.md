@@ -230,7 +230,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `span-projection` | `../core/src/spans.test.ts`, `src/cli.test.ts` | not stated | none |
 | `thrash-detector` | `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts` | not stated | switch `extension:coordination`; no arm declares it |
 | `unit-lease` | `../regulator-pi/src/coordination.test.ts`, `../core/src/coordination.test.ts` | not stated | switch `loop:lease`; no arm declares it |
-| `unit-lifecycle` | `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts` | not stated | none |
+| `unit-lifecycle` | `../protocol/src/execution.test.ts`, `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts` | not stated | none |
 | `work-contract-gate` | `src/controller.test.ts`, `../regulator-pi/src/contract.test.ts` | not stated | switch `loop:check-contract`; no arm declares it |
 
 No record states a last verified revision; the tests run at every revision under `pnpm check`, and the field is where a record would name the one a person verified.

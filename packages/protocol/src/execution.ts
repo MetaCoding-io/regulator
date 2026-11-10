@@ -77,19 +77,78 @@ export function unitTransition(from: UnitStatus, on: UnitTrigger): UnitTransitio
   return UNIT_TRANSITIONS.find((t) => t.from === from && t.on === on);
 }
 
-export const UnitRecordSchema = Type.Object({
+/** What every unit record carries, whatever its status. */
+const UNIT_RECORD_FIELDS = {
   unitId: Type.String({ pattern: "^[a-zA-Z0-9._-]+$" }),
   unitType: NonEmpty,
   workload: Type.Object({ name: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false }),
   contract: Type.Object({ id: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false }),
-  status: UnitStatusSchema,
   attempts: Type.Integer({ minimum: 0 }),
   createdAt: NonEmpty,
   updatedAt: NonEmpty,
-  /** Why the unit is blocked, when it is. */
-  reason: Type.Optional(NonEmpty),
-}, { additionalProperties: false });
+};
+/** A unit in a status that carries nothing of its own. */
+function unitRecordIn<S extends UnitStatus>(status: S) {
+  return Type.Object({ ...UNIT_RECORD_FIELDS, status: Type.Literal(status) }, { additionalProperties: false });
+}
+
+/**
+ * The unit record, keyed on its status (#161): one object per status, each with the fields that status means and
+ * no other. A blocked unit says why it is blocked, always; no other status can carry a reason, so a closed unit with
+ * a reason and a blocked unit without one are not records. `TypeScript` narrows on `status` and the schema is the
+ * same statement for a record read from disk.
+ *
+ * A record written before this (0.1.4 and earlier) could carry `reason` beside any status, and an aborted unit
+ * did: `readUnitRecord` reads that one older shape, and nothing writes it.
+ */
+export const UnitRecordSchema = Type.Union([
+  unitRecordIn("contracted"),
+  unitRecordIn("dispatched"),
+  unitRecordIn("reported"),
+  unitRecordIn("closed"),
+  /** Why the unit is blocked: the loop's one line, written with the status. */
+  Type.Object({ ...UNIT_RECORD_FIELDS, status: Type.Literal("blocked"), reason: NonEmpty }, { additionalProperties: false }),
+  unitRecordIn("aborted"),
+]);
 export type UnitRecord = Static<typeof UnitRecordSchema>;
+/** The unit record in one status, or one of several: what a caller holds once it has narrowed on `status`. */
+export type UnitRecordIn<S extends UnitStatus> = Extract<UnitRecord, { status: S }>;
+/** The statuses whose record carries a reason. */
+export type ReasonedUnitStatus = { [S in UnitStatus]: UnitRecordIn<S> extends { reason: string } ? S : never }[UnitStatus];
+
+/**
+ * The reason a unit's record states, when its status carries one. The one place that asks "is there a reason?" of a
+ * record whose status it has not narrowed, so a reader does not spell the narrowing out.
+ */
+export function unitReason(unit: UnitRecord): string | undefined {
+  return unit.status === "blocked" ? unit.reason : undefined;
+}
+
+/** The shape a build before #161 wrote: the status beside an optional reason, for any status. Read, never written. */
+const LegacyUnitRecordSchema = Type.Object({ ...UNIT_RECORD_FIELDS, status: UnitStatusSchema, reason: Type.Optional(NonEmpty) }, { additionalProperties: false });
+
+export interface ReadUnitRecord {
+  record: UnitRecord;
+  /**
+   * Set when the file is in the older shape: a reason beside a status that cannot carry one (an aborted unit, as
+   * 0.1.4 wrote it). The record is read without it; `regulator doctor` names the unit and `regulator upgrade`
+   * rewrites the file.
+   */
+  legacyReason?: string;
+}
+
+/**
+ * Read a unit record from disk. The current shape is returned as it is. The one older shape that is still a unit
+ * record once its misplaced `reason` is dropped is returned without it, with the reason beside it so the caller can
+ * say so. Anything else is not a unit record and reads as undefined: a blocked unit with no reason is not repaired
+ * by inventing one.
+ */
+export function readUnitRecord(value: unknown): ReadUnitRecord | undefined {
+  if (Value.Check(UnitRecordSchema, value)) return { record: value };
+  if (!Value.Check(LegacyUnitRecordSchema, value) || value.status === "blocked" || value.reason === undefined) return undefined;
+  const { reason, ...record } = value;
+  return Value.Check(UnitRecordSchema, record) ? { record, legacyReason: reason } : undefined;
+}
 
 export const AttemptOutcomeSchema = Type.Union([
   Type.Literal("reported"),

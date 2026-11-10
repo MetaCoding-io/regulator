@@ -15,7 +15,7 @@
 import type {
   AttemptRecord, BudgetLedger, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus, UnitTransition, UnitTransitionStep, UnitTrigger,
 } from "@metacoding.io/regulator-protocol";
-import { UNIT_TRANSITIONS, assertNever, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
+import { UNIT_TRANSITIONS, assertNever, unitReason, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
 import { REGULATOR_FOR } from "./spans.js";
 
 export interface TrajectoryInput {
@@ -265,12 +265,12 @@ export function unitTrajectory(input: TrajectoryInput): UnitTrajectory {
   if (status !== unit.status) {
     const recordless: readonly UnitTrigger[] = ["reintegrated", "reintegration-refused", "dispatch-refused"];
     const declared = unitTransitions(status, unit.status).filter((t) => recordless.includes(t.on));
-    const row = declared.length === 1 ? declared[0] : declared.find((t) => ((unit.reason ?? "").startsWith("reintegration:") ? t.on === "reintegration-refused" : t.on === "dispatch-refused"));
+    const row = declared.length === 1 ? declared[0] : declared.find((t) => ((unitReason(unit) ?? "").startsWith("reintegration:") ? t.on === "reintegration-refused" : t.on === "dispatch-refused"));
     if (row) {
       push({
         at: unit.updatedAt, event: row.on === "reintegrated" ? "reintegration" : "recorded", title: row.on === "reintegrated" ? "reintegrated: closed" : `${row.on}: ${unit.status}`, on: row.on,
         regulator: row.on === "reintegrated" ? REGULATOR.reintegration : row.on === "reintegration-refused" ? REGULATOR.trial : REGULATOR.lease,
-        why: [row.description, ...(unit.reason ? [unit.reason] : [])], cites: ["unit.json"],
+        why: [row.description, ...(unit.status === "blocked" ? [unit.reason] : [])], cites: ["unit.json"],
       });
     } else {
       problem ??= `the replay ends ${status} but the record says ${unit.status}: no record-less transition joins them, so a record is missing or a status was written around the loop`;
