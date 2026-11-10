@@ -176,10 +176,13 @@ first ceiling it reaches. The recovery policy then sees that failure under the c
 actions for one cause. The Nth failure of that cause on one unit takes the Nth action of
 the rule, and once the rule runs out the last action repeats. `fallback` is the rule for
 a cause no rule names, which covers `unknown` and any cause a shorter policy leaves out.
+The one exception is `context-degradation`: with no rule for it, the attempt is routed as
+`no-report`, and the shipped policy declares none
+([Recovery](/concepts/recovery#from-cause-to-action)).
 
 | Causes | Actions |
 | --- | --- |
-| `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
+| `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `context-degradation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
 
 `retry` and `repair` spend an attempt, and once the unit's attempt ceiling is reached
 either of them becomes `escalate`. The other five, every action except `abort`, are

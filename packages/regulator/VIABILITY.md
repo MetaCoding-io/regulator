@@ -184,7 +184,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `advice-context` | `../regulator-pi/src/profiles.test.ts`, `src/profiles.test.ts`, `../core/src/advice.test.ts` | not stated | switch `extension:profiles`; no arm declares it |
 | `advice-decision` | `src/cli.test.ts`, `../core/src/advice.test.ts`, `../core/src/predictions.test.ts` | not stated | none |
 | `algedonic-delivery` | `src/controller.test.ts`, `src/cli.test.ts`, `../core/src/interaction.test.ts` | not stated | switch `loop:deliver-pending`; no arm declares it |
-| `behavioral-canary` | `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts` | not stated | switch `extension:identity`; no arm declares it |
+| `behavioral-canary` | `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `extension:identity`; no arm declares it |
 | `behaviour-check` | `../checks/src/verify.test.ts`, `src/evals.test.ts` | not stated | `no-behaviour-check` (drift) |
 | `budget-guard` | `../regulator-pi/src/budget.test.ts`, `src/controller.test.ts`, `../core/src/policy.test.ts` | not stated | switch `extension:budget`; no arm declares it |
 | `canary-watch` | `../regulator-pi/src/authority.test.ts` | not stated | switch `extension:authority`; no arm declares it |
@@ -221,7 +221,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `progression-veto` | `src/controller.test.ts`, `../core/src/obligations.test.ts` | not stated | switch `loop:progression-veto`; no arm declares it |
 | `project-trust-rule` | `../regulator-pi/src/authority.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `loop:definition-loader`; no arm declares it |
 | `proposal-intake` | `../regulator-pi/src/authority.test.ts` | not stated | switch `extension:authority`; no arm declares it |
-| `recovery-router` | `../core/src/recovery.test.ts`, `src/controller.test.ts` | not stated | switch `policy:recovery.rules`; no arm declares it |
+| `recovery-router` | `../core/src/recovery.test.ts`, `src/controller.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `policy:recovery.rules`; no arm declares it |
 | `regulator-lifecycle` | `../core/src/control-plane.test.ts`, `src/cli.test.ts`, `src/registry.test.ts` | not stated | none |
 | `reintegration` | `src/worktree.test.ts`, `src/unit.test.ts` | not stated | none |
 | `result-report-gate` | `../regulator-pi/src/contract.test.ts`, `src/controller.test.ts`, `../core/src/contracts.test.ts` | not stated | switch `extension:contract`; no arm declares it |
@@ -256,7 +256,7 @@ part of this list and are linked, not copied: a debt row is what the build owes,
 | **Budget without a limit behaviour** (functional pathologies) | a reserve for verification and recovery at the instance level is not declared (the viability-theory framing; unscheduled) |
 | **Recovery per unit hides a shared cause** (functional pathologies) | a level-2 count over recovery decisions that opens an obligation on the instance when N units hit one cause in a window (the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §4 item 8, after Lanham §8.3.7's circuit breaker); recorded as a backlog row, not debt, because the card names the per-unit count as a limit |
 | **The undeclared action** (functional pathologies) | the derivation reads one value of one axis, and an irreversibility outside the tree (a network call the program makes) is declared, not observed (`declared-tool` limitations 2 and 4) |
-| **Attention decay** (information and channel pathologies) | what S3 does with the finding: no recovery cause names it (DEBT row 42), and a model that keeps the marker and still drifts is not seen |
+| **Attention decay** (information and channel pathologies) | the shipped recovery policy declares no rule for the cause, so the fresh session is still a person's decision until a live run shows the silence leading a failure (DEBT row 42), and a model that keeps the marker and still drifts is not seen |
 | **Compaction discards the constraint** (information and channel pathologies) | a model summary can still be wrong, and only the deterministic block is guaranteed (a permanent limit) |
 | **Summary discards the uncertainty** (information and channel pathologies) | observation versus inference is not a typed distinction on evidence, and retraction dependencies are not tracked |
 | **Data absorbed as control** (information and channel pathologies) | poisoned operational memory driving a later unit is untested. Memory is rendered as facts and never as instructions, and that rendering is the whole defence; the candidate fixture is `fixture-poisoned-memory`, one false environment fact under valid provenance and a near review date ([#130](https://github.com/MetaCoding-io/regulator/issues/130), after #46; the [agent-engineering books note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-25-agent-engineering-books.md) §6) |
