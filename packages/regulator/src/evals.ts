@@ -182,7 +182,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
     for (let repetition = 1; repetition <= repetitions; repetition++) {
       const instance = path.join(await mkdtemp(path.join(tmpdir(), `regulator-eval-${arm.name}-${repetition}-`)), "instance");
       try {
-        await initFixture(exec, fixture, instance);
+        await initFixture(exec, fixture, instance, now);
         if (options.instance) await initInstance(exec, { repo: instance, definitionRoot: root, by: options.owner, now, ...options.instance });
         const manifest = await readManifest(instance);
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();

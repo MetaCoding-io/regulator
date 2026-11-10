@@ -376,7 +376,7 @@ export function assertValid<T extends TSchema>(schema: T, value: unknown, label:
 export { TokenUsageSchema, ToolCallRecordSchema, TurnRecordSchema, isTurnRecord, type TokenUsage, type ToolCallRecord, type TurnRecord } from "./trace.js";
 export { ToolEffectSchema, type ToolEffect } from "./effects.js";
 export { CapabilityProfileSchema, ConsentGrantSchema, ReasoningLevelSchema, isCapabilityProfile, type CapabilityProfile, type ConsentGrant, type ReasoningLevel } from "./profiles.js";
-export { MemoryEntrySchema, MemoryEventSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent } from "./memory.js";
+export { MemoryEntrySchema, MemoryEventSchema, MemorySeedSchema, isMemoryEvent, type MemoryEntry, type MemoryEvent, type MemorySeed } from "./memory.js";
 export { ENFORCEMENT_POINTS, EnforcementPointSchema, MechanismLevelSchema, RegulatorRecordSchema, enforcementPointName, isRegulatorRecord, unknownEnforcementPoint, type EnforcementPoint, type EnforcementWhere, type MechanismLevel, type RegulatorRecord } from "./registry.js";
 export {
   ConsequenceSchema, ContractProvenanceSchema, DelegatedDecisionSchema, EvidenceExpectationSchema, ExpectationCheckSchema, FixedDecisionSchema,
