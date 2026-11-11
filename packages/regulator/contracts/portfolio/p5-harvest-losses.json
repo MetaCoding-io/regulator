@@ -1,0 +1,64 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p5-harvest-losses",
+  "unitId": "p5-harvest-losses",
+  "unitType": "harvest-losses",
+  "objective": "Find September's harvest candidates: write trades/proposed/harvest-2026-09-30.json — every open lot at an unrealised loss at the 2026-09-30 prices, with the loss and whether the lot is long-term — as candidates a program found.",
+  "contribution": "The first half of a harvest, which is arithmetic: where the losses are. The second half — whether a loss is worth harvesting against its costs, and the replacement from the ticker's exchangeable set — is the harvest contract's (#124) and is not asked of this unit.",
+  "constraintRefs": [
+    "reg.control.command-runner.v1",
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-lots",
+      "subject": "the lots",
+      "decision": "The open lots are lots/lots.csv, current to 2026-09-30, and are not changed by this unit; a candidate names one of them, in the shares it holds.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-tax",
+      "subject": "the tax parameters",
+      "decision": "The rates, the long-term cutoff and the wash-sale window are tax.json; the jurisdiction is the one it declares, and the rules are its rules.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-candidates",
+      "subject": "candidates only",
+      "decision": "Every lot whose value at the 2026-09-30 prices is below its cost is a candidate, with no threshold and no benefit-versus-cost judgment; nothing in the file is a trade, and nothing is written under trades/pending/.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [],
+  "unresolved": [],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — every candidate is an open lot at an unrealised loss at the date's prices, with the loss as the arithmetic says",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

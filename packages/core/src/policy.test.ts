@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PolicyDefinition, WorkContract } from "@metacoding.io/regulator-protocol";
-import { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger } from "./policy.js";
+import { BudgetMeter, carriedLedger, ceilingFor, chooseModels, ownConsumption, renderPreservedContext, routeFor, summarizeLedger } from "./policy.js";
 
 const policy: PolicyDefinition = {
   name: "default", version: 1, description: "d",
@@ -81,6 +81,44 @@ test("budget meter: a session that opens on an attempt already metered resumes i
   assert.equal(next.ledger.consumed.tokens, 0, "a different attempt's ledger is not resumed");
   assert.equal(next.exhausted, undefined);
   assert.deepEqual(next.ledger.models, ["anthropic/claude-sonnet-4-5"]);
+});
+
+test("a carried ledger (#133): the attempt that continues an earlier one opens on what it spent, under the same ceiling, and says how much of its consumption is the earlier attempt's; the meter resumes it, the clock adds and does not re-measure, and each attempt's own consumption sums to the unit's", () => {
+  let clock = 1_700_000_000_000;
+  const ceiling = { tokens: 1000, cost: 1, wallClockMs: 60_000, turns: 5, attempts: 3 };
+  const first = new BudgetMeter({ unitId: "u1", attempt: 1, ceiling, now: () => clock, model: "anthropic/claude-sonnet-4-5" });
+  first.recordUsage({ input: 600, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 600, cost: 0.25 });
+  first.recordTurn(); first.recordTurn();
+  first.recordCompaction("threshold", true);
+  clock += 20_000;
+  const ended = first.ledger;
+
+  clock += 3_600_000; // the unit waited an hour between the attempts: that hour is nobody's wall clock
+  const seeded = carriedLedger(ended, 2, () => clock);
+  assert.deepEqual(seeded.consumed, { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2 }, "the ledger continues from what attempt 1 spent");
+  assert.deepEqual(seeded.carried, { attempt: 1, consumed: { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2 } });
+  assert.deepEqual([seeded.attempt, seeded.models, seeded.compactions, seeded.exhausted], [2, [], [], undefined], "the models, the compactions and a halt are the earlier attempt's own");
+  assert.deepEqual(ownConsumption(seeded), { tokens: 0, cost: 0, wallClockMs: 0, turns: 0 });
+  assert.deepEqual(ownConsumption(ended), ended.consumed, "a ledger that carries nothing is all its own");
+
+  const second = new BudgetMeter({ unitId: "u1", attempt: 2, ceiling, now: () => clock, model: "anthropic/claude-sonnet-4-5", resume: seeded });
+  assert.equal(second.ledger.consumed.tokens, 600, "the session's meter resumes the ledger S3 opened, as a fallback session resumes an attempt's");
+  assert.equal(second.ledger.carried?.attempt, 1);
+  assert.deepEqual(second.ledger.models, ["anthropic/claude-sonnet-4-5"]);
+  clock += 10_000;
+  second.recordUsage({ input: 300, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 300, cost: 0.25 });
+  second.recordTurn();
+  assert.equal(second.ledger.consumed.wallClockMs, 30_000, "20 s carried and 10 s of its own; the hour between is not counted");
+  assert.equal(second.check(), undefined, "900 of 1000 tokens: there is budget left");
+  assert.deepEqual(ownConsumption(second.ledger), { tokens: 300, cost: 0.25, wallClockMs: 10_000, turns: 1 });
+  assert.equal(ownConsumption(ended).tokens + ownConsumption(second.ledger).tokens, second.ledger.consumed.tokens, "summed per attempt, each token is counted once");
+  assert.match(summarizeLedger(second.ledger), /^900\/1000 tok \(90%\), 3\/5 turns, 600 tok and 2 turns carried from attempt 1$/);
+  second.recordUsage({ input: 100, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 100, cost: 0 });
+  assert.equal(second.check(), "tokens", "the retry spends what the first attempt left, not a new allowance");
+
+  const third = carriedLedger(second.ledger, 3, () => clock);
+  assert.deepEqual([third.carried?.attempt, third.carried?.consumed.tokens, third.exhausted], [2, 1000, undefined], "a chain carries the running total; the halt marker stays with the attempt that crossed");
+  assert.equal(new BudgetMeter({ unitId: "u1", attempt: 3, ceiling, now: () => clock, resume: third }).check(), "tokens", "and with nothing left the guard halts the new session at its first check");
 });
 
 test("preserved context carries the contract allocation, the evidence pointers and the touched files, and nothing of it depends on a model", () => {

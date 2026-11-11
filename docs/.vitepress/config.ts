@@ -22,7 +22,7 @@ const OFF_SITE = ["archive", "research"];
 export default defineConfig({
   title: "regulator",
   description: "An agent harness on Pi with an explicit cybernetic control plane: prompts advise, types describe, gates enforce.",
-  base: "/regulator/",
+  base: "/",
   lang: "en-US",
   lastUpdated: true,
   cleanUrls: true,
@@ -31,12 +31,13 @@ export default defineConfig({
     "generated/cli.md": "reference/cli.md",
     "generated/regulators.md": "reference/regulators.md",
     "generated/boundary.md": "reference/boundary.md",
+    "generated/viability.md": "reference/viability.md",
     "generated/operating.md": "guide/operating.md",
     "generated/changelog.md": "project/changelog.md",
     "generated/roadmap.md": "project/roadmap.md",
     "generated/contributing.md": "project/contributing.md",
   },
-  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/regulator/favicon.svg" }]],
+  head: [["link", { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" }]],
   themeConfig: {
     logo: "/favicon.svg",
     siteTitle: "regulator",
@@ -45,7 +46,8 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/control-plane" },
       { text: "Reference", link: "/reference/cli" },
       { text: "Project", link: "/project/roadmap" },
-      { text: "Course", link: "https://metacoding-io.github.io/regulator-website/index.html" },
+      { text: "Course", link: "https://regulator.metacoding.io/" },
+      { text: "MetaCoding", link: "https://metacoding.io" },
     ],
     sidebar: [
       {
@@ -57,6 +59,8 @@ export default defineConfig({
           { text: "The control room", link: "/guide/control-room" },
           { text: "Operating", link: "/guide/operating" },
           { text: "Worked example: a household ledger", link: "/examples/personal-finance" },
+          { text: "Worked example: a managed portfolio", link: "/examples/portfolio" },
+          { text: "Authoring a workload", link: "/guide/authoring-a-workload" },
         ],
       },
       {
@@ -91,6 +95,7 @@ export default defineConfig({
           { text: "Host checks", link: "/reference/host-checks" },
           { text: "Regulators", link: "/reference/regulators" },
           { text: "Enforcement boundary", link: "/reference/boundary" },
+          { text: "Viability case", link: "/reference/viability" },
         ],
       },
       {
@@ -98,6 +103,7 @@ export default defineConfig({
         collapsed: false,
         items: [
           { text: "Roadmap", link: "/project/roadmap" },
+          { text: "What's coming", link: "/project/whats-coming" },
           { text: "Changelog", link: "/project/changelog" },
           { text: "Build debt", link: "/DEBT" },
           { text: "Decisions", link: "/decisions/0001-own-orchestrator" },
@@ -114,7 +120,7 @@ export default defineConfig({
     search: { provider: "local" },
     footer: {
       message: "Released under the Apache-2.0 License.",
-      copyright: "Copyright © 2025–present MetaCoding",
+      copyright: 'Copyright © 2025–present <a href="https://metacoding.io">MetaCoding</a> · a MetaCoding project',
     },
     outline: { level: [2, 3] },
   },

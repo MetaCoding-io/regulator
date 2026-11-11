@@ -1,0 +1,40 @@
+{
+  "id": "reg.control.unit-lifecycle.v1",
+  "name": "Unit lifecycle",
+  "status": "active",
+  "vsmFunction": "S3",
+  "purpose": "The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, held as a value and as a type (`as const satisfies`). The execution store has one write of a unit's status, `transition(unit, on)`: the caller names the trigger, the target status is looked up in the table, and where the caller holds the unit in a known status an illegal (from, on) pair does not compile (`TriggerFrom`, `TriggerFromEvery`); for a unit named by id, and against the record read from disk in every case, the store refuses a trigger the table does not declare from the unit's status. The unit's record is keyed on that status (`UnitRecordSchema`, a union of one object per status): a blocked unit states its reason and no other status can carry one, by the type the write takes and by the schema a record read from disk is checked against. Each transition appends one line to the unit's status history (`status.ndjson`: from, to, the trigger, when, and the reason where the unit blocked), whose schema is the table, one member per row. The table is what the figure of the lifecycle is drawn from, and the history is what a unit's path is read from: `unitTrajectory` (core) takes the moves from the history in order and puts beside each the record that says why — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the history, the records and the unit record disagree. The control room's Lifecycle view steps through it.",
+  "absorbs": {
+    "failureClass": "status-written-around-the-loop",
+    "description": "A unit marked closed by a hand edit, a test fixture or a branch of the loop nobody drew; a 'why did this unit stop?' answered by reading six logs by hand; a state diagram on the website the code had already outgrown."
+  },
+  "mechanism": {
+    "level": "type",
+    "implementation": "../core/src/execution-store.ts",
+    "enforcementPoints": [
+      {"where": "loop", "point": "runUnit", "note": "ExecutionStore.transition, on the record the step holds: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts"},
+      {"where": "loop", "point": "closeUnit", "note": "re-verified, re-audit-refused"},
+      {"where": "loop", "point": "routeUnit", "note": "routed-waiting, abort"},
+      {"where": "loop", "point": "finishUnit", "note": "reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)"},
+      {"where": "cli", "point": "status", "note": "unitTrajectory (../core/src/trajectory.ts): the status history read on every unit view, with the why from the records, which the control room steps through"}
+    ]
+  },
+  "channels": { "consumes": [".regulator/units/<id>/unit.json", "status.ndjson (the status history)", "attempts.ndjson", "decisions.ndjson", "audit.ndjson (verdicts)", "signals.ndjson (obligations)"], "emits": ["a compile error on a trigger the table does not declare from a status the caller holds", "a refusal on a trigger the table does not declare from the status on disk", "one line of the status history per transition", "the unit's trajectory, in the status read model"] },
+  "scope": { "subjects": ["execution"], "resources": [".regulator/units/", ".regulator/units/*/status.ndjson"] },
+  "cost": { "description": "One table lookup and one appended line per transition; one read of the unit's history and records per status view, which the read model makes anyway." },
+  "authority": {
+    "may": ["refuse a trigger the table does not declare from the unit's status", "append the transition it wrote to the unit's status history", "read the history back as the unit's path, with the why from the records", "say that the history, the records and the unit record disagree", "reconstruct the path from the records for a unit that has no history, and say that it did"],
+    "mayNot": ["take a target status from a caller", "infer a status from the repository or the transcript", "state a why the records do not carry", "write a history line for a move it did not make: a unit older than the history gets none"]
+  },
+  "evidence": { "tests": ["../protocol/src/execution.test.ts", "../core/src/contracts.test.ts", "../core/src/trajectory.test.ts", "src/controller.test.ts", "src/stores.test.ts", "src/status.test.ts", "src/figures.test.ts", "../control-room/src/server.test.ts"] },
+  "limitations": [
+    "The compiler holds the table only where the caller holds the unit's record in a known status: the loop's four steps do, each on the record it read or was returned. A caller that names the unit by id (a test, a future command) and every record read from disk are checked by the store at runtime, by the same table. The three rows that share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) are written with their trigger and are distinct lines of the history; the unit record alone still holds only the status and its reason, so which row a unit last took is read from the history, not from `unit.json`.",
+    "A transition is two writes, the history line and then the unit record, and they are not atomic: a process that dies between them leaves a history that ends one move ahead of the record. The trajectory says so (the history ends where the record does not) and nothing repairs it. A unit whose moves were written before the history existed has none, or one that begins partway (an older build blocked it and this one resumed it): its path is reconstructed whole from the attempt, verdict, decision and obligation records, as it was before the history, with the three record-less moves placed at the record that follows, and the trajectory and each inferred step say that it is a reconstruction. `regulator upgrade` writes no history for such a unit: a line is the store's record of a move it made.",
+    "The why is what the records say, and the history carries none beyond a blocked unit's reason. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the trajectory does not read the transcript to improve on it. A line is joined to its record by its trigger and its order, so a record written without its transition, or a transition without its record, is a stated problem and not a guessed pairing.",
+    "A status written around the store is caught where the history, the records and the unit record disagree: a hand edit of `unit.json` alone, or a line appended alone. An edit that writes both consistently, as a path through the table, is not caught; the files are plain and nothing signs them."
+  ],
+  "ownership": { "owner": "regulator-maintainers", "introduced": "2026-10-13", "reviewBy": "2026-12-01" },
+  "ablation": { "switch": "none", "note": "A type, a store gate and an appended line over the loop's own writes; switching it off changes no run the loop performs, only what a caller outside the loop or a hand edit can do, and what the trajectory is read from." },
+  "retirement": { "condition": "The earlier condition, the store writing the transition with its trigger instead of the status, is met in its first half (#162): the trigger is what the store is given, and the history's schema is the table. The record is not retired by it, because the gate it describes is the one that writes. Retire the reconstruction when no supported instance holds a unit older than the history. Retire the record when the unit record is computed from the history (one write, not two) and every writer holds the unit in a known status, so that the runtime check has no caller left and the lifecycle is a type alone." },
+  "introducedIn": "unreleased"
+}

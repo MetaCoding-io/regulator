@@ -30,6 +30,12 @@ export interface Host {
   /** The absolute path of a named extension's built module. */
   extensionPath(name: string): string;
   dispatcher(options?: HostDispatcherOptions): Dispatcher;
+  /**
+   * The models the runtime can run on now, as `provider/id`: what the dispatcher chooses among when it reads a
+   * route. An eval reads it before spending, so a run declared on a route's primary is refused rather than run on
+   * whichever fallback has a key (the fourth live drift run, 2026-11-08, ran every unit on the last fallback).
+   */
+  availableModels?(): Promise<string[]>;
 }
 
 export interface ResolvedHost {

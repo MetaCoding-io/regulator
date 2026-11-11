@@ -169,3 +169,58 @@ test("the instance manifest reaches the session (lesson 15): the implement profi
   assert.equal(statuses.profile, "profile: research");
   assert.match(gate("lib/greet.js")?.reason ?? "", /may write under nothing \(read-only profile\)/);
 });
+
+test("advice reaches the session from the instance's file (#110): the section is rendered from regulator/advice/<profile>.md in the working tree the unit sees, a profile switch reads the new profile's file, the cut past the policy's advice.maxChars is said once in the status line and a warning, and outside an instance the grant alone renders", async (t) => {
+  const { gitExec, initRepo, startUnit, POLICY_PATH, ADVICE_RELATIVE_DIR } = await import("@metacoding.io/regulator");
+  const { readFile, writeFile, mkdtemp, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const repo = await initRepo(t);
+  const started = await startUnit(gitExec, { repo, unitId: "u1", owner: "alice" });
+  const section = async (handlers: Map<string, (e: unknown, c: unknown) => unknown>, ctx: unknown) => {
+    const event = { type: "before_agent_start", prompt: "hi", systemPrompt: "base", systemPromptOptions: { sections: {} as Record<string, string> } };
+    await handlers.get("before_agent_start")!(event, ctx);
+    return event.systemPromptOptions.sections[PROFILE_SECTION_TAG]!;
+  };
+
+  // The seeded file, byte for byte, as the inline advice rendered before the move.
+  const { pi, handlers, commands } = mockPi();
+  createProfilesExtension()(pi);
+  const { ctx, statuses, notices } = ctxFor(started.worktree.path);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  const seeded = await readFile(path.join(started.worktree.path, ADVICE_RELATIVE_DIR, "implement.md"), "utf8");
+  assert.equal(await section(handlers, ctx), renderProfileSection(PROFILES.implement, { advice: seeded }));
+  assert.match(await section(handlers, ctx), /\n- You are in the implement profile: you may change files under src\/ and test\/ only\.\n/);
+  assert.equal(statuses.profile, "profile: implement");
+
+  // The worktree's copy is what renders: a unit's shell can change it, and the closeout turns that into a finding, not a rule.
+  await writeFile(path.join(started.worktree.path, ADVICE_RELATIVE_DIR, "research.md"), "- Say only what you read.\n");
+  await commands.get("profile")!.handler("research", ctx);
+  assert.match(await section(handlers, ctx), /\n- Say only what you read\.$/);
+  assert.doesNotMatch(await section(handlers, ctx), /implement profile/);
+
+  // The cut: the policy's advice.maxChars is the limit, the status line says what was cut, the warning is said once per session.
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-policy-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  const lowered = { ...JSON.parse(await readFile(POLICY_PATH, "utf8")) as Record<string, unknown>, advice: { maxChars: 100 } };
+  await writeFile(path.join(dir, "policy.json"), JSON.stringify(lowered));
+  const before = process.env.REGULATOR_POLICY;
+  process.env.REGULATOR_POLICY = path.join(dir, "policy.json");
+  t.after(() => { if (before === undefined) delete process.env.REGULATOR_POLICY; else process.env.REGULATOR_POLICY = before; });
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+  assert.equal(statuses.profile, `profile: implement; advice truncated at 100 of ${seeded.trim().length} characters`);
+  const cut = await section(handlers, ctx);
+  await section(handlers, ctx);
+  assert.match(cut, /\n\[advice truncated at 100 characters; the file is authoritative\]$/);
+  assert.equal(cut, renderProfileSection(PROFILES.implement, { advice: seeded, maxChars: 100 }));
+  assert.deepEqual(notices.filter((n) => n.level === "warning").map((n) => n.message), [`regulator: the advice for profile "implement" renders to ${seeded.trim().length} characters and a unit's prompt carries 100: ${seeded.trim().length - 100} character(s) of implement.md are advice the model never sees. Shorten the file, or raise \`advice.maxChars\` in the budget policy; the file is authoritative either way.`], "said once, not per turn");
+
+  // Outside an instance there is no file: the grant alone renders, and nothing is said about a cut.
+  delete process.env.REGULATOR_POLICY;
+  const bare = await fixtureCopy(t);
+  const { ctx: bareCtx, statuses: bareStatuses, notices: bareNotices } = ctxFor(bare);
+  await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, bareCtx);
+  assert.equal(bareStatuses.profile, "profile: implement");
+  assert.equal(await section(handlers, bareCtx), renderProfileSection(PROFILES.implement));
+  assert.doesNotMatch(await section(handlers, bareCtx), /implement profile:/);
+  assert.equal(bareNotices.length, 0);
+});

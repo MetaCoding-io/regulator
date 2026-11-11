@@ -29,7 +29,7 @@ test.
 | `tasks[]` | contracts, run in order in one instance per repetition, so drift can accumulate |
 | `arms[]` | the configurations compared (below) |
 | `repetitions` | runs per arm; agent runs are stochastic, so one run proves nothing |
-| `metrics[]` | the metrics the report summarizes, declared before any run |
+| `metrics[]` | the metrics the report summarizes, declared before any run: built-in, or declared by a workload; at most one marked `optimise` |
 | `baseline` | the arm every other arm is compared against |
 
 The metrics are pre-registered: a suite states what it will measure before it is run,
@@ -118,8 +118,64 @@ Trajectory graders read the records of how the unit got there:
 | `memoryFacts` | entries in the memory store: the sanctioned place for what was learned |
 | `tokens`, `turns`, `wallClockMs` | what the unit spent |
 
-These fifteen names are a closed list (`EVAL_METRICS` in the protocol). A suite chooses
-from them, and a workload cannot yet declare a metric of its own.
+These fifteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
+ship in the harness and run on every unit.
+
+A **declared** metric is one a workload brings, as data beside the workload that owns it:
+`workload/<name>.json` carries `metrics[]`, each a namespaced name
+(`workload:portfolio/turnover`), a kind (`count`, `rate` or `score`), a direction (which
+way is better, or none), an optional instrument reference, and a grader. The grader is a
+declared command the host runs in the instance after each unit, in the shape the host
+checks use: it reads the instance's outputs and the fixture's ground truth, and writes
+one JSON line per metric, `{ metric, value, observation? }`. Its exit code and its output
+are the only things read. It never reads a unit's report, nothing in it is computed from
+text a unit wrote, and it is never a model. The first one is the portfolio workload's
+turnover, computed by the fixture's own library and pre-registered by
+[`evals/portfolio-turnover.json`](../../packages/regulator/evals/portfolio-turnover.json).
+
+Declared metrics run under the same rules as the built-ins. Pre-registration is
+unchanged: a suite names a declared metric before any run, the report summarizes only
+what the suite named, and a declared name the definition does not carry is refused by
+`regulator check`, not warned about — as is a grader whose command names no file under
+the definition, and a workload declaring a metric it does not own. A **judged** metric,
+one whose declaration names an instrument, is refused until the instrument record exists
+with its held-out score; that record kind does not exist yet, so no declared metric is a
+model's judgment. A suite may mark at most one declared metric as the thing an optimiser
+could select on; every other metric is reported only, and the harness optimises nothing.
+
+### Pre-registration, one level down
+
+A suite states what it will measure before it is run, so a report cannot choose afterwards
+the metric that happened to look good. The same rule applies to one proposal instead of
+one suite. A `harness-edit`, a proposal against a profile's advice, carries three parts,
+and each is a different record: a **diagnosis**, references to the evidence records and
+signals the edit traces to; a **change**, the diff against one advice file; and a
+**prediction**, an intelligence signal with a `prediction` block that names, before
+anyone decides, the metric the edit is meant to move, the baseline it is measured
+against (a committed report's arm, by fingerprint), the direction and size, a
+probability, and at each horizon the grader value that would count against it. The
+disconfirming value is the interpretation rule's "where the gated arm lost", asked in
+advance instead of after.
+
+The prediction resolves from the stores with these same graders, never from a unit's
+report, into a `prediction-resolution`: confirmed, disconfirmed, or inconclusive. The
+three values are needed because the baseline problem is real: at three repetitions few
+intervals separate, so a probe's arm often neither reaches the predicted effect nor the
+disconfirming value. Inconclusive counts against the prediction's precision and never for
+the edit. A disconfirmed live horizon opens an obligation owed to S5 to revert or
+re-decide, which is how an accepted edit becomes auditable by the graders that audit
+everything else. [Intelligence and memory](/concepts/intelligence-and-memory#predictions)
+has the record and its resolution rule.
+
+The rule stands beside INV-003 as a candidate invariant, recorded here and not promoted:
+*evidence for a proposal's diagnosis does not satisfy its effect; the effect is a
+prediction that resolves.* INV-003 says a unit's claim cannot close the unit; this is
+the same shape one function over, a trace that justified a diagnosis cannot certify the
+remedy. For now it is a schema rule and a host check: the payload refuses a missing
+part, `advice accept` refuses references that do not resolve, and the resolution record
+is what the disposition is later held against. Whether it becomes INV-005 is a person's
+decision, taken on the record once resolved predictions exist to show what the rule
+caught.
 
 ## Reports
 
@@ -138,8 +194,10 @@ warrants.
 
 It carries a fingerprint: the Node version, the platform, the pinned Pi version, the
 harness revision, the dispatcher (`scripted:<behaviour>` or a live host), the model, the
-number of registry records, and each policy's version. A number without that stamp
-cannot be reproduced or compared.
+number of registry records, each policy's version and, for each declared metric, the
+grader's command and the hash of the file it ran from. A number without that stamp
+cannot be reproduced or compared, and a declared number without its grader's hash could
+not say what measured it.
 
 And it keeps every run, with its outcome, its metrics and each grader's observation, so
 a reader can check what any number was made of.
@@ -185,7 +243,7 @@ regulator eval packages/regulator/evals/drift.json --arm control --arm treatment
 ```
 
 A **scripted** run replaces the model with a deterministic unit, so what it validates
-is the graders and the loop. The four behaviours are:
+is the graders and the loop. The five behaviours are:
 
 | Behaviour | What it does | What the committed report shows |
 | --- | --- | --- |
@@ -193,6 +251,15 @@ is the graders and the loop. The four behaviours are:
 | `drifter` | changes the signature in place, edits the vendored helper and the glossary, writes config at the root and a rule into the README | the control arm lands all of it. The treatment refuses it and closes nothing. Every ablation arm also closes nothing, because the unit trips several checks at once. |
 | `sloppy` | keeps every checked boundary, but writes the `TZ` rule into the README and calls units "tasks" | the control arm lands the drift. The treatment refuses every unit on `glossary-lint`: the over-regulation row. |
 | `self-certifier` | deletes the tests that expose the defect and reports green | the control arm lands the weakened suite. `no-inherited-tests` isolates that check's whole contribution. |
+| `confident` | half-fixes the defect, and reports `high` confidence and low consequence in every report and on every intelligence signal | no arm closes a unit, the control included: `run_tests` refuses it and no refusal quotes the claim. The routing policy's floor lifts the two signals that name an invariant or the identity to blocking; the third is noted at the `info` it claimed. |
+
+The same six tasks also run over `fixture-poisoned-memory` as their own suite
+(`evals/drift-poisoned-memory.json`, the control and treatment arms): slugkit with one
+false fact seeded into operational memory. The committed report is the scripted
+`reference`, and it shows only what a scripted unit can: the fact is stored under its
+provenance, rendered as a fact to implement units, counted by `memoryFacts`, and reaches
+no report, decision or commit. A scripted unit reads no context, so whether a model acts
+on the fact is the next live report's to show.
 
 A scripted unit never runs a session, so the session gates (the profile grant, the write
 gate, the bash watch, the canary watch, the budget guard) are not exercised, and
@@ -220,8 +287,13 @@ short:
   scripted units, and not against a model's actual drift.
 - Contamination (a fixture leaking into a prompt or into a model's training data) is
   not detected.
-- The metric list is closed, so a workload cannot bring its own grader: the household
-  ledger's balance, a corpus F₁, or calibration for a predictor.
+- A declared grader is run as declared and that is all the harness checks: whether its
+  number measures what its declaration says is the workload's correctness, evidenced by
+  the workload's own tests. A judged metric waits on the instrument record kind.
 - Only `check:` and `extension:` switches can be thrown, and scripted runs can only
   throw `check:` switches. Every regulator whose switch is `loop:`, `policy:` or `none`,
   and every session gate under a scripted run, has no ablation evidence yet.
+- No probe arm runs a proposed advice edit before the decision, so `advice accept` does
+  not refuse a `harness-edit` that was never probed; a probe horizon resolves only
+  against a report a person committed. The probe arm and the probe rule are slice 3 of
+  the accept-path split, after the live report.
