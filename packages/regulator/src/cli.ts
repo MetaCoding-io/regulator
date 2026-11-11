@@ -85,14 +85,14 @@ import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, O
 import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
-import { readStatus, renderStatusText } from "./status.js";
+import { readStatus, renderStatusText, unitWhy } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { INTELLIGENCE_POLICY_PATH, loadIntelligencePolicy, loadIntelligencePolicyIfPresent } from "./intelligence-policy.js";
 import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite, unavailablePrimaries } from "./evals.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
-import { closeUnit, driveUnit, routeUnit, runUnit, type Dispatcher } from "./controller.js";
+import { blockedDetail, closeUnit, driveUnit, routeUnit, runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { realExec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, HARNESS_OWNED_INSTANCE_DIRS, IDENTITY_RELATIVE_DIR, finishUnit, initFixture, startUnit, unitStatus } from "./unit.js";
@@ -203,8 +203,11 @@ try {
       const point = (p: { packageVersion: string; harnessRevision: string }) => `${p.packageVersion}@${p.harnessRevision.slice(0, 7)}`;
       console.log(`${check ? "upgrade would carry" : "upgraded"} this instance ${point(plan.from)}${plan.fromUnversioned ? " (the manifest recorded no package version; read as the migration floor)" : ""} → ${point(plan.to)}, crossing ${plan.crossed.length ? plan.crossed.map((n) => n.version).join(", ") : "no version"}`);
       for (const step of plan.steps) {
-        const what = step.step === "seed" ? `seed ${step.instance} from the definition's ${step.class} seed` : "add the .regulator/ line to .gitignore";
-        console.log(`  ${step.apply ? (check ? "would apply" : "applied   ") : "nothing to do"}  ${what}${step.step === "seed" ? step.apply ? `: ${step.files.join(", ")}` : ": every seed file is present; none is overwritten" : step.apply ? "" : ": present"}`);
+        const what = step.step === "seed" ? `seed ${step.instance} from the definition's ${step.class} seed` : step.step === "unit-records" ? "rewrite unit records written before the status-keyed shape" : "add the .regulator/ line to .gitignore";
+        const said = step.step === "seed" ? (step.apply ? `: ${step.files.join(", ")}` : ": every seed file is present; none is overwritten")
+          : step.step === "unit-records" ? (step.apply ? `: ${step.units.join(", ")} (the reason beside a status that carries none is dropped; nothing else changes)` : ": every unit record is in its status's own shape")
+            : step.apply ? "" : ": present";
+        console.log(`  ${step.apply ? (check ? "would apply" : "applied   ") : "nothing to do"}  ${what}${said}`);
       }
       if (result.notes) {
         console.log("  the migration notes, for a person to read; nothing below is applied by upgrade:");
@@ -398,8 +401,9 @@ ${rationale}`]]) {
       console.error(`unit ${contract.unitId}: contract refused; nothing was dispatched`);
       process.exit(1);
     } else {
-      for (const problem of outcome.problems ?? []) console.error(`✖ ${problem.path}: ${problem.message}`);
-      console.error(`unit ${contract.unitId}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}; see \`regulator unit show ${contract.unitId}\``);
+      if (outcome.reason === "invalid-report") for (const problem of outcome.problems) console.error(`✖ ${problem.path}: ${problem.message}`);
+      const detail = blockedDetail(outcome);
+      console.error(`unit ${contract.unitId}: blocked (${outcome.reason})${detail ? ` — ${detail}` : ""}; see \`regulator unit show ${contract.unitId}\``);
       process.exit(1);
     }
   } else if (command === "unit" && sub === "drive" && rest[0]) {
@@ -416,7 +420,9 @@ ${rationale}`]]) {
     if (final.status === "closed") console.log(`unit ${contract.unitId}: closed; reintegrated as ${final.sha}`);
     else if (final.status === "refused") { for (const p of final.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
     else {
-      console.error(`unit ${contract.unitId}: ${(await new ExecutionStore(process.cwd()).getUnit(contract.unitId))?.reason ?? final.reason}`);
+      // Why, as the records say it: a blocked unit's own reason, or for a unit the router aborted, the decision that did (#161).
+      const now = await new ExecutionStore(process.cwd()).getUnit(contract.unitId);
+      console.error(`unit ${contract.unitId}: ${(now && unitWhy(now, decisions)) ?? final.reason}`);
       for (const o of await new ObligationLedger(process.cwd()).open(contract.unitId)) console.error(`  owed: ${describe(o)}`);
       process.exit(1);
     }
@@ -441,7 +447,7 @@ ${rationale}`]]) {
     const store = new ExecutionStore(process.cwd());
     const unit = await store.getUnit(rest[0]);
     if (!unit) throw new Error(`no unit "${rest[0]}" in ${store.dir}`);
-    console.log(`${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${unit.reason ? `  — ${unit.reason}` : ""}`);
+    console.log(`${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${unitWhy(unit, await store.listDecisions(unit.unitId)) ? `  — ${unitWhy(unit, await store.listDecisions(unit.unitId))}` : ""}`);
     for (const attempt of await store.listAttempts(unit.unitId)) {
       const ledger = await store.getBudget(unit.unitId, attempt.attempt);
       console.log(`  attempt ${attempt.attempt}: ${attempt.outcome}${attempt.detail ? ` — ${attempt.detail}` : ""}${ledger ? `\n    budget: ${summarizeLedger(ledger)}; models: ${ledger.models.join(" → ") || "—"}; compactions: ${ledger.compactions.length}` : ""}`);
@@ -460,7 +466,7 @@ ${rationale}`]]) {
     const outcome = await closeUnit(realExec, { repo: process.cwd(), unitId: rest[0], workload: await loadWorkloadFor(closing.workload.name), routing: await routingP(), interaction: await interactionP() });
     if (outcome.status === "closed") console.log(`unit ${rest[0]}: closed; reintegrated as ${outcome.sha}; ${outcome.signals} signal(s) for S3`);
     else if (outcome.status === "refused") { for (const p of outcome.problems) console.error(`✖ ${p.path}: ${p.message}`); process.exit(1); }
-    else { console.error(`unit ${rest[0]}: blocked (${outcome.reason})${outcome.detail ? ` — ${outcome.detail}` : ""}${outcome.verdict ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
+    else { const detail = blockedDetail(outcome); console.error(`unit ${rest[0]}: blocked (${outcome.reason})${detail ? ` — ${detail}` : ""}${outcome.reason === "check-failure" ? `\n  ${outcome.verdict.reasons.join("\n  ")}` : ""}`); process.exit(1); }
   } else if (command === "unit" && sub === "accept" && rest[0] && rest[1]) {
     // An acceptance is a disposition: it satisfies a criterion no check can observe, and the closeout gate counts it. The
     // criterion has no severity of its own, so the check is at blocking, the conservative choice (#77). --reject too.

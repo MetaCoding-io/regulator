@@ -77,7 +77,7 @@ export interface UnitView {
   obligations: ObligationState[];
   /** The replay (lesson 15): every record about the unit in time order, from the span projection. */
   timeline: TimelineEntry[];
-  /** The unit's path through `UNIT_TRANSITIONS`, folded from its records, each step with its why as the records state it; `problem` when the fold and the record disagree. */
+  /** The unit's path through `UNIT_TRANSITIONS`, read from its status history (#162) with each step's why as the records state it; reconstructed from the records, and saying so, for a unit that has no history; `problem` when the history and the records disagree. */
   trajectory: UnitTrajectory;
 }
 
@@ -238,6 +238,18 @@ async function jsonFilesIn(dir: string): Promise<string[]> {
   }
 }
 
+/**
+ * Why a unit is where it is, in one line, as its records say it: a blocked unit's own reason, and for a unit the
+ * router aborted the decision that did. Only a blocked record carries a reason (#161); an aborted unit's why was
+ * always the decision, which the record used to restate.
+ */
+export function unitWhy(unit: UnitRecord, decisions: readonly RecoveryDecision[]): string | undefined {
+  if (unit.status === "blocked") return unit.reason;
+  if (unit.status !== "aborted") return undefined;
+  const abort = [...decisions].reverse().find((d) => d.action === "abort");
+  return abort ? `aborted under ${abort.policy.name} v${abort.policy.version}: ${abort.cause}` : undefined;
+}
+
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
   const store = new ExecutionStore(dir, now);
   const auditLog = new AuditLog(dir);
@@ -261,7 +273,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
       audit,
       obligations: owed,
       timeline: timelineFor(spans, unit.unitId),
-      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets }),
+      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets, history: await store.listTransitions(unit.unitId) }),
     });
   }
   let manifest: InstanceManifest | undefined;
@@ -334,8 +346,9 @@ export function renderStatusText(view: StatusView): string {
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
       const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unitWhy(unit, decisions) ? `  — ${unitWhy(unit, decisions)}` : ""}`);
       if (trajectory.problem) lines.push(`      ! replay: ${trajectory.problem}`);
+      if (trajectory.basis === "reconstructed") lines.push("      history: reconstructed from the records (this unit's moves were written before the store kept a status history)");
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);

@@ -3,6 +3,7 @@ import { Value } from "typebox/value";
 
 import { VsmSystemSchema } from "./vsm-systems.js";
 export { VsmSystemSchema, type VsmSystem } from "./vsm-systems.js";
+export { assertNever } from "./exhaustive.js";
 
 /**
  * Information is typed by control semantics rather than treated as generic
@@ -336,6 +337,10 @@ export const ReportingToolNameSchema = Type.Union([
   Type.Literal("vsm_report_uncertainty"),
 ]);
 export type ReportingToolName = Static<typeof ReportingToolNameSchema>;
+/** Narrow a tool name that arrived at runtime to the closed set before anything switches over it (#160). */
+export function isReportingToolName(value: unknown): value is ReportingToolName {
+  return Value.Check(ReportingToolNameSchema, value);
+}
 
 // The tool produces a JSON-safe string change request, a subset of the general proposal protocol.
 export const RegulatoryMessageSchema = Type.Union([
@@ -388,8 +393,9 @@ export {
 export { CHECK_OPTIONS, CheckEntrySchema, CheckOptionsSchema, CommandRunnerSchema, DeclaredToolSchema, HOST_CHECK_NAMES, ProgramSchema, RunnerSchema, SESSION_RUNNER, SessionRunnerSchema, UnitTypeSchema, WorkloadDefinitionSchema, checkName, checkNames, checkOptions, isCommandRunner, isWorkloadDefinition, runnerOf, type CheckEntry, type CheckOptions, type CommandRunner, type DeclaredTool, type Program, type Runner, type SessionRunner, type UnitType, type WorkloadDefinition } from "./workload.js";
 export {
   AttemptOutcomeSchema, AttemptRecordSchema, BudgetDimensionSchema, BudgetLedgerSchema, LeaseSchema, TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS, UnitRecordSchema, UnitStatusSchema,
-  isAttemptRecord, isLease, isUnitRecord, unitTransition, unitTransitions,
-  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetConsumed, type BudgetDimension, type BudgetLedger, type Lease, type UnitRecord, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
+  UnitTransitionRecordSchema, isAttemptRecord, isLease, isUnitRecord, isUnitTransitionRecord, readUnitRecord, unitReason, unitTransition, unitTransitions,
+  type SourceOf, type TargetOf, type TriggerFrom, type TriggerFromEvery, type UnitTransitionRecord, type UnitTransitionRow,
+  type AttemptOutcome, type AttemptProgram, type AttemptRecord, type BudgetConsumed, type BudgetDimension, type BudgetLedger, type Lease, type ReadUnitRecord, type ReasonedUnitStatus, type UnitRecord, type UnitRecordIn, type UnitStatus, type UnitTransition, type UnitTransitionStep, type UnitTrigger,
 } from "./execution.js";
 export { BudgetCeilingSchema, ModelRouteSchema, PolicyDefinitionSchema, isPolicyDefinition, type BudgetCeiling, type ModelRoute, type PolicyDefinition } from "./policy.js";
 export {

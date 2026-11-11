@@ -266,8 +266,9 @@ or not yet expired), so there is one open obligation per sensor and claim.
 The shipped policy declares the portfolio workload's three sensors, with their programs
 under `workload/portfolio/sensors/`: `drift-band` (a weight further from the latest target
 than `benchmark.json`'s band; affects `plan-rebalance`), `harvest-threshold` (an open lot
-whose unrealised loss, valued at the applicable rate in `tax.json`, is worth more than the
-minimum the argv declares in dollars; affects `harvest-losses`) and `new-export` (a glob
+whose unrealised loss is worth more at the applicable rate in `tax.json` than the trading
+and opportunity costs `harvest.json` prices, by the fixture's own `harvestEvaluation`;
+affects `harvest-losses`) and `new-export` (a glob
 over `positions/` and `prices/`; affects `ingest-positions`). The
 [portfolio example](/examples/portfolio) runs them. Every threshold is the definition's
 claim about what matters, not evidence that it does; the `sensor-intake` record says so.

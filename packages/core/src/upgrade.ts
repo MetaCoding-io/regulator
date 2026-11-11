@@ -110,13 +110,24 @@ export interface InstanceSnapshot {
   absent: Partial<Record<DefinitionWriterClass, readonly string[]>>;
   /** Whether `.gitignore` already carries the `.regulator/` line. */
   ignored: boolean;
+  /**
+   * The units whose `unit.json` is in the shape a build before #161 wrote: a reason beside a status that carries
+   * none (an aborted unit). Absent reads as none.
+   */
+  legacyUnits?: readonly string[];
 }
 
 export type UpgradeStep =
   /** Copy the named files of the definition's seed directory into the instance's directory; never a file that exists there. */
   | { step: "seed"; class: DefinitionWriterClass; seed: string; instance: string; files: string[]; apply: boolean }
   /** Append `.regulator/` to `.gitignore`. */
-  | { step: "ignore"; apply: boolean };
+  | { step: "ignore"; apply: boolean }
+  /**
+   * Rewrite the named units' records in the status-keyed shape (#161): the reason a status cannot carry is dropped,
+   * as the store already reads it, and nothing else in the record changes. The records are under `.regulator/`, so
+   * the step is not part of the upgrade's commit.
+   */
+  | { step: "unit-records"; units: string[]; apply: boolean };
 
 export type UpgradePlan =
   | { outcome: "refused"; reason: string }
@@ -151,6 +162,8 @@ function steps(definitionRoot: string, instance: InstanceSnapshot): UpgradeStep[
     out.push({ step: "seed", class: w.class, seed: `${definitionRoot.replace(/\/$/, "")}/${w.seed[0]}`, instance: w.instance, files, apply: files.length > 0 });
   }
   out.push({ step: "ignore", apply: !instance.ignored });
+  const units = [...(instance.legacyUnits ?? [])].sort();
+  out.push({ step: "unit-records", units, apply: units.length > 0 });
   return out;
 }
 
