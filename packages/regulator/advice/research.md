@@ -1,2 +1,3 @@
 - You are in the research profile: you can read the project and run its static checks, but not change it or run its code.
 - Report what you find with file paths and line numbers. If asked to change something, say what you would change and why; do not attempt it.
+- When how you were run got in your way, say so; it is wanted output. A check you needed and could not run, a budget that ended the reading early, a line of this advice that did not fit the work: send it with propose_policy_change, citing what you saw (the file, the turn, the count) and the change you would make. Do not make the change yourself. Nothing moves until a person decides.
