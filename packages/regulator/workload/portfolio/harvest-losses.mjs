@@ -10,9 +10,11 @@
  * Deliberately not here: no threshold, and no benefit-versus-cost check. The
  * book's harvest evaluation — the tax benefit against the trading cost and
  * the opportunity cost, with the volatility input a person fixes — is the
- * harvest contract's arithmetic (#124), which also turns a candidate into a
- * sell and a replacement from the ticker's exchangeable set. This program
- * only says where the losses are. The last line of stdout is the unit's
+ * plan-harvest unit's (#124), a session under its own contract, which turns
+ * a candidate into a sell and a replacement from the ticker's exchangeable
+ * set and accounts for every candidate it leaves. This program only says
+ * where the losses are; a lot carrying a disallowed loss from an executed
+ * wash sale is under water against that adjusted basis, and says so. The last line of stdout is the unit's
  * report; the suite under test/ checks every candidate against the lots and
  * the prices at closeout.
  */
@@ -42,7 +44,7 @@ for (const lot of [...ledger.open].sort((a, b) => a.lot.localeCompare(b.lot))) {
   if (loss >= 0) continue;
   candidates.push({
     lot: lot.lot, ticker: lot.ticker, acquired: lot.acquired, shares: lot.shares,
-    costPerShare: lib.money(lot.costPerShare), price: lib.money(price), unrealised: lib.money(loss),
+    costPerShare: lib.money(lot.costPerShare), ...(lot.basisAdjustment ? { basisAdjustment: lib.money(lot.basisAdjustment) } : {}), price: lib.money(price), unrealised: lib.money(loss),
     longTerm: lib.daysBetween(lot.acquired, date) > taxRules.longTermAfterDays,
   });
 }

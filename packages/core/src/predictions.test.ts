@@ -228,9 +228,9 @@ test("the host's reading of a harness-edit (#138): every diagnosis reference res
     objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" },
   };
   await store.createUnit(contract);
-  await store.setStatus("u1", "dispatched");
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "run_tests failed" });
-  await store.setStatus("u1", "blocked", "audit refused closeout");
+  await store.transition("u1", "attempt-failed", "audit refused closeout");
   const audit = new AuditLog(dir);
   await audit.appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-1", version: 1 }, check: "run_tests", class: "test", criteria: [], verdict: "fail", observation: "1 failed", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
   await audit.appendVerdict({ id: "v1", unitId: "u1", attempt: 1, contract: { id: "tc-1", version: 1 }, revision: "abc1234", verdict: "fail", evidence: ["e1"], satisfied: [], failed: ["e-tests"], missing: [], stale: [], contradicted: [], awaitingAcceptance: [], reasons: ["run_tests — 1 failed"], decidedBy: "S3*", at: "2026-10-26T10:00:08.500Z" });

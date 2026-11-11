@@ -62,8 +62,9 @@ test("status: a definition and an instance are read from files only, and the vie
   const clock = 5_000_000;
   const store = new ExecutionStore(instance, () => clock);
   await store.createUnit(contract);
-  await store.setStatus("u1", "blocked", "no-report");
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
+  await store.transition("u1", "attempt-failed", "no-report");
   await store.recordDecision({
     id: "d1", unitId: "u1", attempt: 1, cause: "no-report", occurrence: 1, evidence: ["attempt 1: no-report"], action: "retry",
     policy: { name: "recovery", version: 1 }, rationale: "r", decidedAt: "t", decidedBy: "S3",

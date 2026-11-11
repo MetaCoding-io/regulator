@@ -19,7 +19,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileSha256, graderFile, lifts, loadRegistry, routeFor, summarizeArms } from "@metacoding.io/regulator-core";
 import { EvalSuiteSchema, assertValid, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
-import { driveUnit, type Dispatcher } from "./controller.js";
+import { blockedDetail, driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
 import type { Exec } from "./exec.js";
@@ -182,7 +182,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
     for (let repetition = 1; repetition <= repetitions; repetition++) {
       const instance = path.join(await mkdtemp(path.join(tmpdir(), `regulator-eval-${arm.name}-${repetition}-`)), "instance");
       try {
-        await initFixture(exec, fixture, instance);
+        await initFixture(exec, fixture, instance, now);
         if (options.instance) await initInstance(exec, { repo: instance, definitionRoot: root, by: options.owner, now, ...options.instance });
         const manifest = await readManifest(instance);
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();
@@ -205,7 +205,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
           const run: EvalRun = {
             arm: arm.name, repetition, task: task.contract.unitId, unitId: task.contract.unitId,
             outcome: final.status === "closed" ? "closed" : final.status === "refused" ? "refused" : "blocked",
-            ...(final.status === "blocked" ? { detail: `${final.reason}${final.detail ? `: ${final.detail.split("\n")[0]}` : ""}` } : final.status === "refused" ? { detail: final.problems.map((p) => p.message).join("; ") } : {}),
+            ...(final.status === "blocked" ? { detail: `${final.reason}${blockedDetail(final) ? `: ${blockedDetail(final)!.split("\n")[0]}` : ""}` } : final.status === "refused" ? { detail: final.problems.map((p) => p.message).join("; ") } : {}),
             metrics: { ...trajectory.metrics, ...Object.fromEntries([...outcome, ...measured].map((g) => [g.grader, g.value])) },
             graders: [...trajectory.graders, ...outcome, ...measured],
             ...(trajectory.models.length ? { models: trajectory.models } : {}),

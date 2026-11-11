@@ -60,10 +60,11 @@ does not do. `since` is the package version that first shipped the record.
 | `reg.coordination.reintegration.v1` | Reintegration guard | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.control.result-report-gate.v1` | Result report gate | S3 | deterministic-gate | active | 2026-12-01 |
 | `reg.authority.s5-decision.v1` | S5 decision path | S5 | deterministic-gate | active | 2026-12-01 |
+| `reg.intelligence.sensor-intake.v1` | Sensor intake (S4 declared in the definition) | S4 | deterministic-gate | active | 2026-12-01 |
 | `reg.assurance.span-projection.v1` | Span projection (OpenTelemetry GenAI) | S3* | type | active | 2026-12-01 |
 | `reg.coordination.thrash-detector.v1` | Thrash detector | S2 | deterministic-gate | active | 2026-12-01 |
 | `reg.coordination.unit-lease.v1` | Unit lease gate | S2 | deterministic-gate | active | 2026-12-01 |
-| `reg.control.unit-lifecycle.v1` | Unit lifecycle | S3 | deterministic-gate | active | 2026-12-01 |
+| `reg.control.unit-lifecycle.v1` | Unit lifecycle | S3 | type | active | 2026-12-01 |
 | `reg.authority.vendor-write-gate.v1` | Vendor write gate | S5 | deterministic-gate | retired | 2026-12-01 |
 | `reg.control.work-contract-gate.v1` | Work contract gate | S3 | deterministic-gate | active | 2026-12-01 |
 
@@ -216,12 +217,12 @@ does not do. `since` is the package version that first shipped the record.
 - end the attempt or open a fresh session (S3 decides: the recovery router under its policy)
 - infer anything from a single miss
 
-**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`
+**Evidence.** `../regulator-pi/src/identity.test.ts`, `../core/src/canary.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
 - The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
 - It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
-- S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).
+- S3 can act on the finding under a declared rule, and no shipped policy declares one. The recovery router classifies an attempt that ended without a report and carries the finding as `context-degradation`, and a recovery policy with a rule for the cause answers with a retry in a fresh session on the degraded attempt's ledger. The cause is last in the router's precedence by rule: a recorded outcome (a budget halt, a refused report, a failed closeout, an error), an oscillation signal and a failure the session observed each win, and the finding is then evidence on the decision and not its cause. The shipped recovery policy names no rule for it, so such an attempt is routed as `no-report`, and under the shipped routing policy the advisory finding is noted as trace and opens no obligation: the fresh session on the same budget is still a person's decision (docs/DEBT.md row 42). The first live report (evals/reports/drift-live-2026-11-08.json) is why: the canary fell silent in 12 of 18 treatment units, each closed on the attempt in which it fell silent, and no attempt was refused, so no silence has yet preceded a failure. Under either policy nothing stops the model mid-attempt.
 - Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
 
 **Ownership.** regulator-maintainers · introduced 2026-10-22 · review by 2026-12-01
@@ -274,7 +275,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.budget-guard.v1` · S3 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.
+**Purpose.** Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it. An attempt the recovery router retries under `context-degradation` opens on the earlier attempt's consumption, which the ledger records as `carried`: one ceiling is spent across both sessions, and each attempt's own consumption is its ledger less what it carried.
 
 **Absorbs.** `runaway-unit` — A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should.
 
@@ -766,7 +767,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Absorbs.** `regulation-without-evidence` — Twelve lessons of gates, each added for a failure a model produced on a particular day, and no number that says any of them still helps — or that one of them costs more than it saves.
 
-**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: the fifteen built-in outcome and trajectory graders and the declared graders a suite pre-registers, run after each unit; no judge model; the fingerprint hashes each declared grader's file; a live run reads the host's available models first and refuses a route whose declared primary has no key unless --accept-fallback is passed; each run carries the models its attempts' ledgers name and the fingerprint carries their union as modelsObserved beside the declared model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch; a suite pre-registers only built-in metrics or ones a workload declares with a grader file under the definition, with at most one optimisation target, and a judged metric is refused until its instrument record carries a held-out score)
+**Mechanism.** `src/evals.ts` at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: the fifteen built-in outcome and trajectory graders (an advisory audit finding is not an invariant violation) and the declared graders a suite pre-registers, run after each unit; no judge model; the fingerprint hashes each declared grader's file; a live run reads the host's available models first and refuses a route whose declared primary has no key unless --accept-fallback is passed; each run carries the models its attempts' ledgers name and the fingerprint carries their union as modelsObserved beside the declared model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch; a suite pre-registers only built-in metrics or ones a workload declares with a grader file under the definition, with at most one optimisation target, and a judged metric is refused until its instrument record carries a held-out score)
 
 **Channels.** consumes `eval suite`, `the definition (workload, policies, registry)`, `the declared graders of the workloads the tasks name`, `a dispatcher (scripted or live)`, `the instance's stores after each unit` · emits `eval report (arms, lifts, runs, fingerprint, interpretation)`
 
@@ -788,10 +789,10 @@ does not do. `since` is the package version that first shipped the record.
 **Evidence.** `src/evals.test.ts`, `../core/src/evals.test.ts`, `src/portfolio.test.ts`
 
 **Limitations.**
-- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement. The live path itself is covered headlessly (the dispatcher opens and binds a session with no model, ../regulator-pi/src/dispatcher.test.ts); what a model does under the gates is not. The fourth live run (2026-11-08) ran on the route's last fallback with the fingerprint naming the primary: the fingerprint now carries modelsObserved from the ledgers and the run refuses to start on a fallback by default, so a report on a fallback is one a person accepted and the report says so.
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks, and the four `scripted:` reports are the graders' validation, not evidence about a model. The first live report (`evals/reports/drift-live-2026-11-08.json`: three repetitions of control and treatment on `anthropic/claude-sonnet-4-5`, every session bound and metered) is the evidence that exists; it covers two of the six arms, one model, one fixture on which that model did not drift, so it prices regulation and measures no gate catching anything. The ablation arms under a model and a fixture that pulls toward drift (#130) are what the next report owes.
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
-- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
+- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines, an invariant violation is a non-advisory audit finding on an invariant or a failing identity-untouched or export-signature check. They are validated against four scripted learner-style units, not against a model's actual drift. The first live report's `invariantViolations` was computed before advisory findings were excluded and counts the behavioral canary's twenty-eight silence findings; its interpretation says so, and the recorded values stand as the record of what the grader did.
 - A declared grader is run as the workload declared it, and that is all the harness checks: that its command names a file under the definition (hashed into the fingerprint), that it exits clean, and that its lines name the metric it was declared for. Whether the number it emits measures what the declaration says is the workload's correctness, evidenced by the workload's own tests (the portfolio's turnover by its fixture's), not by this record. A judged metric — one that names an instrument — is refused until the instrument record exists with its held-out score, so no declared metric is a model's judgment yet.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
@@ -1124,7 +1125,7 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.identity.instance-manifest.v1` · S5 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Install the definition into a repository as a declaration, and carry the instance forward when the definition moves. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity and the advice, ignores `.regulator/`, records canaries from a committed `.env`, commits the seeds on the base branch, and writes `.regulator/instance.json`: which definition, at which package version and harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. `regulator upgrade` (#53) is the manifest's only other writer: it plans under `planUpgrade` (core) from the manifest, the installed version and the changelog's typed migration notes, refuses a definition that fails its check, a dirty base and an instance ahead of the package, applies a closed list of mechanical steps — seed a harness-owned file the instance lacks, never one that exists; the ignore line — prints the note of every version crossed for the person, records the committed report whose fingerprint names the target revision (or `none`, with a warning), rewrites the manifest with the version and one history entry, and commits on the base branch citing from and to. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
+**Purpose.** Install the definition into a repository as a declaration, and carry the instance forward when the definition moves. `regulator init` refuses a dirty tree, a second init and a definition that fails its own check; it seeds the identity and the advice, ignores `.regulator/`, records canaries from a committed `.env`, commits the seeds on the base branch, and writes `.regulator/instance.json`: which definition, at which package version and harness revision, with how many regulators, under which Pi, initialized when and by whom, and the layout a person declared — the prefixes a unit may write under and the prefixes protected beyond the identity and the conventions. `regulator upgrade` (#53) is the manifest's only other writer: it plans under `planUpgrade` (core) from the manifest, the installed version and the changelog's typed migration notes, refuses a definition that fails its check, a dirty base and an instance ahead of the package, applies a closed list of mechanical steps — seed a harness-owned file the instance lacks, never one that exists; the ignore line; a unit record written before the record was keyed on its status, rewritten without the reason its status cannot carry (#161) — prints the note of every version crossed for the person, records the committed report whose fingerprint names the target revision (or `none`, with a warning), rewrites the manifest with the version and one history entry, and commits on the base branch citing from and to. The profile grant and the closeout checks read the manifest; nothing reads project files to learn about the harness.
 
 **Absorbs.** `layout-assumed` — Everything that worked on the fixture assumed `src/` and `test/` and `vendor/`; installed into a repository with `lib/`, the first unit could not write anything and the closeout protected nothing, and nobody had written down what the harness believed about the project.
 
@@ -1140,13 +1141,13 @@ does not do. `since` is the package version that first shipped the record.
 - seed the identity and the advice and commit them
 - record what a person declared about the layout
 - refuse an init the definition or the tree does not allow
-- seed a harness-owned file the instance lacks at upgrade, add the ignore line, and rewrite the manifest citing who ran it and against which report
+- seed a harness-owned file the instance lacks at upgrade, add the ignore line, rewrite a unit record that is in the older shape as the store already reads it, and rewrite the manifest citing who ran it and against which report
 
 **May not.**
 - create a repository
 - re-init an instance
 - overwrite a file that exists under regulator/identity/ or regulator/advice/, however it differs from the seed
-- apply anything a migration note says beyond the two mechanical steps
+- apply anything a migration note says beyond the three mechanical steps
 - run an eval to produce the fingerprint it records
 - read project settings, context files or extensions
 - widen a read-only profile
@@ -1155,7 +1156,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
-- `regulator upgrade` applies two mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
+- `regulator upgrade` applies three mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
@@ -1196,14 +1197,14 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
 - Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.
-- Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
+- Expiry is the unit's estimate. The router notes intelligence that has already expired when it is routed; a signal that expires while an obligation it opened is still open is re-raised once, as an advisory obligation, by the watcher's tick (`sensor-intake`, #123) — so nothing says so in an instance whose watcher is not running, and the advisory releases nothing by itself.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
 **Ablation.** `extension:intelligence` — A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on.
 
-**Retirement condition.** Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read.
+**Retirement condition.** S4 has its second intake since #123 (`sensor-intake`, scheduled programs and globs declared in the definition). Retire this tool when its share of intelligence signals falls below what a person would read.
 
 
 ## Interaction contract (ask_human)
@@ -1325,7 +1326,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.
 - Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch. The converse is as silent: with only a fallback's key in the shell the dispatcher runs every unit on that fallback and records it in the ledger alone (the fourth live drift run, 2026-11-08, ran thirty-six units on the last fallback). The dispatcher is right to; the eval harness is the one that refuses, since its report is declared on the primary.
-- Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
+- Failover with a model is exercised only live (the lesson's drill), and no live run has yet seen a provider fail mid-route: five runs saw choice by availability and the budget guard's halts. The headless test covers the open-and-bind path, the halt-versus-failure decision and the availability lookup, not a provider failing (docs/DEBT.md row 15).
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -1743,17 +1744,17 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.control.recovery-router.v1` · S3 · deterministic-gate · active · since 0.1.0
 
-**Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
+**Purpose.** Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals, the session's observations and, last, the behavioral canary's finding on the attempt; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.
 
 **Absorbs.** `naive-retry` — A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why.
 
 **Mechanism.** `src/controller.ts` at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the autoloop)
 
-**Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
+**Channels.** consumes `attempt records`, `failure observations`, `coordination-signal (oscillation, conflict)`, `audit-finding (context-degradation, the behavioral canary's)`, `recovery policy` · emits `recovery decision (execution store)`, `algedonic-signal → S5 (policy exhausted)`, `obligation for the waiting action (via the obligation router)`
 
 **Scope.** subjects unit, attempt · resources attempts, lease, worktree
 
-**Cost.** No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them.
+**Cost.** No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them. A retry under `context-degradation` opens that attempt on the failed attempt's ledger (`carried`), so it spends what was left and not a second allowance.
 
 **May.**
 - classify a failure
@@ -1768,10 +1769,10 @@ does not do. `since` is the package version that first shipped the record.
 - answer a clarification (that is the owner's)
 - resolve an obligation on the unit's behalf
 
-**Evidence.** `../core/src/recovery.test.ts`, `src/controller.test.ts`
+**Evidence.** `../core/src/recovery.test.ts`, `src/controller.test.ts`, `../regulator-pi/src/dispatcher.test.ts`
 
 **Limitations.**
-- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
+- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation. `context-degradation` is last in the precedence, and that is a rule: the behavioral canary's finding classifies only an attempt that ended without a report and that no recorded outcome, oscillation signal or session observation explains, since each of those names something a fresh context does not fix and the canary's marker is a proxy. It is read by the finding's invariant inside the attempt's own start and end (any S3* finding naming the invariant counts), never by its prose and never from an earlier attempt. A cause that rests on an advisory finding is routed only under a rule the policy declares; with none, the unit is routed as `no-report`, never by the fallback, and on every cause the finding is evidence on the decision. The shipped policy declares no rule (docs/DEBT.md row 42).
 - Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names; nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people but not authenticated.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
 - Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab.
@@ -1942,6 +1943,51 @@ does not do. `since` is the package version that first shipped the record.
 **Retirement condition.** Never: INV-002 names it as the only writer. Retire with the proposal path, not before.
 
 
+## Sensor intake (S4 declared in the definition)
+
+`reg.intelligence.sensor-intake.v1` · S4 · deterministic-gate · active · unreleased
+
+**Purpose.** Give the definition a second way to raise intelligence, without a model: sensors declared in `policies/intelligence.json` and run by `regulator watch` in its tick. A scheduled sensor's program — a `Program` in the command runner's shape, with no outputs — runs in the instance through `runProgram` with nothing on stdin, and its last stdout line says whether it fires; a glob sensor fires when a file matching its glob appears that the watcher's cursor has not seen. A firing is the same `intelligence-signal` a research unit raises through `report_intelligence`: `source: S4`, the sensor's provenance (`sensor:<name>`) where the unit would be, the program's file and hash as evidence beside what it read, the claim, the observation, the declared severity and expiry unless the program says otherwise for one firing, and the affected unit *types* as `type:<unitType>` entries. The router opens one obligation per entry, holding the type; the progression veto matches a type hold at dispatch, so a unit dispatched after the sensor fired waits until a person dispositions it. A sensor that still fires on the next tick raises nothing while an earlier signal with the same claim is current (unrouted, holding an open obligation, or not yet expired), so there is one open obligation per sensor and claim. A signal with an expiry that expires while an obligation it opened is still open gets one advisory obligation saying so, for every intelligence signal the log holds — the re-raise the intelligence-intake card left undone. A non-zero exit, a timeout, a stray write (undone) or a last line that is not a report is an advisory `operational-signal` naming the sensor, once per distinct failure, below the operational line: noted, never an obligation, never a replan. `regulator check` refuses a sensor whose affected unit type no workload declares, whose provenance is not its own name under `sensor:`, whose program names no file under the definition or declares outputs, that has neither trigger or both, a schedule without a program, or a glob with one. Nothing here dispatches: a sensor raises an obligation and never replans.
+
+**Absorbs.** `environment-watched-by-hand` — Nothing watches the environment the instance works in, so the system learns of a change by failing or by a person noticing: a drift past the band sits unplanned until someone looks, a loss worth harvesting is found at the next close, a new export lands and nobody ingests it. Or a watcher exists and is a script beside the instance, outside the definition — unchecked, with no provenance on what it raises, and free to dispatch.
+
+**Mechanism.** `src/sensors.ts` at `cli:watch` (applicableSensors narrows the policy to the sensors of the workloads the instance runs (its units' workloads, or --workload's); runSensors in the tick: a due program runs in the instance with no outputs (a stray write is undone and the run refused), the last line is read against SensorOutputSchema, a firing is appended as an intelligence-signal under the sensor's provenance and deduplicated against the current signals of the same claim, a failure is an advisory operational-signal, an expired held signal is one advisory obligation; then routeMessages), `check:checkDefinition` (checkIntelligencePolicy in core: an undeclared affected unit type, a provenance that is not sensor:<name>, a program with no file under the definition or with outputs, neither trigger or both, a schedule without a program, a glob with one, a glob that is not a pattern, a sensor declared twice), `loop:runUnit` (progressionVeto(ledger, unitId, unitType): an open blocking obligation with unitType and no unit holds every unit of the type at dispatch and at close, named in the refusal)
+
+**Channels.** consumes `policies/intelligence.json (the sensors)`, `the routing policy (what a firing is routed under; the consumer of the expiry advisory)`, `the instance's files (a glob) and the program's exit, stdout and stderr (a schedule)`, `.regulator/sensors.json (the cursor: files seen per glob sensor, last run per scheduled one)`, `the regulatory log (deduplication and expiry)` · emits `intelligence-signal → S3 (provenance sensor:<name>, affectedUnits type:<unitType>)`, `operational-signal → S3 (advisory; a failed sensor)`, `obligation-opened (advisory; an expired signal still holding an open obligation)`
+
+**Scope.** subjects intelligence, unit type · resources .regulator/signals.ndjson, .regulator/sensors.json, the instance's files, read-only
+
+**Cost.** One program run per scheduled sensor per interval, in the instance, under the policy's programTimeoutMs; one directory walk per tick while a glob sensor is declared; two git status reads per program run; one log read per tick. No model calls. The portfolio's three sensors are arithmetic over the fixture.
+
+**May.**
+- run a declared program in the instance under the policy's ceiling and read its last line
+- record a firing as an intelligence-signal under the sensor's provenance, naming unit types
+- raise one advisory obligation when a held signal expires
+- record a failed run as an operational-signal
+
+**May not.**
+- dispatch, route or disposition anything: the router opens the obligation and a person dispositions it
+- set the severity the router acts on (the declaration reports; the router derives)
+- write to the instance: a program's outputs are empty by the check, and a write is undone and refused
+- raise the same claim twice while the first is current
+
+**Evidence.** `src/sensors.test.ts`, `src/portfolio-sensors.test.ts`, `../core/src/sensors.test.ts`, `../core/src/obligations.test.ts`, `../core/src/definition.test.ts`, `../protocol/src/intelligence-policy.test.ts`
+
+**Limitations.**
+- A sensor's threshold is the definition's claim about what matters, not evidence that it does: the drift band, the harvest inputs, the intervals and the expiries are numbers a person wrote into benchmark.json, harvest.json, tax.json and the policy, and nothing measures whether a firing was worth a person's attention. The eval harness has no metric over sensor firings.
+- The program is trusted as the command runner's is: the watcher inspects nothing beyond its argv's file (hashed) and the absence of writes in the instance. What it reads, imports or reaches by an absolute path or a network call is unseen, and a program that writes outside the instance is not caught.
+- A glob sensor sees names, not content: a file rewritten under a name the cursor has seen is no event, and the first tick seeds the cursor with what exists and fires on nothing, so an export that landed while the watcher was down and before its first tick is a person's to raise. The schedule is the watcher process's wall-clock: nothing runs while the watcher is not running, and an interval missed several times over runs once. Which sensors apply is read off the instance's units' workloads, so a fresh instance runs none until its first unit or until `--workload` says which it is.
+- Deduplication is by the claim's text under one provenance: a sensor whose claim carries a number that changes every tick raises a signal every tick while the first is current, and a resolved claim stays quiet until its signal expires even if the person wanted to hear it again sooner. The shipped sensors put the export date in the claim so it changes with the data and not with the clock.
+- The harvest-threshold sensor reads the household's harvest inputs (harvest.json, tax.json) and fires on the arithmetic the plan-harvest contract fixes and the suite recomputes (harvestEvaluation in the fixture's lib/portfolio.js; #181, which paid docs/DEBT.md row 51), so it carries no number of its own. The arithmetic is still the household's model, not a tax authority's: the benefit is the loss at the lot's rate with no account of the deferral or of the capital-loss limits, and the opportunity cost is one option price on one volatility number. The sensor answers the first of the contract's three reasons to leave a lot only: a lot it names can still be left as blocked by a recent buy or for want of a replacement.
+- Provenance is the declaration's word: `sensor:<name>` says which sensor the watcher ran, not that the program is the sensor the name suggests. A person's `regulator intelligence report` under `human:<name>` provenance, the other half of open questions §2, does not exist yet.
+
+**Ownership.** regulator-maintainers · introduced 2026-11-08 · review by 2026-12-01
+
+**Ablation.** `none` — An operating process: an instance without a watcher, or with a definition that declares no intelligence policy, is the instance of every release before this one. The scripted evals run no watcher; a live arm with sensors declared would be the first measurement of whether a firing changes what a person does.
+
+**Retirement condition.** Never while a definition declares a sensor: the intake is what makes the declaration mean something, and what gives a firing a provenance, a record and a check. Retire the type-hold half if obligations learn a first-class target beyond a unit id and a unit type.
+
+
 ## Span projection (OpenTelemetry GenAI)
 
 `reg.assurance.span-projection.v1` · S3* · type · active · since 0.1.0
@@ -2060,43 +2106,46 @@ does not do. `since` is the package version that first shipped the record.
 
 ## Unit lifecycle
 
-`reg.control.unit-lifecycle.v1` · S3 · deterministic-gate · active · unreleased
+`reg.control.unit-lifecycle.v1` · S3 · type · active · unreleased
 
-**Purpose.** The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, and the execution store refuses a status change that is not a row of it. The table is what the figure of the lifecycle is drawn from and what a unit's history is replayed through: `unitTrajectory` (core) folds the attempt records, the verdicts, the recovery decisions and the obligations through the table in time order, gives each step its why as the records state it — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the fold and the record disagree. The control room's Lifecycle view steps through it.
+**Purpose.** The unit's six statuses and the twelve transitions the S3 loop takes between them are one closed table, `UNIT_TRANSITIONS` in the protocol, held as a value and as a type (`as const satisfies`). The execution store has one write of a unit's status, `transition(unit, on)`: the caller names the trigger, the target status is looked up in the table, and where the caller holds the unit in a known status an illegal (from, on) pair does not compile (`TriggerFrom`, `TriggerFromEvery`); for a unit named by id, and against the record read from disk in every case, the store refuses a trigger the table does not declare from the unit's status. The unit's record is keyed on that status (`UnitRecordSchema`, a union of one object per status): a blocked unit states its reason and no other status can carry one, by the type the write takes and by the schema a record read from disk is checked against. Each transition appends one line to the unit's status history (`status.ndjson`: from, to, the trigger, when, and the reason where the unit blocked), whose schema is the table, one member per row. The table is what the figure of the lifecycle is drawn from, and the history is what a unit's path is read from: `unitTrajectory` (core) takes the moves from the history in order and puts beside each the record that says why — the rule the router applied, the reasons the verdict carries, the obligation the unit waited on — and says when the history, the records and the unit record disagree. The control room's Lifecycle view steps through it.
 
 **Absorbs.** `status-written-around-the-loop` — A unit marked closed by a hand edit, a test fixture or a branch of the loop nobody drew; a 'why did this unit stop?' answered by reading six logs by hand; a state diagram on the website the code had already outgrown.
 
-**Mechanism.** `../core/src/execution-store.ts` at `loop:runUnit` (ExecutionStore.setStatus: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts), `loop:closeUnit` (re-verified, re-audit-refused), `loop:routeUnit` (routed-waiting, abort), `loop:finishUnit` (reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)), `cli:status` (unitTrajectory (../core/src/trajectory.ts): the fold on every unit view, which the control room steps through)
+**Mechanism.** `../core/src/execution-store.ts` at `loop:runUnit` (ExecutionStore.transition, on the record the step holds: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts), `loop:closeUnit` (re-verified, re-audit-refused), `loop:routeUnit` (routed-waiting, abort), `loop:finishUnit` (reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)), `cli:status` (unitTrajectory (../core/src/trajectory.ts): the status history read on every unit view, with the why from the records, which the control room steps through)
 
-**Channels.** consumes `.regulator/units/<id>/unit.json`, `attempts.ndjson`, `decisions.ndjson`, `audit.ndjson (verdicts)`, `signals.ndjson (obligations)` · emits `a refusal on an undeclared status change`, `the unit's trajectory, in the status read model`
+**Channels.** consumes `.regulator/units/<id>/unit.json`, `status.ndjson (the status history)`, `attempts.ndjson`, `decisions.ndjson`, `audit.ndjson (verdicts)`, `signals.ndjson (obligations)` · emits `a compile error on a trigger the table does not declare from a status the caller holds`, `a refusal on a trigger the table does not declare from the status on disk`, `one line of the status history per transition`, `the unit's trajectory, in the status read model`
 
-**Scope.** subjects execution · resources .regulator/units/
+**Scope.** subjects execution · resources .regulator/units/, .regulator/units/*/status.ndjson
 
-**Cost.** One table lookup per status change; one read of the unit's records per status view, which the read model makes anyway.
+**Cost.** One table lookup and one appended line per transition; one read of the unit's history and records per status view, which the read model makes anyway.
 
 **May.**
-- refuse a status change the table does not declare
-- replay the records through the table
-- say that the replay and the record disagree
+- refuse a trigger the table does not declare from the unit's status
+- append the transition it wrote to the unit's status history
+- read the history back as the unit's path, with the why from the records
+- say that the history, the records and the unit record disagree
+- reconstruct the path from the records for a unit that has no history, and say that it did
 
 **May not.**
-- write a status
+- take a target status from a caller
 - infer a status from the repository or the transcript
 - state a why the records do not carry
+- write a history line for a move it did not make: a unit older than the history gets none
 
-**Evidence.** `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts`
+**Evidence.** `../protocol/src/execution.test.ts`, `../core/src/contracts.test.ts`, `../core/src/trajectory.test.ts`, `src/controller.test.ts`, `src/stores.test.ts`, `src/status.test.ts`, `src/figures.test.ts`, `../control-room/src/server.test.ts`
 
 **Limitations.**
-- The gate is on the pair (from, to), not on the trigger: which row the loop took is read back from the records, not written down with the status. Three rows share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) and are told apart by the record beside them.
-- The store keeps only the current status, so the history is a reconstruction. Three moves leave no record of their own — reintegrated, reintegration refused, and a dispatch refused before any attempt — and the fold places them at the record that follows (the decision, or the unit record's last write). A status history in the store, one line per transition with its trigger, would make the fold a read; not yet (DEBT row 47).
-- The why is what the records say. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the fold does not read the transcript to improve on it.
-- A status written around the loop is caught only where the fold and the record disagree; a forged history that happens to be a path through the table is not.
+- The compiler holds the table only where the caller holds the unit's record in a known status: the loop's four steps do, each on the record it read or was returned. A caller that names the unit by id (a test, a future command) and every record read from disk are checked by the store at runtime, by the same table. The three rows that share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) are written with their trigger and are distinct lines of the history; the unit record alone still holds only the status and its reason, so which row a unit last took is read from the history, not from `unit.json`.
+- A transition is two writes, the history line and then the unit record, and they are not atomic: a process that dies between them leaves a history that ends one move ahead of the record. The trajectory says so (the history ends where the record does not) and nothing repairs it. A unit whose moves were written before the history existed has none, or one that begins partway (an older build blocked it and this one resumed it): its path is reconstructed whole from the attempt, verdict, decision and obligation records, as it was before the history, with the three record-less moves placed at the record that follows, and the trajectory and each inferred step say that it is a reconstruction. `regulator upgrade` writes no history for such a unit: a line is the store's record of a move it made.
+- The why is what the records say, and the history carries none beyond a blocked unit's reason. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the trajectory does not read the transcript to improve on it. A line is joined to its record by its trigger and its order, so a record written without its transition, or a transition without its record, is a stated problem and not a guessed pairing.
+- A status written around the store is caught where the history, the records and the unit record disagree: a hand edit of `unit.json` alone, or a line appended alone. An edit that writes both consistently, as a path through the table, is not caught; the files are plain and nothing signs them.
 
 **Ownership.** regulator-maintainers · introduced 2026-10-13 · review by 2026-12-01
 
-**Ablation.** `none` — A type and a store gate over the loop's own writes; switching it off changes no run the loop performs, only what a hand edit can do.
+**Ablation.** `none` — A type, a store gate and an appended line over the loop's own writes; switching it off changes no run the loop performs, only what a caller outside the loop or a hand edit can do, and what the trajectory is read from.
 
-**Retirement condition.** Retire when the store writes the transition, with its trigger, instead of the status — the table as the store's own schema, with nothing left to replay.
+**Retirement condition.** The earlier condition, the store writing the transition with its trigger instead of the status, is met in its first half (#162): the trigger is what the store is given, and the history's schema is the table. The record is not retired by it, because the gate it describes is the one that writes. Retire the reconstruction when no supported instance holds a unit older than the history. Retire the record when the unit record is computed from the history (one write, not two) and every writer holds the unit in a known status, so that the runtime check has no caller left and the lifecycle is a type alone.
 
 
 ## Vendor write gate

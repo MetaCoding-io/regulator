@@ -16,7 +16,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { declaredMetricsOf, graderFile, type CommittedReport } from "@metacoding.io/regulator-core";
-import { isBuiltInMetric, isDeclaredMetricName, isEvalReport, type EvidenceExpectation, type GraderVerdict, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
+import { assertNever, isBuiltInMetric, isDeclaredMetricName, isEvalReport, type EvidenceExpectation, type GraderVerdict, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { GLOSSARY_DRIFT, boundaryViolations, memoryFacts, memoryRules, runDeclaredGraders, signatureDrift, suiteWeakened, unitTrajectory, vocabularyDrift, type GraderContext } from "./graders.js";
 import { readManifest } from "./instance.js";
@@ -90,13 +90,24 @@ export function unitGrader(exec: Exec, options: UnitGraderOptions): (metric: str
       case "memoryRules": return memoryRules(exec, await ctx());
       case "memoryFacts": return memoryFacts(await ctx());
       case "suiteWeakened": return suiteWeakened(exec, await ctx());
-      default: {
+      // The trajectory metrics: read from the unit's own records, never from the repository.
+      case "closed":
+      case "attempts":
+      case "tokens":
+      case "turns":
+      case "wallClockMs":
+      case "retries":
+      case "escalations":
+      case "invariantViolations":
+      case "refusals": {
         const trajectory = await unitTrajectory(options.repo, options.unitId);
         const graded = trajectory.graders.find((g) => g.grader === metric);
         if (graded) return graded;
         const value = trajectory.metrics[metric];
         return value === undefined ? undefined : { grader: metric, kind: "trajectory", value, observation: `${metric} ${value}, read from the unit's records` };
       }
+      default:
+        return assertNever(metric, "built-in metric");
     }
   };
 }

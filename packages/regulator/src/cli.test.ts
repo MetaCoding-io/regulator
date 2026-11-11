@@ -227,16 +227,16 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   r = await regulator(repo, "review");
   assert.equal(r.code, 0, r.stderr);
   assert.match(r.stdout, /reg\.audit\.behaviour-check\.v1 {2}ablation check:export-signature {2}retire when: Never as a mechanism/);
-  assert.match(r.stdout, /\n50 record\(s\)\n$/, "review lists the active records; the retired first gate is history");
+  assert.match(r.stdout, /\n51 record\(s\)\n$/, "review lists the active records; the retired first gate is history");
   r = await regulator(repo, "review", "--due");
   assert.match(r.stdout, /^0 record\(s\) overdue or due within 0 day\(s\)\n$/, "nothing is overdue at the lesson's date");
   r = await regulator(repo, "review", "--due", "--within", "3650");
-  assert.match(r.stdout, /50 record\(s\) overdue or due within 3650 day\(s\)/);
+  assert.match(r.stdout, /51 record\(s\) overdue or due within 3650 day\(s\)/);
 
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 52 regulators\n/);
+  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 53 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -264,14 +264,14 @@ test("operating from the outside (lesson 15): `init` installs the definition int
   assert.doesNotMatch(r.stdout, /^\w+\s+manifest/m);
   r = await regulator(dir, "init", "--writable", "lib/", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(52 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/, regulator\/advice\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
+  assert.match(r.stdout, /^instance ready at .*: definition regulator at [0-9a-f]{7} \(53 regulators, pi 0\.87\.0\), initialized by alice\n {2}writes under lib\/ \(declared\); protected regulator\/identity\/, regulator\/advice\/ and whatever the conventions discover; 0 canaries\n {2}committed [0-9a-f]{7} on the base branch/);
   r = await regulator(dir, "init");
   assert.equal(r.code, 1);
   assert.match(r.stderr, /is already an instance/);
   r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, r.stdout + r.stderr);
   assert.match(r.stdout, /^ok {6} node/m);
-  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 52 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 53 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\//m);
   assert.match(r.stdout, /^ok {6} base {14}clean, on main/m);
   assert.match(r.stdout, /\n0 problem\(s\)(, \d+ warning\(s\))?\n$/, "a warning (the seed over its context budget, #51) is not a problem");
   r = await regulator(dir, "doctor", "--json", "--today", "2027-01-01");
@@ -524,9 +524,9 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   // What the stores hold about u1: one attempt refused at closeout, with the evidence that refused it.
   const store = new ExecutionStore(repo);
   await store.createUnit(await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json")));
-  await store.setStatus("u1", "dispatched");
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
-  await store.setStatus("u1", "blocked", "audit refused closeout");
+  await store.transition("u1", "attempt-failed", "audit refused closeout");
   await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
   const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }] };
   await appendSignal(repo, { id: "i1", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused less", observation: "u1 was refused for a suite it never ran", claim: "fewer refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction } as never);
@@ -613,7 +613,7 @@ test("`regulator upgrade` from the outside (#53): --check prints the plan and ch
   assert.match(r.stdout, /^PROBLEM {2}definition-drift {2}initialized under 5115ea2 .* — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/m);
   r = await regulator(dir, "upgrade", "--check");
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^upgrade would carry this instance 0\.1\.3@5115ea2 \(the manifest recorded no package version; read as the migration floor\) → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n {2}nothing to do {2}seed regulator\/identity\/ from the definition's identity seed: every seed file is present; none is overwritten\n {2}would apply {2}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n {2}nothing to do {2}add the \.regulator\/ line to \.gitignore: present\n {2}the migration notes, for a person to read; nothing below is applied by upgrade:\n {2}## unreleased \(head [0-9a-f]{7}\)\n {4}- advice advice\/<profile>\.md \[gate: regulator check only\]\n/);
+  assert.match(r.stdout, /^upgrade would carry this instance 0\.1\.3@5115ea2 \(the manifest recorded no package version; read as the migration floor\) → 0\.1\.3@[0-9a-f]{7}, crossing unreleased\n {2}nothing to do {2}seed regulator\/identity\/ from the definition's identity seed: every seed file is present; none is overwritten\n {2}would apply {2}seed regulator\/advice\/ from the definition's advice seed: auditor\.md, bookkeeper\.md, implement\.md, intelligence\.md, manager\.md, research\.md\n {2}nothing to do {2}add the \.regulator\/ line to \.gitignore: present\n {2}nothing to do {2}rewrite unit records written before the status-keyed shape: every unit record is in its status's own shape\n {2}the migration notes, for a person to read; nothing below is applied by upgrade:\n {2}## unreleased \(head [0-9a-f]{7}\)\n {4}- advice advice\/<profile>\.md \[gate: regulator check only\]\n/);
   assert.match(r.stdout, /\n {2}WARNING: no committed report under evals\/reports\/ ran at [0-9a-f]{7}; the manifest records "none" as the evidence this upgrade was checked against\n {2}--check: nothing changed; run without it, with --by <who>, to apply\n$/);
   assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: dir })).stdout.trim(), before);
   assert.equal(await readFile(manifestPath, "utf8"), `${JSON.stringify(m, null, 2)}\n`, "a dry run writes nothing");
@@ -635,7 +635,7 @@ test("`regulator upgrade` from the outside (#53): --check prints the plan and ch
   assert.match((await gitExec("git", ["log", "-1", "--format=%s"], { cwd: dir })).stdout, /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n$/);
   r = await regulator(dir, "doctor");
   assert.equal(r.code, 0, r.stdout + r.stderr);
-  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 52 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\/; package 0\.1\.3; upgraded 1× — last \d{4}-\d{2}-\d{2} by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/m);
+  assert.match(r.stdout, /^ok {6} manifest {10}definition regulator at [0-9a-f]{7}, 53 regulators, pi 0\.87\.0; initialized \d{4}-\d{2}-\d{2} by alice; writable lib\/; package 0\.1\.3; upgraded 1× — last \d{4}-\d{2}-\d{2} by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/m);
   assert.match(r.stdout, /^ok {6} definition-drift {2}the instance was initialized under this definition revision$/m);
   r = await regulator(dir, "upgrade", "--by", "alice");
   assert.equal(r.code, 0, r.stderr);

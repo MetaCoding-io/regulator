@@ -48,9 +48,12 @@ test("algedonic signals accept only blocking or critical severity", () => {
   }
 });
 
+// A constraint carries no evidence: it is S5's word. Until typebox 1.3.27 (#191) the constraint below carried the
+// envelope's `evidence` and still validated, because `evidence` contains the declared key `id`.
+const { evidence: _evidence, ...envelopeWithoutEvidence } = envelope;
 const messages = [
   audit, proposal, algedonic,
-  { ...envelope, kind: "constraint", channel: "constraint", source: "S5", destination: "S1", rule: "Preserve authority" },
+  { ...envelopeWithoutEvidence, kind: "constraint", channel: "constraint", source: "S5", destination: "S1", rule: "Preserve authority" },
   { ...envelope, kind: "operational-signal", channel: "signal", source: "S1", destination: "S3", observation: "Task complete" },
   { ...envelope, kind: "coordination-signal", channel: "signal", source: "S2", destination: "S3", coordination: "oscillation", observation: "Same file edited 4 times", resource: "src/slugify.js" },
   { ...envelope, kind: "intelligence-signal", channel: "intelligence", source: "S4", destination: "S3", observation: "Environment changed" },
@@ -63,4 +66,10 @@ test("all message kinds enforce their channel discriminator at runtime", () => {
     }
     assert.equal(Value.Check(VsmMessageSchema, { ...message, kind: "unknown" }), false);
   }
+});
+
+test("a constraint carries no evidence (#191): the envelope's evidence key is refused as undeclared", () => {
+  const constraint = messages.find((message) => message.kind === "constraint")!;
+  assert.equal(Value.Check(VsmMessageSchema, constraint), true);
+  assert.equal(Value.Check(VsmMessageSchema, { ...constraint, evidence: envelope.evidence }), false);
 });

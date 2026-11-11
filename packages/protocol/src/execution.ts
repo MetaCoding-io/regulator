@@ -49,10 +49,15 @@ export interface UnitTransition {
 
 /**
  * The unit lifecycle, as a closed table: every transition the S3 loop takes, and no other. The execution store
- * refuses a status change that is not a row here, so a unit's status history is a path through this table and a
- * figure drawn from it shows every path a unit can take. A new row is a change to the loop, made in the same change.
+ * writes a unit's status only by naming a trigger of this table (`ExecutionStore.transition`), so a unit's status
+ * history is a path through it and a figure drawn from it shows every path a unit can take. A new row is a change
+ * to the loop, made in the same change.
+ *
+ * The table is a value and a type (#162). `as const` keeps each row's literals, `satisfies` checks every row
+ * against `UnitTransition`, and `TriggerFrom`, `TargetOf` and the store's signature are derived from the rows: a
+ * caller that knows a unit's status at compile time cannot name a trigger the table does not declare from it.
  */
-export const UNIT_TRANSITIONS: readonly UnitTransition[] = [
+export const UNIT_TRANSITIONS = [
   { from: "contracted", to: "dispatched", on: "dispatch", by: "runUnit", automatic: true, description: "the contract passed the gate and the progression veto; the lease is held, the worktree is open, attempt 1 runs" },
   { from: "contracted", to: "blocked", on: "dispatch-refused", by: "runUnit", automatic: true, description: "the lease is held by another owner, or the worktree could not be started; no attempt was spent" },
   { from: "blocked", to: "dispatched", on: "dispatch", by: "runUnit", automatic: false, description: "a further attempt under the same contract version: the router said retry or repair, or a person answered what the unit waited on" },
@@ -65,31 +70,149 @@ export const UNIT_TRANSITIONS: readonly UnitTransition[] = [
   { from: "reported", to: "blocked", on: "reintegration-refused", by: "finishUnit", automatic: true, description: "the trial merge failed its checks or conflicted, the base was dirty or moved, or the checkout was on the wrong branch; nothing landed" },
   { from: "blocked", to: "blocked", on: "routed-waiting", by: "routeUnit", automatic: true, description: "the recovery policy named an action the loop cannot apply (remediate, replan, clarify, pause) or was exhausted (escalate): an obligation is opened for the consumer the routing policy names, and the unit waits on it" },
   { from: "blocked", to: "aborted", on: "abort", by: "routeUnit", automatic: true, description: "the recovery policy said abort: the lease is released and the worktree removed; the history stays" },
-];
+] as const satisfies readonly UnitTransition[];
+
+/** One row of the table, with its literals. */
+export type UnitTransitionRow = (typeof UNIT_TRANSITIONS)[number];
+
+/**
+ * The triggers the table declares from status `S`. For a union of statuses it is the triggers declared from any of
+ * them, which is what a reader wants ("what can happen to a unit that is blocked or contracted?"); a writer wants
+ * `TriggerFromEvery`.
+ */
+export type TriggerFrom<S extends UnitStatus> = Extract<UnitTransitionRow, { from: S }>["on"];
+
+/** The statuses a trigger is declared from. */
+export type SourceOf<T extends UnitTrigger> = Extract<UnitTransitionRow, { on: T }>["from"];
+
+/**
+ * The triggers declared from every status in `S`: what a caller may name when all it knows is that the unit is in
+ * one of them. For a single status it is `TriggerFrom<S>`; for a status the caller has not narrowed (`UnitStatus`)
+ * it is `never`, because no trigger is legal from everywhere.
+ */
+export type TriggerFromEvery<S extends UnitStatus> = { [T in UnitTrigger]: [S] extends [SourceOf<T>] ? T : never }[UnitTrigger];
+
+/** Where trigger `T` takes a unit from status `S`: looked up in the table, never passed by the caller. */
+export type TargetOf<S extends UnitStatus, T extends UnitTrigger> = Extract<UnitTransitionRow, { from: S; on: T }>["to"];
+
+/** The trigger list and the table name the same triggers: a trigger no row takes, or a row whose trigger is not on the list, fails here. */
+type Same<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
+const _everyTriggerIsARow: Same<UnitTrigger, UnitTransitionRow["on"]> = true;
+/** The terminal statuses declare nothing: a row out of `closed` or `aborted` fails here. */
+const _terminalsAreTerminal: Same<TriggerFrom<"closed" | "aborted">, never> = true;
+void _everyTriggerIsARow; void _terminalsAreTerminal;
 
 /** The rows from one status to another: several when the loop has more than one reason to take the same edge. */
 export function unitTransitions(from: UnitStatus, to: UnitStatus): UnitTransition[] {
   return UNIT_TRANSITIONS.filter((t) => t.from === from && t.to === to);
 }
 
-/** The row a trigger names from a status, if the table has one. */
+/** The row a trigger names from a status, if the table has one: the runtime lookup, for a status read from disk. */
 export function unitTransition(from: UnitStatus, on: UnitTrigger): UnitTransition | undefined {
   return UNIT_TRANSITIONS.find((t) => t.from === from && t.on === on);
 }
 
-export const UnitRecordSchema = Type.Object({
+/**
+ * One line of a unit's status history (#162): the transition the store wrote, with its trigger. The line is the
+ * row's `from`, `to` and `on` and the time it was written, and the reason where the target is `blocked`: the same
+ * reason the unit record carries, kept after the record moves on. Only a row of the table is a line.
+ */
+export type UnitTransitionRecord = UnitTransitionRow extends infer R
+  ? R extends UnitTransitionRow
+    ? { from: R["from"]; to: R["to"]; on: R["on"]; at: string } & (R["to"] extends ReasonedUnitStatus ? { reason: string } : unknown)
+    : never
+  : never;
+
+/**
+ * The schema of a line: one object per row of the table, so a line that is not a transition the loop declares does
+ * not validate. A row that does not block declares no `reason`, and `additionalProperties: false` refuses one:
+ * typebox anchors and escapes the declared keys when it checks that from 1.0.50 on (1.0.0 did not, and let an
+ * undeclared key through when its name contained a declared one; #191, pinned by `additional-properties.test.ts`).
+ */
+export const UnitTransitionRecordSchema = Type.Union(UNIT_TRANSITIONS.map((row) => Type.Object({
+  from: Type.Literal(row.from),
+  to: Type.Literal(row.to),
+  on: Type.Literal(row.on),
+  at: NonEmpty,
+  ...(row.to === "blocked" ? { reason: NonEmpty } : {}),
+}, { additionalProperties: false })));
+
+export function isUnitTransitionRecord(value: unknown): value is UnitTransitionRecord {
+  return Value.Check(UnitTransitionRecordSchema, value);
+}
+
+/** What every unit record carries, whatever its status. */
+const UNIT_RECORD_FIELDS = {
   unitId: Type.String({ pattern: "^[a-zA-Z0-9._-]+$" }),
   unitType: NonEmpty,
   workload: Type.Object({ name: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false }),
   contract: Type.Object({ id: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false }),
-  status: UnitStatusSchema,
   attempts: Type.Integer({ minimum: 0 }),
   createdAt: NonEmpty,
   updatedAt: NonEmpty,
-  /** Why the unit is blocked, when it is. */
-  reason: Type.Optional(NonEmpty),
-}, { additionalProperties: false });
+};
+/** A unit in a status that carries nothing of its own. */
+function unitRecordIn<S extends UnitStatus>(status: S) {
+  return Type.Object({ ...UNIT_RECORD_FIELDS, status: Type.Literal(status) }, { additionalProperties: false });
+}
+
+/**
+ * The unit record, keyed on its status (#161): one object per status, each with the fields that status means and
+ * no other. A blocked unit says why it is blocked, always; no other status can carry a reason, so a closed unit with
+ * a reason and a blocked unit without one are not records. `TypeScript` narrows on `status` and the schema is the
+ * same statement for a record read from disk.
+ *
+ * A record written before this (0.1.4 and earlier) could carry `reason` beside any status, and an aborted unit
+ * did: `readUnitRecord` reads that one older shape, and nothing writes it.
+ */
+export const UnitRecordSchema = Type.Union([
+  unitRecordIn("contracted"),
+  unitRecordIn("dispatched"),
+  unitRecordIn("reported"),
+  unitRecordIn("closed"),
+  /** Why the unit is blocked: the loop's one line, written with the status. */
+  Type.Object({ ...UNIT_RECORD_FIELDS, status: Type.Literal("blocked"), reason: NonEmpty }, { additionalProperties: false }),
+  unitRecordIn("aborted"),
+]);
 export type UnitRecord = Static<typeof UnitRecordSchema>;
+/** The unit record in one status, or one of several: what a caller holds once it has narrowed on `status`. */
+export type UnitRecordIn<S extends UnitStatus> = Extract<UnitRecord, { status: S }>;
+/** The statuses whose record carries a reason. */
+export type ReasonedUnitStatus = { [S in UnitStatus]: UnitRecordIn<S> extends { reason: string } ? S : never }[UnitStatus];
+
+/**
+ * The reason a unit's record states, when its status carries one. The one place that asks "is there a reason?" of a
+ * record whose status it has not narrowed, so a reader does not spell the narrowing out.
+ */
+export function unitReason(unit: UnitRecord): string | undefined {
+  return unit.status === "blocked" ? unit.reason : undefined;
+}
+
+/** The shape a build before #161 wrote: the status beside an optional reason, for any status. Read, never written. */
+const LegacyUnitRecordSchema = Type.Object({ ...UNIT_RECORD_FIELDS, status: UnitStatusSchema, reason: Type.Optional(NonEmpty) }, { additionalProperties: false });
+
+export interface ReadUnitRecord {
+  record: UnitRecord;
+  /**
+   * Set when the file is in the older shape: a reason beside a status that cannot carry one (an aborted unit, as
+   * 0.1.4 wrote it). The record is read without it; `regulator doctor` names the unit and `regulator upgrade`
+   * rewrites the file.
+   */
+  legacyReason?: string;
+}
+
+/**
+ * Read a unit record from disk. The current shape is returned as it is. The one older shape that is still a unit
+ * record once its misplaced `reason` is dropped is returned without it, with the reason beside it so the caller can
+ * say so. Anything else is not a unit record and reads as undefined: a blocked unit with no reason is not repaired
+ * by inventing one.
+ */
+export function readUnitRecord(value: unknown): ReadUnitRecord | undefined {
+  if (Value.Check(UnitRecordSchema, value)) return { record: value };
+  if (!Value.Check(LegacyUnitRecordSchema, value) || value.status === "blocked" || value.reason === undefined) return undefined;
+  const { reason, ...record } = value;
+  return Value.Check(UnitRecordSchema, record) ? { record, legacyReason: reason } : undefined;
+}
 
 export const AttemptOutcomeSchema = Type.Union([
   Type.Literal("reported"),
@@ -144,6 +267,14 @@ export const BudgetDimensionSchema = Type.Union([
 ]);
 export type BudgetDimension = Static<typeof BudgetDimensionSchema>;
 
+const BudgetConsumedSchema = Type.Object({
+  tokens: Type.Integer({ minimum: 0 }),
+  cost: Type.Number({ minimum: 0 }),
+  wallClockMs: Type.Integer({ minimum: 0 }),
+  turns: Type.Integer({ minimum: 0 }),
+}, { additionalProperties: false });
+export type BudgetConsumed = Static<typeof BudgetConsumedSchema>;
+
 /**
  * The running account of what one attempt has consumed against its ceiling.
  * Written by the budget guard in the session, read by the orchestrator at
@@ -159,12 +290,7 @@ export const BudgetLedgerSchema = Type.Object({
     wallClockMs: Type.Integer({ minimum: 1 }),
     turns: Type.Integer({ minimum: 1 }),
   }, { additionalProperties: false }),
-  consumed: Type.Object({
-    tokens: Type.Integer({ minimum: 0 }),
-    cost: Type.Number({ minimum: 0 }),
-    wallClockMs: Type.Integer({ minimum: 0 }),
-    turns: Type.Integer({ minimum: 0 }),
-  }, { additionalProperties: false }),
+  consumed: BudgetConsumedSchema,
   startedAt: NonEmpty,
   updatedAt: NonEmpty,
   /** The model(s) the attempt ran on, in order; a second entry means a switch or a fallback. */
@@ -173,6 +299,15 @@ export const BudgetLedgerSchema = Type.Object({
   exhausted: Type.Optional(Type.Object({ dimension: BudgetDimensionSchema, at: NonEmpty }, { additionalProperties: false })),
   /** Compactions that happened during the attempt, with whether the contract block was carried. */
   compactions: Type.Array(Type.Object({ at: NonEmpty, reason: NonEmpty, preserved: Type.Boolean() }, { additionalProperties: false })),
+  /**
+   * Set when the attempt continues an earlier attempt's ledger (#133): a retry under `context-degradation` is a fresh
+   * session, not a fresh budget, so `consumed` starts from what that attempt had spent. `carried.consumed` is the
+   * part of `consumed` that is the earlier attempt's, so a sum over a unit's ledgers counts each token once.
+   */
+  carried: Type.Optional(Type.Object({
+    attempt: Type.Integer({ minimum: 1 }),
+    consumed: BudgetConsumedSchema,
+  }, { additionalProperties: false })),
 }, { additionalProperties: false });
 export type BudgetLedger = Static<typeof BudgetLedgerSchema>;
 

@@ -46,6 +46,7 @@
     "fixture-finance",
     "fixture-injection",
     "fixture-oscillation",
+    "fixture-poisoned-memory",
     "fixture-portfolio",
     "drift",
     "settings.json",

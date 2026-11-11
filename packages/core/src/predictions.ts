@@ -345,7 +345,7 @@ export async function checkHarnessEdit(root: string, edit: HarnessEdit, options:
     const attempts = await store.listAttempts(ref.unit);
     if (!attempts.some((a) => a.attempt === ref.attempt)) problems.push(`${where}: unit "${ref.unit}" has no attempt ${ref.attempt} (${attempts.length} recorded)`);
     const held = await audit.forUnit(ref.unit);
-    const trajectory = unitTrajectory({ unit, attempts, decisions: await store.listDecisions(ref.unit), verdicts: held.verdicts, obligations: obligations.filter((o) => o.unit === ref.unit) });
+    const trajectory = unitTrajectory({ unit, attempts, decisions: await store.listDecisions(ref.unit), verdicts: held.verdicts, obligations: obligations.filter((o) => o.unit === ref.unit), history: await store.listTransitions(ref.unit) });
     if (!trajectory.steps.some((s) => s.transition === ref.moment)) problems.push(`${where}: unit "${ref.unit}" never passed through "${ref.moment}" (its trajectory: ${trajectory.steps.map((s) => s.transition).filter(Boolean).join(" → ") || "nothing yet"})`);
     if (!ref.evidence.length && !ref.signals.length) problems.push(`${where}: names no evidence record and no signal; a diagnosis references what was observed`);
     for (const id of ref.evidence) {
