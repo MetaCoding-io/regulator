@@ -24,7 +24,7 @@
   "evidence": { "tests": ["../regulator-pi/src/contract.test.ts"] },
   "limitations": [
     "Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.",
-    "The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started."
+    "The section is regenerated once per attempt, when the dispatcher prompts the session, from the loaded contract; it cannot reflect a contract version issued after the session started."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:contract", "note": "Shares the contract extension with the result-report gate; dropping the extension removes both the section and the tool, so a live arm without it has no report path at all."},
