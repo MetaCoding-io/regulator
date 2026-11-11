@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import type { RecoveryPolicy, UnitRecord, WorkContract } from "@metacoding.io/regulator-protocol";
+import { FailureCauseSchema, type FailureCause, type RecoveryPolicy, type UnitRecord, type WorkContract } from "@metacoding.io/regulator-protocol";
 import { EffectJournal, effectKey } from "./effect-journal.js";
 import { ExecutionStore } from "./execution-store.js";
 import type { AuditFinding } from "@metacoding.io/regulator-protocol";
@@ -23,10 +23,11 @@ const policy: RecoveryPolicy = {
   fallback: ["pause"],
 };
 
-const unit = (over: Partial<UnitRecord> = {}): UnitRecord => ({
-  unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 },
-  status: "blocked", attempts: 1, createdAt: "t", updatedAt: "t", ...over,
-});
+/** A unit as the classifier is handed one: blocked, with the reason the loop wrote; with no reason given, a record whose status carries none (#161). */
+const unit = (over: { attempts?: number; reason?: string } = {}): UnitRecord => {
+  const base = { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, attempts: over.attempts ?? 1, createdAt: "t", updatedAt: "t" };
+  return over.reason === undefined ? { ...base, status: "dispatched" } : { ...base, status: "blocked", reason: over.reason };
+};
 const attempt = (outcome: "reported" | "no-report" | "invalid-report" | "budget-exhausted" | "error", detail?: string, n = 1) =>
   ({ unitId: "u1", attempt: n, contractVersion: 1, startedAt: "a", endedAt: "b", outcome, ...(detail === undefined ? {} : { detail }) });
 
@@ -127,6 +128,25 @@ test("decideRecovery: the Nth occurrence takes the Nth action and the last repea
   assert.equal(hintFor("oscillation", "clarify", []), undefined, "only attempt-spending actions carry a hint");
 });
 
+test("hintFor: every cause has a hint of its own, and only a silent end is told it ended without a report (#160)", () => {
+  const causes = FailureCauseSchema.anyOf.map((s) => s.const);
+  assert.equal(causes.length, 13);
+  const hints = new Map(causes.map((c) => [c, hintFor(c, "retry", ["the evidence"]) ?? ""]));
+  for (const [cause, hint] of hints) assert.match(hint, /the evidence/, `${cause}: the hint carries the evidence`);
+  assert.equal(new Set(hints.values()).size, causes.length, "no two causes share a hint");
+  // The seven that fell into one `default:` before: what each is told is true of it.
+  assert.match(hints.get("no-report")!, /ended without a report \(no-report\)/);
+  assert.match(hints.get("tool-error")!, /failed tool call or session error/);
+  assert.match(hints.get("environment")!, /failed on its environment, not on the work/);
+  assert.match(hints.get("dispatch-error")!, /could not be started, or its session failed before it reported/);
+  assert.match(hints.get("ambiguity")!, /a requirement it could not decide/);
+  assert.match(hints.get("oscillation")!, /Do not apply the previous fix again/);
+  assert.match(hints.get("unknown")!, /the records do not say why/);
+  for (const cause of ["tool-error", "environment", "dispatch-error", "ambiguity", "oscillation", "unknown"] as const) assert.doesNotMatch(hints.get(cause)!, /ended without a report/, `${cause} is not described as a silent end`);
+  // A cause that never went through the schema is refused, not given the nearest hint.
+  assert.throws(() => hintFor("gremlins" as FailureCause, "retry", []), /unhandled failure cause: "gremlins"/);
+});
+
 test("routeBlockedUnit: records one immutable decision per routed failure, counting occurrences per cause, citing the policy version; a unit that is not blocked is not routed", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "regulator-route-"));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -138,8 +158,9 @@ test("routeBlockedUnit: records one immutable decision per routed failure, count
   await store.createUnit(contract);
   assert.equal(await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals: [] }), undefined, "contracted, not blocked");
 
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "a", endedAt: "b", outcome: "no-report" });
-  await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
+  await store.transition("u1", "attempt-failed", "the unit ended without calling report_result");
   const first = await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals: [], now: () => 1_700_000_000_000 });
   assert.equal(first?.cause, "no-report");
   assert.equal(first?.action, "retry");
@@ -175,8 +196,9 @@ test("routeBlockedUnit (#133): a silent attempt that carries the canary's findin
     objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" },
   };
   await store.createUnit(contract);
+  await store.transition("u1", "dispatch");
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-11-10T10:00:00.000Z", endedAt: "2026-11-10T10:30:00.000Z", outcome: "no-report" });
-  await store.setStatus("u1", "blocked", "the unit ended without calling report_result");
+  await store.transition("u1", "attempt-failed", "the unit ended without calling report_result");
   const signals = [silence("2026-11-10T10:05:00.000Z")];
 
   const shipped = await routeBlockedUnit(store, { policy, unitId: "u1", attemptCeiling: 3, signals });

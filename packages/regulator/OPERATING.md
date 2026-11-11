@@ -157,8 +157,13 @@ file of a harness-owned directory the instance lacks from the definition's seed
 (`regulator/advice/` for an instance initialized before advice was a file set; a
 profile's advice file added since; `regulator/identity/` if it were ever absent) and
 never overwrites a file that exists, since a decided identity or advice file is the
-instance's own; and it adds the `.regulator/` line to `.gitignore`. `init` renders no
-other file into an instance, so there is nothing to re-render. Everything else a release
+instance's own; it adds the `.regulator/` line to `.gitignore`; and it rewrites a unit
+record written before the record was keyed on its status. Such a record carries a reason
+beside a status that has none (an aborted unit's, as 0.1.4 wrote it). The store reads it
+without the reason, `doctor` names the unit under `units`, and `upgrade` writes the file
+as it is read; nothing else in the record changes, and the reason is still on the
+unit's last decision in `decisions.ndjson`. `init` renders no other file into an
+instance, so there is nothing to re-render. Everything else a release
 changed — a policy, a workload, a profile, the registry, the seed of a file the instance
 already has — is read from the definition or is the person's to act on, and `upgrade`
 prints it verbatim from the release's migration note, under a heading per version

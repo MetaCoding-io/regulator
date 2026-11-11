@@ -4,15 +4,19 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { ExecutionStore, SIGNALS_RELATIVE_PATH, loadRegistry, readSignals } from "@metacoding.io/regulator-core";
-import type { ResultReport, WorkContract } from "@metacoding.io/regulator-protocol";
-import { runUnit, type Dispatcher } from "./controller.js";
+import { unitReason, type ResultReport, type UnitRecord, type WorkContract } from "@metacoding.io/regulator-protocol";
+import { blockedDetail, runUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { gitExec, initRepo } from "./git-support.js";
+import { readInstance, unitWhy } from "./status.js";
 import { unitStatus } from "./unit.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { loadRoutingPolicy } from "./routing-policy.js";
 import { loadWorkload } from "./workload.js";
+
+/** The reason on a unit's record, or "" where its status carries none (#161). */
+const reasonOf = (unit: UnitRecord | undefined): string => (unit ? unitReason(unit) ?? "" : "");
 
 const LAB_ROOT = fileURLToPath(new URL("../", import.meta.url));
 const contractFile = path.join(LAB_ROOT, "contracts", "fix-known-issue.json");
@@ -83,7 +87,7 @@ test("no report, no close: the unit is blocked, the attempt is recorded, and the
   assert.deepEqual(outcome, { status: "blocked", reason: "no-report" });
   const store = new ExecutionStore(repo);
   assert.equal((await store.getUnit("u1"))?.status, "blocked");
-  assert.match((await store.getUnit("u1"))?.reason ?? "", /without calling report_result/);
+  assert.match(reasonOf(await store.getUnit("u1")), /without calling report_result/);
   assert.equal((await store.listAttempts("u1"))[0]?.outcome, "no-report");
   assert.equal((await unitStatus(gitExec, repo)).length, 1, "the resource stays claimed until S3 routes the failure");
   await stat(path.join(repo, ".regulator", "worktrees", "u1"));
@@ -98,7 +102,7 @@ test("a report that settles an unresolved decision does not close the unit even 
   });
   assert.equal(outcome.status, "blocked");
   assert.equal(outcome.status === "blocked" && outcome.reason, "invalid-report");
-  assert.match(outcome.status === "blocked" ? outcome.problems?.[0]?.message ?? "" : "", /u-unicode.*settled silently/);
+  assert.match(outcome.status === "blocked" && outcome.reason === "invalid-report" ? outcome.problems[0]?.message ?? "" : "", /u-unicode.*settled silently/);
   assert.equal((await new ExecutionStore(repo).listAttempts("u1"))[0]?.outcome, "invalid-report");
 });
 
@@ -170,9 +174,9 @@ test("budgets: a halted attempt is recorded as budget-exhausted; a blocked unit 
   });
   assert.equal(first.status, "blocked");
   assert.equal(first.status === "blocked" && first.reason, "budget-exhausted");
-  assert.match(first.status === "blocked" ? first.detail ?? "" : "", /tokens ceiling crossed .*1200 tokens, 3 turns/);
+  assert.match(first.status === "blocked" ? blockedDetail(first) ?? "" : "", /tokens ceiling crossed .*1200 tokens, 3 turns/);
   assert.equal((await store.listAttempts("u1"))[0]?.outcome, "budget-exhausted");
-  assert.match((await store.getUnit("u1"))?.reason ?? "", /budget exhausted: tokens/);
+  assert.match(reasonOf(await store.getUnit("u1")), /budget exhausted: tokens/);
   assert.equal((await unitStatus(gitExec, repo)).length, 1, "the lease and worktree are kept for the next attempt");
 
   // Attempt 2: re-dispatched under the same contract version, same worktree; this time it reports and closes.
@@ -245,7 +249,7 @@ test("recovery: the autoloop retries a silent unit under the policy, repairs a r
   assert.match(hints[2] ?? "", /report_result was refused: attempt 2: no-report; .*tool report_result: invalid-report — Report refused .*u-unicode/);
   assert.equal(final.status, "blocked");
   const unit = await store.getUnit("u1");
-  assert.match(unit?.reason ?? "", /escalated to S5: no-report \(recovery v1\)/);
+  assert.match(reasonOf(unit), /escalated to S5: no-report \(recovery v1\)/);
   assert.equal(unit?.attempts, 3);
   const signals = await readSignals(repo);
   const algedonic = signals.find((s) => s.kind === "algedonic-signal");
@@ -324,7 +328,7 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   assert.equal(osc.decisions.length, 1);
   assert.equal(osc.decisions[0]?.action, "clarify");
   assert.match(osc.decisions[0]?.question ?? "", /Which behaviour is wanted\?/);
-  assert.match((await store.getUnit("u1"))?.reason ?? "", /awaiting clarify: oscillation/);
+  assert.match(reasonOf(await store.getUnit("u1")), /awaiting clarify: oscillation/);
   assert.equal((await store.getUnit("u1"))?.attempts, 1, "clarify spends no attempt");
 
   // Environment, observed by the session: remediate, not retry.
@@ -338,7 +342,7 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
     },
   });
   assert.deepEqual(env.decisions.map((d) => [d.cause, d.action]), [["environment", "remediate"]]);
-  assert.match((await store2.getUnit("u1"))?.reason ?? "", /awaiting remediate: environment/);
+  assert.match(reasonOf(await store2.getUnit("u1")), /awaiting remediate: environment/);
 
   // Abort under a policy that says so: the claim is released, the record stays.
   const abortive = { ...recovery, version: 2, rules: [{ cause: "no-report" as const, actions: ["abort" as const] }] };
@@ -351,6 +355,14 @@ test("recovery: oscillation routes to clarify with a question and stops; environ
   await assert.rejects(stat(path.join(repo3, ".regulator", "worktrees", "u1")), /ENOENT/, "worktree removed");
   assert.equal((await store3.listAttempts("u1")).length, 1, "history kept");
   assert.equal(await routeUnit(gitExec, { repo: repo3, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction }), undefined, "an aborted unit is not routed again");
+  // The abort is the last line of the history, and the record carries no reason (#161, #162): why is the decision, and the read model says it from there.
+  assert.deepEqual((await store3.listTransitions("u1")).map((l) => [l.on, l.to]), [["dispatch", "dispatched"], ["attempt-failed", "blocked"], ["abort", "aborted"]]);
+  const abortedUnit = (await readInstance(repo3)).units[0]!;
+  assert.equal("reason" in abortedUnit.unit, false);
+  assert.equal(unitWhy(abortedUnit.unit, abortedUnit.decisions), "aborted under recovery v2: no-report");
+  assert.deepEqual([abortedUnit.trajectory.basis, abortedUnit.trajectory.final, abortedUnit.trajectory.problem], ["history", "aborted", undefined]);
+  // The waiting decisions earlier in this test are blocked → blocked on `routed-waiting`, by the store's own line.
+  assert.deepEqual((await store.listTransitions("u1")).filter((l) => l.from === "blocked" && l.to === "blocked").map((l) => l.on), ["routed-waiting"]);
 });
 
 test("evidence, not claims: a report that says the tests pass does not close the unit when the harness's own run says otherwise; the repair attempt closes on fresh evidence", async (t) => {
@@ -414,8 +426,8 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   }, repo) });
   assert.equal(dirty.status, "blocked", JSON.stringify(dirty));
   assert.equal(dirty.status === "blocked" && dirty.reason, "check-failure");
-  assert.equal(dirty.status === "blocked" ? dirty.verdict?.verdict : "", "inconclusive");
-  assert.match(dirty.status === "blocked" ? dirty.verdict?.reasons[0] ?? "" : "", /uncommitted changes: evidence cannot be bound to revision/);
+  assert.equal(dirty.status === "blocked" && dirty.reason === "check-failure" ? dirty.verdict.verdict : "", "inconclusive");
+  assert.match(dirty.status === "blocked" && dirty.reason === "check-failure" ? dirty.verdict.reasons[0] ?? "" : "", /uncommitted changes: evidence cannot be bound to revision/);
   assert.equal((await new AuditLog(repo).forUnit("u1")).evidence.length, 0, "nothing was recorded against a tree that binds to no revision");
 
   // Commit inside the worktree, as the unit should have; re-audit without an attempt.
@@ -423,10 +435,10 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   await gitExec("git", ["commit", "-qam", "commit the work"], { cwd: worktree });
   const waiting = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(waiting.status, "blocked");
-  assert.equal(waiting.status === "blocked" ? waiting.verdict?.verdict : "", "inconclusive");
-  assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.awaitingAcceptance : [], ["e-wording"]);
-  assert.deepEqual(waiting.status === "blocked" ? waiting.verdict?.satisfied : [], ["e-tests", "e-checks"], "the host evidence is in; only the human's part is missing");
-  assert.match((await store.getUnit("u1"))?.reason ?? "", /audit refused closeout: inconclusive@\w{7} \(awaiting acceptance e-wording\)/);
+  assert.equal(waiting.status === "blocked" && waiting.reason === "check-failure" ? waiting.verdict.verdict : "", "inconclusive");
+  assert.deepEqual(waiting.status === "blocked" && waiting.reason === "check-failure" ? waiting.verdict.awaitingAcceptance : [], ["e-wording"]);
+  assert.deepEqual(waiting.status === "blocked" && waiting.reason === "check-failure" ? waiting.verdict.satisfied : [], ["e-tests", "e-checks"], "the host evidence is in; only the human's part is missing");
+  assert.match(reasonOf(await store.getUnit("u1")), /audit refused closeout: inconclusive@\w{7} \(awaiting acceptance e-wording\)/);
 
   const revision = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: worktree })).stdout.trim();
   await new AuditLog(repo).appendAcceptance({ id: "a1", unitId: "u1", contract: { id: contract.id, version: 1 }, criterion: "e-wording", revision: "0000000", disposition: "accepted", by: "alice", at: "t" });
@@ -442,6 +454,11 @@ test("closeout is inconclusive on an uncommitted tree or a criterion no check ca
   const again = await closeUnit(gitExec, { repo, unitId: "u1", workload, routing: options.routing, interaction: options.interaction });
   assert.equal(again.status, "refused");
   assert.match(again.status === "refused" ? again.problems[0]?.message ?? "" : "", /is closed; only a blocked unit is re-audited/);
+  // A re-audit is a transition of its own (#162): refused, it is blocked → blocked on `re-audit-refused`; passed, `re-verified`.
+  assert.deepEqual((await store.listTransitions("u1")).map((l) => l.on), ["dispatch", "attempt-failed", "re-audit-refused", "re-audit-refused", "re-verified", "reintegrated"]);
+  const trajectory = (await readInstance(repo)).units[0]!.trajectory;
+  assert.deepEqual([trajectory.basis, trajectory.final, trajectory.problem], ["history", "closed", undefined]);
+  assert.deepEqual(trajectory.steps.filter((s) => s.event === "re-audit").map((s) => [s.transition, s.by]), [["re-audit-refused", "closeUnit"], ["re-audit-refused", "closeUnit"], ["re-verified", "closeUnit"]]);
 });
 
 test("obligations: what a unit records is routed at the loop's steps under the routing policy; S3's recovery decision dispositions what S3 was routed; a waiting action becomes an obligation owed to a person that vetoes re-dispatch until it is resolved, and the resolution reaches the next attempt as the hint", async (t) => {
@@ -578,7 +595,7 @@ test("identity in code (lesson 12): a fixed decision must cite an authority that
   }, repo) });
   assert.equal(outcome.status, "blocked");
   assert.equal(outcome.status === "blocked" && outcome.reason, "check-failure");
-  const verdict = outcome.status === "blocked" ? outcome.verdict : undefined;
+  const verdict = outcome.status === "blocked" && outcome.reason === "check-failure" ? outcome.verdict : undefined;
   assert.equal(verdict?.verdict, "fail");
   assert.deepEqual(verdict?.failed, ["e-checks"], "the identity check speaks to the command-class criterion");
   assert.match(verdict?.reasons.join("\n") ?? "", /identity-untouched — protected paths changed on the branch \(INV-001\): regulator\/identity\/INVARIANTS\.md/);
@@ -620,11 +637,11 @@ test("algedonic (lesson 13): a unit that asked a person and got no answer is rec
   });
   assert.equal(driven.final.status, "blocked");
   assert.equal(driven.final.status === "blocked" && driven.final.reason, "paused");
-  assert.match(driven.final.status === "blocked" ? driven.final.detail ?? "" : "", /^consent: force-push — The branch diverged; may I force-push\? \(obligation [0-9a-f]{8}\)$/);
+  assert.match(driven.final.status === "blocked" ? blockedDetail(driven.final) ?? "" : "", /^consent: force-push — The branch diverged; may I force-push\? \(obligation [0-9a-f]{8}\)$/);
   assert.deepEqual(driven.decisions, [], "the recovery policy has nothing to say while a person is asked: no retry, no repair, no attempt spent on it");
   const unit = await store.getUnit("u1");
   assert.equal(unit?.status, "blocked");
-  assert.match(unit?.reason ?? "", /^paused: awaiting a person — consent: force-push/);
+  assert.match(reasonOf(unit), /^paused: awaiting a person — consent: force-push/);
   assert.deepEqual((await store.listAttempts("u1")).map((a) => a.outcome), ["paused"]);
   assert.equal(await routeUnit(gitExec, { repo, unitId: "u1", policy: base.policy, recovery, routing: base.routing, interaction: base.interaction, now }), undefined, "not routed while the question is open");
 
@@ -706,7 +723,7 @@ test("a wait ceiling (#52): with `waitCeilingMs` declared, a unit paused past it
 
   clock += 60_000;
   assert.deepEqual([(await route())?.action, (await route())?.action], ["retry", "escalate"], "the third routing past the ceiling escalates");
-  assert.match((await store.getUnit("u1"))?.reason ?? "", /^escalated to S5: timeout/);
+  assert.match(reasonOf(await store.getUnit("u1")), /^escalated to S5: timeout/);
   const algedonic = (await readSignals(repo)).filter((s) => s.kind === "algedonic-signal");
   assert.equal(algedonic.length, 1);
   assert.equal((await ledger.get(question.id))?.status, "acknowledged", "the question is still the person's to answer");
@@ -775,7 +792,10 @@ test("the pre-merge trial (#48): two units change disjoint files and break each 
   const b = await runUnit(gitExec, { ...base, contract: contractFor("b"), dispatcher: bDispatcher });
   assert.equal(b.status, "blocked", "B passed every check at its own HEAD and the merge had no file conflict; the merged tree fails, so nothing landed");
   assert.equal(b.status === "blocked" && b.reason, "conflict", "a failing trial is a conflict for the recovery policy");
-  assert.match(b.status === "blocked" ? b.detail ?? "" : "", /^Reintegrating unit\/b into main merges cleanly and the merged tree fails its checks at [0-9a-f]{7}: pre-merge:run_tests: 1 passed, 1 failed/);
+  assert.match(b.status === "blocked" ? blockedDetail(b) ?? "" : "", /^Reintegrating unit\/b into main merges cleanly and the merged tree fails its checks at [0-9a-f]{7}: pre-merge:run_tests: 1 passed, 1 failed/);
+  // The case carries its own payload (#161): a conflict found by the trial has the trial, with the revision the evidence is bound to.
+  assert.equal(b.status === "blocked" && b.reason === "conflict" ? b.via : "", "trial");
+  assert.deepEqual(b.status === "blocked" && b.reason === "conflict" && b.via === "trial" ? [b.trial.verdict, /^[0-9a-f]{40}$/.test(b.trial.sha), b.trial.reasons.length] : [], ["fail", true, 1]);
   assert.equal(await head(), afterA, "the base is exactly as A left it: green");
   assert.equal((await gitExec("git", ["worktree", "list"], { cwd: repo })).stdout.includes("trials"), false, "the trial worktree is gone");
   const trial = (await new AuditLog(repo).forUnit("b")).evidence.filter((r) => r.check.startsWith("pre-merge:"));
@@ -802,6 +822,25 @@ test("the pre-merge trial (#48): two units change disjoint files and break each 
   assert.equal(repaired.status, "closed", JSON.stringify(repaired));
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.verdict : undefined, "pass");
   assert.equal(repaired.status === "closed" ? repaired.preMerge?.sha : undefined, await head());
+
+  // The store wrote each of B's moves with its trigger (#162): the refused reintegration and the landing are lines of their own,
+  // and the trajectory is those lines with the records' why beside them. Nothing is reconstructed and nothing disagrees.
+  const moves = await new ExecutionStore(repo).listTransitions("b");
+  assert.deepEqual(moves.map((l) => [l.from, l.on, l.to]), [
+    ["contracted", "dispatch", "dispatched"], ["dispatched", "verified", "reported"], ["reported", "reintegration-refused", "blocked"],
+    ["blocked", "dispatch", "dispatched"], ["dispatched", "verified", "reported"], ["reported", "reintegrated", "closed"],
+  ]);
+  assert.match(moves[2] && "reason" in moves[2] ? moves[2].reason : "", /^reintegration: conflict — Reintegrating unit\/b into main merges cleanly and the merged tree fails its checks/);
+  const trajectory = (await readInstance(repo)).units.find((u) => u.unit.unitId === "b")!.trajectory;
+  assert.deepEqual([trajectory.basis, trajectory.final, trajectory.problem], ["history", "closed", undefined]);
+  assert.deepEqual(trajectory.steps.filter((s) => s.transition).map((s) => [s.transition, s.source, s.event]), [
+    ["dispatch", "history", "attempt-started"], ["verified", "history", "attempt-ended"], ["reintegration-refused", "history", "reintegration"],
+    ["dispatch", "history", "attempt-started"], ["verified", "history", "attempt-ended"], ["reintegrated", "history", "reintegration"],
+  ]);
+  const refusedStep = trajectory.steps.find((s) => s.transition === "reintegration-refused")!;
+  const routedStep = trajectory.steps.find((s) => s.event === "decision")!;
+  assert.deepEqual(refusedStep.cites, ["status.ndjson"]);
+  assert.ok(refusedStep.index < routedStep.index && refusedStep.at <= routedStep.at, "the refusal is placed where the store wrote it, before the decision that routed it");
 });
 
 test("advice is harness-owned at closeout too (#110): a unit that commits a change under regulator/advice/ on its branch fails the identity-untouched check, which diffs every harness-owned directory DEFINITION_WRITERS names, and nothing reintegrates", async (t) => {
@@ -817,7 +856,7 @@ test("advice is harness-owned at closeout too (#110): a unit that commits a chan
   }, repo) });
   assert.equal(outcome.status, "blocked");
   assert.equal(outcome.status === "blocked" && outcome.reason, "check-failure");
-  const verdict = outcome.status === "blocked" ? outcome.verdict : undefined;
+  const verdict = outcome.status === "blocked" && outcome.reason === "check-failure" ? outcome.verdict : undefined;
   assert.match(verdict?.reasons.join("\n") ?? "", /identity-untouched — protected paths changed on the branch \(INV-001\): regulator\/advice\/implement\.md/);
   const record = (await new AuditLog(repo).forUnit("u1")).evidence.find((r) => r.check === "identity-untouched");
   assert.equal(record?.verdict, "fail");
@@ -976,19 +1015,19 @@ test("a command unit, non-zero exit: a dispatch error with the exit code and the
   const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "fail.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
   assert.equal(outcome.status, "blocked");
   assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
-  assert.match(outcome.status === "blocked" ? outcome.detail ?? "" : "", /^the program exited 3: no prices for 2026-09-30$/);
+  assert.match(outcome.status === "blocked" ? blockedDetail(outcome) ?? "" : "", /^the program exited 3: no prices for 2026-09-30$/);
   const store = new ExecutionStore(repo);
   const [attempt] = await store.listAttempts("n1");
   assert.equal(attempt?.outcome, "error");
   assert.deepEqual(attempt?.program, { file: "fail.mjs", sha256: await sha256Of(path.join(root, "fail.mjs")), exit: 3 });
-  assert.match((await store.getUnit("n1"))?.reason ?? "", /^dispatch error: the program exited 3/);
+  assert.match(reasonOf(await store.getUnit("n1")), /^dispatch error: the program exited 3/);
   assert.equal((await unitStatus(gitExec, repo)).length, 1, "the claim is kept for S3 to route");
   assert.equal(await store.getReport("n1", 1, 1), undefined, "no report from a failed program");
 
   const second = await initRepo(t);
   const claimed = await runUnit(gitExec, { ...(await withPolicy()), repo: second, contract, workload: await commandWorkload(["node", "claims.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
   assert.equal(claimed.status === "blocked" && claimed.reason, "dispatch-error");
-  assert.match(claimed.status === "blocked" ? claimed.detail ?? "" : "", /claims delegatedResults, which a program does not have/);
+  assert.match(claimed.status === "blocked" ? blockedDetail(claimed) ?? "" : "", /claims delegatedResults, which a program does not have/);
 });
 
 test("a command unit, past the wall-clock ceiling: the program is stopped at the policy's wallClockMs for the unit type, the ledger says the ceiling was crossed, the attempt is an error carrying the program without an exit, and the unit is blocked as a dispatch error", async (t) => {
@@ -999,7 +1038,7 @@ test("a command unit, past the wall-clock ceiling: the program is stopped at the
   const contract = await commandContract();
   const outcome = await runUnit(gitExec, { ...base, policy, repo, contract, workload: await commandWorkload(["node", "slow.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
   assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
-  assert.match(outcome.status === "blocked" ? outcome.detail ?? "" : "", /ran past the wall-clock ceiling \(500 ms\) and was stopped: timed out/);
+  assert.match(outcome.status === "blocked" ? blockedDetail(outcome) ?? "" : "", /ran past the wall-clock ceiling \(500 ms\) and was stopped: timed out/);
   const store = new ExecutionStore(repo);
   const [attempt] = await store.listAttempts("n1");
   assert.equal(attempt?.outcome, "error");
@@ -1011,7 +1050,7 @@ test("a command unit, past the wall-clock ceiling: the program is stopped at the
   // The runner's own timeout, below the ceiling, is honoured the same way.
   const quick = await initRepo(t);
   const own = await runUnit(gitExec, { ...base, repo: quick, contract, workload: await commandWorkload(["node", "slow.mjs"], { timeoutMs: 300 }), definitionRoot: root, owner: "alice", dispatcher: noHost });
-  assert.match(own.status === "blocked" ? own.detail ?? "" : "", /\(300 ms\)/);
+  assert.match(own.status === "blocked" ? blockedDetail(own) ?? "" : "", /\(300 ms\)/);
 });
 
 test("a command unit that writes outside its declared outputs: the diff against the worktree before the run names the stray paths, they are undone, nothing of the attempt is committed, and the unit is blocked as a dispatch error; the closeout's identity-untouched check stays as the second catch for a protected prefix", async (t) => {
@@ -1031,7 +1070,7 @@ test("a command unit that writes outside its declared outputs: the diff against 
   const contract = await commandContract();
   const outcome = await runUnit(gitExec, { ...(await withPolicy()), repo, contract, workload: await commandWorkload(["node", "stray.mjs"]), definitionRoot: root, owner: "alice", dispatcher: noHost });
   assert.equal(outcome.status === "blocked" && outcome.reason, "dispatch-error");
-  assert.equal(outcome.status === "blocked" ? outcome.detail : "", "the program wrote outside its declared outputs (out/): README.md, src/index.js, vendor-note.txt; the writes are undone and nothing of this attempt is committed");
+  assert.equal(outcome.status === "blocked" ? blockedDetail(outcome) : "", "the program wrote outside its declared outputs (out/): README.md, src/index.js, vendor-note.txt; the writes are undone and nothing of this attempt is committed");
   const worktree = path.join(repo, ".regulator", "worktrees", "n1");
   assert.equal(await readFile(path.join(worktree, "src", "index.js"), "utf8"), "export const answer = 42;\n", "the tracked file is restored");
   assert.equal(await readFile(path.join(worktree, "README.md"), "utf8"), "fixture\n");
