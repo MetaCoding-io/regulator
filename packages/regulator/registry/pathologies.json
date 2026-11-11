@@ -617,6 +617,36 @@
       "notAbsorbed": "`confidence` on an intelligence signal is recorded and never calibrated; it is a `model-judgment` instrument once the prediction record exists (open questions §4). A self-assessed `info` on a signal that names no invariant and no identity path is taken at its word: the confident unit's third signal was noted below the routing policy's line, as the policy declares"
     },
     {
+      "id": "trace-across-drifted-views",
+      "section": "channel",
+      "name": "A trace across views is read as current when one view has drifted",
+      "summary": "an arrangement relates several descriptions of one system, one current by construction and the others hand-maintained, and a trace across them is only as current as the least current view",
+      "looksLike": "A verdict is read as current after the revision moved; an `authorityRef` names an invariant or a decision a later revision renamed; a hand-drawn figure of the definition no longer matches the registry",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.audit.closeout-gate.v1",
+            "note": "evidence binds to a revision, and evidence from another revision is a memory, never the verdict's input"
+          },
+          {
+            "id": "reg.control.work-contract-gate.v1",
+            "note": "an authority reference that does not resolve refuses the contract"
+          },
+          {
+            "id": "reg.identity.definition-writers.v1",
+            "note": "`regulator docs --write` renders the figures and documents from the definition and `docs --check` holds them current under `pnpm check`, so a figure of what exists is generated, never drawn"
+          }
+        ],
+        "invariants": [
+          "INV-003"
+        ],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "none; a fixture would be a contract citing an authority reference that a later identity revision renames, and a verdict re-read after a new commit",
+      "notAbsorbed": "the longitudinal form, drift of the *description* of the system rather than of the system, outside the definition and the generated figures: a research note, a README, the website's drawings, the research index's status column ([Wintercorn note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-22-wintercorn-semantic-sos/README.md) §8.3)"
+    },
+    {
       "id": "mast-disobey-task-specification",
       "section": "agent",
       "name": "Disobey task specification",
