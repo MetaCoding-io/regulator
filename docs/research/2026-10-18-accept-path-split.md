@@ -151,6 +151,16 @@ The instance manifest does not change. Its `writablePaths` and `protectedPaths` 
 *domain's* declaration; the definition's writers are the definition's, and a constant is
 the right place for a list that must agree with the CLI.
 
+*Added 2026-11-11.* A seed file of the identity or advice class may also change by a
+merged change to the definition's repository, which is path 3 applied to the seed. The
+class names the command that writes the *instance's* copy and the command that carries
+it up to the seed; a maintainer editing `identity/` or `advice/` in the definition itself
+lands it with `regulator check` as the gate, as any definition file does, and the change
+reaches an instance initialized earlier only through the migration note, `advice accept`
+or a hand edit (DEBT row 44). That is how the asking bullet landed on every advice seed
+([#168](https://github.com/MetaCoding-io/regulator/pull/168), 2026-11-08; the
+[Exo note §8.2](2026-11-06-exo-runtime-self-improvement.md#82-the-manager-asking-the-team-that-is-this-design-and-it-has-three-gaps)).
+
 ## 5. Decision 3: the commands
 
 **Proposed.** The Harness² note called the command `definition accept`. That name says it

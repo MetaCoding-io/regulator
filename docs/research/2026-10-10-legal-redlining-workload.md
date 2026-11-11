@@ -6,7 +6,7 @@
   read it against the control plane. Claims about what `regulator` does today cite the
   file; claims about what the LRA does cite the article. The two are kept apart.
 - **Question:** three. Does the LRA read as a viable system, and where does the reading
-  disagree with it? Could contract redlining be the third workload
+  disagree with it? Could contract redlining be an additional workload
   ([#61](https://github.com/MetaCoding-io/regulator/issues/61))? And does the article
   carry mechanisms the registry does not yet have a card for?
 
@@ -194,7 +194,7 @@ non-negotiable rule with a MODIFY, invents a capitalised term, edits the redline
 match its disposition, and settles the no-rule change silently. Each is caught by a
 different check, which is what the report should show.
 
-### Why this is a good third workload, and what it costs
+### Why this is a good additional workload, and what it costs
 
 For: it is a domain where most of the work is judgment on top of structure that can be
 checked without judgment (the finance property); the hard guardrail is a real

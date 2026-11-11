@@ -334,8 +334,9 @@ the [research index](README.md).
 - Sensors in `policies/context.json`: the stores to read and what to render from each;
   `regulator check` refuses an unknown sensor. The worktree mtime sensor is optional and
   off by default.
-- A registry card, `context-steward`, `vsmFunction: S3`, level `deterministic-check`
-  for this slice, with the limitations stated (advice; shows only what the stores hold;
+- A registry card, `context-steward`, `vsmFunction: S3`, level `deterministic-gate` (the
+  schema's word for a model-free mechanism, `MechanismLevelSchema`; it refuses nothing,
+  which its limitations say) for this slice, with the limitations stated (advice; shows only what the stores hold;
   nothing from other units' transcripts), an ablation switch (`extension:context`) and a
   retirement condition.
 - Done when: `pnpm check` passes; a dispatched unit under a blocking obligation opened
@@ -390,6 +391,16 @@ useful" before anything is ported.
 - **A person as a sensor.** Open questions §2 proposes `regulator intelligence report
   --by`. A steward makes that intelligence reach a running unit, which §2 does not
   address; the two threads should land with the same record and the same provenance.
+- **Push against pull, and against the unit's own note** (added 2026-11-11). Three
+  other proposals put something in a unit's context mid-attempt: the
+  [Exo note](2026-11-06-exo-runtime-self-improvement.md)'s `read_budget` (§4 item 3),
+  the unit's ledger as a read-only tool it calls; its `note_to_self` (§8.3), a line the
+  unit appends to the preserved compaction block for the rest of the attempt; and the
+  [agent-memory note](2026-11-08-components-of-agent-memory.md)'s `recall` (§6 item 6),
+  facts by subject on request. The steward pushes the budget remaining and the facts
+  recorded mid-attempt into every call without a call. Slice 2 decides whether
+  `read_budget` is subsumed by the steward's budget item; `note_to_self` and `recall` are
+  the reflector thread's and stay distinct.
 
 ## 10. For the record
 

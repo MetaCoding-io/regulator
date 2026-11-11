@@ -1,6 +1,6 @@
 # Documentation and website gaps
 
-- **Status:** open, a work list. Strike items as they land.
+- **Status:** closed (2026-11-11): every item landed, and §7 says where. The note stays as the record of what was wrong and where it was fixed.
 - **Source:** a coverage audit (2026-09-25) of the docs site (`docs/`, every built
   page and every generated source) and the product website
   (`regulator-website/site/`, the four live pages) against an inventory of what the

@@ -28,7 +28,7 @@
   "limitations": [
     "The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.",
     "Evidence pointers are the first line of run_tests and run_checks results; evidence gathered through bash is invisible to it.",
-    "The block is what compaction carries; the contract section in the system prompt is regenerated every turn regardless. This regulator preserves progress, not the contract text.",
+    "The block is what compaction carries; the contract section in the system prompt is regenerated each attempt regardless (one prompt per session). This regulator preserves progress, not the contract text.",
     "Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },

@@ -127,7 +127,9 @@ loads only the first 200 lines or 25 KB of `MEMORY.md` and treats it as an index
    it or the review date passes; the card says it plainly: "nothing checks that a fact is
    true, current or about the environment" (`memory-store` limitation 1; DEBT row 26). The
    poisoned-memory foil in [#130](https://github.com/MetaCoding-io/regulator/issues/130)
-   is the article's PokéCenter case, unbuilt.
+   is the article's PokéCenter case. *2026-11-10: #130 landed it, scripted, as
+   `evals/drift-poisoned-memory.json`; a scripted unit reads no context, so the live
+   reading is the next live report's (live-run note §5).*
 2. **No pressure on volume.** Sonnet 3.7's 413 files against Fable 5's nine is the
    article's salience story. regulator bounds a note's length and its lifetime and not
    its count, and the card admits the consequence: "a large store still crowds the prompt
@@ -213,7 +215,9 @@ loads only the first 200 lines or 25 KB of `MEMORY.md` and treats it as an index
    tests without that fact, graded on whether the unit set TZ from memory or rediscovered
    it (the trajectory shows the attempts; a scripted unit can be told either way), turns
    `memoryFacts` from a count into the article's metric. The poisoned-memory foil in #130
-   is the same fixture with the fact wrong, and the two should land together.
+   is the same fixture with the fact wrong, and the two should land together. *2026-11-10:
+   #130 landed the foil without the closed-loop `d6`; the `d6` is a suite change for the
+   next live report, and this item is where it is designed.*
 5. **Fold by subject at render time.** Before any representation layer, the cheapest
    consolidation: when several current facts share a subject, render the newest with a
    count of the earlier ones, and let `regulator memory` show the history. Level 2, in

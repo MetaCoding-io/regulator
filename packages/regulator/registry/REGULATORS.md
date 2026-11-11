@@ -465,7 +465,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
-- The section is regenerated each turn from the loaded contract; it cannot reflect a contract version issued after the session started.
+- The section is regenerated once per attempt, when the dispatcher prompts the session, from the loaded contract; it cannot reflect a contract version issued after the session started.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -504,7 +504,7 @@ does not do. `since` is the package version that first shipped the record.
 **Limitations.**
 - The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
 - Evidence pointers are the first line of run_tests and run_checks results; evidence gathered through bash is invisible to it.
-- The block is what compaction carries; the contract section in the system prompt is regenerated every turn regardless. This regulator preserves progress, not the contract text.
+- The block is what compaction carries; the contract section in the system prompt is regenerated each attempt regardless (one prompt per session). This regulator preserves progress, not the contract text.
 - Without a model (or when it fails) the summary says so and the block stands alone; the unit continues with less.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
