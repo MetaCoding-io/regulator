@@ -1,22 +1,32 @@
 /**
- * The unit's trajectory: its path through `UNIT_TRANSITIONS`, replayed from the
- * records the orchestrator and the regulators wrote. The execution store keeps
- * only the unit's current status, so the history is a fold — a reducer over
- * the attempt records, the verdicts, the recovery decisions and the
- * obligations, in time order, applying the typed table at each step. The fold
- * ends where the record says, or it says that it does not: a transition that
- * left no record is a problem the view shows, not a gap it papers over.
+ * The unit's trajectory: its path through `UNIT_TRANSITIONS`, with the why of each step.
  *
- * Every step carries its *why* as the records state it — the rule the router
- * applied, the reasons the verdict carries, the obligation the unit waited on
- * — never a reading of the transcript or the repository. The control room
- * steps through these; the CLI could print them.
+ * The path is read, not inferred (#162). The execution store appends one line to the unit's status history for
+ * every transition it writes, with the trigger, so the moves a unit made are those lines, in that order, and the
+ * fold's work is to put beside each one the record that says why: the attempt, the verdict, the recovery decision,
+ * the obligation. The three moves that leave no other record (reintegrated, reintegration refused, a dispatch
+ * refused) are their own lines and are placed where the history has them. Where the history and the records
+ * disagree, a record with no line or a line with no record, the trajectory says so in `problem`.
+ *
+ * A unit whose moves were written before the history existed has none, or one that begins partway through its
+ * life. For such a unit the path is reconstructed from the records as it was before #162: a reducer over the
+ * attempts, verdicts, decisions and obligations in time order, applying the table at each step and placing the
+ * three record-less moves at the record that follows. The trajectory says which it did (`basis`), and every step
+ * whose move was inferred says so (`source`).
+ *
+ * Every step carries its *why* as the records state it — the rule the router applied, the reasons the verdict
+ * carries, the obligation the unit waited on — never a reading of the transcript or the repository. The control
+ * room steps through these; the CLI could print them.
  */
 import type {
-  AttemptRecord, BudgetLedger, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus, UnitTransition, UnitTransitionStep, UnitTrigger,
+  AttemptRecord, BudgetLedger, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus, UnitTransition, UnitTransitionRecord, UnitTransitionStep, UnitTrigger,
 } from "@metacoding.io/regulator-protocol";
-import { UNIT_TRANSITIONS, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
+import { UNIT_TRANSITIONS, assertNever, unitReason, unitTransition, unitTransitions } from "@metacoding.io/regulator-protocol";
+import { UNIT_STATUS_HISTORY_FILE } from "./paths.js";
 import { REGULATOR_FOR } from "./spans.js";
+
+/** What a step read from the history cites. */
+const UNIT_STATUS_HISTORY = UNIT_STATUS_HISTORY_FILE;
 
 export interface TrajectoryInput {
   unit: UnitRecord;
@@ -28,6 +38,8 @@ export interface TrajectoryInput {
   budgets?: readonly BudgetLedger[];
   /** The policy's attempt ceiling for the unit type, when the caller knows it. */
   attemptCeiling?: number;
+  /** The unit's status history, as the store wrote it (`ExecutionStore.listTransitions`). Absent or partial for a unit older than the history: the path is then reconstructed. */
+  history?: readonly UnitTransitionRecord[];
 }
 
 export type TrajectoryEvent =
@@ -45,6 +57,8 @@ export interface TrajectoryStep {
   /** The row of the table this step took, when it moved the unit; a step that leaves the status alone has none. */
   transition?: UnitTrigger;
   by?: UnitTransitionStep;
+  /** Where a step that moved the unit got its move: a line of the status history, or the reconstruction from the records for a unit that has no history. */
+  source?: "history" | "reconstructed";
   /** The registry record whose work this step is, when a record says. */
   regulator?: string;
   attempt?: number;
@@ -56,11 +70,17 @@ export interface TrajectoryStep {
 
 export interface UnitTrajectory {
   steps: TrajectoryStep[];
-  /** Where the fold ends. */
+  /** Where the path ends. */
   final: UnitStatus;
-  /** Set when the fold and the record disagree, or a step needed a move the table does not declare: a transition left no record, or a status was written around the loop. */
+  /** What the path was taken from: the status history the store wrote, or a reconstruction from the records for a unit whose moves predate it. */
+  basis: "history" | "reconstructed";
+  /** Set when the history and the records disagree, the path ends where the unit record does not, or (reconstructing) a step needed a move the table does not declare. */
   problem?: string;
 }
+
+/** The moves that leave no record but their line of the history: no attempt, verdict or decision is written with them. */
+const RECORDLESS: ReadonlySet<UnitTrigger> = new Set<UnitTrigger>(["reintegrated", "reintegration-refused", "dispatch-refused"]);
+const RECONSTRUCTED = "reconstructed: this unit has no status history for this move (it was written before the store kept one, #162), so it is placed here from the records beside it";
 
 const REGULATOR = {
   contractGate: "reg.control.work-contract-gate.v1",
@@ -105,44 +125,98 @@ function verdictWhy(v: TechnicalVerdict): string[] {
   return lines;
 }
 
-/** Replay the unit's records through the typed lifecycle. */
+/** The unit's path, read from its status history with the why from its records; reconstructed from the records for a unit that has no history. */
 export function unitTrajectory(input: TrajectoryInput): UnitTrajectory {
   const { unit } = input;
+  const history = input.history ?? [];
+  // A history is the unit's whole path when it starts where every unit starts. One that is empty for a unit that has
+  // moved, or that begins partway, belongs to a unit older than the history: nothing is read from it, and the path is
+  // reconstructed whole, as before #162, so one unit is never half read and half inferred.
+  const recorded = history.length ? history[0]!.from === "contracted" : unit.status === "contracted";
   const steps: TrajectoryStep[] = [];
   let status: UnitStatus = "contracted";
   let problem: string | undefined;
+  let cursor = 0;
   const ended = new Set<number>();
   const verdictBefore = new Map<number, TechnicalVerdict>();
   let lastEndedAt = "";
 
-  const push = (step: Omit<TrajectoryStep, "index" | "from" | "to"> & { to?: UnitStatus; on?: UnitTrigger }): void => {
+  type Step = Omit<TrajectoryStep, "index" | "from" | "to" | "source"> & { to?: UnitStatus; on?: UnitTrigger };
+  const describe = (line: UnitTransitionRecord, n: number): string => `line ${n} of the status history (${line.on}: ${line.from} → ${line.to} at ${line.at})`;
+
+  /** Take a line of the history as a step: the move is the line's, and the rest is whatever record explains it. */
+  const take = (line: UnitTransitionRecord, step: Omit<Step, "to" | "on">): void => {
+    if (line.from !== status) problem ??= `${describe(line, cursor)} leaves ${line.from}, and the line before it left the unit ${status}: a line is missing, or one was written around the store`;
+    steps.push({ index: steps.length + 1, from: line.from, to: line.to, ...step, transition: line.on, ...(unitTransition(line.from, line.on) ? { by: unitTransition(line.from, line.on)!.by } : {}), source: "history" });
+    status = line.to;
+  };
+  /** A line that is its own record: the three moves nothing else writes down. */
+  const takeRecordless = (line: UnitTransitionRecord): void => {
+    const row = unitTransition(line.from, line.on);
+    take(line, {
+      at: line.at, event: line.on === "dispatch-refused" ? "recorded" : "reintegration", title: line.on === "reintegrated" ? "reintegrated: closed" : line.on === "reintegration-refused" ? "reintegration refused" : `${line.on}: ${line.to}`,
+      regulator: line.on === "reintegrated" ? REGULATOR.reintegration : line.on === "reintegration-refused" ? REGULATOR.trial : REGULATOR.lease,
+      why: [...(row ? [row.description] : []), ...("reason" in line ? [line.reason] : [])], cites: [UNIT_STATUS_HISTORY],
+    });
+  };
+  /** A line the records do not explain: taken, because the store wrote it, and said. */
+  const takeUnexplained = (line: UnitTransitionRecord): void => {
+    problem ??= `${describe(line, cursor)} has no record beside it: the store wrote the transition, and the attempt, verdict or decision that should say why is missing`;
+    take(line, { at: line.at, event: "recorded", title: `${line.on}: ${line.to}`, regulator: REGULATOR.lifecycle, why: [unitTransition(line.from, line.on)?.description ?? "a transition the table does not declare", ...("reason" in line ? [line.reason] : [])], cites: [UNIT_STATUS_HISTORY] });
+  };
+  /** The record-less lines at the head of what is unread, up to a time: placed where the history has them. */
+  const flushRecordless = (until?: string): void => {
+    while (cursor < history.length && RECORDLESS.has(history[cursor]!.on) && (until === undefined || history[cursor]!.at <= until)) takeRecordless(history[cursor++]!);
+  };
+
+  const push = (step: Step): void => {
+    const { to: _to, on, ...rest } = step;
+    if (recorded) {
+      flushRecordless(step.at);
+      if (on === undefined) { steps.push({ index: steps.length + 1, from: status, to: status, ...rest }); return; }
+      const at = history.findIndex((line, i) => i >= cursor && line.on === on);
+      if (at === -1) {
+        // The record exists and the transition does not: say so once, and show the record where it falls without moving the unit.
+        problem ??= `step ${steps.length + 1} (${step.title}) is a record of ${on}, and the status history has no ${on} after its line ${cursor}: the record was written and the transition was not`;
+        steps.push({ index: steps.length + 1, from: status, to: status, ...rest });
+        return;
+      }
+      while (cursor < at) { const line = history[cursor++]!; if (RECORDLESS.has(line.on)) takeRecordless(line); else takeUnexplained(line); }
+      take(history[cursor++]!, rest);
+      return;
+    }
+    // No history to read: the move is inferred from the record, through the table.
     const from = status;
     let to = step.to ?? from;
     let transition: UnitTransition | undefined;
-    if (step.on !== undefined) {
-      transition = unitTransition(from, step.on);
+    if (on !== undefined) {
+      transition = unitTransition(from, on);
       if (!transition) {
         // The loop could not have taken this from here: say so once, then follow the records anyway so the rest still reads.
         const declared = unitTransitions(from, to);
-        problem ??= `step ${steps.length + 1} (${step.title}) takes ${step.on} from ${from}, which the loop does not declare (from ${from} it declares ${UNIT_TRANSITIONS.filter((t) => t.from === from).map((t) => t.on).join(", ") || "nothing"}): a record is missing or a status was written around the loop`;
+        problem ??= `step ${steps.length + 1} (${step.title}) takes ${on} from ${from}, which the loop does not declare (from ${from} it declares ${UNIT_TRANSITIONS.filter((t) => t.from === from).map((t) => t.on).join(", ") || "nothing"}): a record is missing or a status was written around the loop`;
         transition = declared[0];
       } else to = transition.to;
     }
-    const { to: _to, on: _on, ...rest } = step;
-    steps.push({ index: steps.length + 1, from, to, ...rest, ...(transition ? { transition: transition.on, by: transition.by } : {}) });
+    steps.push({ index: steps.length + 1, from, to, ...rest, ...(transition ? { transition: transition.on, by: transition.by, source: "reconstructed" as const } : {}) });
     status = to;
   };
 
-  /** A unit verified at its HEAD is not closed until the trial merge lands; a record that needs it blocked first means the trial refused it. */
+  /** Reconstruction only. A unit verified at its HEAD is not closed until the trial merge lands; a record that needs it blocked first means the trial refused it. */
   const settleReintegration = (at: string, why: string[], cites: string[]): void => {
-    if (status !== "reported") return;
-    push({ at, event: "reintegration", title: "reintegration refused", on: "reintegration-refused", regulator: REGULATOR.trial, why: why.length ? why : ["the record of the refusal is the decision that followed it"], cites });
+    if (recorded || status !== "reported") return;
+    push({ at, event: "reintegration", title: "reintegration refused", on: "reintegration-refused", regulator: REGULATOR.trial, why: [...(why.length ? why : ["the record of the refusal is the decision that followed it"]), RECONSTRUCTED], cites });
   };
 
   const pending: Pending[] = [];
   pending.push({ rank: 0, at: unit.createdAt, apply: () => push({
     at: unit.createdAt, event: "contracted", title: `contracted: ${unit.contract.id} v${unit.contract.version}`, regulator: REGULATOR.contractGate,
-    why: [`the work contract passed the gate and was recorded; the unit is of type ${unit.unitType} under workload ${unit.workload.name} v${unit.workload.version}`, "a refused contract records no unit, so a unit that exists was accepted"],
+    why: [
+      `the work contract passed the gate and was recorded; the unit is of type ${unit.unitType} under workload ${unit.workload.name} v${unit.workload.version}`, "a refused contract records no unit, so a unit that exists was accepted",
+      ...(recorded ? [] : [history.length
+        ? `this unit's status history begins partway (its first line leaves ${history[0]!.from}, not contracted): its earlier moves were written before the store kept a history (#162), so the whole path below is reconstructed from the attempt, verdict, decision and obligation records, and the history is not read`
+        : "this unit has no status history: its moves were written before the store kept one (#162), so the path below is reconstructed from the attempt, verdict, decision and obligation records"]),
+    ],
     cites: [`${unit.contract.id} v${unit.contract.version}`],
   }) });
 
@@ -208,6 +282,8 @@ export function unitTrajectory(input: TrajectoryInput): UnitTrajectory {
         case "error":
           why.push(`the dispatch failed${a.detail ? `: ${a.detail}` : ""}`);
           break;
+        default:
+          assertNever(a.outcome, "attempt outcome");
       }
       push({ at: a.endedAt, event: "attempt-ended", title: `attempt ${a.attempt} ended: ${a.outcome}`, on: a.outcome === "reported" ? "verified" : "attempt-failed", attempt: a.attempt, ...(regulator ? { regulator } : {}), why, cites });
     } });
@@ -258,21 +334,27 @@ export function unitTrajectory(input: TrajectoryInput): UnitTrajectory {
   pending.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : a.rank - b.rank));
   for (const p of pending) p.apply();
 
-  // The tail: what the record says beyond the last record that says why. Reintegration leaves no record of its own, and a dispatch
-  // refused before any attempt leaves only the unit's reason; both are one declared move from where the fold stopped.
+  if (recorded) {
+    // What is left of the history after the last record: the record-less moves are themselves, and anything else is a transition no record explains.
+    while (cursor < history.length) { const line = history[cursor++]!; if (RECORDLESS.has(line.on)) takeRecordless(line); else takeUnexplained(line); }
+    if (status !== unit.status) problem ??= `the status history ends ${status} and the unit record says ${unit.status}: a transition reached one and not the other, or the record was written around the store`;
+    return { steps, final: status, basis: "history", ...(problem ? { problem } : {}) };
+  }
+
+  // Reconstruction's tail: what the record says beyond the last record that says why. Reintegration left no record of its own, and a
+  // dispatch refused before any attempt left only the unit's reason; both are one declared move from where the fold stopped.
   if (status !== unit.status) {
-    const recordless: readonly UnitTrigger[] = ["reintegrated", "reintegration-refused", "dispatch-refused"];
-    const declared = unitTransitions(status, unit.status).filter((t) => recordless.includes(t.on));
-    const row = declared.length === 1 ? declared[0] : declared.find((t) => ((unit.reason ?? "").startsWith("reintegration:") ? t.on === "reintegration-refused" : t.on === "dispatch-refused"));
+    const declared = unitTransitions(status, unit.status).filter((t) => RECORDLESS.has(t.on));
+    const row = declared.length === 1 ? declared[0] : declared.find((t) => ((unitReason(unit) ?? "").startsWith("reintegration:") ? t.on === "reintegration-refused" : t.on === "dispatch-refused"));
     if (row) {
       push({
         at: unit.updatedAt, event: row.on === "reintegrated" ? "reintegration" : "recorded", title: row.on === "reintegrated" ? "reintegrated: closed" : `${row.on}: ${unit.status}`, on: row.on,
         regulator: row.on === "reintegrated" ? REGULATOR.reintegration : row.on === "reintegration-refused" ? REGULATOR.trial : REGULATOR.lease,
-        why: [row.description, ...(unit.reason ? [unit.reason] : [])], cites: ["unit.json"],
+        why: [row.description, ...(unit.status === "blocked" ? [unit.reason] : []), RECONSTRUCTED], cites: ["unit.json"],
       });
     } else {
       problem ??= `the replay ends ${status} but the record says ${unit.status}: no record-less transition joins them, so a record is missing or a status was written around the loop`;
     }
   }
-  return { steps, final: status, ...(problem ? { problem } : {}) };
+  return { steps, final: status, basis: "reconstructed", ...(problem ? { problem } : {}) };
 }

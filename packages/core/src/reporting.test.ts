@@ -27,6 +27,13 @@ function exampleEvent(index: number) {
   }, `call-${index}`);
 }
 
+test("an unknown tool name is refused before anything is built: the switch is over the closed union, the refusal is for runtime input (#160)", () => {
+  const { payload, authority } = examples[0];
+  assert.throws(() => createRegulatoryEvent("vsm_do_anything", payload, { authority, provenance: { host: "test-host", sessionId: "s" } }, "call"), /^Error: Unknown reporting tool\.$/);
+  // Before the context is read: a caller with no grant learns nothing about which names exist beyond "not this one".
+  assert.throws(() => createRegulatoryEvent("vsm_do_anything", payload, undefined, "call"), /Unknown reporting tool/);
+});
+
 test("host context constructs envelope, provenance and grants without sharing mutable input", () => {
   for (let index = 0; index < examples.length; index++) {
     const event = exampleEvent(index);

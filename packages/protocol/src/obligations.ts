@@ -72,13 +72,19 @@ export const ObligationSchema = Type.Object({
   subject: NonEmpty,
   /** The unit the concern is about, when it is about one. */
   unit: Type.Optional(NonEmpty),
+  /**
+   * The unit *type* the concern is about (#123), when it is about a unit not yet dispatched: an intelligence signal
+   * naming `type:<unitType>` opens one of these, and the progression veto holds every unit of the type at dispatch
+   * until it is dispositioned. Never set beside `unit`.
+   */
+  unitType: Type.Optional(NonEmpty),
   concern: ConcernSchema,
   /** The message ids, decision ids or predecessor obligation ids this obligation was opened from. */
   sources: Type.Array(NonEmpty, { minItems: 1 }),
   /** Effective severity: the router's, derived under policy — never the emitting model's claim. */
   severity: SeveritySchema,
   consumer: ConsumerSchema,
-  /** While open, the named unit may not be dispatched or closed. Derived from severity under policy. */
+  /** While open, the named unit — or every unit of the named type — may not be dispatched or closed. Derived from severity under policy. */
   blocks: Type.Boolean(),
   /** For a clarification: what must be answered. */
   question: Type.Optional(NonEmpty),

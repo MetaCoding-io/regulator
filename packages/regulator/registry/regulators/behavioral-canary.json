@@ -58,13 +58,14 @@
   "evidence": {
     "tests": [
       "../regulator-pi/src/identity.test.ts",
-      "../core/src/canary.test.ts"
+      "../core/src/canary.test.ts",
+      "../regulator-pi/src/dispatcher.test.ts"
     ]
   },
   "limitations": [
     "The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.",
     "It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.",
-    "S3 does nothing with the finding yet. Under the shipped routing policy an advisory audit finding is noted as trace and opens no obligation, and no recovery cause names a degraded session, so the fresh session the signal argues for is a person's decision today (docs/DEBT.md row 42).",
+    "S3 can act on the finding under a declared rule, and no shipped policy declares one. The recovery router classifies an attempt that ended without a report and carries the finding as `context-degradation`, and a recovery policy with a rule for the cause answers with a retry in a fresh session on the degraded attempt's ledger. The cause is last in the router's precedence by rule: a recorded outcome (a budget halt, a refused report, a failed closeout, an error), an oscillation signal and a failure the session observed each win, and the finding is then evidence on the decision and not its cause. The shipped recovery policy names no rule for it, so such an attempt is routed as `no-report`, and under the shipped routing policy the advisory finding is noted as trace and opens no obligation: the fresh session on the same budget is still a person's decision (docs/DEBT.md row 42). The first live report (evals/reports/drift-live-2026-11-08.json) is why: the canary fell silent in 12 of 18 treatment units, each closed on the attempt in which it fell silent, and no attempt was refused, so no silence has yet preceded a failure. Under either policy nothing stops the model mid-attempt.",
     "Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other."
   ],
   "ownership": {

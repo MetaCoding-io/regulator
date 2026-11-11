@@ -41,10 +41,10 @@ async function fixture(t: TestContext) {
   const b = path.join(root, "instance-b");
   const store = new ExecutionStore(a, () => clock);
   await store.createUnit(contract);
-  // The lifecycle is a closed table: a unit reaches closed only through dispatched and reported, so the fixture walks the path.
-  await store.setStatus("u1", "dispatched");
-  await store.setStatus("u1", "reported");
-  await store.setStatus("u1", "closed");
+  // The lifecycle is a closed table: a unit reaches closed only through dispatched and reported, so the fixture walks the path by its triggers.
+  await store.transition("u1", "dispatch");
+  await store.transition("u1", "verified");
+  await store.transition("u1", "reintegrated");
   await new LeaseStore(path.join(b, ".regulator", "leases"), () => clock).acquire({ unitId: "u2", owner: "bob", resource: "/w/u2", branch: "unit/u2", ttlMs: 1000 });
   await appendSignal(b, {
     id: "s1", timestamp: "t", source: "S2", kind: "coordination-signal", channel: "signal", destination: "S3",
@@ -61,9 +61,11 @@ test("readControlRoom projects one definition and any number of instances, from 
   assert.equal(view.definition?.registry.records[0]?.id, "reg.test.gate.v1");
   assert.equal(view.instances.length, 2);
   assert.deepEqual(view.instances[0]?.units.map((u) => [u.unit.unitId, u.unit.status]), [["u1", "closed"]]);
-  // The trajectory is folded from the records; a status with no attempt behind it is a disagreement the view states, not a path it invents.
-  assert.equal(view.instances[0]?.units[0]?.trajectory.final, "contracted");
-  assert.match(view.instances[0]?.units[0]?.trajectory.problem ?? "", /^the replay ends contracted but the record says closed/);
+  // The trajectory is read from the status history the store wrote (#162): the path is the three transitions, and a transition with no
+  // attempt behind it is a disagreement the view states, not a why it invents.
+  assert.deepEqual([view.instances[0]?.units[0]?.trajectory.final, view.instances[0]?.units[0]?.trajectory.basis], ["closed", "history"]);
+  assert.deepEqual(view.instances[0]?.units[0]?.trajectory.steps.map((s) => s.transition ?? null), [null, "dispatch", "verified", "reintegrated"]);
+  assert.match(view.instances[0]?.units[0]?.trajectory.problem ?? "", /^line 1 of the status history \(dispatch: contracted → dispatched at .*\) has no record beside it/);
   assert.deepEqual(view.instances[1]?.leases.map((l) => [l.lease.unitId, l.live]), [["u2", true]]);
   assert.equal(view.instances[1]?.signals[0]?.kind, "coordination-signal");
   assert.deepEqual(view.instances[1]?.obligations.map((o) => [o.consumer, o.status, o.blocks]), [["human", "open", true]]);

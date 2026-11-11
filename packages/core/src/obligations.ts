@@ -16,7 +16,7 @@
  */
 import { randomUUID } from "node:crypto";
 import {
-  WAITING_ACTIONS, severityAtLeast,
+  WAITING_ACTIONS, affectedUnitType, severityAtLeast,
   type Consumer, type Disposition, type InteractionEvent, type InteractionOutcome, type InteractionRequest, type Obligation, type ObligationEvent, type ObligationState,
   type RecoveryDecision, type RegulatoryEntry, type RoutingPolicy, type Severity, type VsmMessage, type VsmSystem,
 } from "@metacoding.io/regulator-protocol";
@@ -75,6 +75,8 @@ export function isOpen(state: ObligationState): boolean {
 export interface OpenObligationInput {
   subject: string;
   unit?: string;
+  /** The unit type the obligation holds (#123), for a unit dispatched after it was opened; never beside `unit`. */
+  unitType?: string;
   concern: Obligation["concern"];
   sources: string[];
   severity: Severity;
@@ -124,7 +126,7 @@ export class ObligationLedger {
 
   async openObligation(input: OpenObligationInput): Promise<Obligation> {
     const obligation: Obligation = {
-      id: randomUUID(), subject: input.subject, ...(input.unit === undefined ? {} : { unit: input.unit }), concern: input.concern, sources: input.sources,
+      id: randomUUID(), subject: input.subject, ...(input.unit === undefined ? {} : { unit: input.unit }), ...(input.unitType === undefined ? {} : { unitType: input.unitType }), concern: input.concern, sources: input.sources,
       severity: input.severity, consumer: input.consumer, blocks: input.blocks, ...(input.question === undefined ? {} : { question: input.question }),
       openedAt: this.#stamp(), openedBy: input.openedBy ?? "S3",
     };
@@ -167,7 +169,7 @@ export class ObligationLedger {
       successor = target;
     } else {
       successor = await this.openObligation({
-        subject: state.subject, ...(state.unit === undefined ? {} : { unit: state.unit }), concern: state.concern, sources: [id, ...state.sources],
+        subject: state.subject, ...(state.unit === undefined ? {} : { unit: state.unit }), ...(state.unitType === undefined ? {} : { unitType: state.unitType }), concern: state.concern, sources: [id, ...state.sources],
         severity: transition.severity ?? state.severity, consumer: transition.to, blocks: transition.blocks ?? state.blocks, ...(state.question === undefined ? {} : { question: state.question }),
       });
     }
@@ -254,7 +256,10 @@ export interface Routed {
  * Route every unrouted message under the policy. Intelligence past its
  * expiry is noted, never an obligation: stale evidence cannot certify a
  * decision. Intelligence naming affected units opens one obligation per unit,
- * so the veto lands where the concern is.
+ * so the veto lands where the concern is; an entry naming a unit type
+ * (`type:<unitType>`, #123) opens one that holds every unit of the type at
+ * dispatch, since the unit a sensor's signal bears on is usually dispatched
+ * after the sensor fires.
  */
 export async function routeMessages(ledger: ObligationLedger, options: RouteMessagesOptions): Promise<Routed> {
   const { policy } = options;
@@ -270,23 +275,28 @@ export async function routeMessages(ledger: ObligationLedger, options: RouteMess
     if (message.kind === "intelligence-signal" && message.expiresAt && Date.parse(message.expiresAt) <= now()) { await note(`intelligence expired at ${message.expiresAt}; stale evidence cannot raise an obligation`); continue; }
     const blocks = severityAtLeast(severity, policy.blocksAtOrAbove);
     const units = message.kind === "intelligence-signal" && message.affectedUnits?.length ? message.affectedUnits : [message.unit];
-    for (const unit of new Set(units)) {
+    for (const entry of new Set(units)) {
+      const unitType = entry === undefined ? undefined : affectedUnitType(entry);
+      const unit = unitType === undefined ? entry : undefined;
       routed.opened.push(await ledger.openObligation({
-        subject: message.subject, ...(unit === undefined ? {} : { unit }), concern: message.kind, sources: [message.id], severity, consumer: rule.consumer,
-        // A blocking obligation holds the unit it is about. With no unit it holds nothing — except an audit finding about the
-        // instance itself (lesson 15: the base failing its checks after a merge), which holds every dispatch until S3 decides.
-        blocks: blocks && (unit !== undefined || message.kind === "audit-finding"), openedBy: by,
+        subject: message.subject, ...(unit === undefined ? {} : { unit }), ...(unitType === undefined ? {} : { unitType }), concern: message.kind, sources: [message.id], severity, consumer: rule.consumer,
+        // A blocking obligation holds the unit it is about, or every unit of the type it names. With neither it holds nothing — except
+        // an audit finding about the instance itself (lesson 15: the base failing its checks after a merge), which holds every dispatch until S3 decides.
+        blocks: blocks && (unit !== undefined || unitType !== undefined || message.kind === "audit-finding"), openedBy: by,
       }));
     }
   }
   return routed;
 }
 
-/** The open obligations that veto a unit's dispatch and close. */
-export async function progressionVeto(ledger: ObligationLedger, unitId: string): Promise<ObligationState[]> {
-  // What is owed on the unit, and what is owed on the instance itself (lesson 15): an obligation with no unit — the base
-  // failing its checks after a merge — holds every unit until S3 dispositions it.
-  return (await ledger.open()).filter((o) => o.blocks && (o.unit === unitId || o.unit === undefined));
+/**
+ * The open obligations that veto a unit's dispatch and close: what is owed on the unit; what is owed on its type (#123),
+ * when the caller says which type the unit is; and what is owed on the instance itself.
+ */
+export async function progressionVeto(ledger: ObligationLedger, unitId: string, unitType?: string): Promise<ObligationState[]> {
+  // What is owed on the unit, and what is owed on the instance itself (lesson 15): an obligation with no unit and no type — the
+  // base failing its checks after a merge — holds every unit until S3 dispositions it. One with a type holds the units of that type.
+  return (await ledger.open()).filter((o) => o.blocks && (o.unit === unitId || (o.unit === undefined && (o.unitType === undefined || o.unitType === unitType))));
 }
 
 /**
