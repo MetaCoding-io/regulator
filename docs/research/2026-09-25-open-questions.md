@@ -217,6 +217,24 @@ generated figure when the drawing reads better, checked against the table when t
 changes. Clause 3 stands as a mechanism (`--embed` works and is tested) and is not an
 obligation. Next: the sequence view, the gates placed on the unit's path.
 
+**Refined (2026-11-08).** The sequence view's design, from a generated explainer of
+another Pi harness ([LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md)
+§3–§6). The page replays a named recorded run over a static map whose boxes are grouped
+by where they run and coloured by what kind of thing they are (ran, pure logic, needs a
+model, needs infrastructure, known limitation), and it says in words what ran and what
+was only read. Decided: the sequence view's lanes are `ENFORCEMENT_POINTS`' `where`,
+each gate is coloured by `mechanism.level` and marked when it carries a limitation, with
+the legend drawn from `MechanismLevelSchema`, and the same level and limitation go onto
+the cards of the lifecycle and map fragments that exist; its first overlay is a recorded
+instance kept as a fixture (one scripted drift run's `.regulator/`), labelled as
+recorded with its fingerprint, so the view has a unit to step through without a live run
+and the docs and the course get the same one. The committed eval reports carry arms,
+runs and metrics, not the stores, so that fixture does not exist yet. Smaller things from
+the same source (a lesson strip over `introducedIn`, predictions placed on the step they
+bet on, a header phase and an owed-to-a-person badge over the read model, a change
+signal in place of the five-second poll) are rows in §6. Still read-only (§5). Filed as
+[#171](https://github.com/MetaCoding-io/regulator/issues/171).
+
 ## 2. A person should be able to create S4 intelligence
 
 **Today.** Intelligence enters the instance one way: a `research` unit under the
@@ -478,3 +496,7 @@ Items with no design yet. Each gets a section above when it has one.
 | A closed list of stores for `scope.resources` | §1 above | the who-writes-where figure needs it |
 | ~~The shipped identity seed is over its context budget: it renders to 7005 characters against the 6000 a unit's prompt carries, so the tail of GLOSSARY.md (the refused words among it) has not reached units~~ | found paying DEBT row 25 ([#51](https://github.com/MetaCoding-io/regulator/issues/51)); `regulator check` now warns | Decided (2026-09-29, James): not shortened. [#91](https://github.com/MetaCoding-io/regulator/issues/91) raised the default to 12000 characters and made the limit the budget policy's `identity.maxChars`; `check` passes with no warning |
 | A fourth workload from a free course: David Sumpter's *Agentic AI for Statistics and Data Science* (Uppsala, CC BY 4.0) and its public template `Vivid-Insights/human-agentic-data-analysis`, whose `instructions.md` is a twenty-one-rule, all-prompt contract for a stepwise analysis with the judgement held by a person. Assessed 2026-10-26 on the three released lessons, the companion course's checking and reliability lessons, and the template read in full: nothing to buy, the contract is the source. Opens the [agentic-statistics note](2026-10-26-agentic-statistics-course.md) and [#150](https://github.com/MetaCoding-io/regulator/issues/150) under #61. Two things it gets right that the docs here argue only one side of: a person's attention as the product rather than the scarce budget (the interaction policy's page), and a consent gate on an epistemic effect rather than an irreversible one (the question before the data; the Asher et al. p-hacking-by-rewording result is the case against a prompt). Remaining lessons land 2, 16 and 30 November and are read as they do | this conversation (2026-10-26) | Decided (2026-10-26, James): the note is committed and the issue filed; a weekly scheduled check reads each release and appends to the note |
+| A lesson strip over the generated figures: `introducedIn` as an arm-style filter, one view per lesson with the rest dimmed | §1 above; [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 4 | layout for a sentence the roadmap row already carries; after the sequence view |
+| Predictions placed on the step they bet on, before the outcome, on the sequence view | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 5 | over `prediction` and `prediction-resolution`, which exist; after the sequence view and a live run that resolves one (#46) |
+| The control room's header phase (units per lifecycle state), a per-unit budget footer (consumed over ceiling, route, turns) and a badge for what is owed to a person | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 6 | level 1 over the read model; small; the Exo note's `cacheShare` lands beside the footer |
+| A change signal in place of the five-second poll: a GET-only event stream over the store files, no payload, the page refetches | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 7 | stays inside the read-only rule; independent of the figures |
