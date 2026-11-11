@@ -15,13 +15,15 @@
  * effect declaration lets a unit write and no yes is required (#122), and a
  * workload's declared tools carry an effect, a name of their own and a
  * program under the definition, with a profile judged by the effects it
- * grants, declared ones included (#121). The registry has its own check;
- * this is the rest.
+ * grants, declared ones included (#121), and an intelligence policy's sensors
+ * affect unit types a workload declares, write under their own provenance,
+ * run a program under the definition that declares no outputs, and have one
+ * trigger (#123). The registry has its own check; this is the rest.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import {
-  CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
+  CapabilityProfileSchema, DEFINITION_WRITERS, EvalReportSchema, EvalSuiteSchema, HOST_CHECK_NAMES, PolicyDefinitionSchema, UNINTERPRETED_MARKER, WorkloadDefinitionSchema, assertValid, definitionClassOf, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy, isUninterpreted, seedDirFor, type CapabilityProfile, type EvalReport, type EvalSuite, type IntelligencePolicy, type InteractionPolicy, type PolicyDefinition, type RecoveryPolicy, type RoutingPolicy, type WorkloadDefinition, CHECK_OPTIONS, checkName, checkNames, type CheckEntry,
   isBuiltInMetric, metricNames, optimisedMetrics, parseDeclaredMetric, isCommandRunner, isWorkloadDefinition, runnerOf,
 } from "@metacoding.io/regulator-protocol";
 import { adviceContextBudget, adviceMaxChars, readAdviceSet, type AdviceSet } from "./advice.js";
@@ -32,6 +34,7 @@ import { readOnlyViolations, withDeclaredEffects } from "./effects.js";
 import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
 import { isReadOnlyProfile } from "./profiles.js";
 import { checkCommandRunner, commandRunnerShapeHints } from "./runners.js";
+import { checkIntelligencePolicy } from "./sensors.js";
 
 export interface DefinitionProblem {
   file: string;
@@ -46,6 +49,8 @@ export interface CheckedDefinition {
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
+  /** The intelligence policies (#123): the sensors the watcher runs. None declared is a definition that watches nothing. */
+  intelligence: IntelligencePolicy[];
   identity: IdentitySet;
   /** The advice files under advice/, one per declared profile (#110). */
   advice: AdviceSet;
@@ -80,7 +85,7 @@ function unknownCheckOptions(entry: CheckEntry): string[] {
 }
 
 export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
-  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], identity: await readIdentity(path.join(dir, seedDirFor("identity"))), advice: { dir: path.join(dir, seedDirFor("advice")), files: {}, problems: [] }, evals: [], reports: [], problems: [], warnings: [] };
+  const out: CheckedDefinition = { dir, profiles: [], workloads: [], policies: [], recovery: [], routing: [], interaction: [], intelligence: [], identity: await readIdentity(path.join(dir, seedDirFor("identity"))), advice: { dir: path.join(dir, seedDirFor("advice")), files: {}, problems: [] }, evals: [], reports: [], problems: [], warnings: [] };
   const problem = (file: string, message: string) => out.problems.push({ file, message });
 
   // The workloads are read before the profiles for the one thing a profile check needs from them (#121): the tools they
@@ -191,7 +196,13 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
       } else if (isInteractionPolicy(value)) {
         out.interaction.push(value);
         if (!value.people.length) problem(`policies/${file}`, "names nobody: no obligation owed to a person can ever be dispositioned");
-      } else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
+      } else if (isIntelligencePolicy(value)) {
+        // Sensors (#123): each affects a unit type some workload declares, writes under its own name, has one trigger, and a
+        // scheduled one runs a program under the definition that declares no outputs.
+        out.intelligence.push(value);
+        const types = new Set(out.workloads.flatMap((w) => w.unitTypes.map((t) => t.name)));
+        for (const message of await checkIntelligencePolicy({ root: dir, policy: value, unitTypes: types })) problem(`policies/${file}`, message);
+      } else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing, interaction or intelligence policy)`);
     } catch (error) {
       problem(`policies/${file}`, (error as Error).message);
     }

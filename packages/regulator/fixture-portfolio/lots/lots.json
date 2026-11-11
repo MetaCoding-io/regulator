@@ -1,1 +1,5 @@
-{ "asOf": "2026-08-31", "note": "The date the ledger is current to: every executed trade through it is applied, and the open lots reconcile to the custodian's export of that date." }
+{
+  "asOf": "2026-08-31",
+  "note": "The date the ledger is current to: every executed trade through it is applied, the open lots reconcile to the custodian's export of that date, and washSales lists every loss sale a buy of the same ticker inside the wash-sale window disallowed in part or whole — the disallowed loss is the replacement lot's basisAdjustment in lots.csv, and the sold lot is marked here.",
+  "washSales": []
+}

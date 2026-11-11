@@ -115,8 +115,11 @@ drawn from the table with `data-` attributes for a page to place records on, and
 control room's Lifecycle view steps through a unit's trajectory over it (`#unit=<i>/<id>@<step>`).
 The "why" is deterministic: the control room stays read-only (§5) and asks no model;
 *copy as a question for your agent* hands the step, its records and the reducer's
-location to whatever agent the maintainer uses. What the store does not keep — a status
-history — is DEBT row 47; the website's hand-drawn six states is still hand-drawn until
+location to whatever agent the maintainer uses. What the store did not keep then, a
+status history, was DEBT row 47, paid by [#162](https://github.com/MetaCoding-io/regulator/issues/162)
+on 2026-11-10: the store writes each transition by its trigger (`transition`, which
+replaced `setStatus`) and appends it to `status.ndjson`, and `unitTrajectory` reads the
+path from there. The website's hand-drawn six states is still hand-drawn until
 `regulator docs --write` renders this figure and the website copies it, which is the
 thread's next step.
 
@@ -214,6 +217,24 @@ generated figure when the drawing reads better, checked against the table when t
 changes. Clause 3 stands as a mechanism (`--embed` works and is tested) and is not an
 obligation. Next: the sequence view, the gates placed on the unit's path.
 
+**Refined (2026-11-08).** The sequence view's design, from a generated explainer of
+another Pi harness ([LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md)
+§3–§6). The page replays a named recorded run over a static map whose boxes are grouped
+by where they run and coloured by what kind of thing they are (ran, pure logic, needs a
+model, needs infrastructure, known limitation), and it says in words what ran and what
+was only read. Decided: the sequence view's lanes are `ENFORCEMENT_POINTS`' `where`,
+each gate is coloured by `mechanism.level` and marked when it carries a limitation, with
+the legend drawn from `MechanismLevelSchema`, and the same level and limitation go onto
+the cards of the lifecycle and map fragments that exist; its first overlay is a recorded
+instance kept as a fixture (one scripted drift run's `.regulator/`), labelled as
+recorded with its fingerprint, so the view has a unit to step through without a live run
+and the docs and the course get the same one. The committed eval reports carry arms,
+runs and metrics, not the stores, so that fixture does not exist yet. Smaller things from
+the same source (a lesson strip over `introducedIn`, predictions placed on the step they
+bet on, a header phase and an owed-to-a-person badge over the read model, a change
+signal in place of the five-second poll) are rows in §6. Still read-only (§5). Filed as
+[#171](https://github.com/MetaCoding-io/regulator/issues/171).
+
 ## 2. A person should be able to create S4 intelligence
 
 **Today.** Intelligence enters the instance one way: a `research` unit under the
@@ -250,6 +271,34 @@ gap (§5: "No S4. The statement arrives by hand").
 - Keep the boundary: intelligence raises an obligation; it never replans (AGENTS.md).
   A person who wants to *act* on what they know dispatches a unit or dispositions an
   obligation; reporting it is a separate act, and the separation is the point.
+
+**Landed (2026-11-08).** The sensors half, the proposal's second and third bullets, as
+[#123](https://github.com/MetaCoding-io/regulator/issues/123): `policies/intelligence.json`
+is the fifth policy kind (`IntelligencePolicySchema` in protocol), with `sensors[]` each
+naming a provenance (`sensor:<name>`, its own name, refused otherwise), the unit types it
+`affects`, a `severity`, an `expiresAfterMs`, and one trigger — a `schedule.everyMs` with
+a `program` in the command runner's shape whose `outputs` must be empty, or a `glob` over
+the instance's files. `regulator watch` runs them in its tick through `runProgram` in the
+base checkout, with nothing on stdin; exit 0 with a last line `{ fires, claim, observation,
+evidence, severity?, confidence?, expiresAt? }` raises the research unit's record with the
+sensor's provenance and the program's file and hash as evidence, a glob sensor's signal
+names the files that appeared, and a failed run is an advisory `operational-signal`, never
+a replan. Three decisions were taken here. The signal's `affectedUnits` admits a
+`type:<unitType>` entry beside unit ids, the obligation carries `unitType`, and
+`progressionVeto` matches it at dispatch and close, because the unit a sensor's signal
+concerns is dispatched after the sensor fires and resolving to the open units would have
+made the issue's done-when false. A sensor that still fires raises nothing while an
+earlier signal with the same claim is current (unrouted, holding an open obligation, or
+unexpired), so there is one open obligation per sensor and claim, and a resolved claim
+stays quiet until its signal expires. And the expiry re-raise this section asked for is
+the watcher's: a signal with an `expiresAt` that expires while an obligation it opened is
+still open gets one advisory obligation, for every intelligence signal on the log, which
+amends the `intelligence-intake` card's third limitation. The portfolio declares three
+(`drift-band`, `harvest-threshold`, `new-export`; the portfolio note §3 and §5). The
+record is `sensor-intake`. **Still open:** the first bullet, a person's
+`regulator intelligence report --by <person> …` writing the same record under
+`human:<name>` provenance — the type-hold entry and the `provenance` field are there for
+it — and the `regulator intelligence` listing of what is held, by whom, until when.
 
 ## 3. Must every unit run a Pi session?
 
@@ -442,7 +491,12 @@ Items with no design yet. Each gets a section above when it has one.
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link. The figures: §1 (the website copies the generated SVGs) |
 | A typed unit lifecycle transition table | §1 above | the lifecycle figure needs it; obligations already have one |
 | The remaining optional fields in `protocol`, sorted into genuinely optional, dependent on a sibling tag (to become a sum type), and kept for compatibility with records on disk | [ADT note](2026-11-02-algebraic-data-types.md) §3.4 | after [#161](https://github.com/MetaCoding-io/regulator/issues/161) |
+| ~~`additionalProperties: false` under the pinned typebox (1.0.0) lets an undeclared key through when its name contains a declared key's name (`Value.Check` tests it against an unanchored pattern of the declared keys, on any object schema with an optional property): `xstatus` passes beside `status`, and `reason` passes beside `on`~~ | found while writing the status history's schema ([#162](https://github.com/MetaCoding-io/regulator/issues/162)), which refuses `reason` by declaring it; `packages/protocol/src/execution.ts` | ~~every schema with an optional field is exposed to the same thing; check a later typebox, or anchor the check in `assertValid`. No record in the repository is known to rely on it~~ Paid by [#191](https://github.com/MetaCoding-io/regulator/issues/191): the gap is typebox 1.0.0's and is fixed upstream from 1.0.50 (the declared keys are anchored and escaped); `packages/protocol` now pins 1.3.27 as the other packages do, `additional-properties.test.ts` pins the refusal, and the status history schema declares no `reason` on a row that does not block. The hole needed no optional field |
 | Branded identifiers (`UnitId`, `ContractId`, `ObligationId`) produced by the schema's decode | [ADT note](2026-11-02-algebraic-data-types.md) §3.5 | only once a mixed-up identifier causes a bug; the cost is a cast at every boundary where a value enters |
 | A closed list of stores for `scope.resources` | §1 above | the who-writes-where figure needs it |
 | ~~The shipped identity seed is over its context budget: it renders to 7005 characters against the 6000 a unit's prompt carries, so the tail of GLOSSARY.md (the refused words among it) has not reached units~~ | found paying DEBT row 25 ([#51](https://github.com/MetaCoding-io/regulator/issues/51)); `regulator check` now warns | Decided (2026-09-29, James): not shortened. [#91](https://github.com/MetaCoding-io/regulator/issues/91) raised the default to 12000 characters and made the limit the budget policy's `identity.maxChars`; `check` passes with no warning |
 | A fourth workload from a free course: David Sumpter's *Agentic AI for Statistics and Data Science* (Uppsala, CC BY 4.0) and its public template `Vivid-Insights/human-agentic-data-analysis`, whose `instructions.md` is a twenty-one-rule, all-prompt contract for a stepwise analysis with the judgement held by a person. Assessed 2026-10-26 on the three released lessons, the companion course's checking and reliability lessons, and the template read in full: nothing to buy, the contract is the source. Opens the [agentic-statistics note](2026-10-26-agentic-statistics-course.md) and [#150](https://github.com/MetaCoding-io/regulator/issues/150) under #61. Two things it gets right that the docs here argue only one side of: a person's attention as the product rather than the scarce budget (the interaction policy's page), and a consent gate on an epistemic effect rather than an irreversible one (the question before the data; the Asher et al. p-hacking-by-rewording result is the case against a prompt). Remaining lessons land 2, 16 and 30 November and are read as they do | this conversation (2026-10-26) | Decided (2026-10-26, James): the note is committed and the issue filed; a weekly scheduled check reads each release and appends to the note |
+| A lesson strip over the generated figures: `introducedIn` as an arm-style filter, one view per lesson with the rest dimmed | §1 above; [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 4 | layout for a sentence the roadmap row already carries; after the sequence view |
+| Predictions placed on the step they bet on, before the outcome, on the sequence view | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 5 | over `prediction` and `prediction-resolution`, which exist; after the sequence view and a live run that resolves one (#46) |
+| The control room's header phase (units per lifecycle state), a per-unit budget footer (consumed over ceiling, route, turns) and a badge for what is owed to a person | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 6 | level 1 over the read model; small; the Exo note's `cacheShare` lands beside the footer |
+| A change signal in place of the five-second poll: a GET-only event stream over the store files, no payload, the page refetches | [LearnHarness note](2026-11-08-learnharness-explainer-and-control-room.md) §4 item 7 | stays inside the read-only rule; independent of the figures |

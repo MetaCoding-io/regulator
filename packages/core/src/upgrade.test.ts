@@ -94,7 +94,7 @@ test("planUpgrade (#53): one version behind crosses one note, and nothing else i
   if (one.outcome !== "upgrade") return;
   assert.deepEqual([one.from, one.to, one.fromUnversioned], [{ packageVersion: "0.1.4", harnessRevision: REV("0") }, { packageVersion: "0.1.5", harnessRevision: REV("5") }, false]);
   assert.deepEqual(one.crossed.map((n) => n.version), ["0.1.5"], "0.1.4's note is behind the instance and 0.1.5 is the installed version");
-  assert.deepEqual(one.steps.map((s) => [s.step, s.apply]), [["seed", false], ["seed", false], ["ignore", false]]);
+  assert.deepEqual(one.steps.map((s) => [s.step, s.apply]), [["seed", false], ["seed", false], ["ignore", false], ["unit-records", false]]);
 });
 
 test("planUpgrade: a version between from and to whose heading carries no Migration section is refused by name; an installed version the changelog has no section for is refused; an instance ahead of the installed package is refused", () => {
@@ -118,12 +118,17 @@ test("planUpgrade: two versions behind, with the unreleased head on top — the 
     { step: "seed", class: "identity", seed: "/srv/def/identity/", instance: "regulator/identity/", files: [], apply: false },
     { step: "seed", class: "advice", seed: "/srv/def/advice/", instance: "regulator/advice/", files: ["auditor.md", "implement.md"], apply: true },
     { step: "ignore", apply: true },
+    { step: "unit-records", units: [], apply: false },
   ]);
+  // Unit records in the older shape (#161) are a step of their own, named by unit, and enough on their own to plan an upgrade at the same point.
+  const records = planUpgrade({ manifest: manifest("0.1.5", REV("5")), installed: { packageVersion: "0.1.5", harnessRevision: REV("5") }, definitionRoot: "/srv/def", changelog: released, instance: { ...seeded, legacyUnits: ["u9", "u2"] } });
+  assert.equal(records.outcome, "upgrade");
+  assert.deepEqual(records.outcome === "upgrade" ? records.steps.filter((s) => s.apply) : [], [{ step: "unit-records", units: ["u2", "u9"], apply: true }]);
   const floor = planUpgrade({ manifest: manifest(undefined), installed: { packageVersion: "0.1.4", harnessRevision: REV("4") }, definitionRoot: "/srv/def", changelog: released, instance: seeded });
   assert.equal(floor.outcome, "upgrade");
   if (floor.outcome !== "upgrade") return;
   assert.deepEqual([floor.from.packageVersion, floor.fromUnversioned, floor.crossed.map((n) => n.version)], ["0.1.3", true, ["0.1.4"]]);
-  assert.deepEqual(floor.steps.map((s) => s.apply), [false, false, false], "nothing absent: the steps are reported and none applies");
+  assert.deepEqual(floor.steps.map((s) => s.apply), [false, false, false, false], "nothing absent: the steps are reported and none applies");
   const noFloor = planUpgrade({ manifest: manifest(undefined), installed: { packageVersion: "0.1.4", harnessRevision: REV("4") }, definitionRoot: "/srv/def", changelog: released.map((v) => ({ version: v.version })), instance: seeded });
   assert.equal(noFloor.outcome, "refused");
   assert.match((noFloor as { reason: string }).reason, /carries no package version and CHANGELOG.md carries no migration note to read it as/);

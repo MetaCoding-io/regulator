@@ -38,6 +38,24 @@ export const MemoryEventSchema = Type.Union([
 ]);
 export type MemoryEvent = Static<typeof MemoryEventSchema>;
 
+/**
+ * A memory seed (#130): one entry a fixture carries into a fresh instance's store, in a `memory.seed.json` beside the
+ * fixture's files. It holds what a unit would have supplied and no dates: the fixture step records it through the
+ * store at the fixture commit's revision, with `reviewBy` that many days after the copy, so a seeded fact is under the
+ * same expiry rule as one a unit remembered and a committed fixture never goes stale on the shelf.
+ */
+export const MemorySeedSchema = Type.Object({
+  subject: NonEmpty,
+  note: NonEmpty,
+  evidence: Type.Array(EvidenceRefSchema),
+  unit: Type.Optional(NonEmpty),
+  recordedBy: NonEmpty,
+  /** Days from the copy to the review-by date; the store refuses more than its maximum. */
+  reviewInDays: Type.Integer({ minimum: 1 }),
+  scope: Type.Optional(Type.Array(NonEmpty)),
+}, { additionalProperties: false });
+export type MemorySeed = Static<typeof MemorySeedSchema>;
+
 export function isMemoryEvent(value: unknown): value is MemoryEvent {
   return Value.Check(MemoryEventSchema, value);
 }

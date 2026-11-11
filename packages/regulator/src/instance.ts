@@ -30,7 +30,7 @@
  */
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, declaredToolsOf, guardedOutputsOf, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
+import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, declaredToolsOf, guardedOutputsOf, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
 import { DEFINITION_WRITERS, InstanceManifestSchema, assertValid, type DefinitionPoint, type DefinitionWriterClass, type InstanceManifest, type UpgradeEntry } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, INSTANCE_SEEDS, canariesFromEnv } from "./unit.js";
@@ -195,7 +195,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
   const registry = await checkRegistry(path.join(definitionRoot, "registry"), definitionRoot, { today });
   check("registry", registry.problems.length === 0, `${registry.records.length} record(s), ${registry.problems.length} problem(s)${registry.problems.length ? `: ${registry.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}${registry.filesVerified ? "" : "; implementation and test paths not verified here (an installed package ships no sources; they were verified at the release by `pnpm check`)"}`);
   const definition = await checkDefinition(definitionRoot);
-  check("definition", definition.problems.length === 0, `${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.evals.length} eval suite(s), ${definition.reports.length} report(s)${definition.problems.length ? `; problems: ${definition.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`, definition.warnings.map((w) => `${w.file}: ${w.message}`).join("; ") || undefined);
+  check("definition", definition.problems.length === 0, `${definition.profiles.length} profile(s), ${definition.workloads.length} workload(s), ${definition.policies.length + definition.recovery.length + definition.routing.length + definition.interaction.length + definition.intelligence.length} policy file(s), ${definition.identity.invariants.length} invariant(s), ${definition.evals.length} eval suite(s), ${definition.reports.length} report(s)${definition.problems.length ? `; problems: ${definition.problems.map((p) => `${p.file}: ${p.message}`).join("; ")}` : ""}`, definition.warnings.map((w) => `${w.file}: ${w.message}`).join("; ") || undefined);
   const due = reviewDue((await loadRegistry(path.join(definitionRoot, "registry"))).records, today, 30);
   check("reviews", !due.some((d) => d.overdueDays > 0), due.length ? due.map((d) => `${d.record.id} ${d.overdueDays > 0 ? `overdue ${d.overdueDays}d` : `due in ${-d.overdueDays}d`}`).join(", ") : "nothing due within 30 days");
 
@@ -250,6 +250,13 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     const clean = await isClean(exec, repo).catch(() => false);
     const branch = await currentBranch(exec, repo).catch(() => "?");
     check("base", clean, clean ? `clean, on ${branch}` : `the base checkout has uncommitted changes (on ${branch}); nothing dispatches until it is clean`);
+    // The unit records, as the store reads them (#161): a record written before the status-keyed shape carries a reason beside a
+    // status that has none (0.1.4 wrote one at an abort). It is read without it, so this is said and not thrown; a file that is
+    // a record in neither shape is a problem, by unit, with what the schema says.
+    const records = await new ExecutionStore(repo, now).legacyUnits();
+    check("units", records.unreadable.length === 0,
+      `${records.total} unit record(s)${records.unreadable.length ? `; ${records.unreadable.length} not readable as a unit record: ${records.unreadable.map((u) => `${u.unitId}: ${u.problem}`).join("; ")}` : ", each in its status's own shape or the one older shape the store reads"}`,
+      records.legacy.length ? `${records.legacy.length} unit record(s) were written before the record was keyed on its status and carry a reason beside a status that has none (${records.legacy.map((u) => `${u.unitId}: ${u.status}, "${u.reason}"`).join("; ")}). They are read without it; \`regulator upgrade\` rewrites them in the current shape` : undefined);
     const ledger = new ObligationLedger(repo, now);
     const open = await ledger.open();
     const owedToPeople = open.filter((o) => o.consumer === "human");
@@ -303,7 +310,9 @@ async function snapshotInstance(repo: string, definitionRoot: string): Promise<I
     if (missing.length) absent[w.class] = missing;
   }
   const ignore = await readFile(path.join(repo, ".gitignore"), "utf8").catch(() => "");
-  return { absent, ignored: ignore.split("\n").some((l) => l.trim() === ".regulator/" || l.trim() === ".regulator") };
+  // Unit records in the older shape (#161): read, never thrown on here; a record in neither shape is doctor's to report.
+  const { legacy } = await new ExecutionStore(repo).legacyUnits();
+  return { absent, ignored: ignore.split("\n").some((l) => l.trim() === ".regulator/" || l.trim() === ".regulator"), legacyUnits: legacy.map((u) => u.unitId) };
 }
 
 /** A committed report under `evals/reports/` whose fingerprint names the target revision: live preferred over scripted, then by file name. */
@@ -318,7 +327,8 @@ async function evidenceFor(definitionRoot: string, harnessRevision: string): Pro
  * Carry an instance to the installed definition (#53). Refuses an instance without a manifest, a definition that fails
  * its own check or ships no version or changelog, and — to apply — a dirty base checkout. Applies only the plan's
  * closed steps: a seed file absent from the instance is copied and a file that exists is never touched, so a decided
- * identity or advice file stays as the person left it; the ignore line is added. Everything the migration notes say is
+ * identity or advice file stays as the person left it; the ignore line is added; a unit record in the shape a build
+ * before #161 wrote is rewritten as the store reads it. Everything the migration notes say is
  * printed, under a heading per version crossed, and nothing in them is acted on. The manifest is rewritten with the
  * version, the revision, the registry count, the pin and one history entry naming the report the target revision was
  * checked against; the tree change is one commit on the base branch citing from and to.
@@ -363,6 +373,10 @@ export async function upgradeInstance(exec: Exec, options: UpgradeInstanceOption
         await cp(path.join(step.seed, file), path.join(repo, step.instance, file), { force: false, errorOnExist: true });
         staged.push(path.posix.join(step.instance, file));
       }
+    } else if (step.step === "unit-records") {
+      // Under `.regulator/`, which is ignored: rewritten in place and never staged. The store drops what it already reads past.
+      const store = new ExecutionStore(repo, now);
+      for (const unitId of step.units) await store.rewriteLegacyUnit(unitId);
     } else {
       const ignore = path.join(repo, ".gitignore");
       const current = await readFile(ignore, "utf8").catch(() => "");
