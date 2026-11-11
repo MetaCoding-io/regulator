@@ -115,8 +115,11 @@ drawn from the table with `data-` attributes for a page to place records on, and
 control room's Lifecycle view steps through a unit's trajectory over it (`#unit=<i>/<id>@<step>`).
 The "why" is deterministic: the control room stays read-only (§5) and asks no model;
 *copy as a question for your agent* hands the step, its records and the reducer's
-location to whatever agent the maintainer uses. What the store does not keep — a status
-history — is DEBT row 47; the website's hand-drawn six states is still hand-drawn until
+location to whatever agent the maintainer uses. What the store did not keep then, a
+status history, was DEBT row 47, paid by [#162](https://github.com/MetaCoding-io/regulator/issues/162)
+on 2026-11-10: the store writes each transition by its trigger (`transition`, which
+replaced `setStatus`) and appends it to `status.ndjson`, and `unitTrajectory` reads the
+path from there. The website's hand-drawn six states is still hand-drawn until
 `regulator docs --write` renders this figure and the website copies it, which is the
 thread's next step.
 
@@ -268,6 +271,34 @@ gap (§5: "No S4. The statement arrives by hand").
 - Keep the boundary: intelligence raises an obligation; it never replans (AGENTS.md).
   A person who wants to *act* on what they know dispatches a unit or dispositions an
   obligation; reporting it is a separate act, and the separation is the point.
+
+**Landed (2026-11-08).** The sensors half, the proposal's second and third bullets, as
+[#123](https://github.com/MetaCoding-io/regulator/issues/123): `policies/intelligence.json`
+is the fifth policy kind (`IntelligencePolicySchema` in protocol), with `sensors[]` each
+naming a provenance (`sensor:<name>`, its own name, refused otherwise), the unit types it
+`affects`, a `severity`, an `expiresAfterMs`, and one trigger — a `schedule.everyMs` with
+a `program` in the command runner's shape whose `outputs` must be empty, or a `glob` over
+the instance's files. `regulator watch` runs them in its tick through `runProgram` in the
+base checkout, with nothing on stdin; exit 0 with a last line `{ fires, claim, observation,
+evidence, severity?, confidence?, expiresAt? }` raises the research unit's record with the
+sensor's provenance and the program's file and hash as evidence, a glob sensor's signal
+names the files that appeared, and a failed run is an advisory `operational-signal`, never
+a replan. Three decisions were taken here. The signal's `affectedUnits` admits a
+`type:<unitType>` entry beside unit ids, the obligation carries `unitType`, and
+`progressionVeto` matches it at dispatch and close, because the unit a sensor's signal
+concerns is dispatched after the sensor fires and resolving to the open units would have
+made the issue's done-when false. A sensor that still fires raises nothing while an
+earlier signal with the same claim is current (unrouted, holding an open obligation, or
+unexpired), so there is one open obligation per sensor and claim, and a resolved claim
+stays quiet until its signal expires. And the expiry re-raise this section asked for is
+the watcher's: a signal with an `expiresAt` that expires while an obligation it opened is
+still open gets one advisory obligation, for every intelligence signal on the log, which
+amends the `intelligence-intake` card's third limitation. The portfolio declares three
+(`drift-band`, `harvest-threshold`, `new-export`; the portfolio note §3 and §5). The
+record is `sensor-intake`. **Still open:** the first bullet, a person's
+`regulator intelligence report --by <person> …` writing the same record under
+`human:<name>` provenance — the type-hold entry and the `provenance` field are there for
+it — and the `regulator intelligence` listing of what is held, by whom, until when.
 
 ## 3. Must every unit run a Pi session?
 
@@ -460,6 +491,7 @@ Items with no design yet. Each gets a section above when it has one.
 | The course and the product drift | the website's hand-drawn diagrams | anything drawn twice will disagree; generate or link. The figures: §1 (the website copies the generated SVGs) |
 | A typed unit lifecycle transition table | §1 above | the lifecycle figure needs it; obligations already have one |
 | The remaining optional fields in `protocol`, sorted into genuinely optional, dependent on a sibling tag (to become a sum type), and kept for compatibility with records on disk | [ADT note](2026-11-02-algebraic-data-types.md) §3.4 | after [#161](https://github.com/MetaCoding-io/regulator/issues/161) |
+| ~~`additionalProperties: false` under the pinned typebox (1.0.0) lets an undeclared key through when its name contains a declared key's name (`Value.Check` tests it against an unanchored pattern of the declared keys, on any object schema with an optional property): `xstatus` passes beside `status`, and `reason` passes beside `on`~~ | found while writing the status history's schema ([#162](https://github.com/MetaCoding-io/regulator/issues/162)), which refuses `reason` by declaring it; `packages/protocol/src/execution.ts` | ~~every schema with an optional field is exposed to the same thing; check a later typebox, or anchor the check in `assertValid`. No record in the repository is known to rely on it~~ Paid by [#191](https://github.com/MetaCoding-io/regulator/issues/191): the gap is typebox 1.0.0's and is fixed upstream from 1.0.50 (the declared keys are anchored and escaped); `packages/protocol` now pins 1.3.27 as the other packages do, `additional-properties.test.ts` pins the refusal, and the status history schema declares no `reason` on a row that does not block. The hole needed no optional field |
 | Branded identifiers (`UnitId`, `ContractId`, `ObligationId`) produced by the schema's decode | [ADT note](2026-11-02-algebraic-data-types.md) §3.5 | only once a mixed-up identifier causes a bug; the cost is a cast at every boundary where a value enters |
 | A closed list of stores for `scope.resources` | §1 above | the who-writes-where figure needs it |
 | ~~The shipped identity seed is over its context budget: it renders to 7005 characters against the 6000 a unit's prompt carries, so the tail of GLOSSARY.md (the refused words among it) has not reached units~~ | found paying DEBT row 25 ([#51](https://github.com/MetaCoding-io/regulator/issues/51)); `regulator check` now warns | Decided (2026-09-29, James): not shortened. [#91](https://github.com/MetaCoding-io/regulator/issues/91) raised the default to 12000 characters and made the limit the budget policy's `identity.maxChars`; `check` passes with no warning |

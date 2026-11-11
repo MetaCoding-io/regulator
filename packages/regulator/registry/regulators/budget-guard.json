@@ -3,7 +3,7 @@
   "name": "Budget guard",
   "status": "active",
   "vsmFunction": "S3",
-  "purpose": "Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.",
+  "purpose": "Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it. An attempt the recovery router retries under `context-degradation` opens on the earlier attempt's consumption, which the ledger records as `carried`: one ceiling is spent across both sessions, and each attempt's own consumption is its ledger less what it carried.",
   "absorbs": {
     "failureClass": "runaway-unit",
     "description": "A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should."

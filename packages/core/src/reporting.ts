@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import {
-  assertValid, AuditFindingInputSchema, PolicyProposalInputSchema, RegulatoryEventSchema,
+  assertNever, assertValid, AuditFindingInputSchema, isReportingToolName, PolicyProposalInputSchema, RegulatoryEventSchema,
   ReportingContextSchema, UncertaintyInputSchema,
-  type RegulatoryEvent, type ReportingContext, type ReportingToolName,
+  type RegulatoryEvent, type ReportingContext,
 } from "@metacoding.io/regulator-protocol";
 
 /** Validate both structure and the host grant that authorized the event. */
@@ -25,11 +25,14 @@ export function assertRegulatoryEvent(value: unknown): asserts value is Regulato
 
 /** Build one event from content-only input. No I/O, routing, or workflow decisions. */
 export function createRegulatoryEvent(
-  tool: ReportingToolName,
+  /** A name as it arrived: narrowed to `ReportingToolName` below, and refused when it is none of them. */
+  tool: string,
   input: unknown,
   context: ReportingContext | undefined,
   toolCallId: string,
 ): RegulatoryEvent {
+  // The name is runtime input (a host registers tools by string): the refusal is here, so the switch below is over the closed union.
+  if (!isReportingToolName(tool)) throw new Error("Unknown reporting tool.");
   if (!context) throw new Error("Reporting authority denied: no host context was supplied.");
   assertValid(ReportingContextSchema, context, "host reporting context");
   const { authority, provenance } = context;
@@ -73,7 +76,7 @@ export function createRegulatoryEvent(
       break;
     }
     default:
-      throw new Error("Unknown reporting tool.");
+      return assertNever(tool, "reporting tool");
   }
   const event: unknown = { schemaVersion: 1, message, authority, provenance, tool: { name: tool, callId: toolCallId } };
   assertRegulatoryEvent(event);
