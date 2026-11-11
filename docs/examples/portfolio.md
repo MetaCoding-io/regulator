@@ -240,16 +240,26 @@ the unit *type* it concerns (`type:plan-rebalance`, `type:harvest-losses`,
 `type:ingest-positions`); the router opens an obligation that holds the type, and the
 veto matches it when a unit of the type is dispatched, which is after the sensor fired.
 A person dispositions the obligation; nothing replans. The thresholds are the
-definition's: the band is `benchmark.json`'s, the harvest minimum is a number on the
-sensor's declaration until the harvest contract's costs file
-([#124](https://github.com/MetaCoding-io/regulator/issues/124)) is the place to read it
-from, and a sensor's threshold is a claim about what matters, not evidence that it does.
+household's, read from their files: the band is `benchmark.json`'s, and the harvest
+threshold is the harvest's own arithmetic
+([#181](https://github.com/MetaCoding-io/regulator/issues/181)): the sensor fires when
+`harvestEvaluation` in `lib/portfolio.js` gives an open lot a positive net at the latest
+prices, the benefit at the rate `tax.json` applies less the two costs `harvest.json`
+prices, which is what the `plan-harvest` contract fixes and the suite recomputes. The
+sensor raises it, the contract fixes it, the suite checks it, and the definition carries
+no number of its own. A sensor's threshold is still a claim about what matters, not
+evidence that it does.
 
 On the shipped data the drift sensor fires at once: at the 30 September prices VTI is
 2.33% over the August target, past the 2% band, which is the rebalance September's
 close plans. So with the watcher running, `plan-rebalance` waits on that obligation
 until someone dispositions it, and the drift the close is about is on the record before
-the close begins.
+the close begins. The harvest sensor fires on the same data: the 2025 BND lot's loss of
+779.00 is worth 116.85 at the long-term rate against 14.04 of trading cost and 32.12 of
+opportunity cost, a net of 70.69, so `harvest-losses` waits on an obligation that names
+those figures. It is the lot September's harvest then takes; the VXUS lot's 24.75 is
+under its costs, the sensor leaves it in its observation, and the harvest list leaves it
+as "benefit below costs".
 
 The rest is still to come. Capital-market assumptions with a publication date are what
 `remember` with an expiry was built for. A view with a confidence is a prediction,
@@ -424,9 +434,11 @@ policies, unchanged.
 Three sensors, the first the definition has: `drift-band`, a program every hour over
 `positions/`, `prices/`, `targets/` and `benchmark.json`, firing when a targeted weight
 at the latest export is further from the latest target than the band, affecting
-`plan-rebalance`; `harvest-threshold`, a program every hour over the lots and the latest
-prices, firing when an open lot's unrealised loss is worth more than `--minimum 150`
-dollars at the rate `tax.json` applies to it, affecting `harvest-losses`; and
+`plan-rebalance`; `harvest-threshold`, a program every hour over the lots, the latest
+prices, `tax.json` and `harvest.json`, firing when an open lot's net from
+`harvestEvaluation` is positive (the benefit of its loss less two legs of trading cost
+and the opportunity cost of the wash-sale window), with no argument of its own and each
+lot's benefit, costs and net in its claim, affecting `harvest-losses`; and
 `new-export`, a glob `{positions,prices}/*`, firing when a file the watcher has not seen
 appears, affecting `ingest-positions`. The two over the domain are raised at `blocking`,
 so the obligation holds the type until a person dispositions it; `new-export` is
@@ -587,16 +599,20 @@ regulator unit show p3-plan-rebalance          # the attempt: the program's file
 regulator status --definition packages/regulator --instance .
 ```
 
-The sensors run in the watcher's tick, and on the shipped data the drift sensor fires
-before any unit has run:
+The sensors run in the watcher's tick, and on the shipped data the drift sensor and the
+harvest sensor fire before any unit has run:
 
 ```sh
 regulator watch --once --workload portfolio    # runs the three sensors, routes what fired, delivers what is owed
 regulator obligations                          # drift-band: VTI is 2.33% over its target … — S3, blocking veto, on unit type plan-rebalance
+                                               # harvest-threshold: 2025-03-14-BND is worth harvesting at the 2026-09-30 prices: benefit 116.85 … net 70.69 — on unit type harvest-losses
 regulator unit drive $L/p3-plan-rebalance.json --policy $P    # refused: the obligation holds every unit of the type
 regulator obligation resolve <obligation> --by alice --disposition replan --rationale "plan the rebalance"
 regulator unit drive $L/p3-plan-rebalance.json --policy $P    # past the veto; the program runs
 ```
+
+`harvest-losses` is held the same way, and released the same way, by the harvest
+sensor's obligation.
 
 A new export copied under `positions/` and `prices/` fires `new-export` on the next
 tick and opens an advisory obligation naming the files, holding nothing; a sensor that
@@ -734,8 +750,9 @@ of the ledger instance; this one reads the same way.
   They read the tree and raise an obligation; the exports still arrive by hand, and a
   sensor's threshold is the definition's claim about what matters, not evidence that it
   does — nothing measures whether a firing was worth a person's attention. The harvest
-  minimum is a number on the sensor's declaration until the sensor reads `harvest.json`'s
-  costs (DEBT row 51). A glob
+  sensor reads `harvest.json` and fires on the contract's arithmetic (DEBT row 51, paid
+  by [#181](https://github.com/MetaCoding-io/regulator/issues/181)), so its threshold is
+  the household's model with the limits the next point lists. A glob
   sensor sees names, not content, and the first tick of the watcher seeds its cursor
   with what exists, so an export that landed before the watcher first ran is a person's
   to raise. The [sensor intake](../../packages/regulator/registry/regulators/sensor-intake.json)
