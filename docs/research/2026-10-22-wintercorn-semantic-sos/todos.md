@@ -4,9 +4,9 @@ Concrete items this note argues for. Per `AGENTS.md` and `ROADMAP.md` § "How th
 
 ## Now (documentation, no code)
 
-- [ ] **Add this note to the table in `docs/research/README.md`** (done in the change that added the note; keep the row's status current).
-- [ ] **Add a threads row to `ROADMAP.md`** for the note's next step: "graph outputs under S3\*: asserted, entailed, derived; severity per shape declared", fits beside the knowledge-production workload ([#61](https://github.com/MetaCoding-io/regulator/issues/61)). The convention says a note that names a next step gets its row in the same change; this one was left for the maintainer so the roadmap is not edited from a reading note without review.
-- [ ] **Add a row to `docs/PATHOLOGIES.md`**: "A trace across views is read as current when one view has drifted" (sub-forms: a derivation presented as current after its inputs moved; a correspondence whose referenced identifier was renamed). Absorbed by: evidence freshness bound to a revision (`audit.ts`), authority-reference resolution, the generated figures. Cite the note.
+- [x] **Add this note to the table in `docs/research/README.md`** (done in the change that added the note; keep the row's status current).
+- [x] **Add a threads row to `ROADMAP.md`** for the note's next step: "graph outputs under S3\*: asserted, entailed, derived; severity per shape declared", fits beside the knowledge-production workload ([#61](https://github.com/MetaCoding-io/regulator/issues/61)). The convention says a note that names a next step gets its row in the same change; this one was left for the maintainer so the roadmap is not edited from a reading note without review. Added 2026-11-11.
+- [ ] **Add a row to `docs/PATHOLOGIES.md`**: "A trace across views is read as current when one view has drifted" (sub-forms: a derivation presented as current after its inputs moved; a correspondence whose referenced identifier was renamed). Absorbed by: evidence freshness bound to a revision (`audit.ts`), authority-reference resolution, the generated figures. Cite the note. *Waits on a decision (2026-11-11): a pathology row is a registry change (`packages/regulator/registry/pathologies.json`), so it is put to the maintainer rather than added from a reading note.*
 
 ## When the knowledge-production workload is designed (#61, the ArticleMiner note)
 

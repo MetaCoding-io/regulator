@@ -430,6 +430,16 @@ survives when the edits are restricted to a unit's own advice and the harness st
 where it is. It is a live-model run and waits on
 [#46](https://github.com/MetaCoding-io/regulator/issues/46) like everything else here.
 
+*Added 2026-11-11.* Two later notes touch the same seam. The
+[Actor-Gatherer note](2026-11-08-actor-gatherer-context-steward.md) proposes a context
+steward that re-renders per model call what the stores already hold, the budget
+remaining among them (its §5, §8 slice 2), and the
+[agent-memory note](2026-11-08-components-of-agent-memory.md) a `recall` tool (§6 item 6)
+in `read_budget`'s shape. `note_to_self` is a third thing: the unit's own line, not the
+stores', carried in the preserved block. The steward's slice 2 decides whether
+`read_budget` (§4 item 3) is subsumed by its per-call budget item; `note_to_self` and
+`recall` stay distinct.
+
 ### 8.4 Where this leaves the refusal
 
 regulator still refuses the thing Exo does: a unit editing compaction, context assembly,

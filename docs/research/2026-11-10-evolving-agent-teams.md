@@ -219,7 +219,7 @@ Each item sits on a seam that exists. None lets a model write a grant. Ordered b
    decision with an authority reference). The fixture is not a GPU kernel: a Node
    microbenchmark with a latency grader over a fixed corpus (a parser, a sort, a
    serialiser) is enough to run the arms of §6, and it needs none of the Python-domain
-   decision the statistics and SemanticSeams notes wait on. This is the fourth
+   decision the statistics and SemanticSeams notes wait on. This is a
    workload shape after software, finance and the portfolio: a domain where the score is
    the product and the contract's job is to stop the unit settling. Under
    [#61](https://github.com/MetaCoding-io/regulator/issues/61), and it is the first
@@ -302,7 +302,7 @@ with its count in the recovery policy, the decision id on the replan's provenanc
 the instance-level count over decisions that the backlog row already describes, all
 under `roadmap:0.3`, with no dependency on
 [#46](https://github.com/MetaCoding-io/regulator/issues/46). Item 5, the optimisation
-workload, is a design decision first: whether the fourth workload shape is the drift
+workload, is a design decision first: whether this workload shape is the drift
 suite's complement, measuring what regulation *costs* on a task where the score is the
 product, which the [Terminal-Bench note §5](2026-11-05-minimal-harness-and-terminal-bench.md#5-terminal-bench-20-with-regulator)
 asks as H2 from the other side. Decided yes, it is a fixture and a workload under #61

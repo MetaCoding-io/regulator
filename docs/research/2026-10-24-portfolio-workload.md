@@ -11,10 +11,13 @@
   irreversible effect, from which the gate derives the consent; the path grant on `trades/pending/` and the advice line are gone, and the
   landed paragraphs are in §3 and §5 row 2. Phase 2d landed ([#124](https://github.com/MetaCoding-io/regulator/issues/124), 2026-11-08): the harvest
   as a session unit type, `plan-harvest`, with its contract's two bounds, the wash-sale check live over a harvest list by its
-  kind, and the lots adjusted after an executed wash sale; the landed paragraphs are under §1 and in §6. Phase 2's remaining item is
-  [#123](https://github.com/MetaCoding-io/regulator/issues/123), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
-  blocked on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)); its other blocker, the
-  open-metric row, landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129) with this workload's turnover as the first declared metric. All six are sub-issues of
+  kind, and the lots adjusted after an executed wash sale; the landed paragraphs are under §1 and in §6. Phase 2c landed
+  ([#123](https://github.com/MetaCoding-io/regulator/issues/123), 2026-11-08): the three sensors declared in `policies/intelligence.json` and run by
+  `regulator watch` (`sensor-intake`), with the harvest sensor on the harvest arithmetic since [#181](https://github.com/MetaCoding-io/regulator/issues/181). Phase 3 is
+  filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125) and unblocked: the prediction record landed as
+  [#138](https://github.com/MetaCoding-io/regulator/issues/138) on 2026-10-26 and the open-metric row as [#129](https://github.com/MetaCoding-io/regulator/issues/129)
+  with this workload's turnover as the first declared metric; it is a 0.3 row (2026-11-11), with part 3's longevity limitation waiting on
+  the instrument record kind (DEBT row 48). All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
   the designed slices are not lost.
 - **Source:** *Build a Robo-Advisor with Python (From Scratch)*, Rob Reider and Alexander
@@ -442,9 +445,11 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
 first row as its one recorded decision. Phase 2's issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
 [#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names;
-#121, #122 and #124 have landed; #123 remains.
-Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row after the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138));
-the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) has landed.
+all four have landed (#121 and #122 on 2026-10-27, #123 and #124 on 2026-11-08), and the harvest sensor's
+argument went with [#181](https://github.com/MetaCoding-io/regulator/issues/181).
+Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) is a 0.3 milestone row since 2026-11-11: the prediction record
+([#138](https://github.com/MetaCoding-io/regulator/issues/138), 2026-10-26) and the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) have landed, and
+only part 3's longevity limitation waits, on the instrument record kind (DEBT row 48).
 
 **Decided (2026-10-25, James).** All three phases are filed at once rather than Phase 2
 waiting for Phase 1 to merge and Phase 3 for its blockers, so the designed slices have a
