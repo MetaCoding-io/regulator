@@ -24,7 +24,7 @@ dated it.
 | --- | --- | --- | --- |
 | **Function** | S4 → S3 | S3 | S5 |
 | **Written by** | a `research` unit, through `report_intelligence` | a unit whose profile grants `remember` (`implement`, `bookkeeper`) | only the S5 decision path, when a named person accepts a proposal |
-| **Holds** | subject, claim, observation, evidence, confidence, severity, when it was observed, when it expires, affected units | subject, note, evidence, scope (unit types), review-by date | invariants, glossary, boundaries |
+| **Holds** | subject, claim, observation, evidence, confidence, severity, when it was observed, when it expires, affected units; optionally a prediction (a metric, a baseline, a direction and size, a probability, the horizons it resolves at) | subject, note, evidence, scope (unit types), review-by date | invariants, glossary, boundaries |
 | **Provenance** | unit, revision and time, stamped by the host | unit, revision and time, stamped by the host; `recordedBy: "S1"` | the proposal, the person who accepted it, the rationale |
 | **Lives in** | `.regulator/signals.ndjson`, with the obligations it opened | `.regulator/memory.ndjson` | `regulator/identity/`, committed, write-protected |
 | **Does** | opens an obligation per affected unit; vetoes their dispatch and close at blocking severity | is rendered into later units' context as facts that expire | is rendered into every unit's context; gates and host checks enforce it |
@@ -116,6 +116,72 @@ a finding, and none should.
 - `regulator status` and the control room show the same obligations on the unit they
   hold, along with any signals not yet routed.
 
+## Predictions
+
+An intelligence signal may carry a claim about the future. It is the same signal, on the
+same channel, routed by the same router into the same obligation; what it adds is a
+`prediction` block that says what the claim stakes and when it will be known whether it
+held. The block is optional, and every part inside it is required:
+
+| Field | Meaning |
+| --- | --- |
+| `metric` | one of the eval harness's built-in metrics (`refusals`, `attempts`, `closed`, …) or a metric a workload declares |
+| `baseline` | a committed report's arm, named by the report's fingerprint (the SHA-256 of its file under `evals/reports/`) and the arm whose mean is the baseline value; or an arm by name alone, the arm a probe runs against |
+| `direction`, `magnitude` | which way the metric is expected to move from the baseline, and by how much, in the metric's units |
+| `probability` | a number in [0, 1]: what the emitter stakes. The signal's three-valued `confidence` stays beside it, as it was |
+| `horizons[]` | where the prediction resolves: a `probe` horizon names a report by fingerprint and an arm; a `live` horizon names unit types and a count, the next N units of those types. Each horizon carries `disconfirmedBy`, the grader value that counts against the prediction |
+
+A signal without the block is exactly what it was. A block missing any part, a
+probability outside [0, 1] or a metric nobody declared is refused by the schema, so it
+never reaches the log.
+
+### How it resolves
+
+A prediction resolves from the stores, never from a unit's report. When a unit a live
+horizon names closes or aborts, the loop reads the named metric with the graders the
+eval harness uses: the trajectory counts from the unit's own records, the outcome
+graders over the instance's tree, a declared grader by the workload's own command. It
+compares the value with the baseline and the disconfirming value and appends a
+`prediction-resolution` to the regulatory log, one per unit, with the grader's
+observation and what it was read from. A probe horizon resolves once, from the committed
+report whose fingerprint it names, against the arm's 95% interval.
+
+The resolution is three-valued, and the order matters:
+
+1. **Disconfirmed** when the observed value is at or past `disconfirmedBy`, whatever the
+   baseline says.
+2. **Confirmed** when the observed value reaches the baseline moved by the magnitude in
+   the predicted direction; at a probe horizon, when the arm's whole interval does.
+3. **Inconclusive** otherwise, and whenever no baseline value could be read or no grader
+   observes the metric here.
+
+Inconclusive is not neutral. It counts against the prediction's precision and never for
+the edit the prediction was made about: an effect too small to see at the budget the
+probe had is not an effect. A disconfirmed live horizon raises a proposal from S3 to S5
+to revert or re-decide the advice, with the prediction's id in its subject, routed under
+the routing policy into an obligation like any proposal. Nothing reverts the advice file:
+that is an accept path's, after a person decides.
+
+### What bets on it
+
+The first thing that bets on a prediction is a `harness-edit`, a proposal against a
+profile's advice whose `requestedChange` is typed: a **diagnosis** (references to
+evidence records and signals, with the unit, attempt, revision and trajectory moment they
+were read at), a **change** (the diff against one advice file, named by profile) and a
+**prediction** (the id of a signal with the block). Three parts, three kinds of record:
+the diagnosis is evidence that something happened and nothing more, the change is the
+thing asked for, and the prediction is a bet that resolves. The schema refuses a payload
+that claims the kind and lacks a part; `advice accept` refuses one whose diagnosis
+references do not resolve in the stores or whose prediction names no signal with the
+block, takes the target from the payload, cites the prediction's id in the disposition,
+and the live horizon is open from that decision. Units of the named types that closed
+before the acceptance are not readings: the edit was not in effect.
+
+`regulator status` lists every prediction with its horizons, what bet on it and how that
+was decided, each reading's outcome, and a precision that counts inconclusive against.
+[Evidence about the regulators](/concepts/evidence-about-the-regulators#pre-registration-one-level-down)
+says why this is the eval harness's pre-registration rule applied to one proposal.
+
 ## Operational memory
 
 ### Who writes it
@@ -200,8 +266,14 @@ to run into:
   the 90-day limit retires anything.
 - Retraction names a person but does not authenticate one. The `--by` name is checked
   against the interaction policy and not verified further.
+- Nothing produces a prediction yet. `report_intelligence` does not take the block, and
+  no command records one by hand; a person appends the signal, or the reflector will.
+  The probe rule (refusing a `harness-edit` that was never probed) and the probe arm wait
+  on the live report; a signal's `confidence` is recorded and never calibrated until the
+  instrument record kind exists.
 
-The design notes on a person-raised intake, declared sensors and predictions that
-resolve are in the [open
+The design notes on a person-raised intake and declared sensors are in the [open
 questions](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-25-open-questions.md)
-(§2 and §4).
+(§2); predictions that resolve are §4 there and §8 of the [Harness²
+note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-18-harness2-recursive-harnessing.md),
+landed as slice 2 of the accept-path split (#138).

@@ -31,9 +31,20 @@ a rule is enforced at is a recorded fact about the system.
 | **S1 Operations** | A unit, which is one session running under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects. The host enforces the writable paths, the tool set and the budget, so none of them depends on the profile's advice being followed. A [host](/concepts/hosts) runs the session. |
 | **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, and the effect journal reconciled on restart. | A set of mechanisms. There is no coordinator persona: each mechanism detects and records, and S3 decides what to do about it. See [coordination](/concepts/coordination). |
 | **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator, which is the only execution authority. Regulators never schedule a unit. See [work contracts](/concepts/contracts) and [recovery](/concepts/recovery). |
-| **S3\* Audit** | Host-run checks at a revision, the technical verdict, the canary watch, and the closeout gate over protected paths. | The host, which owns the evidence independently of the session that did the work. A model's review is an additional layer on top of that evidence. |
+| **S3\* Audit** | Host-run checks at a revision, the technical verdict, the credential canary watch, the behavioral canary, and the closeout gate over protected paths. | The host, which owns the evidence independently of the session that did the work. A model's review is an additional layer on top of that evidence. |
 | **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation for S3 to consider. It never replans the work itself. See [intelligence and memory](/concepts/intelligence-and-memory). |
 | **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition and protected by the write gate and the `identity-untouched` check. | Committed files. A unit may propose a change. Only a person with `actAsS5` in the interaction policy may accept one, and the S5 decision path is the only thing that writes an identity file. See [protecting identity](/concepts/identity). |
+
+The same level, drawn from the definition rather than described: every box is a kind the
+definition declares (the carried files and their writer classes, the loop's steps, the
+software-development workload's unit types under their profiles, the routing policy, the
+S2 records, the checks the workload names, the stores) and every edge an enforcement
+point or a command. Hover, focus or tap one for the record behind it.
+
+<figure class="generated-figure">
+<!--@include: ../generated/figures/instance-map.svg-->
+<figcaption>One regulated level, generated from the definition by <code>regulator docs --write</code>. The count lines on the unit types are empty here and filled in the control room, which places an instance's units on the same figure.</figcaption>
+</figure>
 
 ## The loop
 

@@ -1,0 +1,9 @@
+{
+  "date": "2025-03-14",
+  "note": "The opening purchases, from the custodian's confirmations.",
+  "trades": [
+    { "ticker": "VTI", "side": "buy", "shares": 60, "price": "250.00" },
+    { "ticker": "VXUS", "side": "buy", "shares": 150, "price": "60.00" },
+    { "ticker": "BND", "side": "buy", "shares": 190, "price": "78.00" }
+  ]
+}

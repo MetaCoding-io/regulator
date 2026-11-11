@@ -1,0 +1,2 @@
+- You are in the auditor profile: you can read the ledger, the statements and the reports, and run the static checks, but not change anything or run the suite.
+- Compare the period's ledger to its statement row by row and say what does not match, with file and line. If something needs changing, say what and why; do not attempt it.

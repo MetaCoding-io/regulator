@@ -3,7 +3,7 @@
   "name": "Budget guard",
   "status": "active",
   "vsmFunction": "S3",
-  "purpose": "Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it.",
+  "purpose": "Meter each attempt's tokens, cost, wall-clock and turns against the policy's ceiling for the unit type; halt the attempt when a ceiling is crossed and refuse every tool with an effect from then on. The ledger is written to the execution store so the orchestrator closes on it and the read model can show it. An attempt the recovery router retries under `context-degradation` opens on the earlier attempt's consumption, which the ledger records as `carried`: one ceiling is spent across both sessions, and each attempt's own consumption is its ledger less what it carried.",
   "absorbs": {
     "failureClass": "runaway-unit",
     "description": "A unit that keeps going — retrying, re-reading, re-editing — consumes the whole context window and the whole budget without anything outside the loop deciding it should."
@@ -31,7 +31,8 @@
     "Tokens and cost are what the provider reports on each assistant message; a provider that reports nothing meters as zero. Tokens sum every message's total, so a long context is paid again on every turn: the default 400,000-token ceiling is about thirty turns of a large context, which the live drift run's memory unit reached on both arms.",
     "The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.",
     "A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.",
-    "Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted."
+    "Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.",
+    "A command unit (a unit type whose runner is a program, reg.control.command-runner.v1) is not metered by this guard: no session opens, so no turn end and no tool call reaches it. The loop's runner meters wall-clock alone — the policy's ceiling for the unit type is the timeout the program runs under — and writes the ledger once at the end with tokens, cost and turns zero by construction; a run past the ceiling is marked exhausted on the wall-clock dimension and refused as a dispatch error. Nothing halts a program before that timeout, and no other ceiling applies to it."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:budget", "note": "The harness drops the budget extension from a live arm; the loop's attempt ceiling still applies. Not separable from contract-preserving compaction, which the same extension carries."},

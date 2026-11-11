@@ -7,7 +7,7 @@
  * authority surface (docs/archive/2026-09/CONTROL-REGISTRY.md §6), so it will not.
  */
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
-import { readDefinition, readInstance, type DefinitionView, type InstanceView } from "@metacoding.io/regulator";
+import { readDefinition, readInstance, renderInstanceMapFigure, type DefinitionView, type InstanceView } from "@metacoding.io/regulator";
 import { renderPage } from "./page.js";
 
 export interface ControlRoomOptions {
@@ -39,7 +39,11 @@ function send(res: ServerResponse, status: number, type: string, body: string, h
 }
 
 export function createControlRoomServer(options: ControlRoomOptions): Server {
-  const page = renderPage();
+  // The map is drawn from the definition once, like the lifecycle figure; the page places the instance's units on it.
+  // A definition the map cannot be drawn from (no workload yet) gets the page without it, saying so.
+  const page: Promise<string> = options.definitionDir
+    ? readDefinition(options.definitionDir).then((d) => renderPage({ instanceMap: renderInstanceMapFigure(d) })).catch((error: unknown) => renderPage({ instanceMap: `<p class="empty">no map: ${String((error as Error).message ?? error).replace(/[<>&]/g, "")}</p>` }))
+    : Promise.resolve(renderPage());
   return createServer(async (req: IncomingMessage, res: ServerResponse) => {
     const url = new URL(req.url ?? "/", "http://localhost");
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -47,7 +51,7 @@ export function createControlRoomServer(options: ControlRoomOptions): Server {
       return;
     }
     if (url.pathname === "/") {
-      send(res, 200, "text/html; charset=utf-8", page);
+      send(res, 200, "text/html; charset=utf-8", await page);
       return;
     }
     if (url.pathname === "/api/status") {

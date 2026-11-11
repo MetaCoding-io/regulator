@@ -29,16 +29,19 @@ export const ENFORCEMENT_POINTS = {
     "session_start", "before_agent_start", "tool_call", "tool_execution_start", "tool_execution_end", "tool_result", "turn_end", "message_end",
     "agent_end", "agent_before_settle", "model_select", "project_trust", "session_before_compact", "session_compact", "session_compact_failed",
   ],
-  /** A tool the host's extensions register for a unit session: the gate is the tool's execute. */
-  tool: ["report_result", "report_intelligence", "ask_human", "notify_owner", "remember", "propose_policy_change", "read_conventions", "run_tests", "run_checks"],
+  /**
+   * A tool the host's extensions register for a unit session: the gate is the tool's execute. `declared` stands for
+   * every tool a workload declares (#121): registered by name from the definition, so no fixed name can be listed.
+   */
+  tool: ["report_result", "report_intelligence", "ask_human", "notify_owner", "remember", "propose_policy_change", "read_conventions", "run_tests", "run_checks", "declared"],
   /** The orchestrator: the S3 loop's steps and the unit lifecycle around them (`packages/regulator/src/controller.ts`, `unit.ts`; `runHostChecks` in `packages/checks`). */
-  loop: ["runUnit", "auditUnit", "runHostChecks", "routeUnit", "closeUnit", "driveUnit", "routeAndDeliver", "startUnit", "finishUnit"],
+  loop: ["runUnit", "auditUnit", "runHostChecks", "routeUnit", "closeUnit", "driveUnit", "routeAndDeliver", "resolvePredictions", "startUnit", "finishUnit"],
   /** A `regulator` subcommand, as the usage line spells it. */
   cli: [
     "status", "fixture", "unit start", "unit finish", "unit status", "contract check", "unit dispatch", "unit drive", "unit route", "unit show", "unit close",
     "unit accept", "unit evidence", "effects", "obligations", "obligation show", "obligation ack", "obligation resolve", "obligation escalate", "signals route",
     "memory", "memory retract", "identity accept", "identity reject", "answer", "remind", "init", "doctor", "watch", "identity promote", "eval", "spans",
-    "review", "check", "docs",
+    "review", "check", "docs", "advice accept", "advice reject", "advice promote", "upgrade",
   ],
   /** The definition check, under `regulator check`, `doctor` and `pnpm check`. */
   check: ["checkRegistry", "checkDefinition"],

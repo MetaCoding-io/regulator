@@ -17,11 +17,17 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
   assert.deepEqual(empty.problems.map((p) => p.message).slice(0, 2), ["no profiles declared: the definition grants no capabilities", "no workload declared"]);
   assert.ok(empty.problems.some((p) => p.file === "identity/" && /INVARIANTS\.md is missing/.test(p.message)));
 
-  await write(dir, "profiles/research.json", { name: "research", description: "Read-only.", tools: ["read", "run_tests"], writablePaths: [], advice: [] });
-  await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
-  await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"], advice: [] });
+  await write(dir, "profiles/research.json", { name: "research", description: "Read-only.", tools: ["read", "run_tests"], writablePaths: [], advice: ["Report; do not change."] });
+  await write(dir, "profiles/implement.json", { name: "implementer", description: "d", tools: ["write"], writablePaths: ["src/"] });
+  await write(dir, "profiles/builder.json", { name: "builder", description: "d", tools: ["write"], writablePaths: ["src/"] });
+  // Advice is a file set (#110): builder has its file (a long one, over the policy's cap); research carries the text twice; implementer has none; nobody is not a profile.
+  await write(dir, "advice/builder.md", `- ${"Build small, build often. ".repeat(20).trim()}\n`);
+  await write(dir, "advice/research.md", "- Report; do not change.\n");
+  await write(dir, "advice/nobody.md", "- x\n");
+  // A directory of the definition in no class of DEFINITION_WRITERS: nobody declared who writes it.
+  await write(dir, "skills/review.md", "# a skill\n");
   await write(dir, "workload/sd.json", { name: "sd", version: 1, description: "d", unitTypes: [{ name: "implement", description: "d", profile: "implement", checks: ["run_tests", "lint", { name: "run_tests", options: { commitMessages: "advisory" } }], requiresContract: true }, { name: "plan", description: "d", profile: "nope", checks: [], requiresContract: false }, { name: "sketch", description: "d", profile: "research", checks: [], requiresContract: false }, { name: "build", description: "d", profile: "builder", checks: [], requiresContract: true }] });
-  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", identity: { maxChars: 1000 }, budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
+  await write(dir, "policies/default.json", { name: "default", version: 1, description: "d", identity: { maxChars: 1000 }, advice: { maxChars: 100 }, budgets: { default: { tokens: 1, wallClockMs: 1, turns: 1, attempts: 1 }, byUnitType: { deploy: { tokens: 2 } } }, models: { default: { primary: "a/b", fallback: [] } } });
   await write(dir, "policies/routing.json", { name: "routing", version: 1, description: "d", rules: [], impactSeverity: { low: "info", medium: "advisory", high: "blocking", critical: "critical" }, recovery: { remediate: "S3", replan: "S3", clarify: "human", pause: "human", escalate: "human" }, blocksAtOrAbove: "blocking", floors: [{ pattern: "(", severity: "blocking", reason: "r" }] });
   await write(dir, "policies/odd.json", { name: "odd" });
   for (const name of ["IDENTITY.md", "GLOSSARY.md"]) await write(dir, `identity/${name}`, "# x\n\ntext\n");
@@ -39,12 +45,307 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
     "workload/sd.json: unit type \"sketch\" runs without a contract but its profile \"research\" grants run_tests, whose effects are not read-only: a unit no contract bounds may not write",
     "workload/sd.json: unit type \"build\" runs under a contract but its profile \"builder\" does not grant report_result: a contracted unit closes only by reporting, and the grant belongs in the declaration (the contract extension adds the tool as a backstop)",
     "policies/default.json: names unit type \"deploy\", which no workload declares",
-    "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing or interaction policy): payload does not match the closed runtime schema.",
+    "policies/odd.json: Invalid policy odd.json (not a budget, recovery, routing, interaction or intelligence policy): payload does not match the closed runtime schema.",
     "policies/routing.json: floor pattern \"(\" is not a regular expression",
     "policies/: no recovery policy declared",
     "policies/: no interaction policy declared: nothing says how long to wait for a person or who may answer",
+    "advice/nobody.md: names no declared profile (declared: builder, implementer, research); an advice file is `<profile>.md` for a profile under profiles/",
+    "profiles/research.json: carries advice inline and advice/research.md exists: move the text into the file, do not carry two copies",
+    "advice/implementer.md: is missing: profile \"implementer\" declares no advice; every profile has an advice file (an empty one says the profile is told nothing beyond its grant)",
+    "skills/: is a definition directory in no class of DEFINITION_WRITERS (identity, advice, declaration): declare who writes it, and through which path, before anything reads it",
   ]);
-  assert.deepEqual(checked.warnings.map((w) => `${w.file}: ${w.message.slice(0, 60)}`), ["identity/: the identity set renders to 1761 characters and a unit's pro"], "the policy's identity.maxChars (1000) is the limit the check measures against (#91)");
+  assert.deepEqual(checked.warnings.map((w) => `${w.file}: ${w.message.slice(0, 60)}`), [
+    "identity/: the identity set renders to 1761 characters and a unit's pro",
+    "advice/builder.md: the advice for profile \"builder\" renders to 521 characters a",
+  ], "the policy's identity.maxChars (1000) and advice.maxChars (100) are the limits the check measures against (#91, #110)");
   assert.deepEqual(checked.identity.invariants.map((i) => i.id), ["INV-001"]);
+  assert.deepEqual(Object.keys(checked.advice.files).sort(), ["builder", "research"]);
   assert.equal(checked.profiles.length, 3, "a profile with a naming problem is still loaded; the problem is reported");
+});
+
+/**
+ * Declared metrics (#129). A definition with one workload, `pf`, under a profile that resolves, so the only problems
+ * about `workload/pf.json` and `evals/` are the ones the declaration and the suite earn.
+ */
+async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, options: { metrics?: unknown[]; suiteMetrics?: unknown[]; otherWorkload?: boolean; report?: Record<string, unknown> } = {}): Promise<string[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-metrics-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["write", "report_result"], writablePaths: ["lots/"] });
+  await write(dir, "advice/manager.md", "- x\n");
+  await write(dir, "workload/pf/turnover.mjs", "process.stdout.write(JSON.stringify({ metric: 'workload:pf/turnover', value: 0 }));\n");
+  const unitTypes = [{ name: "ingest", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true }];
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes, ...(options.metrics ? { metrics: options.metrics } : {}) });
+  if (options.otherWorkload) await write(dir, "workload/other.json", { name: "other", version: 1, description: "d", unitTypes, metrics: [{ name: "workload:other/size", description: "d", kind: "count", direction: "none", grader: { argv: ["node", "workload/pf/turnover.mjs"] } }] });
+  await write(dir, "contracts/p1.json", "{}");
+  await mkdir(path.join(dir, "fixture-pf"), { recursive: true });
+  if (options.suiteMetrics) {
+    await write(dir, "evals/pf.json", {
+      name: "pf", version: 1, description: "d", fixture: "fixture-pf", tasks: ["contracts/p1.json"],
+      arms: [{ name: "control", description: "d", extensions: [], checks: ["run_tests"], identity: false }, { name: "treatment", description: "d", extensions: [], checks: ["run_tests"], identity: true }],
+      repetitions: 1, metrics: options.suiteMetrics, baseline: "control",
+    });
+  }
+  if (options.report) await write(dir, "evals/reports/pf.json", options.report);
+  const checked = await checkDefinition(dir);
+  return checked.problems.filter((p) => p.file === "workload/pf.json" || p.file.startsWith("evals/")).map((p) => `${p.file}: ${p.message}`);
+}
+
+const turnover = { name: "workload:pf/turnover", description: "the turnover the latest target implies", kind: "rate", direction: "lower", grader: { argv: ["node", "workload/pf/turnover.mjs"] } };
+
+test("consent grants (#60) are part of the declaration: a grant naming an ungranted tool, a path outside the writable paths or a bash pattern that is not one is refused; a guarded write beside bash with no pattern covering the path warns, naming the profile and the path", async (t) => {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/teller.json", { name: "teller", description: "d", tools: ["read", "write", "edit", "bash", "report_result"], writablePaths: ["ledger/", "payments/pending/"], consent: [{ tool: "pay" }, { tool: "write", paths: ["payments/executed/"] }, { tool: "bash", pattern: "(" }] });
+  await write(dir, "profiles/clerk.json", { name: "clerk", description: "d", tools: ["read", "write", "bash", "report_result"], writablePaths: ["payments/pending/"], consent: [{ tool: "write", paths: ["payments/pending/"] }] });
+  await write(dir, "profiles/cashier.json", { name: "cashier", description: "d", tools: ["read", "write", "bash", "report_result"], writablePaths: ["payments/pending/"], consent: [{ tool: "write", paths: ["payments/pending/"] }, { tool: "bash", pattern: "payments/pending/" }] });
+  for (const name of ["teller", "clerk", "cashier"]) await write(dir, `advice/${name}.md`, "");
+  const checked = await checkDefinition(dir);
+  assert.deepEqual(checked.problems.filter((p) => p.file.startsWith("profiles/")).map((p) => `${p.file}: ${p.message}`), [
+    'profiles/teller.json: consent[0] needs consent for "pay", which the profile does not grant: a grant guards calls the profile can make',
+    'profiles/teller.json: consent[1] needs consent for write under "payments/executed/", which is outside the profile\'s writable paths (ledger/, payments/pending/): a write there is refused before consent could be asked',
+    'profiles/teller.json: consent[2] pattern "(" is not a regular expression',
+  ]);
+  assert.deepEqual(checked.warnings.filter((w) => w.file.startsWith("profiles/")).map((w) => `${w.file}: ${w.message}`), [
+    'profiles/clerk.json: profile "clerk" needs consent for write under "payments/pending/" and grants bash, which is not path-gated: a shell command can write there with no consent asked. Declare {"tool":"bash","pattern":"payments\\/pending\\/"} beside it, or the grant is enforced on write calls only',
+    'profiles/teller.json: profile "teller" needs consent for write under "payments/executed/" and grants bash, which is not path-gated: a shell command can write there with no consent asked. Declare {"tool":"bash","pattern":"payments\\/executed\\/"} beside it, or the grant is enforced on write calls only',
+  ], "the cashier's bash pattern covers the path; the clerk's grant is warned about and nothing refused; the teller's shell is warned about beside the path it is refused for");
+  assert.deepEqual(checked.profiles.find((p) => p.name === "cashier")?.consent, [{ tool: "write", paths: ["payments/pending/"] }, { tool: "bash", pattern: "payments/pending/" }]);
+});
+
+test("declared metrics: a workload's declaration with a grader file under the definition, pre-registered by a suite with one optimisation target, passes the definition check", async (t) => {
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", { name: "workload:pf/turnover", optimise: true }] }), []);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", "workload:pf/turnover"] }), [], "nothing marked: everything is reported only");
+  assert.deepEqual(await metricsDefinition(t, { metrics: [], suiteMetrics: ["closed", "attempts"] }), [], "a workload that declares nothing, and a suite of built-ins, are what they were");
+});
+
+test("refused: a suite that pre-registers a declared name the definition does not carry — by a workload that exists, by one that does not, and by an instrument, since no instrument record exists yet", async (t) => {
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", "workload:pf/taxCost", "workload:nope/turnover", "instrument:inst.judge.v1/brier"] }), [
+    'evals/pf.json: pre-registers "workload:pf/taxCost", which workload "pf" does not declare (it declares workload:pf/turnover)',
+    'evals/pf.json: pre-registers "workload:nope/turnover", which no workload declares (no workload "nope")',
+    'evals/pf.json: pre-registers "instrument:inst.judge.v1/brier", an instrument\'s metric, and no instrument record declares it: the instrument record kind does not exist yet (open questions §4)',
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["workload:pf/turnover"] }), ['evals/pf.json: pre-registers "workload:pf/turnover", which workload "pf" does not declare (it declares no metrics)']);
+});
+
+test("refused: a declared grader whose command names no file under the definition — the file is what the report fingerprints", async (t) => {
+  assert.deepEqual(await metricsDefinition(t, { metrics: [{ ...turnover, grader: { argv: ["node", "workload/pf/missing.mjs"] } }] }), [
+    'workload/pf.json: metric "workload:pf/turnover" declares the grader `node workload/pf/missing.mjs`, and no argument of it is a file under the definition: the grader\'s file is what the report fingerprints, and it is missing',
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [{ ...turnover, grader: { argv: ["git", "diff", "--stat"] } }] }), [
+    'workload/pf.json: metric "workload:pf/turnover" declares the grader `git diff --stat`, and no argument of it is a file under the definition: the grader\'s file is what the report fingerprints, and it is missing',
+  ], "a command with no file of its own has nothing a report can hash");
+  assert.deepEqual(await metricsDefinition(t, { metrics: [{ ...turnover, grader: { argv: ["node", "../../etc/passwd"] } }] }).then((p) => p.length), 1, "a path outside the definition is not the definition's");
+});
+
+test("refused: a workload that declares the same metric twice, or a metric another workload or an instrument owns", async (t) => {
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover, { ...turnover, description: "again" }] }), ['workload/pf.json: declares metric "workload:pf/turnover" twice']);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [{ ...turnover, name: "workload:other/turnover" }, { ...turnover, name: "instrument:inst.judge.v1/brier" }], otherWorkload: true }), [
+    'workload/pf.json: declares metric "workload:other/turnover", which belongs to workload "other": a declaration lives beside the workload that owns it',
+    'workload/pf.json: declares metric "instrument:inst.judge.v1/brier", which belongs to instrument "inst.judge.v1": an instrument\'s metric is declared on its record',
+  ]);
+});
+
+test("refused: a second optimisation target, and a built-in as the target — one declared metric to optimise, everything else reported only", async (t) => {
+  const second = { ...turnover, name: "workload:pf/taxCost" };
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover, second], suiteMetrics: [{ name: "workload:pf/turnover", optimise: true }, { name: "workload:pf/taxCost", optimise: true }] }), [
+    "evals/pf.json: marks 2 metrics optimise (workload:pf/turnover, workload:pf/taxCost): at most one declared metric is the optimisation target, and every other is reported only",
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: [{ name: "closed", optimise: true }, "workload:pf/turnover"] }), [
+    'evals/pf.json: marks "closed" optimise, but a built-in is reported only: only a declared metric may be the optimisation target',
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: ["closed", "closed", "workload:pf/turnover"] }), ['evals/pf.json: pre-registers "closed" twice']);
+});
+
+test("refused: a judged metric — one with an instrument ref — until the instrument record exists with its held-out score; the record kind does not exist yet, so every judged metric waits", async (t) => {
+  assert.deepEqual(await metricsDefinition(t, { metrics: [{ ...turnover, name: "workload:pf/viewQuality", kind: "score", direction: "higher", instrument: "inst.judge.consequential.v1" }] }), [
+    'workload/pf.json: metric "workload:pf/viewQuality" is judged by instrument "inst.judge.consequential.v1", and no instrument record carries its held-out score: a judged metric waits on the record (open questions §4, #49)',
+  ]);
+});
+
+test("a committed report over a declared suite version says the same optimisation target the suite marks", async (t) => {
+  const fingerprint = { node: "v22", platform: "linux", arch: "x64", pi: "0.87.0", harnessRevision: "a".repeat(40), dispatcher: "scripted:manager", model: "none", registry: 1, policies: {} };
+  const report = { suite: { name: "pf", version: 1 }, generatedAt: "t", fingerprint, arms: [], lifts: [], runs: [], interpretation: "read", interpretedBy: "alice" };
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: [{ name: "workload:pf/turnover", optimise: true }], report }), [
+    'evals/reports/pf.json: says the optimisation target was none, but suite pf v1 marks "workload:pf/turnover"',
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { metrics: [turnover], suiteMetrics: [{ name: "workload:pf/turnover", optimise: true }], report: { ...report, suite: { ...report.suite, optimise: "workload:pf/turnover" } } }), []);
+});
+
+/**
+ * Command runners (#122). A definition with one workload, `pf`, whose `plan` unit type runs a program under the profile
+ * the options describe, so the problems about `workload/pf.json` are the ones the runner's declaration earns.
+ */
+async function runnerDefinition(t: { after(fn: () => Promise<void>): void }, options: { runner?: unknown; profile?: Record<string, unknown>; programFile?: boolean } = {}): Promise<string[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-runner-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "report_result"], writablePaths: ["trades/proposed/", "trades/pending/"], consent: [{ tool: "write", paths: ["trades/pending/"] }], ...options.profile });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.programFile !== false) await write(dir, "workload/pf/plan.mjs", "process.stdout.write('{\"summary\":\"planned\"}\\n');\n");
+  const runner = options.runner ?? { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/proposed/"] };
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes: [{ name: "plan", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true, runner }] });
+  const checked = await checkDefinition(dir);
+  return checked.problems.filter((p) => p.file === "workload/pf.json").map((p) => p.message);
+}
+
+test("a command runner (#122) whose program is a file under the definition, whose outputs are inside the profile's writable paths and under no consent grant, and whose profile grants no arbitrary execution, passes the definition check; the profile need not grant report_result, since a program reports by its exit and its output", async (t) => {
+  assert.deepEqual(await runnerDefinition(t), []);
+  assert.deepEqual(await runnerDefinition(t, { profile: { tools: ["read", "write"] } }), [], "no report tool to grant: the loop reads the program's exit and last line");
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: [] } }), [], "a program that writes nothing declares no outputs");
+});
+
+test("refused: a command runner without an argv — the schema refuses the shape, and the check names the unit type", async (t) => {
+  const problems = await runnerDefinition(t, { runner: { kind: "command", outputs: ["trades/proposed/"] } });
+  assert.equal(problems.length, 1);
+  assert.match(problems[0]!, /^Invalid workload pf\.json: payload does not match the closed runtime schema\. unit type "plan" declares a command runner without an argv: a program is named or there is nothing to run$/);
+  assert.match((await runnerDefinition(t, { runner: { kind: "command", argv: [], outputs: [] } }))[0] ?? "", /without an argv/);
+});
+
+test("refused: a command runner whose argv names no file under the definition — the file is what the attempt record hashes", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { programFile: false }), [
+    'unit type "plan" runs the program `node workload/pf/plan.mjs`, and no argument of it is a file under the definition: the program\'s file is what the attempt record hashes, and it is missing',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "-e", "1"], outputs: [] } }), [
+    'unit type "plan" runs the program `node -e 1`, and no argument of it is a file under the definition: the program\'s file is what the attempt record hashes, and it is missing',
+  ]);
+});
+
+test("refused: a command runner whose declared output falls under a consent grant of its profile — a program cannot ask, so it may not write where a yes is required", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/pending/"] } }), [
+    'unit type "plan" declares output "trades/pending/", which falls under profile "manager"\'s consent grant (write under trades/pending/): a program cannot ask, so it may not write where a yes is required',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/"] }, profile: { writablePaths: ["trades/"] } }), [
+    'unit type "plan" declares output "trades/", which falls under profile "manager"\'s consent grant (write under trades/pending/): a program cannot ask, so it may not write where a yes is required',
+  ], "a prefix above the guarded one reaches it");
+  assert.deepEqual(await runnerDefinition(t, { profile: { consent: [{ tool: "write" }] } }), [
+    'unit type "plan" declares output "trades/proposed/", which falls under profile "manager"\'s consent grant (every write call): a program cannot ask, so it may not write where a yes is required',
+  ], "a bare grant on write guards every output");
+});
+
+test("refused: a command runner under a profile that grants bash or any arbitrary-execution tool — a program's reach is its declared outputs, nothing wider", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { profile: { tools: ["read", "write", "bash", "report_result"] } }), [
+    'unit type "plan" runs a program under profile "manager", which grants bash, whose execution is arbitrary: a profile on a command runner is an effect declaration, and a program\'s reach is its declared outputs, nothing wider',
+  ]);
+});
+
+test("refused: a command runner whose outputs lie outside the profile's writable paths, or outside the project", async (t) => {
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["reports/", "trades/proposed/"] } }), [
+    'unit type "plan" declares output "reports/", which is outside profile "manager"\'s writable paths (trades/proposed/, trades/pending/): a program writes only where its effect declaration says a unit of the profile may',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { runner: { kind: "command", argv: ["node", "workload/pf/plan.mjs"], outputs: ["trades/proposed/../../../etc/"] } }), [
+    'unit type "plan" declares output "trades/proposed/../../../etc/", which is not inside the project',
+  ]);
+  assert.deepEqual(await runnerDefinition(t, { profile: { writablePaths: [], consent: [] } }), [
+    'unit type "plan" declares output "trades/proposed/", which is outside profile "manager"\'s writable paths (none): a program writes only where its effect declaration says a unit of the profile may',
+  ], "a read-only effect declaration admits no output");
+});
+
+/**
+ * Declared tools (#121). A definition with one workload, `pf`, declaring the tools the options give under the profile
+ * the options describe, so the problems about `workload/pf.json` and `profiles/` are the ones the declaration earns.
+ */
+const placeTrade = {
+  name: "place_trade", description: "Place the proposed list.", parameters: { type: "object", properties: { proposed: { type: "string" } }, required: ["proposed"], additionalProperties: false },
+  effect: { filesystem: "write", execution: "project-code", network: "none", sideEffects: "irreversible" },
+  program: { argv: ["node", "workload/pf/place-trade.mjs"], outputs: ["trades/pending/"] },
+};
+async function toolsDefinition(t: { after(fn: () => Promise<void>): void }, options: { tools?: unknown[]; profile?: Record<string, unknown>; programFile?: boolean; otherWorkload?: boolean; auditor?: Record<string, unknown> } = {}): Promise<{ problems: string[]; warnings: string[] }> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-tools-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "place_trade", "report_result"], writablePaths: ["lots/", "trades/proposed/"], ...options.profile });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.auditor) {
+    await write(dir, "profiles/auditor.json", { name: "auditor", description: "Read-only.", tools: ["read"], writablePaths: [], ...options.auditor });
+    await write(dir, "advice/auditor.md", "");
+  }
+  if (options.programFile !== false) await write(dir, "workload/pf/place-trade.mjs", "process.stdout.write('{\"summary\":\"placed\"}\\n');\n");
+  const unitTypes = [{ name: "confirm", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true }];
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes, tools: options.tools ?? [placeTrade] });
+  if (options.otherWorkload) await write(dir, "workload/other.json", { name: "other", version: 1, description: "d", unitTypes, tools: [placeTrade] });
+  const checked = await checkDefinition(dir);
+  const of = (p: { file: string; message: string }) => `${p.file}: ${p.message}`;
+  return { problems: checked.problems.filter((p) => p.file.startsWith("workload/") || p.file.startsWith("profiles/")).map(of), warnings: checked.warnings.filter((w) => w.file.startsWith("workload/") || w.file.startsWith("profiles/")).map(of) };
+}
+
+test("a declared tool (#121) with a name of its own, an object schema, an effect that agrees with its outputs, a program under the definition, and a granting profile that reaches its outputs no other way passes the definition check; its outputs need not lie inside the profile's writable paths, since the tool is the one way a unit of the profile writes there", async (t) => {
+  assert.deepEqual(await toolsDefinition(t), { problems: [], warnings: [] });
+  assert.deepEqual(await toolsDefinition(t, { tools: [] }), { problems: [], warnings: [] }, "a workload that declares no tool is what it was");
+  assert.deepEqual(await toolsDefinition(t, { tools: [{ ...placeTrade, name: "lookup", effect: { filesystem: "read", execution: "none", network: "none", sideEffects: "none" }, program: { ...placeTrade.program, outputs: [] } }] }), { problems: [], warnings: [] }, "a read-only declared tool writes nothing and derives no consent");
+  assert.deepEqual(await toolsDefinition(t, { auditor: { tools: ["read", "lookup"] }, tools: [placeTrade, { ...placeTrade, name: "lookup", effect: { filesystem: "read", execution: "none", network: "none", sideEffects: "none" }, program: { ...placeTrade.program, outputs: [] } }] }), { problems: [], warnings: [] }, "a read-only profile may be granted a declared tool whose declared effect is read-only");
+});
+
+test("refused: a declared tool that takes a built-in's name, is declared twice or by two workloads, whose parameters are not an object schema, whose effect says arbitrary execution or disagrees with its outputs, or whose program names no file under the definition or an output outside the project or under a harness-owned prefix", async (t) => {
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, name: "write" }] })).problems, [
+    'workload/pf.json: declares tool "write", which is a built-in the host registers (read, grep, find, ls, write, edit, bash, read_conventions, run_checks, run_tests, notify_owner, propose_policy_change, report_result, report_intelligence, remember, ask_human): a declared tool\'s name is its own',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { tools: [placeTrade, { ...placeTrade, description: "again" }] })).problems, ['workload/pf.json: declares tool "place_trade" twice']);
+  assert.deepEqual((await toolsDefinition(t, { otherWorkload: true })).problems, [
+    'workload/other.json: declares tool "place_trade", which workload "pf" also declares: the host registers a declared tool by name, so one workload declares it',
+    'workload/pf.json: declares tool "place_trade", which workload "other" also declares: the host registers a declared tool by name, so one workload declares it',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, parameters: { type: "string" } }] })).problems, ['workload/pf.json: tool "place_trade" declares a parameters schema whose type is "string"; a tool\'s parameters are an object schema ("type": "object"), as every built-in\'s are']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, effect: { ...placeTrade.effect, execution: "arbitrary" } }] })).problems, ['workload/pf.json: tool "place_trade" declares execution "arbitrary"; a declared tool is a program whose reach is its declared outputs, nothing wider, and arbitrary execution is the shell\'s alone']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, effect: { ...placeTrade.effect, filesystem: "read" } }] })).problems, ['workload/pf.json: tool "place_trade" declares outputs (trades/pending/) and an effect whose filesystem is "read": a program that writes under the project declares filesystem "write"']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: [] } }] })).problems, ['workload/pf.json: tool "place_trade" declares filesystem "write" and no outputs: a program\'s reach is its declared outputs, so what it writes is a prefix there']);
+  assert.deepEqual((await toolsDefinition(t, { programFile: false })).problems, ['workload/pf.json: tool "place_trade" runs the program `node workload/pf/place-trade.mjs`, and no argument of it is a file under the definition: the program\'s file is what the call\'s record hashes, and it is missing']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: ["trades/../../etc/"] } }] })).problems, ['workload/pf.json: tool "place_trade" declares output "trades/../../etc/", which is not inside the project']);
+  assert.deepEqual((await toolsDefinition(t, { tools: [{ ...placeTrade, program: { ...placeTrade.program, outputs: ["regulator/advice/"] } }] })).problems, ['workload/pf.json: tool "place_trade" declares output "regulator/advice/", which is the identity\'s, the advice\'s or S5\'s: those change through their accept paths, never through a program']);
+});
+
+test("the declared effect reaches the profile checks: a read-only profile granted a declared tool whose effect is irreversible is refused by that effect, not as an unknown name; a profile that grants an irreversible declared tool beside a plain write under its outputs is refused, since a write there would need no yes, and one that grants a shell beside it is warned about unless a pattern covers the outputs", async (t) => {
+  assert.deepEqual((await toolsDefinition(t, { auditor: { tools: ["read", "place_trade"] } })).problems, ["profiles/auditor.json: says read-only but grants place_trade, whose effects are not read-only"]);
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["lots/", "trades/pending/"] } })).problems, [
+    'workload/pf.json: tool "place_trade" needs consent, derived from its irreversible effect, and profile "manager" grants it beside write under "trades/pending/", which reaches its output "trades/pending/" with no yes asked: drop the prefix from the profile\'s writable paths, or guard it with a consent grant on write',
+  ]);
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["trades/"] } })).problems.length, 1, "a prefix above the output reaches it");
+  assert.deepEqual((await toolsDefinition(t, { profile: { writablePaths: ["lots/", "trades/pending/"], consent: [{ tool: "write", paths: ["trades/pending/"] }] } })).problems, [], "a consent grant on the write guards the prefix, and the two declarations stand together");
+  const shell = await toolsDefinition(t, { profile: { tools: ["read", "write", "bash", "place_trade", "report_result"] } });
+  assert.deepEqual(shell.problems, []);
+  assert.deepEqual(shell.warnings, ['workload/pf.json: tool "place_trade" needs consent, derived from its irreversible effect, and profile "manager" grants bash, which is not path-gated: a shell command can write under "trades/pending/" with no consent asked. Declare {"tool":"bash","pattern":"trades\\/pending\\/"} beside it, or the derived consent is enforced on place_trade calls only']);
+  assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "bash", "place_trade", "report_result"], consent: [{ tool: "bash", pattern: "trades/pending/" }] } })).warnings, [], "a bash pattern covering the output closes the hole");
+  assert.deepEqual((await toolsDefinition(t, { profile: { tools: ["read", "write", "report_result"] } })), { problems: [], warnings: [] }, "a profile that does not grant the tool is not judged by it");
+});
+
+/** Sensors (#123): a definition with one workload, `pf`, and an intelligence policy whose problems are the ones its sensors earn. */
+async function sensorsDefinition(t: { after(fn: () => Promise<void>): void }, sensors: unknown[], options: { programFile?: boolean; policy?: Record<string, unknown> } = {}): Promise<string[]> {
+  const dir = await mkdtemp(path.join(tmpdir(), "regulator-sensors-"));
+  t.after(() => rm(dir, { recursive: true, force: true }));
+  await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["read", "write", "report_result"], writablePaths: ["trades/proposed/"] });
+  await write(dir, "advice/manager.md", "- x\n");
+  if (options.programFile !== false) await write(dir, "workload/pf/sensors/drift.mjs", "process.stdout.write('{\"fires\":false}\\n');\n");
+  await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes: [{ name: "plan", description: "d", profile: "manager", checks: ["run_tests"], requiresContract: true }] });
+  await write(dir, "policies/intelligence.json", { name: "intelligence", version: 1, description: "d", programTimeoutMs: 60000, sensors, ...options.policy });
+  const checked = await checkDefinition(dir);
+  return checked.problems.filter((p) => p.file === "policies/intelligence.json").map((p) => p.message);
+}
+const DRIFT = { name: "drift", description: "d", provenance: "sensor:drift", affects: ["plan"], severity: "blocking", expiresAfterMs: 60000, schedule: { everyMs: 1000 }, program: { argv: ["node", "workload/pf/sensors/drift.mjs"], outputs: [] } };
+const GLOB = { name: "export", description: "d", provenance: "sensor:export", affects: ["plan"], severity: "advisory", expiresAfterMs: 60000, glob: "{positions,prices}/*" };
+
+test("an intelligence policy (#123) is the fifth policy kind: a scheduled sensor with a program under the definition and no outputs, and a glob sensor, each affecting a declared unit type under its own provenance, pass the definition check", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT, GLOB]), []);
+  assert.deepEqual(await sensorsDefinition(t, []), [], "a policy that declares no sensor watches nothing and refuses nothing");
+});
+
+test("refused: a sensor whose affected unit type no workload declares, whose provenance is not its own name, or that is declared twice", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, affects: ["plan", "rebalance"] }]), ['sensor "drift" affects unit type "rebalance", which no workload declares']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, provenance: "sensor:band" }]), ['sensor "drift" writes under provenance "sensor:band"; a sensor\'s provenance is its own name, "sensor:drift"']);
+  assert.match((await sensorsDefinition(t, [{ ...DRIFT, provenance: "" }]))[0] ?? "", /^Invalid policy intelligence\.json \(not a budget, recovery, routing, interaction or intelligence policy\)/, "an unnamed provenance is refused by the schema, before the check reads the sensor");
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT, DRIFT]), ['sensor "drift" is declared twice']);
+});
+
+test("refused: a sensor whose program names no file under the definition, or that declares outputs — a sensor reads and never writes the tree", async (t) => {
+  assert.deepEqual(await sensorsDefinition(t, [DRIFT], { programFile: false }), [
+    'sensor "drift" runs the program `node workload/pf/sensors/drift.mjs`, and no argument of it is a file under the definition: the program\'s file is what the signal\'s evidence hashes, and it is missing',
+  ]);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, program: { ...DRIFT.program, outputs: ["trades/proposed/"] } }]), [
+    'sensor "drift" declares outputs (trades/proposed/); a sensor reads the instance and never writes it, so its program declares none',
+  ]);
+});
+
+test("refused: a sensor with neither trigger or both, a schedule without a program, a glob with one, and a glob that is not a pattern", async (t) => {
+  const { schedule: _s, program: _p, ...bare } = DRIFT;
+  assert.deepEqual(await sensorsDefinition(t, [bare]), ['sensor "drift" has no trigger: declare a glob over the instance\'s files or a schedule with a program']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...DRIFT, glob: "prices/*" }]), ['sensor "drift" declares both a glob and a schedule; a sensor has one trigger', 'sensor "drift" declares a glob and a program; a glob sensor\'s event is the file, and nothing runs']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...bare, schedule: { everyMs: 1000 } }]), ['sensor "drift" is scheduled but names no program: a schedule says when to run, and there is nothing to run']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...GLOB, program: DRIFT.program }]), ['sensor "export" declares a glob and a program; a glob sensor\'s event is the file, and nothing runs']);
+  assert.deepEqual(await sensorsDefinition(t, [{ ...GLOB, glob: "{positions,prices/*" }]), ['sensor "export" declares glob "{positions,prices/*", which is not a pattern: unmatched "{"']);
 });

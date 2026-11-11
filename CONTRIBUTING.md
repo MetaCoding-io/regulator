@@ -57,6 +57,12 @@ eval, not a test.
    pnpm --filter @metacoding.io/regulator registry:docs
    ```
 
+   That rewrites `REGULATORS.md`, `BOUNDARY.md`, `VIABILITY.md` (the viability case) and
+   the tables of `docs/PATHOLOGIES.md`. The catalog's rows are edited in
+   `packages/regulator/registry/pathologies.json`, which names the regulators that absorb
+   each pathology by record id; a new regulator's failure class is a row to add there, and
+   `regulator check` warns while none names it.
+
 2. **A debt row, when a limitation names later work.** A new limitation that says
    "not yet", names a milestone or points at another issue gets a row in `docs/DEBT.md`
    in the same change. A change that pays a row strikes it and updates the card.

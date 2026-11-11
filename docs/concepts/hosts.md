@@ -79,7 +79,7 @@ runner, outside the session and outside the host.
 ## Which regulators live where
 
 The registry records where each regulator is implemented, and the split follows the
-seam. Of the active regulators, 22 are implemented in the control plane and 20 in the
+seam. Of the active regulators, 22 are implemented in the control plane and 21 in the
 host's session.
 
 The 22 in the control plane are the contract gate, the closeout gate and every host
@@ -89,11 +89,12 @@ delivery and the outbox watcher, disposition authority, the definition check, th
 harness, the span projection, and the instance manifest. These run the same under any
 host, and under none.
 
-The 20 in the host's session are the lease gate and the thrash detector, the profile
+The 21 in the host's session are the lease gate and the thrash detector, the profile
 grant, the report gate and the evidence preflight, the budget guard, the model router
 and compaction, the failure observer and the effect journal, the write gate, the bash
-watch, the canary watch, proposal intake and the trust rule, identity in context and
-the memory store, intelligence intake, the interaction contract and the pause gate.
+watch, the credential canary watch, proposal intake and the trust rule, identity in
+context, the behavioral canary and the memory store, intelligence intake, the
+interaction contract and the pause gate.
 
 The second group exists only where a host implements it. A dispatcher that runs no
 session, such as the scripted units the drift suite and the household-ledger example use
@@ -103,21 +104,22 @@ regulator was in play for those runs.
 
 ## The Pi host
 
-`@metacoding.io/regulator-pi` implements every host-side concern as one of eleven Pi
+`@metacoding.io/regulator-pi` implements every host-side concern as one of twelve Pi
 extensions. Each extension carries a single concern:
 
 | Extension | Concern |
 | --- | --- |
 | `tools` | `read_conventions`, `run_tests` and `run_checks` |
+| `declared-tools` | every tool a workload declares, registered from the definition and run under its declared outputs |
 | `profiles` | the profile's tool surface and write grant |
 | `coordination` | the lease gate, the heartbeat, the thrash detector |
 | `contract` | the contract in context, and `report_result` |
 | `budget` | the budget guard, compaction, the model ledger |
 | `recovery` | the failure observer, and `notify_owner` through the effect journal |
 | `evidence` | provenance on test and check results, and the evidence preflight on `report_result` |
-| `authority` | the write gate, the bash watch, proposals, the canary watch |
+| `authority` | the write gate, the bash watch, proposals, the credential canary watch |
 | `intelligence` | `report_intelligence` |
-| `identity` | identity and memory in context, and `remember` |
+| `identity` | identity and memory in context, the behavioral canary, and `remember` |
 | `algedonic` | `ask_human` and the pause gate |
 
 Its dispatcher runs each unit's session through the Pi SDK. It uses a resource loader
@@ -134,7 +136,7 @@ report records the version it ran under. The same extensions are declared under
 - The seam has one implementation. Until a second host exists, "host-agnostic" is a
   claim about the code's structure that no second host has tested.
   [Issue #58](https://github.com/MetaCoding-io/regulator/issues/58)
-  asks for one, with a manifest that declares which of the eleven concerns it does not
+  asks for one, with a manifest that declares which of the twelve concerns it does not
   implement, so that `doctor` can say what a unit under that host is not protected by.
 - A host's coverage is not declared. Nothing records, per host, which session-side
   regulators it enforces. What exists is the
@@ -142,8 +144,11 @@ report records the version it ran under. The same extensions are declared under
 - The session-side gates are only exercised live. Scripted runs cover the control
   plane. The dispatcher itself and every host-side gate are covered by their own tests
   and by live drills, and not by the committed eval reports.
-- Every unit runs a session. A unit whose work is a deterministic program (a parser,
-  a normalizer) still needs a session under a profile. A `command` runner per unit type
-  is designed in the
-  [open questions](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-25-open-questions.md)
-  (§3), and the dispatcher seam already allows it.
+- A unit that runs a program needs no host, and no host sees it. A unit type whose
+  work is deterministic declares a `command` runner, and the loop runs the program
+  itself through the same dispatcher seam — lease, worktree, wall-clock budget, the
+  report read from its exit and output, the closeout's checks at the revision — with
+  the control plane's own process runner ([the command runner](/reference/regulators#reg-control-command-runner-v1)).
+  So "host-agnostic" has a second implementation of the seam after all, but not a
+  second host: the program path exercises none of a host's session-side gates, and
+  says nothing about whether another agent runtime could stand where Pi does.
