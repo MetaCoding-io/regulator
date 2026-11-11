@@ -54,7 +54,7 @@ Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`);
 
 Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over three workloads (software development, personal finance, a managed portfolio), the regulator registry of forty-nine records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
-The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
+The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the first live-model report is committed (`packages/regulator/evals/reports/drift-live-2026-11-08.json`, with its interpretation beside it), and the ablation arms under a model are what the next one owes.
 
 No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the control-plane pattern proves useful.
 

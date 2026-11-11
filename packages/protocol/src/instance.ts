@@ -123,7 +123,11 @@ export function isMigrationNote(value: unknown): value is MigrationNote {
  * that writes it; a test holds the list against the path constants and against a run's `.regulator/`.
  */
 export interface InstanceStore {
-  /** The path relative to the base checkout; a directory ends in `/` and covers everything under it. */
+  /**
+   * The path relative to the base checkout; a directory ends in `/` and covers everything under it. A `*` stands
+   * for one path segment (a unit id), for a file every unit's directory keeps; such an entry is more specific than
+   * the directory it is under and is matched first.
+   */
   readonly path: string;
   readonly name: string;
   readonly kind: "record" | "workspace" | "manifest";
@@ -132,7 +136,8 @@ export interface InstanceStore {
 
 export const INSTANCE_STORES: readonly InstanceStore[] = [
   { path: ".regulator/instance.json", name: "the instance manifest", kind: "manifest", description: "what `regulator init` wrote: the definition and its version, the Pi pin, the layout a person declared" },
-  { path: ".regulator/units/", name: "the execution store", kind: "record", description: "one directory per unit: the unit record (the only mutable file), the contract, the report, one line per attempt and one per recovery decision" },
+  { path: ".regulator/units/", name: "the execution store", kind: "record", description: "one directory per unit: the unit record (the only mutable file), the contract, the report, one line per attempt and one per recovery decision, and the status history" },
+  { path: ".regulator/units/*/status.ndjson", name: "the status history", kind: "record", description: "one line per transition a unit took, as the store wrote it (#162): from, to, the trigger, when, and the reason where the unit blocked; append-only, and what the unit's trajectory is read from" },
   { path: ".regulator/leases/", name: "the leases", kind: "record", description: "one file per held lease on a worktree, with its owner and expiry" },
   { path: ".regulator/signals.ndjson", name: "the regulatory log", kind: "record", description: "signals, the obligations they became, dispositions and prediction resolutions; append-only" },
   { path: ".regulator/audit.ndjson", name: "the audit log", kind: "record", description: "host-run evidence, technical verdicts and human acceptances, each bound to a revision; append-only" },
@@ -141,6 +146,7 @@ export const INSTANCE_STORES: readonly InstanceStore[] = [
   { path: ".regulator/trace.ndjson", name: "the trace", kind: "record", description: "the session's gated events as the extension records them" },
   { path: ".regulator/outbox", name: "the outbox", kind: "record", description: "what is owed to a person, one delivery per line, forwarded by the watcher" },
   { path: ".regulator/outbox.cursor", name: "the outbox cursor", kind: "record", description: "how far the watcher has forwarded the outbox" },
+  { path: ".regulator/sensors.json", name: "the sensor cursor", kind: "record", description: "what the watcher's sensors have seen (#123): the files per glob sensor, the last run per scheduled one" },
   { path: ".regulator/events.db", name: "the event store", kind: "record", description: "the SQLite regulatory event store" },
   { path: ".regulator/worktrees/", name: "the worktrees", kind: "workspace", description: "a unit's isolated checkout: domain output, not a record" },
   { path: ".regulator/trials/", name: "the trial merges", kind: "workspace", description: "the pre-merge trial's checkout of the merged tree, verified before a reintegration lands" },
@@ -148,5 +154,13 @@ export const INSTANCE_STORES: readonly InstanceStore[] = [
 
 /** The store a path under `.regulator/` belongs to: the file itself, or the directory it is under. */
 export function instanceStoreFor(resource: string): InstanceStore | undefined {
-  return INSTANCE_STORES.find((s) => (s.path.endsWith("/") ? resource === s.path || resource.startsWith(s.path) : resource === s.path));
+  const pattern = INSTANCE_STORES.find((s) => s.path.includes("*") && (resource === s.path || matchesSegments(s.path, resource)));
+  return pattern ?? INSTANCE_STORES.find((s) => !s.path.includes("*") && (s.path.endsWith("/") ? resource === s.path || resource.startsWith(s.path) : resource === s.path));
+}
+
+/** Whether a path matches a store's pattern, segment by segment: `*` is exactly one segment, never a separator. */
+function matchesSegments(pattern: string, resource: string): boolean {
+  const want = pattern.split("/");
+  const have = resource.split("/");
+  return want.length === have.length && want.every((w, i) => (w === "*" ? have[i] !== "" : w === have[i]));
 }

@@ -17,9 +17,9 @@ import {
   type IdentitySet, type InteractionState, type MemoryState, type PredictionState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   InstanceManifestSchema,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type IntelligencePolicy, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
 
@@ -32,6 +32,8 @@ export interface DefinitionView {
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
+  /** The intelligence policies (#123): the sensors `regulator watch` runs. */
+  intelligence: IntelligencePolicy[];
   /** Capability profiles, declared as files since lesson 12. */
   profiles: CapabilityProfile[];
   /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
@@ -75,7 +77,7 @@ export interface UnitView {
   obligations: ObligationState[];
   /** The replay (lesson 15): every record about the unit in time order, from the span projection. */
   timeline: TimelineEntry[];
-  /** The unit's path through `UNIT_TRANSITIONS`, folded from its records, each step with its why as the records state it; `problem` when the fold and the record disagree. */
+  /** The unit's path through `UNIT_TRANSITIONS`, read from its status history (#162) with each step's why as the records state it; reconstructed from the records, and saying so, for a unit that has no history; `problem` when the history and the records disagree. */
   trajectory: UnitTrajectory;
 }
 
@@ -133,6 +135,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   const recovery: RecoveryPolicy[] = [];
   const routing: RoutingPolicy[] = [];
   const interaction: InteractionPolicy[] = [];
+  const intelligence: IntelligencePolicy[] = [];
   let policyFiles: string[] = [];
   try {
     policyFiles = (await readdir(path.join(dir, "policies"))).filter((f) => f.endsWith(".json")).sort();
@@ -142,12 +145,13 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   for (const file of policyFiles) {
     try {
       const value: unknown = JSON.parse(await readFile(path.join(dir, "policies", file), "utf8"));
-      // Four policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
+      // Five policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
       if (isPolicyDefinition(value)) policies.push(value);
       else if (isRecoveryPolicy(value)) recovery.push(value);
       else if (isRoutingPolicy(value)) routing.push(value);
       else if (isInteractionPolicy(value)) interaction.push(value);
-      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
+      else if (isIntelligencePolicy(value)) intelligence.push(value);
+      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing, interaction or intelligence policy)`);
     } catch (error) {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
@@ -214,6 +218,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     recovery,
     routing,
     interaction,
+    intelligence,
     profiles,
     identity,
     evals,
@@ -231,6 +236,18 @@ async function jsonFilesIn(dir: string): Promise<string[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Why a unit is where it is, in one line, as its records say it: a blocked unit's own reason, and for a unit the
+ * router aborted the decision that did. Only a blocked record carries a reason (#161); an aborted unit's why was
+ * always the decision, which the record used to restate.
+ */
+export function unitWhy(unit: UnitRecord, decisions: readonly RecoveryDecision[]): string | undefined {
+  if (unit.status === "blocked") return unit.reason;
+  if (unit.status !== "aborted") return undefined;
+  const abort = [...decisions].reverse().find((d) => d.action === "abort");
+  return abort ? `aborted under ${abort.policy.name} v${abort.policy.version}: ${abort.cause}` : undefined;
 }
 
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
@@ -256,7 +273,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
       audit,
       obligations: owed,
       timeline: timelineFor(spans, unit.unitId),
-      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets }),
+      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets, history: await store.listTransitions(unit.unitId) }),
     });
   }
   let manifest: InstanceManifest | undefined;
@@ -305,6 +322,10 @@ export function renderStatusText(view: StatusView): string {
       lines.push(`  interaction ${policy.name} v${policy.version}: waits ${Object.entries(policy.timeoutsMs).map(([k, ms]) => `${k} ${Math.round(ms / 1000)}s`).join(", ")}; ${policy.attention.blockingPerAttempt} blocking interrupt(s) per attempt; remind after ${Math.round(policy.reminderAfterMs / 60_000)} min`);
       for (const p of policy.people) lines.push(`    ${p.name}: up to ${p.resolveUpTo}${p.acceptRisk ? ", may accept risk" : ""}${p.actAsS5 ? ", may act as S5" : ""}`);
     }
+    for (const policy of d.intelligence) {
+      lines.push(`  intelligence ${policy.name} v${policy.version}: ${policy.sensors.length} sensor(s); programs under ${Math.round(policy.programTimeoutMs / 1000)}s`);
+      for (const s of policy.sensors) lines.push(`    ${s.name} (${s.provenance}): ${s.glob !== undefined ? `glob ${s.glob}` : `every ${Math.round((s.schedule?.everyMs ?? 0) / 1000)}s, ${s.program?.argv.join(" ")}`}; affects ${s.affects.join(", ")} at ${s.severity}; current ${Math.round(s.expiresAfterMs / 3_600_000)}h`);
+    }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {
       lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}`);
@@ -325,8 +346,9 @@ export function renderStatusText(view: StatusView): string {
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
       const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unitWhy(unit, decisions) ? `  — ${unitWhy(unit, decisions)}` : ""}`);
       if (trajectory.problem) lines.push(`      ! replay: ${trajectory.problem}`);
+      if (trajectory.basis === "reconstructed") lines.push("      history: reconstructed from the records (this unit's moves were written before the store kept a status history)");
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);

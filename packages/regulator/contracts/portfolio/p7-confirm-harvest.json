@@ -1,0 +1,67 @@
+{
+  "kind": "task",
+  "version": 1,
+  "workload": {
+    "name": "portfolio",
+    "version": 1
+  },
+  "provenance": {
+    "createdBy": "S3",
+    "createdAt": "2026-10-01T00:00:00.000Z"
+  },
+  "id": "tc-p7-confirm-harvest",
+  "unitId": "p7-confirm-harvest",
+  "unitType": "confirm-trades",
+  "objective": "Confirm September's harvest: read trades/proposed/harvest-plan-2026-09-30.json, the harvest list the plan-harvest unit wrote, put it to a person as one consent question naming every leg — each sell with the lot it comes from, its loss and the tax it saves, each buy with the ticker it replaces — and after the yes place it with place_trade, the workload's declared tool, which writes it unchanged to trades/pending/harvest-plan-2026-09-30.json.",
+  "contribution": "The second unit whose output the household acts on. Consent is asked once for the list, before the pending file exists, naming every leg; without a yes the tool is refused, nothing is written and the unit waits. The list is the plan-harvest unit's and the copy is the tool's: this unit asks and places, it does not plan and it does not write the file.",
+  "constraintRefs": [
+    "reg.algedonic.interaction-contract.v1",
+    "reg.control.declared-tool.v1",
+    "reg.algedonic.pause-gate.v1",
+    "reg.control.profile-write-grant.v1",
+    "reg.audit.closeout-gate.v1"
+  ],
+  "fixed": [
+    {
+      "id": "f-proposed",
+      "subject": "the list",
+      "decision": "The list is trades/proposed/harvest-plan-2026-09-30.json, written by the plan-harvest unit, and is not changed by this unit: place_trade writes the pending file byte for byte from it, and the suite refuses a pending list that does not carry the proposed trades.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-consent",
+      "subject": "consent before a trade list",
+      "decision": "No file is written under trades/pending/ until a person answers yes to one consent question that names every leg of the harvest — each sell with its lot, its loss and the tax it saves, each buy with the ticker it replaces — one question per list, not one per leg — and names the call: place_trade with proposed trades/proposed/harvest-plan-2026-09-30.json. The harness refuses the call without that yes on the record. Silence is not consent.",
+      "authorityRef": "human:alice"
+    },
+    {
+      "id": "f-executed",
+      "subject": "trades/executed/",
+      "decision": "The record of what was traded is the person's; a unit never writes there.",
+      "authorityRef": "human:alice"
+    }
+  ],
+  "delegated": [],
+  "unresolved": [
+    {
+      "id": "u-vnq",
+      "subject": "VNQ, 2 shares the custodian's export carries and universe.json does not name",
+      "reason": "Nobody has said what it is or what it cost; no set names it, no lot holds it, and nothing harvests it.",
+      "handling": "defer"
+    }
+  ],
+  "expectedEvidence": [
+    {
+      "id": "e-portfolio-checks",
+      "description": "run_tests: the portfolio's own suite passes at the committed revision — the pending harvest list is the proposed one, and keeps the harvest rules set by set",
+      "class": "test",
+      "required": true
+    },
+    {
+      "id": "e-checks",
+      "description": "run_checks: the static checks pass and the protected prefixes are untouched",
+      "class": "command",
+      "required": true
+    }
+  ]
+}

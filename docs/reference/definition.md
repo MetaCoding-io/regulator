@@ -176,10 +176,13 @@ first ceiling it reaches. The recovery policy then sees that failure under the c
 actions for one cause. The Nth failure of that cause on one unit takes the Nth action of
 the rule, and once the rule runs out the last action repeats. `fallback` is the rule for
 a cause no rule names, which covers `unknown` and any cause a shorter policy leaves out.
+The one exception is `context-degradation`: with no rule for it, the attempt is routed as
+`no-report`, and the shipped policy declares none
+([Recovery](/concepts/recovery#from-cause-to-action)).
 
 | Causes | Actions |
 | --- | --- |
-| `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
+| `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `context-degradation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
 
 `retry` and `repair` spend an attempt, and once the unit's attempt ceiling is reached
 either of them becomes `escalate`. The other five, every action except `abort`, are
@@ -224,6 +227,51 @@ was asserted; authenticating that the person is who they claim is the deployment
 responsibility.
 [Asking a person](/concepts/asking-a-person) explains the kinds, the pause and the
 attention budget.
+
+## Intelligence policy
+
+`policies/intelligence.json` declares the sensors `regulator watch` runs: S4 without a
+model. A sensor is a program over the instance on a schedule, or a glob over its files,
+and when it fires it raises the same `intelligence-signal` a `research` unit raises
+through `report_intelligence`, with the sensor's provenance where the unit would be. The
+router opens the obligation; nothing replans. The file is optional: a definition without
+it declares no sensors, and the watcher runs none. A sensor belongs to the workloads
+whose unit types it affects, and `regulator watch` runs only the sensors of the
+workloads the instance runs — the workloads of its units, or the one `--workload <name>`
+names — since a sensor over one workload's domain has nothing to read in another's
+instance; `--intelligence <file>` reads a policy from elsewhere.
+
+| Field | Meaning |
+| --- | --- |
+| `programTimeoutMs` | the ceiling every sensor program runs under; the lesser of it and a program's own `timeoutMs` applies |
+| `sensors[].name` | `^[a-z][a-z0-9-]*$`, once per policy |
+| `sensors[].provenance` | what the signal is raised under: `sensor:<name>`, the sensor's own name. The definition check refuses any other |
+| `sensors[].affects[]` | the unit *types* the signal bears on, each one some workload declares. The signal names them as `type:<unitType>`, the router opens one obligation per entry holding the type, and the progression veto matches it when a unit of the type is dispatched later, which is when the unit a sensor's signal concerns usually exists |
+| `sensors[].severity` | the severity the signal is raised at: the declaration's claim about what the firing is worth; the router derives what it acts on. At or above the routing policy's `blocksAtOrAbove`, the obligation holds the type until a person dispositions it |
+| `sensors[].expiresAfterMs` | how long a firing stays current, from the time it fires (at least a minute): the signal's `expiresAt`. A signal that expires while an obligation it opened is still open gets one advisory obligation saying so |
+| `sensors[].schedule.everyMs` | the schedule trigger: the program runs when at least this long has passed since its last run (at least a second; no cron). Needs `program` |
+| `sensors[].program` | the program a scheduled sensor runs, in the command runner's shape (`argv`, `timeoutMs`?, `outputs`): the first argument that is a file under the definition is the program's file, hashed into the signal's evidence. `outputs` must be empty — a sensor reads the instance and never writes it; a write is undone and the run refused. It runs in the instance (the base checkout, not a worktree) with nothing on stdin and `REGULATOR_SENSOR` in its environment |
+| `sensors[].glob` | the glob trigger: a pattern over paths relative to the instance (`*` and `?` within a segment, `**` across them, `{a,b}`); a matching file the watcher's cursor has not seen is the event, and the signal's observation names it. The first tick seeds the cursor and fires on nothing. No program |
+
+A sensor has one trigger, not two and not none. A scheduled program says whether it
+fires on its last stdout line: `{ "fires": false }`, optionally with an `observation`,
+or `{ "fires": true, "claim", "observation", "evidence": [...], "severity"?,
+"confidence"?, "expiresAt"? }`, where the optional fields speak for this firing over
+the declaration. Exit 0 with anything else, a non-zero exit, a timeout or a stray write
+is a failed run: an advisory `operational-signal` naming the sensor, noted by the router
+and never an obligation. A sensor that still fires on the next tick raises nothing while
+an earlier signal with the same claim is current (unrouted, holding an open obligation,
+or not yet expired), so there is one open obligation per sensor and claim.
+
+The shipped policy declares the portfolio workload's three sensors, with their programs
+under `workload/portfolio/sensors/`: `drift-band` (a weight further from the latest target
+than `benchmark.json`'s band; affects `plan-rebalance`), `harvest-threshold` (an open lot
+whose unrealised loss is worth more at the applicable rate in `tax.json` than the trading
+and opportunity costs `harvest.json` prices, by the fixture's own `harvestEvaluation`;
+affects `harvest-losses`) and `new-export` (a glob
+over `positions/` and `prices/`; affects `ingest-positions`). The
+[portfolio example](/examples/portfolio) runs them. Every threshold is the definition's
+claim about what matters, not evidence that it does; the `sensor-intake` record says so.
 
 ## Work contracts
 

@@ -192,11 +192,25 @@ actually the author's. Everything else was already decided.
   fills and reconciled to the custodian's export of the date it says it is current to;
   a position the custodian carries without a fill has no lot and is an open item,
   never a guess.
-- **Which rules wait.** The design names checks on a harvest's benefit and on an
-  executed wash sale's cost-basis adjustment; the harvest program finds the candidates
-  and judges none, so those checks are not written. The design puts a risk tolerance in
-  the identity; the number is not set, so the check is not written. A rule without the
-  number it needs is recorded as waiting, not approximated.
+- **Which rules wait, and what unblocks them.** The design named checks on a harvest's
+  benefit and on an executed wash sale's cost-basis adjustment; while the harvest
+  program only found candidates, neither was written. Both arrived with the harvest
+  contract, and what unblocked them was a file: `harvest.json`, two numbers a person
+  fixes, outside every write grant. The design also puts a risk tolerance in the
+  identity; the number is not set, so that check is still not written. A rule without
+  the number it needs is recorded as waiting, not approximated.
+- **A second kind of output under one prefix.** A harvest list lives beside the
+  rebalance list under `trades/proposed/` and would fail the rebalance's band check for
+  the wrong reason, since a swap within a set is what a harvest is. The list carries a
+  `kind`, its name agrees with it, and the suite judges by kind — ticker by ticker for a
+  rebalance, set by set for a harvest. The tool that places a list admits both names
+  and copies either to the same name under `trades/pending/`.
+- **A bound about a pair.** The harvest's delegated decision has two bounds, and the
+  second is a rule about the pair of trades, not one: the buy must come from the sold
+  ticker's set and never be a ticker the list sells. That is a sentence in the contract
+  and a check over the pair in the suite; and what the unit did *not* take is a list in
+  the file with a reason from a closed set, which the suite recomputes, rather than prose
+  in the report the harness would have to believe.
 - **Where a program's output goes.** The rebalance is arithmetic, so it is a program;
   but a trade list needs a person's yes, and a program cannot ask. The split is the
   program's output under an unguarded prefix the suite checks like any list, and a

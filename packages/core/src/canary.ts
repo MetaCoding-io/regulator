@@ -26,6 +26,12 @@ export interface BehavioralCanaryPolicy {
 
 export const CANARY_UNIT_PLACEHOLDER = "{unit}";
 
+/**
+ * The `invariant` of the canary's audit finding, and the name of the recovery cause read from it: what the host
+ * writes and what the recovery router reads are this one constant, so neither depends on the finding's prose.
+ */
+export const CANARY_INVARIANT = "context-degradation";
+
 /** The marker for one session: the policy's template with the unit id substituted (`no-unit` outside a unit). */
 export function canaryMarker(template: string, unitId: string | undefined): string {
   return template.replaceAll(CANARY_UNIT_PLACEHOLDER, unitId || "no-unit");
