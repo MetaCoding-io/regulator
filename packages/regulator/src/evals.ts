@@ -17,9 +17,9 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileSha256, graderFile, lifts, loadRegistry, summarizeArms } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
-import { driveUnit, type Dispatcher } from "./controller.js";
+import { fileSha256, graderFile, lifts, loadRegistry, routeFor, summarizeArms } from "@metacoding.io/regulator-core";
+import { EvalSuiteSchema, assertValid, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
+import { blockedDetail, driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
 import type { Exec } from "./exec.js";
@@ -116,7 +116,7 @@ export async function declaredGradersFor(suite: EvalSuite, root: string): Promis
   return out;
 }
 
-export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[] }): Promise<EnvironmentFingerprint> {
+export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[] }): Promise<EnvironmentFingerprint> {
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: root });
   const [policy, recovery, routing, interaction] = await Promise.all([loadPolicy(options.policyPath), loadRecoveryPolicy(), loadRoutingPolicy(), loadInteractionPolicy()]);
   const graders: GraderFingerprint[] = [];
@@ -129,7 +129,26 @@ export async function fingerprintFor(exec: Exec, root: string, options: { dispat
     registry: (await loadRegistry(path.join(root, "registry"))).records.length,
     policies: { [policy.name]: policy.version, [recovery.name]: recovery.version, [routing.name]: routing.version, [interaction.name]: interaction.version },
     ...(graders.length ? { graders } : {}),
+    ...(options.modelsObserved?.length ? { modelsObserved: [...options.modelsObserved] } : {}),
   };
+}
+
+/**
+ * The route primaries a live run of these tasks is declared on that the host cannot run now, by unit type, with the
+ * declared fallbacks it could run on instead. The dispatcher would silently take the first available fallback; an
+ * eval refuses, because the report names the primary and the arms were pre-registered on it (the fourth live drift
+ * run, 2026-11-08, ran every unit on the route's last fallback with only that provider's key in the shell).
+ */
+export function unavailablePrimaries(tasks: readonly WorkContract[], policy: PolicyDefinition, available: readonly string[]): Array<{ unitType: string; primary: string; fallbacksAvailable: string[] }> {
+  const set = new Set(available);
+  const out = new Map<string, { unitType: string; primary: string; fallbacksAvailable: string[] }>();
+  for (const contract of tasks) {
+    if (out.has(contract.unitType)) continue;
+    const route = routeFor(policy, contract.unitType);
+    if (set.has(route.primary)) continue;
+    out.set(contract.unitType, { unitType: contract.unitType, primary: route.primary, fallbacksAvailable: route.fallback.filter((f) => set.has(f)) });
+  }
+  return [...out.values()];
 }
 
 export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<EvalReport> {
@@ -156,12 +175,14 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   const declared = await declaredGradersFor(suite, root);
   const fixture = path.join(root, suite.fixture);
   const runs: EvalRun[] = [];
+  // What the ledgers say the run was on, in order of first use: the fingerprint's `modelsObserved`, beside the declared model.
+  const observed: string[] = [];
 
   for (const arm of arms) {
     for (let repetition = 1; repetition <= repetitions; repetition++) {
       const instance = path.join(await mkdtemp(path.join(tmpdir(), `regulator-eval-${arm.name}-${repetition}-`)), "instance");
       try {
-        await initFixture(exec, fixture, instance);
+        await initFixture(exec, fixture, instance, now);
         if (options.instance) await initInstance(exec, { repo: instance, definitionRoot: root, by: options.owner, now, ...options.instance });
         const manifest = await readManifest(instance);
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();
@@ -172,6 +193,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
             owner: options.owner, now, dispatcher: options.dispatcherFor(arm, task, instance),
           });
           const trajectory = await unitTrajectory(instance, task.contract.unitId);
+          for (const m of trajectory.models) if (!observed.includes(m)) observed.push(m);
           const ctx: GraderContext = {
             repo: instance, baseRevision, writable: manifest?.writablePaths ?? ["src/", "test/"],
             ...(task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature") ? { signature: task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature")! } : {}),
@@ -183,9 +205,10 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
           const run: EvalRun = {
             arm: arm.name, repetition, task: task.contract.unitId, unitId: task.contract.unitId,
             outcome: final.status === "closed" ? "closed" : final.status === "refused" ? "refused" : "blocked",
-            ...(final.status === "blocked" ? { detail: `${final.reason}${final.detail ? `: ${final.detail.split("\n")[0]}` : ""}` } : final.status === "refused" ? { detail: final.problems.map((p) => p.message).join("; ") } : {}),
+            ...(final.status === "blocked" ? { detail: `${final.reason}${blockedDetail(final) ? `: ${blockedDetail(final)!.split("\n")[0]}` : ""}` } : final.status === "refused" ? { detail: final.problems.map((p) => p.message).join("; ") } : {}),
             metrics: { ...trajectory.metrics, ...Object.fromEntries([...outcome, ...measured].map((g) => [g.grader, g.value])) },
             graders: [...trajectory.graders, ...outcome, ...measured],
+            ...(trajectory.models.length ? { models: trajectory.models } : {}),
             startedAt, endedAt: stamp(),
           };
           runs.push(run);
@@ -200,7 +223,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   const [optimise] = optimisedMetrics(suite.metrics);
   return {
     suite: { name: suite.name, version: suite.version, ...(optimise ? { optimise } : {}) }, generatedAt: stamp(),
-    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared }),
+    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed }),
     arms: summaries, lifts: lifts(summaries, suite.baseline), runs,
     interpretation: options.interpretation, interpretedBy: options.interpretedBy,
   };

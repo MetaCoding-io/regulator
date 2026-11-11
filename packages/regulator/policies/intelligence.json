@@ -1,0 +1,37 @@
+{
+  "name": "intelligence",
+  "version": 2,
+  "description": "The sensors regulator watch runs (#123): S4 without a model. Each is a declared part of the definition — a program over the instance on a schedule, or a glob over its files — that raises the same intelligence-signal a research unit raises through report_intelligence, under its own provenance, naming the unit types it bears on; the router opens the obligation, the veto holds the type at dispatch, and nothing replans. The three here are the portfolio workload's. Every threshold and interval below is the definition's claim about what matters, not evidence that it does: the drift band is benchmark.json's, the harvest threshold is the household's own arithmetic over harvest.json and tax.json, the intervals and the expiries are this file's, a guess at how long a reading stays current.",
+  "programTimeoutMs": 60000,
+  "sensors": [
+    {
+      "name": "drift-band",
+      "description": "A weight at the latest custodian's export, valued at that date's prices, further from the latest target on or before it than the rebalance band benchmark.json declares. Reads positions/, prices/, targets/ and benchmark.json through lib/portfolio.js and writes nothing. The portfolio note's S4 item 1, first case.",
+      "provenance": "sensor:drift-band",
+      "affects": ["plan-rebalance"],
+      "severity": "blocking",
+      "expiresAfterMs": 2592000000,
+      "schedule": { "everyMs": 3600000 },
+      "program": { "argv": ["node", "workload/portfolio/sensors/drift-band.mjs"], "outputs": [] }
+    },
+    {
+      "name": "harvest-threshold",
+      "description": "An open lot worth harvesting at the latest prices by the household's own arithmetic (#181): the tax benefit of its unrealised loss at the rate tax.json applies to it (long-term after the cutoff, short-term before), less two legs of trading cost and the opportunity cost of holding a replacement through the wash-sale window, both priced from harvest.json, is positive. The threshold is not a number of the definition's: it is harvestEvaluation in lib/portfolio.js, the arithmetic the plan-harvest contract fixes and the suite recomputes, over files the person owns. Reads lots/, positions/, prices/, tax.json and harvest.json through lib/portfolio.js, takes no arguments and writes nothing. The portfolio note's S4 item 1, second case.",
+      "provenance": "sensor:harvest-threshold",
+      "affects": ["harvest-losses"],
+      "severity": "blocking",
+      "expiresAfterMs": 2592000000,
+      "schedule": { "everyMs": 3600000 },
+      "program": { "argv": ["node", "workload/portfolio/sensors/harvest-threshold.mjs"], "outputs": [] }
+    },
+    {
+      "name": "new-export",
+      "description": "A new file under positions/ or prices/: the custodian's export landed, and the lots and the review are behind it. The event the finance example named as the short extension of regulator watch. Advisory, not blocking: the export is what ingest-positions consumes, so a hold on the type would hold the one unit that answers the signal; the obligation tells a person the export landed and holds nothing.",
+      "provenance": "sensor:new-export",
+      "affects": ["ingest-positions"],
+      "severity": "advisory",
+      "expiresAfterMs": 604800000,
+      "glob": "{positions,prices}/*"
+    }
+  ]
+}

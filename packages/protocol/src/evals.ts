@@ -112,6 +112,8 @@ export const EvalRunSchema = Type.Object({
   /** Every pre-registered metric, observed for this run. */
   metrics: Type.Record(Type.String(), Type.Number()),
   graders: Type.Array(GraderVerdictSchema),
+  /** The models the unit's attempts ran on, from their ledgers, in order of first use; absent for a scripted unit (no session, no ledger). */
+  models: Type.Optional(Type.Array(NonEmpty)),
   startedAt: NonEmpty,
   endedAt: NonEmpty,
 }, { additionalProperties: false });
@@ -149,7 +151,10 @@ export const EnvironmentFingerprintSchema = Type.Object({
   harnessRevision: NonEmpty,
   /** `scripted:<behaviour>` for a headless run with a scripted unit; a model id for a live run. */
   dispatcher: NonEmpty,
+  /** The model the policy routes the suite's units to: what the run was declared on. */
   model: NonEmpty,
+  /** The models the units' ledgers say the run was on, in order of first use. A live run whose primary was unavailable ran on a fallback, and this is where it says so; absent for a scripted run. */
+  modelsObserved: Type.Optional(Type.Array(NonEmpty)),
   /** Registry records and the definition's policy versions at run time. */
   registry: Type.Integer({ minimum: 0 }),
   policies: Type.Record(Type.String(), Type.Integer({ minimum: 1 })),

@@ -48,8 +48,9 @@ state machine from `UNIT_TRANSITIONS`, the closed table of the transitions the l
 takes and the execution store enforces: six states and twelve numbered edges, solid
 where the loop moves on its own and dashed where it waits on a decision outside it.
 Each state says how many of the instance's units are in it. Select a unit and the view
-steps through its *trajectory*: the fold of the unit's records (attempts, verdicts,
-recovery decisions, obligations) through the table, oldest first. The step's transition
+steps through its *trajectory*: the unit's status history, one line per transition the
+store wrote with the trigger that took it, oldest first, with the unit's records
+(attempts, verdicts, recovery decisions, obligations) beside each line. The step's transition
 lights up on the figure, and the panel below says why, as the records state it: the
 rule the recovery policy applied, the reasons the verdict carries, the obligation the
 unit waited on and who answered it, with the regulator responsible and the ids of the
@@ -57,9 +58,10 @@ records cited. The arrow keys, the slider and the replay rows in the inspector m
 between steps, and `#unit=<instance>/<id>@<step>` deep-links one. *Copy as a question
 for your agent* puts the step, its why, the records and the location of the reducer on
 the clipboard, so the question can go to a coding agent with the evidence attached; the
-page itself asks nothing and writes nothing. When the fold and the unit record disagree
-(a status written around the loop, a record missing), the view says so rather than
-inventing a path.
+page itself asks nothing and writes nothing. When the history, the records and the unit
+record disagree (a status written around the store, a record missing), the view says so
+rather than inventing a path. A unit whose moves were written before the store kept a
+history has its path reconstructed from the records, and its first step says so.
 
 <figure class="generated-figure">
 <!--@include: ../generated/figures/unit-lifecycle.svg-->
@@ -94,8 +96,9 @@ regulator status --definition node_modules/@metacoding.io/regulator --instance .
 The object has two parts. `definition` holds the registry (its records and its
 problems), the profiles, the policies, the workloads, the identity seed, the eval
 reports, and which parts are declared as files. `instance` holds the manifest,
-the units (each with its `trajectory`: the steps, where the fold ends, and the problem
-when it disagrees with the record), the leases, the obligations, the interactions, the
+the units (each with its `trajectory`: the steps, where the path ends, whether it was
+read from the status history or reconstructed, and the problem when the history, the
+records and the unit record disagree), the leases, the obligations, the interactions, the
 memory and the unrouted signals. All of it is read from the execution store and the regulatory logs, and none
 of it is inferred from the repository. Anything that wants to render the instance
 another way (a dashboard, a bot, a diagram) starts from this object rather than from

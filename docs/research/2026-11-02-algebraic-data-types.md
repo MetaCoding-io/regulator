@@ -1,6 +1,6 @@
 # Algebraic data types read against "Types describe"
 
-- **Status:** graduated: §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
+- **Status:** landed for §3.1 to §3.3 (see the **Landed** line under each); §3.4 and §3.5 stay open: §3.1 is [#160](https://github.com/MetaCoding-io/regulator/issues/160),
   §3.2 is [#161](https://github.com/MetaCoding-io/regulator/issues/161), and §3.3 is
   [#162](https://github.com/MetaCoding-io/regulator/issues/162) (all `roadmap:0.2`; #162 pays
   DEBT row 47). §3.4 (the optional-field survey) and §3.5 (branded identifiers) are open and
@@ -79,6 +79,17 @@ have no `default` and no exhaustiveness check:
 `assertNever` from `protocol`, list every case, and prefer a `Record<Union, …>` table where
 the switch only maps one value to another. Mechanism level: type.
 
+**Landed (2026-11-10, [#160](https://github.com/MetaCoding-io/regulator/issues/160)).**
+`assertNever` is `protocol/src/exhaustive.ts`. The five switches list every member and end
+in it, and so does a sixth this section missed: `regulator/src/predictions.ts` switched
+over the built-in metrics with the nine trajectory metrics in `default:`. `reporting.ts`
+narrows the name with `isReportingToolName` first and keeps its refusal. `hintFor` had seven
+causes in its `default:`, not eight (the union has thirteen members with
+`context-degradation`), and each now has a hint that is true of it. No switch became a
+`Record` table: each of the six computes from more than the tag. The other `default:`
+matches in `packages/*/src` are object keys (a policy's `budgets.default`, a flag's
+default value), not switch branches.
+
 ### 3.2 Products with optional fields that admit states the loop never means
 
 `UnitRecord` is `status` plus `reason?`, so a closed unit with a reason is valid, and so is a
@@ -91,6 +102,16 @@ and most of those combinations mean nothing.
 **Proposal ([#161](https://github.com/MetaCoding-io/regulator/issues/161)):** key both types
 on status, so each case carries exactly what it means and nothing else. Mechanism level:
 type, with the schema kept as the check on records read from disk.
+
+**Landed (2026-11-10, [#161](https://github.com/MetaCoding-io/regulator/issues/161)).**
+`UnitRecordSchema` is a union of one object per status, and `reason` is required on
+`blocked` and absent elsewhere. The store's status write takes the reason as a required
+argument for `blocked` and takes none for any other status. `RunUnitOutcome`'s blocked
+case is `BlockedOutcome`, six members partitioned by the loop's own `return` sites, and
+the partition is written on the type. One thing this section did not anticipate: the
+build wrote a reason beside `aborted` ("aborted under recovery v3: …"), which restated
+the decision record. The abort no longer writes it, `readUnitRecord` reads the older
+shape without it, `doctor` names such units, and `upgrade` rewrites them.
 
 ### 3.3 The lifecycle is a state machine held as data, not as a type
 
@@ -106,6 +127,21 @@ table `as const`, derive `TriggerFrom<S>` from it, write a transition by trigger
 by status, and append the transition to a history. This moves the lifecycle from a gate
 (level 2) to a type (level 1) where the caller's status is known, keeps the gate for
 records read from disk, and meets the card's retirement condition.
+
+**Landed (2026-11-10, [#162](https://github.com/MetaCoding-io/regulator/issues/162),
+PR [#190](https://github.com/MetaCoding-io/regulator/pull/190)).** `UNIT_TRANSITIONS` is
+`as const satisfies readonly UnitTransition[]`, and `TriggerFrom<S>` is derived from it.
+The store's write is `transition(unit, on)`. A caller that holds the unit's record in a
+known status is checked by the compiler; a caller that passes an id, and the record read
+from disk in every case, is checked by the store. Each transition appends a line to
+`status.ndjson` in the unit's directory, and `unitTrajectory` reads the path from it.
+Two things turned out differently from this section. First, a writer that knows only
+that a unit is in one of several statuses needs the triggers legal from *all* of them,
+which is `TriggerFromEvery<S>`; `TriggerFrom` of a union is the triggers legal from
+*any*. Second, the card's retirement condition is met only in its first half. The store
+is given the trigger, and the history's schema is the table. The gate remains for
+records read from disk, and a unit older than the history is still reconstructed, so
+the card stays with a new condition. DEBT row 47 is struck.
 
 ### 3.4 Open: a survey of the remaining optional fields
 

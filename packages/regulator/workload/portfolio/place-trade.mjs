@@ -2,11 +2,13 @@
  * The portfolio workload's `place_trade` tool (#121): the program behind the
  * one tool the workload declares, run by the host in the unit's worktree
  * when a session calls the tool, with the call's arguments on stdin as JSON.
- * It takes `{ "proposed": "trades/proposed/<date>.json" }`, the list the
- * plan-rebalance program computed and a person was asked about, checks that
- * it is a trade list, and writes `trades/pending/<date>.json` byte for byte
- * the same: a file there is a commitment the household executes, and this
- * program is the only way one comes to exist. "Copied unchanged" is a
+ * It takes `{ "proposed": "trades/proposed/<name>.json" }` — `<date>.json`,
+ * the rebalance list the plan-rebalance program computed, or
+ * `harvest-plan-<date>.json`, the harvest list a plan-harvest unit wrote
+ * (#124) — the list a person was asked about, checks that it is a trade list
+ * of the kind its name says, and writes `trades/pending/<name>.json` byte
+ * for byte the same: a file there is a commitment the household executes,
+ * and this program is the only way one comes to exist. "Copied unchanged" is a
  * property of the tool, not advice to the model; the suite's assertion that
  * the pending list carries the proposed trades guards a bug here, not a
  * model's shortcut.
@@ -32,9 +34,10 @@ try {
   fail("place_trade takes its arguments on stdin as one JSON object, and none was readable");
 }
 const proposed = args?.proposed;
-const named = typeof proposed === "string" ? /^trades\/proposed\/(\d{4}-\d{2}-\d{2})\.json$/.exec(proposed) : null;
-if (!named) fail(`proposed must name a list the plan-rebalance program wrote, trades/proposed/<date>.json; got ${JSON.stringify(proposed)}`);
-const date = named[1];
+const named = typeof proposed === "string" ? /^trades\/proposed\/((harvest-plan-)?(\d{4}-\d{2}-\d{2})\.json)$/.exec(proposed) : null;
+if (!named) fail(`proposed must name a trade list under trades/proposed/ — <date>.json, the plan-rebalance program's, or harvest-plan-<date>.json, a plan-harvest unit's; got ${JSON.stringify(proposed)}`);
+const [, name, harvestPrefix, date] = named;
+const kind = harvestPrefix ? "harvest" : "rebalance";
 if (!existsSync(proposed)) fail(`${proposed} does not exist: there is no list to place`);
 const bytes = readFileSync(proposed);
 let list;
@@ -45,6 +48,7 @@ try {
 }
 if (typeof list !== "object" || list === null || Array.isArray(list)) fail(`${proposed} is not a trade list: not an object`);
 if (list.date !== date) fail(`${proposed} says date ${JSON.stringify(list.date)}; the file is named for ${date}`);
+if ((list.kind ?? "rebalance") !== kind) fail(`${proposed} says kind ${JSON.stringify(list.kind ?? "rebalance")}; a file named ${name} is a ${kind} list`);
 if (!Array.isArray(list.trades) || !list.trades.length) fail(`${proposed} carries no trades: nothing to place`);
 for (const [i, trade] of list.trades.entries()) {
   const at = `${proposed} trades[${i}]`;
@@ -58,7 +62,7 @@ for (const [i, trade] of list.trades.entries()) {
   }
 }
 
-const file = `trades/pending/${date}.json`;
+const file = `trades/pending/${name}`;
 const said = (summary) => process.stdout.write(`${JSON.stringify({ summary, evidence: [{ class: "file", ref: file, observation: `byte for byte ${proposed}: ${list.trades.length} trade(s)` }] })}\n`);
 if (existsSync(file)) {
   if (readFileSync(file).equals(bytes)) {

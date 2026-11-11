@@ -3,7 +3,7 @@
   "name": "Recovery router",
   "status": "active",
   "vsmFunction": "S3",
-  "purpose": "Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals and the session's observations; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.",
+  "purpose": "Route every blocked unit: normalize the failure to one cause from the orchestrator's records, S2's signals, the session's observations and, last, the behavioral canary's finding on the attempt; take the action the versioned recovery policy names for that cause on its Nth occurrence; record the decision immutably with the policy version; apply what the loop can apply (retry and repair with a hint, abort, escalate as an algedonic signal) and hold the rest for a decision from outside the loop.",
   "absorbs": {
     "failureClass": "naive-retry",
     "description": "A failed attempt is retried as-is, again and again: a variety amplifier pointed at the wrong target, multiplying cost without adding information, until the budget is gone and nobody can say why."
@@ -16,16 +16,16 @@
       {"where": "loop", "point": "driveUnit", "note": "the autoloop"}
     ]
   },
-  "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)", "obligation for the waiting action (via the obligation router)"] },
+  "channels": { "consumes": ["attempt records", "failure observations", "coordination-signal (oscillation, conflict)", "audit-finding (context-degradation, the behavioral canary's)", "recovery policy"], "emits": ["recovery decision (execution store)", "algedonic-signal → S5 (policy exhausted)", "obligation for the waiting action (via the obligation router)"] },
   "scope": { "subjects": ["unit", "attempt"], "resources": ["attempts", "lease", "worktree"] },
-  "cost": { "description": "No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them." },
+  "cost": { "description": "No model calls. One decision record per routed failure; a retry or repair costs a further attempt, which is why the attempt ceiling caps them. A retry under `context-degradation` opens that attempt on the failed attempt's ledger (`carried`), so it spends what was left and not a second allowance." },
   "authority": {
     "may": ["classify a failure", "select the policy's action", "re-dispatch with a hint", "abort a unit and release its claim", "escalate to S5"],
     "mayNot": ["change the recovery policy", "issue a new contract version (replan is S3 planning, not routing)", "answer a clarification (that is the owner's)", "resolve an obligation on the unit's behalf"]
   },
-  "evidence": { "tests": ["../core/src/recovery.test.ts", "src/controller.test.ts"] },
+  "evidence": { "tests": ["../core/src/recovery.test.ts", "src/controller.test.ts", "../regulator-pi/src/dispatcher.test.ts"] },
   "limitations": [
-    "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.",
+    "Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation. `context-degradation` is last in the precedence, and that is a rule: the behavioral canary's finding classifies only an attempt that ended without a report and that no recorded outcome, oscillation signal or session observation explains, since each of those names something a fresh context does not fix and the canary's marker is a proxy. It is read by the finding's invariant inside the attempt's own start and end (any S3* finding naming the invariant counts), never by its prose and never from an earlier attempt. A cause that rests on an advisory finding is routed only under a rule the policy declares; with none, the unit is routed as `no-report`, never by the fallback, and on every cause the finding is evidence on the decision. The shipped policy declares no rule (docs/DEBT.md row 42).",
     "Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names; nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people but not authenticated.",
     "Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.",
     "Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab."

@@ -4,10 +4,11 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import test, { type TestContext } from "node:test";
 import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger } from "@metacoding.io/regulator-core";
-import type { WorkContract } from "@metacoding.io/regulator-protocol";
+import { isUnitRecord, type WorkContract } from "@metacoding.io/regulator-protocol";
 import { driveUnit } from "./controller.js";
 import { gitExec } from "./git-support.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
+import { readStatus } from "./status.js";
 import { LAB_ROOT } from "./workload.js";
 import { loadInteractionPolicy } from "./interaction-policy.js";
 import { POLICY_PATH, loadPolicy } from "./policy.js";
@@ -51,7 +52,7 @@ test("the portability drill (lesson 15): the definition installs into an unfamil
   assert.ok(result.committed, "the identity was committed");
   assert.deepEqual([result.manifest.version, result.manifest.definition.name, result.manifest.writablePaths, result.manifest.protectedPaths, result.manifest.initializedBy, result.manifest.initializedAt], [1, "regulator", ["lib/", "test/"], ["config/"], "alice", "2026-09-22T12:00:00.000Z"]);
   assert.equal(result.manifest.definition.pi, "0.87.0");
-  assert.equal(result.manifest.definition.registry, 52);
+  assert.equal(result.manifest.definition.registry, 53);
   assert.match(result.manifest.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.deepEqual(await readManifest(repo), result.manifest);
   assert.match(await readFile(path.join(repo, ".gitignore"), "utf8"), /^\.regulator\/\n$/);
@@ -172,11 +173,20 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   const asOf013 = { ...written, definition: { root: written.definition.root, name: written.definition.name, registry: 43, harnessRevision: REV_0_1_3, pi: written.definition.pi } };
   await writeFile(path.join(repo, INSTANCE_MANIFEST_RELATIVE_PATH), `${JSON.stringify(asOf013, null, 2)}\n`, "utf8");
   assert.equal((await readManifest(repo))!.definition.packageVersion, undefined, "a 0.1.3 manifest validates and carries no package version");
+  // A unit an older build aborted (#161): its record carries the reason beside `aborted`, which the status-keyed record does not admit.
+  const oldUnit = { unitId: "old1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-old1", version: 1 }, status: "aborted", attempts: 2, createdAt: "2026-09-20T10:00:00.000Z", updatedAt: "2026-09-20T11:00:00.000Z", reason: "aborted under recovery v3: check-failure" };
+  const oldUnitFile = path.join(repo, ".regulator", "units", "old1", "unit.json");
+  await mkdir(path.dirname(oldUnitFile), { recursive: true });
+  await writeFile(oldUnitFile, `${JSON.stringify(oldUnit, null, 2)}\n`, "utf8");
+  assert.equal(isUnitRecord(oldUnit), false);
   let report = await doctor(gitExec, { repo, now: () => clock });
   const by = (name: string) => report.checks.find((c) => c.name === name)!;
+  assert.equal(by("units").ok, true, "doctor says so and does not throw: the store reads the older shape");
+  assert.match(by("units").warning ?? "", /^1 unit record\(s\) were written before the record was keyed on its status and carry a reason beside a status that has none \(old1: aborted, "aborted under recovery v3: check-failure"\)\. They are read without it; `regulator upgrade` rewrites them in the current shape$/);
+  assert.equal((await readStatus({ instanceDir: repo })).instance?.units.find((u) => u.unit.unitId === "old1")?.unit.status, "aborted", "status reads it too");
   assert.match(by("manifest").detail, /; package version not recorded \(a manifest written before `regulator upgrade` existed\); never upgraded$/);
   assert.equal(by("definition-drift").ok, false);
-  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(52, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
+  assert.match(by("definition-drift").detail, /initialized under 5115ea2 \(43 regulators, pi 0\.87\.0\); the definition is now [0-9a-f]{7} \(53, pi 0\.87\.0\) — the installed package 0\.1\.3 is newer than the manifest's \(none recorded\): run `regulator upgrade`$/);
   assert.equal(by("advice").ok, false, "doctor sees the missing advice files");
   const before = await git("rev-parse", "HEAD");
 
@@ -185,7 +195,9 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.equal(dry.plan.outcome, "upgrade");
   if (dry.plan.outcome !== "upgrade") return;
   assert.deepEqual([dry.plan.from, dry.plan.fromUnversioned, dry.plan.to.packageVersion, dry.plan.crossed.map((n) => n.version)], [{ packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, true, "0.1.3", ["unreleased"]], "read as the floor, crossing the unreleased head's note");
-  assert.deepEqual(dry.plan.steps.map((s) => [s.step, s.apply, s.step === "seed" ? s.files : undefined]), [["seed", false, []], ["seed", true, ["auditor.md", "bookkeeper.md", "intelligence.md", "manager.md", "research.md"]], ["ignore", false, undefined]]);
+  assert.deepEqual(dry.plan.steps.map((s) => [s.step, s.apply, s.step === "seed" ? s.files : undefined]), [["seed", false, []], ["seed", true, ["auditor.md", "bookkeeper.md", "intelligence.md", "manager.md", "research.md"]], ["ignore", false, undefined], ["unit-records", true, undefined]]);
+  assert.deepEqual(dry.plan.steps.flatMap((s) => (s.step === "unit-records" ? s.units : [])), ["old1"]);
+  assert.deepEqual(JSON.parse(await readFile(oldUnitFile, "utf8")), oldUnit, "a dry run rewrites no record");
   assert.match(dry.notes, /^## unreleased \(head [0-9a-f]{7}\)\n {2}- advice advice\/<profile>\.md \[gate: regulator check only\]\n {4}A profile's advice is a file set seeded like identity \(#110\)/);
   assert.match(dry.notes, /- workload workload\/software-development\.json \[gate: scripted report 4a7daff51eb1…\]/, "a gate read from the note, never asserted here");
   assert.deepEqual([dry.applied, dry.committed, dry.evidence], [[], undefined, { report: "none" }], "no committed report ran at this revision, and the dry run says so");
@@ -200,11 +212,14 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
 
   const result = await upgradeInstance(gitExec, { repo, by: "alice", now: () => clock });
   assert.equal(result.plan.outcome, "upgrade");
-  assert.deepEqual(result.applied.map((s) => s.step), ["seed"]);
+  assert.deepEqual(result.applied.map((s) => s.step), ["seed", "unit-records"]);
+  const { reason: _dropped, ...oldUnitNow } = oldUnit;
+  assert.deepEqual(JSON.parse(await readFile(oldUnitFile, "utf8")), oldUnitNow, "the record is rewritten in the status-keyed shape: the reason goes, nothing else changes");
+  assert.ok(isUnitRecord(oldUnitNow));
   assert.ok(result.committed && result.committed !== before, "the seeded files are one commit on the base branch");
   assert.equal(await git("rev-parse", "HEAD"), result.committed);
   assert.equal(await git("status", "--porcelain"), "", "the base is clean after: nothing left unstaged");
-  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(52 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
+  assert.match(await git("log", "-1", "--format=%s%n%b"), /^regulator upgrade: 0\.1\.3 → 0\.1\.3 by alice\n+Definition regulator 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7} \(53 regulators, pi 0\.87\.0\)\.\nSeeded from the definition, absent here: regulator\/advice\/auditor\.md, regulator\/advice\/bookkeeper\.md, regulator\/advice\/intelligence\.md, regulator\/advice\/manager\.md, regulator\/advice\/research\.md\.\nChecked against no committed report at this revision\./);
   assert.deepEqual((await readdir(path.join(repo, "regulator/advice"))).sort(), ["auditor.md", "bookkeeper.md", "implement.md", "intelligence.md", "manager.md", "research.md"]);
   assert.equal(await readFile(path.join(repo, "regulator/advice/manager.md"), "utf8"), await readFile(path.join(LAB_ROOT, "advice/manager.md"), "utf8"), "seeded byte for byte");
   assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), "- Decided here: say so in your summary.\n", "the file a person decided is exactly as they left it");
@@ -213,7 +228,7 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.equal(tracked.length, 6, "every advice file is committed");
   const upgraded = (await readManifest(repo))!;
   assert.equal(upgraded.definition.packageVersion, "0.1.3");
-  assert.equal(upgraded.definition.registry, 52);
+  assert.equal(upgraded.definition.registry, 53);
   assert.match(upgraded.definition.harnessRevision, /^[0-9a-f]{40}$/);
   assert.notEqual(upgraded.definition.harnessRevision, REV_0_1_3);
   assert.deepEqual(upgraded.upgrades, [{ from: { packageVersion: "0.1.3", harnessRevision: REV_0_1_3 }, to: { packageVersion: "0.1.3", harnessRevision: upgraded.definition.harnessRevision }, report: "none", by: "alice", at: "2026-09-22T12:00:00.000Z" }]);
@@ -225,6 +240,13 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.match(by("manifest").detail, /; package 0\.1\.3; upgraded 1× — last 2026-09-22 by alice, 0\.1\.3@5115ea2 → 0\.1\.3@[0-9a-f]{7}, checked against no report$/);
   assert.equal(by("definition-drift").detail, "the instance was initialized under this definition revision");
   assert.equal(by("advice").ok, true);
+  assert.deepEqual([by("units").ok, by("units").warning, by("units").detail], [true, undefined, "1 unit record(s), each in its status's own shape or the one older shape the store reads"]);
+  // A record in neither shape is a problem doctor names, by unit; it still does not throw.
+  await writeFile(oldUnitFile, `${JSON.stringify({ ...oldUnitNow, status: "blocked" }, null, 2)}\n`, "utf8");
+  const broken = await doctor(gitExec, { repo, now: () => clock });
+  assert.equal(broken.checks.find((c) => c.name === "units")?.ok, false);
+  assert.match(broken.checks.find((c) => c.name === "units")?.detail ?? "", /^1 unit record\(s\); 1 not readable as a unit record: old1: /);
+  await writeFile(oldUnitFile, `${JSON.stringify(oldUnitNow, null, 2)}\n`, "utf8");
 
   // A second run: nothing crossed, nothing absent, nothing written.
   const again = await upgradeInstance(gitExec, { repo, by: "alice", now: () => clock });

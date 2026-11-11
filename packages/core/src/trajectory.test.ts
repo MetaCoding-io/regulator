@@ -1,13 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { AttemptRecord, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord } from "@metacoding.io/regulator-protocol";
-import { UNIT_TRANSITIONS, UNIT_TRIGGERS } from "@metacoding.io/regulator-protocol";
+import type { AttemptRecord, ObligationState, RecoveryDecision, TechnicalVerdict, UnitRecord, UnitStatus, UnitTransitionRecord } from "@metacoding.io/regulator-protocol";
+import { TERMINAL_UNIT_STATUSES, UNIT_TRANSITIONS, UNIT_TRIGGERS } from "@metacoding.io/regulator-protocol";
 import { unitTrajectory } from "./trajectory.js";
 
 const T = (n: number) => `2026-10-13T10:${String(n).padStart(2, "0")}:00.000Z`;
 
-function unit(overrides: Partial<UnitRecord> = {}): UnitRecord {
-  return { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, status: "closed", attempts: 2, createdAt: T(0), updatedAt: T(30), ...overrides };
+function unit(overrides: { status?: UnitStatus; attempts?: number; updatedAt?: string; reason?: string } = {}): UnitRecord {
+  const base = { unitId: "u1", unitType: "implement", workload: { name: "software-development", version: 1 }, contract: { id: "tc-1", version: 1 }, attempts: overrides.attempts ?? 2, createdAt: T(0), updatedAt: overrides.updatedAt ?? T(30) };
+  const status = overrides.status ?? "closed";
+  // Only a blocked unit's record says why (#161).
+  return status === "blocked" ? { ...base, status, reason: overrides.reason ?? "the unit ended without calling report_result" } : { ...base, status };
 }
 function attempt(n: number, startedAt: string, endedAt: string, outcome: AttemptRecord["outcome"], detail?: string): AttemptRecord {
   return { unitId: "u1", attempt: n, contractVersion: 1, startedAt, endedAt, outcome, sessionId: `s${n}`, ...(detail ? { detail } : {}) };
@@ -22,7 +25,9 @@ function decision(n: number, at: string, cause: RecoveryDecision["cause"], actio
 test("the table is closed and consistent: every trigger is used, every row's step is a loop step, and the terminal statuses have no way out", () => {
   const used = new Set(UNIT_TRANSITIONS.map((t) => t.on));
   assert.deepEqual([...UNIT_TRIGGERS].filter((t) => !used.has(t)), [], "a trigger nothing takes is a word, not a transition");
-  assert.deepEqual(UNIT_TRANSITIONS.filter((t) => t.from === "closed" || t.from === "aborted"), [], "closed and aborted are terminal");
+  // The table is a type now (#162): comparing a row's `from` with "closed" does not compile, because no row has it. The runtime reading, for the record:
+  assert.deepEqual(UNIT_TRANSITIONS.filter((t) => TERMINAL_UNIT_STATUSES.has(t.from)), [], "closed and aborted are terminal");
+  assert.equal(new Set(UNIT_TRANSITIONS.map((t) => `${t.from}/${t.on}`)).size, UNIT_TRANSITIONS.length, "a trigger names one row from a status: the store looks the target up by the pair");
   assert.deepEqual([...new Set(UNIT_TRANSITIONS.map((t) => t.by))].sort(), ["closeUnit", "finishUnit", "routeUnit", "runUnit"]);
   for (const from of ["contracted", "dispatched", "reported", "blocked"] as const) assert.ok(UNIT_TRANSITIONS.some((t) => t.from === from), `${from} leads somewhere`);
 });
@@ -81,7 +86,123 @@ test("a reintegration the trial refused is placed before the decision that route
   ]);
   assert.equal(t.steps[3]!.at, T(7));
   assert.equal(t.steps[3]!.regulator, "reg.audit.pre-merge-trial.v1");
-  assert.deepEqual(t.steps[3]!.why, ["unit: reintegration: conflict — pre-merge:run_tests failed on the trial commit"]);
+  assert.deepEqual(t.steps[3]!.why, ["unit: reintegration: conflict — pre-merge:run_tests failed on the trial commit", RECONSTRUCTED]);
+  // No history was given: the whole path is a reconstruction, and it says so, on the trajectory, on the first step and on every step whose move was inferred.
+  assert.equal(t.basis, "reconstructed");
+  assert.match(t.steps[0]!.why.at(-1)!, /^this unit has no status history: its moves were written before the store kept one \(#162\), so the path below is reconstructed from the attempt, verdict, decision and obligation records$/);
+  assert.deepEqual(t.steps.map((s) => s.source ?? null), [null, "reconstructed", "reconstructed", "reconstructed", null, "reconstructed", "reconstructed", "reconstructed"]);
+  assert.equal(t.steps[7]!.why.at(-1), RECONSTRUCTED);
+});
+
+const RECONSTRUCTED = "reconstructed: this unit has no status history for this move (it was written before the store kept one, #162), so it is placed here from the records beside it";
+const line = <L extends UnitTransitionRecord>(l: L): UnitTransitionRecord => l;
+
+test("with the status history the path is read, not inferred: the three moves that had no record of their own are lines, placed where the store wrote them (#162)", () => {
+  const records = {
+    unit: unit({ status: "closed", attempts: 2 }),
+    attempts: [attempt(1, T(1), T(5), "reported"), attempt(2, T(10), T(20), "reported")],
+    decisions: [decision(1, T(7), "conflict", "repair", { evidence: ["attempt 1: reported", "unit: reintegration: conflict — pre-merge:run_tests failed on the trial commit"] })],
+    verdicts: [verdict(1, T(5), "pass"), verdict(2, T(20), "pass")],
+    obligations: [],
+  };
+  const history = [
+    line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) }),
+    line({ from: "dispatched", to: "reported", on: "verified", at: T(5) }),
+    line({ from: "reported", to: "blocked", on: "reintegration-refused", at: T(6), reason: "reintegration: conflict — pre-merge:run_tests failed on the trial commit" }),
+    line({ from: "blocked", to: "dispatched", on: "dispatch", at: T(10) }),
+    line({ from: "dispatched", to: "reported", on: "verified", at: T(20) }),
+    line({ from: "reported", to: "closed", on: "reintegrated", at: T(21) }),
+  ];
+  const t = unitTrajectory({ ...records, history });
+  assert.equal(t.problem, undefined);
+  assert.deepEqual([t.basis, t.final], ["history", "closed"]);
+  assert.deepEqual(t.steps.map((s) => [s.event, s.from, s.to, s.transition ?? null, s.source ?? null]), [
+    ["contracted", "contracted", "contracted", null, null],
+    ["attempt-started", "contracted", "dispatched", "dispatch", "history"],
+    ["attempt-ended", "dispatched", "reported", "verified", "history"],
+    ["reintegration", "reported", "blocked", "reintegration-refused", "history"],
+    ["decision", "blocked", "blocked", null, null],
+    ["attempt-started", "blocked", "dispatched", "dispatch", "history"],
+    ["attempt-ended", "dispatched", "reported", "verified", "history"],
+    ["reintegration", "reported", "closed", "reintegrated", "history"],
+  ]);
+  // The refusal is its own line: its time is when the store wrote it (not the decision's), its reason is the line's, and it cites the history.
+  const refused = t.steps[3]!;
+  assert.deepEqual([refused.at, refused.title, refused.regulator, refused.by, refused.cites], [T(6), "reintegration refused", "reg.audit.pre-merge-trial.v1", "finishUnit", ["status.ndjson"]]);
+  assert.equal(refused.why.at(-1), "reintegration: conflict — pre-merge:run_tests failed on the trial commit");
+  assert.equal(refused.why.includes(RECONSTRUCTED), false);
+  // Reintegration is when the store wrote it, not when the unit record was last touched.
+  assert.deepEqual([t.steps[7]!.at, t.steps[7]!.title, t.steps[7]!.cites], [T(21), "reintegrated: closed", ["status.ndjson"]]);
+  assert.equal(t.steps[0]!.why.length, 2, "nothing is said about reconstruction when nothing is reconstructed");
+  // The why of a step the records explain is still the records': the history gives the move, never the reason.
+  assert.ok(t.steps[5]!.why.some((w) => w.startsWith("routed under recovery v2: conflict → repair")));
+
+  // The same records with no history reconstruct the same path; the difference is where the refusal is placed, and that it says it was placed.
+  const legacy = unitTrajectory(records);
+  assert.deepEqual(legacy.steps.map((s) => [s.event, s.from, s.to, s.transition ?? null]), t.steps.map((s) => [s.event, s.from, s.to, s.transition ?? null]));
+  assert.deepEqual([legacy.basis, legacy.steps[3]!.at, legacy.steps[7]!.at], ["reconstructed", T(7), T(30)]);
+});
+
+test("the three rows that share blocked → blocked are told apart by the trigger the store wrote, not by the record beside them (#162)", () => {
+  const t = unitTrajectory({
+    unit: unit({ status: "blocked", attempts: 1, reason: "lease for unit u1 is held by bob until 2026-10-13T11:00:00.000Z", updatedAt: T(9) }),
+    attempts: [attempt(1, T(1), T(5), "check-failure", "inconclusive — awaiting acceptance e-wording")],
+    decisions: [decision(1, T(6), "check-failure", "pause")],
+    verdicts: [verdict(1, T(5), "inconclusive", { awaitingAcceptance: ["e-wording"] }), verdict(1, T(8), "inconclusive", { id: "v1b", awaitingAcceptance: ["e-wording"] })],
+    obligations: [],
+    history: [
+      line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) }),
+      line({ from: "dispatched", to: "blocked", on: "attempt-failed", at: T(5), reason: "audit refused closeout: inconclusive" }),
+      line({ from: "blocked", to: "blocked", on: "routed-waiting", at: T(6), reason: "awaiting pause: check-failure (recovery v2)" }),
+      line({ from: "blocked", to: "blocked", on: "re-audit-refused", at: T(8), reason: "audit refused closeout: inconclusive" }),
+      line({ from: "blocked", to: "blocked", on: "dispatch-refused", at: T(9), reason: "lease for unit u1 is held by bob until 2026-10-13T11:00:00.000Z" }),
+    ],
+  });
+  assert.equal(t.problem, undefined);
+  assert.deepEqual(t.steps.filter((s) => s.from === "blocked" && s.to === "blocked").map((s) => [s.event, s.transition, s.by, s.source]), [
+    ["decision", "routed-waiting", "routeUnit", "history"],
+    ["re-audit", "re-audit-refused", "closeUnit", "history"],
+    ["recorded", "dispatch-refused", "runUnit", "history"],
+  ]);
+  assert.deepEqual([t.final, t.basis], ["blocked", "history"]);
+  assert.equal(t.steps.at(-1)!.why.at(-1), "lease for unit u1 is held by bob until 2026-10-13T11:00:00.000Z");
+});
+
+test("where the history and the records disagree the trajectory says so; a history that begins partway is not read, and the path is reconstructed whole (#162)", () => {
+  const base = { decisions: [], verdicts: [], obligations: [] };
+  // A unit that has not moved has an empty history, and that is its whole path.
+  const fresh = unitTrajectory({ ...base, unit: unit({ status: "contracted", attempts: 0 }), attempts: [], history: [] });
+  assert.deepEqual([fresh.steps.length, fresh.basis, fresh.final, fresh.problem], [1, "history", "contracted", undefined]);
+
+  // A transition with no record beside it: the store wrote it, so it is taken, and the missing record is named.
+  const noRecord = unitTrajectory({ ...base, unit: unit({ status: "blocked", attempts: 0 }), attempts: [], history: [line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) }), line({ from: "dispatched", to: "blocked", on: "attempt-failed", at: T(5), reason: "the unit ended without calling report_result" })] });
+  assert.match(noRecord.problem ?? "", /^line 1 of the status history \(dispatch: contracted → dispatched at 2026-10-13T10:01:00\.000Z\) has no record beside it: the store wrote the transition, and the attempt, verdict or decision that should say why is missing$/);
+  assert.deepEqual(noRecord.steps.map((s) => [s.event, s.to, s.transition ?? null]), [["contracted", "contracted", null], ["recorded", "dispatched", "dispatch"], ["recorded", "blocked", "attempt-failed"]]);
+  assert.equal(noRecord.final, "blocked");
+
+  // A record with no transition: shown where it falls, and the unit does not move for it.
+  const noLine = unitTrajectory({ ...base, unit: unit({ status: "dispatched", attempts: 1 }), attempts: [attempt(1, T(1), T(5), "no-report")], history: [line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) })] });
+  assert.match(noLine.problem ?? "", /^step 3 \(attempt 1 ended: no-report\) is a record of attempt-failed, and the status history has no attempt-failed after its line 1: the record was written and the transition was not$/);
+  assert.deepEqual(noLine.steps.map((s) => [s.event, s.from, s.to, s.transition ?? null]), [["contracted", "contracted", "contracted", null], ["attempt-started", "contracted", "dispatched", "dispatch"], ["attempt-ended", "dispatched", "dispatched", null]]);
+
+  // The history ends where the unit record does not: one of the two writes of a transition did not land, or the record was edited.
+  const forged = unitTrajectory({ ...base, unit: unit({ status: "aborted", attempts: 1 }), attempts: [attempt(1, T(1), T(5), "no-report")], history: [line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) }), line({ from: "dispatched", to: "blocked", on: "attempt-failed", at: T(5), reason: "the unit ended without calling report_result" })] });
+  assert.equal(forged.problem, "the status history ends blocked and the unit record says aborted: a transition reached one and not the other, or the record was written around the store");
+
+  // A history whose lines do not join: every line is a row of the table, and the path through them is not one.
+  const broken = unitTrajectory({ ...base, unit: unit({ status: "closed", attempts: 1 }), attempts: [attempt(1, T(1), T(5), "no-report")], history: [line({ from: "contracted", to: "dispatched", on: "dispatch", at: T(1) }), line({ from: "dispatched", to: "blocked", on: "attempt-failed", at: T(5), reason: "r" }), line({ from: "reported", to: "closed", on: "reintegrated", at: T(9) })] });
+  assert.match(broken.problem ?? "", /^line 3 of the status history \(reintegrated: reported → closed at .*\) leaves reported, and the line before it left the unit blocked: a line is missing, or one was written around the store$/);
+
+  // A unit an older build ran and this one resumed: its history begins at blocked. Nothing is read from it.
+  const partial = unitTrajectory({
+    ...base, unit: unit({ status: "closed", attempts: 2 }),
+    attempts: [attempt(1, T(1), T(5), "no-report"), attempt(2, T(10), T(20), "reported")], decisions: [decision(1, T(6), "no-report", "retry")], verdicts: [verdict(2, T(20), "pass")],
+    history: [line({ from: "blocked", to: "dispatched", on: "dispatch", at: T(10) }), line({ from: "dispatched", to: "reported", on: "verified", at: T(20) }), line({ from: "reported", to: "closed", on: "reintegrated", at: T(21) })],
+  });
+  assert.deepEqual([partial.basis, partial.final, partial.problem], ["reconstructed", "closed", undefined]);
+  assert.match(partial.steps[0]!.why.at(-1)!, /^this unit's status history begins partway \(its first line leaves blocked, not contracted\): its earlier moves were written before the store kept a history \(#162\), so the whole path below is reconstructed .*, and the history is not read$/);
+  assert.equal(partial.steps.at(-1)!.at, T(30), "reconstructed: reintegration is placed at the record's last write, as before");
+  assert.ok(partial.steps.filter((s) => s.transition).every((s) => s.source === "reconstructed"));
 });
 
 test("a paused attempt waits on the question; the answer is why the next attempt starts; a waiting decision and an abort are self-loop and terminal moves", () => {
