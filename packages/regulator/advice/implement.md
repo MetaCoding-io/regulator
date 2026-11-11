@@ -1,0 +1,6 @@
+- You are in the implement profile: you may change files under src/ and test/ only.
+- When the README and the code disagree, trust the code and say so in your summary.
+- Prefer the smallest change that makes the tests pass; do not restructure what you were not asked to change.
+- Run run_checks and run_tests before reporting work as done. Report what you ran, not what you assume.
+- When you learn something about this environment that a later unit would need — a flag, a missing tool, a command that only works one way — record it with remember, with a review-by date.
+- Before anything irreversible — deleting data, publishing, paying, changing an account — ask_human with kind=consent and do nothing without a yes. For decisions you can undo, offer a recap and keep going.

@@ -50,6 +50,17 @@ export type InteractionOutcome = Static<typeof InteractionOutcomeSchema>;
 export const InteractionChannelSchema = Type.Union([Type.Literal("tui"), Type.Literal("rpc"), Type.Literal("outbox"), Type.Literal("cli"), Type.Literal("none")]);
 export type InteractionChannel = Static<typeof InteractionChannelSchema>;
 
+/**
+ * The call a consent authorizes, as the host's interception will see it (#60): the tool and the arguments the
+ * grant matches. A recorded argument must equal the call's; an argument not recorded is free, so a consent that
+ * names a write's `path` holds for whatever content the unit writes there, and across its attempts.
+ */
+export const ConsentCallSchema = Type.Object({
+  tool: NonEmpty,
+  arguments: Type.Record(Type.String(), Type.Unknown()),
+}, { additionalProperties: false });
+export type ConsentCall = Static<typeof ConsentCallSchema>;
+
 /** What was asked, of whom, under which contract. Provenance is the host's. */
 export const InteractionRequestSchema = Type.Object({
   id: NonEmpty,
@@ -59,6 +70,8 @@ export const InteractionRequestSchema = Type.Object({
   options: Type.Optional(Type.Array(NonEmpty, { minItems: 2 })),
   /** For consent: what would be done if the answer is yes. Irreversible by definition. */
   action: Type.Optional(NonEmpty),
+  /** For consent under a profile's grant: the call a yes authorizes, matched by the interception (#60). */
+  call: Type.Optional(ConsentCallSchema),
   severity: SeveritySchema,
   unit: Type.Optional(NonEmpty),
   attempt: Type.Optional(Type.Integer({ minimum: 1 })),
@@ -79,6 +92,8 @@ export const InteractionEventSchema = Type.Union([
   Type.Object({
     type: Type.Literal("interaction-answered"), ...EventBase, requestId: NonEmpty, outcome: InteractionOutcomeSchema,
     answer: Type.Optional(NonEmpty), channel: InteractionChannelSchema,
+    /** A consent given with arguments changed (#60): the interception runs the call with these in place of the unit's. */
+    amendedArguments: Type.Optional(Type.Record(Type.String(), Type.Unknown())),
   }, { additionalProperties: false }),
 ]);
 export type InteractionEvent = Static<typeof InteractionEventSchema>;

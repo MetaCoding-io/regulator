@@ -1,7 +1,11 @@
 # The accept-path split on `BOUNDARY.md`
 
-- **Status:** proposed. The design asks for two decisions (§3 and §5) before an issue is
-  filed for its first slice (§8).
+- **Status:** graduated; slice 1 landed ([#110](https://github.com/MetaCoding-io/regulator/issues/110),
+  `roadmap:0.2`: advice as a seeded file set, `DEFINITION_WRITERS`, `advice accept | reject |
+  promote`, the three cards, DEBT rows 43 to 46); slice 2 landed ([#138](https://github.com/MetaCoding-io/regulator/issues/138):
+  the prediction record, its resolution from the stores, the typed `harness-edit` payload, the
+  `prediction-resolution` card). Slices 3 and 4 of §8 stay designed here until each becomes an
+  issue; slice 3 is next, after #46.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the
   split has to sit on, cited by file below.
@@ -88,8 +92,10 @@ Why per instance: for the same reason identity is. An instance's advice is propo
 against and decided there; the reflector's live horizon is the next N units of *this*
 instance; and `identity promote` already models how a local decision becomes the next
 instance's seed. The cost is the one identity already pays: instances initialized
-earlier keep their own copy (`identity-promotion` card, limitation 3; DEBT row 39 and
-#53 are where a definition upgrade would carry it).
+earlier keep their own copy (`identity-promotion` card, limitation 3). *Landed 2026-10-27
+(#53): `regulator upgrade` seeds the advice set an older instance lacks and never
+overwrites a file it has; a promoted seed reaches such an instance only as a bullet of
+the release's migration note (DEBT row 44, narrowed).*
 
 **Alternatives considered.**
 
@@ -174,7 +180,11 @@ Two rules that are not in `identity accept`:
   `harness-edit` whose prediction has no probe-horizon resolution, and records the
   prediction's live horizon as open at acceptance. A plain proposal against an advice
   file has no prediction and is accepted on the person's judgment, as identity is. Until
-  slice 2 lands, every advice proposal is plain.
+  slice 2 lands, every advice proposal is plain. *Slice 2 landed the second half (#138):
+  `advice accept` reads a `harness-edit` against the stores, refuses one whose parts do not
+  resolve, cites the prediction in the disposition, and the live horizon is open from the
+  decision. The first half, refusing an unprobed `harness-edit`, waits for the probe arm
+  (slice 3), since nothing produces a probe report yet.*
 - **The file must be the one proposed against.** `identity accept` lets the person point
   at any of the four files (`s5-decision` card, limitation 2). `advice accept` requires
   `--file` to equal the profile the proposal's `subject` names, because a `harness-edit`
@@ -230,7 +240,8 @@ Limitations that become `DEBT.md` rows:
   disguise; the `glossary-lint` analogue for advice does not exist. The live horizon
   (§8 of the Harness² note) and the person are the only pressure.
 - Advice accepted in one instance does not reach another. This is identity's row and
-  shares its fate with #53 (`regulator upgrade`).
+  shared its fate with #53 (`regulator upgrade`), which landed: an absent file is seeded,
+  a file the instance has is never touched (row 44, narrowed).
 - The third path has no mechanism until the definition's repository runs under the
   loop (§6); the `BOUNDARY.md` row says so.
 - `advice.maxChars` cuts and warns, as `identity.maxChars` does; past the cap, part of
@@ -249,9 +260,21 @@ Limitations that become `DEBT.md` rows:
    and refuses a dirty definition; `BOUNDARY.md` carries the new section and
    `regulator docs --check` is clean; the test holding `DEFINITION_WRITERS` against
    `ENFORCEMENT_POINTS.cli` passes; the committed eval reports are unchanged (scripted
-   units read no advice).
+   units read no advice). **Landed** in #110, with two readings the note had left open,
+   recorded in §9: how a plain proposal names its advice file, and how the fixtures are
+   placed in a class.
 2. **The prediction record** (Harness² note §8), its own issue: the record, its
-   resolution from the stores, and the `harness-edit` payload that carries it.
+   resolution from the stores, and the `harness-edit` payload that carries it. **Filed**
+   2026-10-26 as [#138](https://github.com/MetaCoding-io/regulator/issues/138) (0.2) and
+   **landed** the same day: the `prediction` block on the signal, `prediction-resolution`
+   in the regulatory log (three-valued; resolved by the loop at close and abort from the
+   harness's graders, or from a committed report by fingerprint), the S5 obligation on a
+   disconfirmed live horizon routed under the shipped policy, `HarnessEditSchema`, the
+   host's reading of it at `advice accept` (target from the payload, prediction cited,
+   live horizon open from the decision), the `prediction-resolution` card, and
+   `regulator status` listing predictions with a precision that counts inconclusive
+   against. The committed reports are byte-unchanged. No DEBT row was opened: the count
+   of the next N units is the fold over the log, not a scan of the execution store.
 3. **The probe arm and the probe rule.** `EvalArmSchema` gains an optional `advice`
    override (a map from profile to file); `advice accept` refuses an unprobed
    `harness-edit`. Waits on the live report (#46), since a probe with no live baseline
@@ -278,6 +301,21 @@ Slice 1 is one issue in 0.2 and pays nothing in `DEBT.md`; it opens the four row
 - Whether `regulator/advice/` should be per unit type as well as per profile when a
   workload has two unit types on one profile with different needs. Not today: the
   shipped workloads have no such pair.
+- How a plain proposal names its advice file, until the `harness-edit` payload (slice 2)
+  names its target by type. Slice 1 reads the file off the proposal's `subject`: it
+  names a profile when it contains `advice/<profile>.md`, under the seed or as the
+  instance path, and `advice accept` refuses a `--file` that is not that file or a
+  subject that names none (`adviceProfileNamed` in core). The typed payload should
+  replace the reading, not sit beside it. *Slice 2 (#138): the payload names the target
+  for a `harness-edit` and the subject reading stays for a plain proposal, as the issue
+  specified; the two do not overlap, since a payload that claims the kind is either
+  well-formed or refused by the schema.*
+- Whether the fixtures (`fixture*/`, `drift/`) belong in the declaration class by name,
+  as slice 1 lists them in `DEFINITION_WRITERS`, or should be derived from the eval suites
+  and the `fixture` command that read them. Listing them keeps the class check one closed
+  list; deriving them would make a new fixture declared by the suite that uses it. The
+  package's own `src/`, `dist/` and `node_modules/` are not definition files and the check
+  skips them either way.
 
 ## 10. What this asks of the reader
 
@@ -291,3 +329,11 @@ Two decisions, then an issue:
 
 With those two taken, slice 1 of §8 is filed as a `roadmap:0.2` issue with its "done
 when" list as the acceptance criteria, and this note's status changes to `graduated`.
+
+**Decided (2026-10-19).** Both, as proposed. Advice becomes a file set seeded like
+identity (§3), and the commands are `advice accept | reject | promote` (§5);
+`definition accept` in the Harness² note and the "What's coming" figures reads as
+`advice accept` until slice 1 redraws them. Slice 1 is filed as
+[#110](https://github.com/MetaCoding-io/regulator/issues/110), a sub-issue of the
+engineering handoff [#108](https://github.com/MetaCoding-io/regulator/issues/108), with
+§8's done-when list as its acceptance criteria.

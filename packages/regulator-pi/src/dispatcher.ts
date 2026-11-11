@@ -41,7 +41,7 @@ export async function definitionSettings(file: string = SETTINGS_PATH): Promise<
   return SettingsManager.inMemory(value as Parameters<typeof SettingsManager.inMemory>[0]);
 }
 /** The session extensions this host loads for a unit, by name, in load order. */
-export const EXTENSIONS = ["tools", "profiles", "coordination", "contract", "budget", "recovery", "evidence", "authority", "intelligence", "identity", "algedonic"] as const;
+export const EXTENSIONS = ["tools", "declared-tools", "profiles", "coordination", "contract", "budget", "recovery", "evidence", "authority", "intelligence", "identity", "algedonic"] as const;
 /** The absolute path of a named extension's built module. */
 export function extensionPath(name: string): string { return path.join(dist, `${name}.js`); }
 export const CHECKPOINT_EXTENSIONS = EXTENSIONS.map(extensionPath);
@@ -221,4 +221,6 @@ export const host: Host = {
   extensions: EXTENSIONS,
   extensionPath,
   dispatcher: (options: HostDispatcherOptions = {}) => piDispatcher({ ...(options.echo === undefined ? {} : { echo: options.echo }), ...(options.extensions ? { extensionPaths: options.extensions.map(extensionPath) } : {}) }),
+  // The same lookup the dispatcher makes before choosing: Pi's registry, filtered to the providers with a key.
+  availableModels: async () => (await (await ModelRuntime.create()).getAvailable()).map((m) => `${m.provider}/${m.id}`),
 };

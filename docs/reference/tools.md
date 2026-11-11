@@ -21,6 +21,7 @@ not name is never offered to the model at all, so there is nothing for a gate to
 | [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper` | a memory entry |
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
 | [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | `implement`, `intelligence`, `bookkeeper` | a `policy-proposal` |
+| [`place_trade`](#tools-a-workload-declares) | irreversible: it writes a commitment (declared by the `portfolio` workload) | `manager` | a `regulator:declared-tool` session entry; the consent it needs, derived from the effect |
 
 ::: tip `report_result` is granted twice
 A contracted unit must be able to report, so the profile a contracted unit type runs
@@ -93,6 +94,7 @@ becomes an `operational-signal`, and the router decides what obligations they op
 | `subject`, `question` | what the question is about, and the question itself, including what the unit would do under each answer |
 | `options[]` | for a `choice`: two to six options. Required for that kind |
 | `action` | for `consent`: the irreversible action a yes authorizes, stated concretely. Required for that kind |
+| `call` | for `consent` under the profile's [consent grant](/concepts/asking-a-person#the-consent-grant): the call a yes authorizes, as the unit will make it — the tool and the arguments the grant matches (the path for a `write` or `edit`, the command for `bash`). The interception matches the record against the call, so a consent asked without it holds no guarded call |
 | `evidence[]` | what the person needs in order to decide |
 
 What each kind does:
@@ -113,7 +115,8 @@ cancellation, nothing is answered. The obligation stays open and is delivered to
 outbox, and for every kind but `recap` the pause gate refuses every tool with an effect
 for the rest of the session. The unit's attempt is recorded as `paused`. Later,
 `regulator answer` resolves the obligation, and the next attempt is told the answer as
-its hint.
+its hint; a consent answered with `--amend` runs the guarded call with the amended
+arguments in place of the unit's.
 
 That only a recap continues without an answer is a protocol constant, so no policy can
 make silence into consent. The policy's `attention.blockingPerAttempt` caps how many
@@ -164,11 +167,49 @@ changes nothing, because a proposal is not policy (INV-002). A person with `actA
 decides it with `regulator identity accept` or `identity reject`, and an accepted file
 is the only way an identity file changes.
 
+## Tools a workload declares
+
+A workload may declare tools of its own under `tools[]` in its definition file ([the
+fields](/reference/definition#workload)): a name, the description and parameters schema
+the model sees, an effect on the same four axes every built-in declares, and the
+program that implements it. The Pi host's `declared-tools` extension registers each one
+generically from the definition when it loads, knowing nothing of what it does; the
+profile grant puts it on the surface by name, as for a built-in, and a profile that calls
+itself read-only may not be granted one whose declared effect is not read-only.
+
+A call runs the declared program in the unit's worktree through the control plane's own
+runner, with the call's arguments on stdin as one JSON object and the tool's declared
+`outputs` as its whole reach: a write outside them is undone and the call refused, a
+non-zero exit or a run past the ceiling is refused with what the program said, and the
+last stdout line (`{ "summary", "evidence"? }`, or the tail of the output) is what the
+model is told, followed by what ran: the program's file, its hash, its exit and what it
+wrote. The same is recorded as a `regulator:declared-tool` session entry, so a report's
+claim can name what produced a file.
+
+One thing is derived from the declaration, and it is the only thing the control plane
+derives from an effect: a declared tool whose `sideEffects` is `irreversible` needs a
+person's recorded yes for exactly the call before it runs. The [consent
+gate](/concepts/asking-a-person#the-consent-grant) reads the declared effects beside the
+profile's `consent[]` and refuses the call as it refuses a call under a grant, with no
+profile naming the tool; the refusal tells the unit to ask with `ask_human`
+`kind=consent` and `call` naming the tool and the arguments. The derivation stops at
+workload-declared tools: `ask_human` and `notify_owner` are irreversible and are the
+control plane's channels to a person, so consent on them would be circular.
+
+The shipped example is the `portfolio` workload's `place_trade`: it takes `{ proposed:
+"trades/proposed/<date>.json" }`, checks that the file is a trade list, and writes
+`trades/pending/<date>.json` byte for byte the same. The `manager` profile has no write
+grant on `trades/pending/`, so the tool is the one way a pending list comes to exist,
+and the fixture's assertion that a pending list carries the proposed trades guards a bug
+in the tool, not a model's shortcut. The [declared
+tool](/reference/regulators#reg-control-declared-tool-v1) record states what the host
+trusts and what the other session gates make of a declared tool.
+
 ## Tools that are not a unit's
 
 `vsm_report_audit_finding`, `vsm_report_uncertainty` and `vsm_propose_policy_change`
 belong to a separate, generic reporting extension that the Pi host exports for hosts
 that embed it. They write the SQLite event store (`.regulator/events.db`), and the
-extension is not among the eleven a unit's session loads, so a unit never sees these
+extension is not among the twelve a unit's session loads, so a unit never sees these
 tools. [Typed reporting](/REPORTING) describes them. A unit has no uncertainty tool; it
 reports uncertainty through its result report.

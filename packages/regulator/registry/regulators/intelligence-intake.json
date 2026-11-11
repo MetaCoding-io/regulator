@@ -26,11 +26,11 @@
   "limitations": [
     "The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.",
     "Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.",
-    "Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.",
+    "Expiry is the unit's estimate. The router notes intelligence that has already expired when it is routed; a signal that expires while an obligation it opened is still open is re-raised once, as an advisory obligation, by the watcher's tick (`sensor-intake`, #123) — so nothing says so in an instance whose watcher is not running, and the advisory releases nothing by itself.",
     "One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget."
   ],
   "ownership": { "owner": "regulator-maintainers", "introduced": "2026-09-22", "reviewBy": "2026-12-01" },
   "ablation": {"switch": "extension:intelligence", "note": "A live arm without the intelligence extension has no research unit that can report; the router has nothing to hold units on."},
-  "retirement": {"condition": "Retire when S4 has a second intake (a scheduled scan) and this tool's share of intelligence signals falls below what a person would read."},
+  "retirement": {"condition": "S4 has its second intake since #123 (`sensor-intake`, scheduled programs and globs declared in the definition). Retire this tool when its share of intelligence signals falls below what a person would read."},
   "introducedIn": "0.1.0"
 }

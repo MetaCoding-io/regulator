@@ -7,15 +7,15 @@
  * Lesson 06's orchestrator dispatches units through exactly these two steps.
  */
 import { randomUUID } from "node:crypto";
-import { cp, mkdir, readFile, realpath, stat, writeFile } from "node:fs/promises";
+import { cp, mkdir, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import type { CoordinationSignal } from "@metacoding.io/regulator-protocol";
-import { LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding.io/regulator-core";
+import { HARNESS_OWNED_INSTANCE_DIRS, MemorySeedSchema, assertValid, definitionWriter, seedDirFor, type CoordinationSignal, type MemoryEntry, type MemorySeed } from "@metacoding.io/regulator-protocol";
+import { LEASES_RELATIVE_DIR, MemoryStore, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, WORKTREES_RELATIVE_DIR, appendSignal } from "@metacoding.io/regulator-core";
 import { LeaseHeldError, LeaseStore, type Lease } from "./coordination.js";
 import type { Exec } from "./exec.js";
 import {
-  baseRoot, createUnitWorktree, currentBranch, reintegrate, removeUnitWorktree, unitBranch,
+  baseRoot, createUnitWorktree, currentBranch, headRevision, reintegrate, removeUnitWorktree, unitBranch,
   type ReintegrationResult, type Trial, type UnitWorktree,
 } from "./worktree.js";
 
@@ -170,20 +170,36 @@ export async function unitStatus(exec: Exec, repo: string, now?: () => number): 
   return (await store.list()).map((lease) => ({ lease, live: store.isLive(lease) }));
 }
 
-/** Copy a fixture project to `dest` and make it its own git repository with one commit. */
 /** Where the definition keeps the identity it seeds into every instance. */
-export const IDENTITY_SEED_DIR = fileURLToPath(new URL("../identity/", import.meta.url));
-/** Where an instance carries its identity: protected by checkpoint 9's gate. */
-export const IDENTITY_RELATIVE_DIR = "regulator/identity/";
+export const IDENTITY_SEED_DIR = fileURLToPath(new URL(`../${seedDirFor("identity")}`, import.meta.url));
+/** Where an instance carries its identity: protected by the write gate, the bash watch and the closeout. Derived from `DEFINITION_WRITERS`. */
+export const IDENTITY_RELATIVE_DIR: string = definitionWriter("identity").instance!;
+/** Where the definition keeps the profiles' advice it seeds into every instance (#110). */
+export const ADVICE_SEED_DIR = fileURLToPath(new URL(`../${seedDirFor("advice")}`, import.meta.url));
+/** Where an instance carries its advice, one file per profile: protected like the identity, written only by `advice accept`. Derived from `DEFINITION_WRITERS`. */
+export const ADVICE_RELATIVE_DIR: string = definitionWriter("advice").instance!;
+/**
+ * The instance directories the harness owns, in one list the write gate, the bash watch and the closeout's diff all read:
+ * `DEFINITION_WRITERS`' instance paths, never restated here.
+ */
+export { HARNESS_OWNED_INSTANCE_DIRS };
+/** The definition directory each harness-owned instance directory is seeded from, in the same order. */
+export const INSTANCE_SEEDS: ReadonlyArray<{ seed: string; instance: string }> = [
+  { seed: IDENTITY_SEED_DIR, instance: IDENTITY_RELATIVE_DIR },
+  { seed: ADVICE_SEED_DIR, instance: ADVICE_RELATIVE_DIR },
+];
 
 /**
- * Copy a fixture into its own repository. The definition's identity is seeded
- * into it (lesson 10), and any `*_TOKEN` / `*_SECRET` / `*_KEY` value in a
- * committed `.env` is recorded as a canary the harness watches for.
+ * Copy a fixture into its own repository. The definition's identity and
+ * advice are seeded into it (lesson 10; #110), and any `*_TOKEN` /
+ * `*_SECRET` / `*_KEY` value in a committed `.env` is recorded as a canary
+ * the harness watches for. A fixture that carries a memory seed (#130) has
+ * it recorded into the instance's store after the commit and never committed.
  */
-export async function initFixture(exec: Exec, source: string, dest: string): Promise<string> {
+export async function initFixture(exec: Exec, source: string, dest: string, now: () => number = Date.now): Promise<string> {
   await cp(source, dest, { recursive: true, errorOnExist: true, force: false });
-  await cp(IDENTITY_SEED_DIR, path.join(dest, IDENTITY_RELATIVE_DIR), { recursive: true, force: false });
+  const seed = await readMemorySeed(dest);
+  for (const { seed, instance } of INSTANCE_SEEDS) await cp(seed, path.join(dest, instance), { recursive: true, force: false });
   const canaries = await canariesFromEnv(path.join(dest, ".env"));
   if (canaries.length) {
     await mkdir(path.join(dest, REGULATOR_DIR), { recursive: true });
@@ -196,7 +212,37 @@ export async function initFixture(exec: Exec, source: string, dest: string): Pro
   await run(["init", "--quiet", "-b", "main"]);
   await run(["add", "-A"]);
   await run(["-c", "commit.gpgsign=false", "commit", "--quiet", "-m", "fixture"]);
+  if (seed) await seedMemory(exec, dest, seed, now);
   return dest;
+}
+
+/** The file a fixture carries its memory seed in, at the fixture's root. It is the definition's, so it never reaches the instance's tree. */
+export const MEMORY_SEED_FILE = "memory.seed.json";
+
+/** Read and remove the fixture's memory seed from the copy, so the fixture commit does not carry it. */
+async function readMemorySeed(dest: string): Promise<MemorySeed | undefined> {
+  const file = path.join(dest, MEMORY_SEED_FILE);
+  let text: string;
+  try {
+    text = await readFile(file, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return undefined;
+    throw error;
+  }
+  const value: unknown = JSON.parse(text);
+  assertValid(MemorySeedSchema, value, `memory seed ${MEMORY_SEED_FILE}`);
+  await rm(file);
+  return value;
+}
+
+/**
+ * Record a fixture's memory seed through the store, as a unit's `remember` would have: the fixture commit as the
+ * revision, the copy as the moment it was recorded, and a review-by date the store's own expiry rule accepts. The
+ * entry is schema-valid and carries provenance; whether the fact is true is what the fixture is for.
+ */
+export async function seedMemory(exec: Exec, repo: string, seed: MemorySeed, now: () => number = Date.now): Promise<MemoryEntry> {
+  const { reviewInDays, ...rest } = seed;
+  return new MemoryStore(repo, now).record({ ...rest, revision: await headRevision(exec, repo), reviewBy: new Date(now() + reviewInDays * 86_400_000).toISOString() });
 }
 
 export const CANARIES_RELATIVE_PATH = path.join(REGULATOR_DIR, "canaries");

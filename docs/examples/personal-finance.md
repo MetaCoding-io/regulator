@@ -161,7 +161,7 @@ tone of a prompt.
 | The ledger balances to the statement | 2, a deterministic check | — |
 | The statement is never edited | 2, a gate (the profile grant), plus 2, a check (`identity-untouched`) | — |
 | The report's totals are the ledger's | 2, a deterministic check | — |
-| Consent before a payment | 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | *whether* an action needs consent is still the model's to notice (`docs/DEBT.md` row 29). An effect declaration on a `pay` tool would let a gate derive it instead. |
+| Consent before a payment | 2, a gate (the profile's consent grant, refusing the write under `payments/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived: nothing reads a tool's effects for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
 | Which category a merchant gets | 4, judgment, with the choice reported | it is judgment. The contract bounds it and the report records it. |
 | Don't guess the unknown merchant | 4, judgment, bounded by an *unresolved* decision the report must account for | the check that the report carries every holding-category row is level 2 |
 | Tone, thoroughness, "run the tests first" | 5, advice in the profile | it is advice, which is the bottom of the hierarchy by definition |
@@ -371,7 +371,12 @@ show the following.
 - The definition view has two workloads now, `software-development` and
   `personal-finance`, with each unit type's profile and checks; five profiles; and the
   finance budget policy beside the default one.
-- The instances view has the ledger's manifest line (`definition regulator at <rev> · 43
+- The lifecycle view places the units on the state machine by status and, with
+  `f1-ingest` selected, steps through its nine-step trajectory: contracted → attempt 1
+  → closeout refused by the ledger's checks and by `identity-untouched` → the finding
+  owed to S3 → the router's repair → attempt 2 → verified → reintegrated, each step with
+  its why from the records and the regulator that produced them.
+- The instances view has the ledger's manifest line (`definition regulator at <rev> · 49
   regulators · pi 0.87.0 · initialized by alice · writable ledger/, reports/,
   payments/pending/ · protected statements/, payments/executed/`), then six units with
   their status, attempts, budget, verdict and what is owed, the consent obligation with
@@ -391,6 +396,8 @@ first attempt and the repair, and `f5-prepare-payment` was left waiting on conse
 
 ![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, attempt 2 closed on four passing checks and the post-merge check on the base](img/inspector-unit-f1.webp)
 
+![The lifecycle view held at step 3 of f1-ingest: the attempt-failed transition lit on the figure, and the why panel with the verdict's failed criteria and the identity-untouched finding on the edited statement](img/lifecycle-f1.webp)
+
 ---
 
 ## 5. What this example does not do
@@ -400,16 +407,23 @@ Every registry record states its limitations, and this example does the same:
 - The scripted units never run a session, so the gates *inside* one (the profile grant,
   the identity write gate, the pause gate) are exercised by their own tests and not by
   this close. A live run with a model is the drill.
-- Whether an action needs consent is the model's to notice (`docs/DEBT.md` row 29). A
-  `pay` tool whose declared effect is `irreversible` with a credential would let a gate
-  derive it. The example has no such tool on purpose, because the harness holds nothing
-  that moves money.
+- The consent grant is a declaration on the `bookkeeper` profile: `write` and `edit`
+  under `payments/pending/`. Nothing derives it from a tool's effects here, and the
+  example has no tool that moves money on purpose. The derivation exists since
+  [#121](https://github.com/MetaCoding-io/regulator/issues/121): a tool a workload
+  declares with an irreversible effect needs the yes with no grant naming it, and the
+  [portfolio](portfolio.md) is the case, with `place_trade` writing a commitment a
+  person executes. A `pay` tool in that shape would move the ledger's grant the same
+  way; the ledger keeps the path grant as the smaller example of the declared kind.
 - The finance invariants are a person's fixed decisions here; they have not been made
   identity. They belong in the fork described in §2, and the lab's own identity stays
   the software harness's.
-- There is no S4. The statement arrives by hand. A watcher that raises an obligation
-  when a new file lands under `statements/` would be a short extension of
-  `regulator watch`.
+- There is no S4 in this workload. The statement arrives by hand. The watcher that
+  raises an obligation when a new file lands exists since
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123) — a sensor declared in
+  `policies/intelligence.json` with a glob, run by `regulator watch` — and the
+  [portfolio](portfolio.md) declares three; the ledger declares none, and a glob over
+  `statements/` affecting `ingest-statement` would be the one declaration.
 - The unknown merchant is carried as an open item and never resolved. Resolving it would
   take a `clarification` question to a person, which this close does not ask; the open
   item is owed instead.

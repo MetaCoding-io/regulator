@@ -13,13 +13,13 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import {
-  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, formatSummary, projectSpans, readIdentity, summarizeLedger, timelineFor,
-  type IdentitySet, type InteractionState, type MemoryState, type RegistryProblem, type TimelineEntry, type UnitAudit,
+  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, foldPredictions, formatSummary, precisionOf, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
+  type IdentitySet, type InteractionState, type MemoryState, type PredictionState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   InstanceManifestSchema,
-  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
+  type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type IntelligencePolicy, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
 } from "@metacoding.io/regulator-protocol";
 
@@ -32,6 +32,8 @@ export interface DefinitionView {
   recovery: RecoveryPolicy[];
   routing: RoutingPolicy[];
   interaction: InteractionPolicy[];
+  /** The intelligence policies (#123): the sensors `regulator watch` runs. */
+  intelligence: IntelligencePolicy[];
   /** Capability profiles, declared as files since lesson 12. */
   profiles: CapabilityProfile[];
   /** The identity set the definition seeds into every instance (lesson 12): files, invariants, problems. */
@@ -75,6 +77,8 @@ export interface UnitView {
   obligations: ObligationState[];
   /** The replay (lesson 15): every record about the unit in time order, from the span projection. */
   timeline: TimelineEntry[];
+  /** The unit's path through `UNIT_TRANSITIONS`, read from its status history (#162) with each step's why as the records state it; reconstructed from the records, and saying so, for a unit that has no history; `problem` when the history and the records disagree. */
+  trajectory: UnitTrajectory;
 }
 
 export interface InstanceView {
@@ -89,6 +93,8 @@ export interface InstanceView {
   memory: MemoryState[];
   /** What units asked a person and what came back (lesson 13), oldest first. */
   interactions: InteractionState[];
+  /** Every prediction the log holds (#138), folded: its horizons, what bet on it and how that was decided, its resolutions, and a precision that counts inconclusive against. */
+  predictions: PredictionState[];
   /** What `regulator init` wrote (lesson 15), when it did; the problem when the file is there and invalid. */
   manifest: InstanceManifest | undefined;
   manifestProblem?: string;
@@ -129,6 +135,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   const recovery: RecoveryPolicy[] = [];
   const routing: RoutingPolicy[] = [];
   const interaction: InteractionPolicy[] = [];
+  const intelligence: IntelligencePolicy[] = [];
   let policyFiles: string[] = [];
   try {
     policyFiles = (await readdir(path.join(dir, "policies"))).filter((f) => f.endsWith(".json")).sort();
@@ -138,12 +145,13 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
   for (const file of policyFiles) {
     try {
       const value: unknown = JSON.parse(await readFile(path.join(dir, "policies", file), "utf8"));
-      // Four policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
+      // Five policy shapes share the directory; a file is whichever closed schema it satisfies, and none is a problem.
       if (isPolicyDefinition(value)) policies.push(value);
       else if (isRecoveryPolicy(value)) recovery.push(value);
       else if (isRoutingPolicy(value)) routing.push(value);
       else if (isInteractionPolicy(value)) interaction.push(value);
-      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing or interaction policy)`);
+      else if (isIntelligencePolicy(value)) intelligence.push(value);
+      else assertValid(PolicyDefinitionSchema, value, `policy ${file} (not a budget, recovery, routing, interaction or intelligence policy)`);
     } catch (error) {
       problems.push(`policies/${file}: ${(error as Error).message}`);
     }
@@ -210,6 +218,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     recovery,
     routing,
     interaction,
+    intelligence,
     profiles,
     identity,
     evals,
@@ -229,6 +238,18 @@ async function jsonFilesIn(dir: string): Promise<string[]> {
   }
 }
 
+/**
+ * Why a unit is where it is, in one line, as its records say it: a blocked unit's own reason, and for a unit the
+ * router aborted the decision that did. Only a blocked record carries a reason (#161); an aborted unit's why was
+ * always the decision, which the record used to restate.
+ */
+export function unitWhy(unit: UnitRecord, decisions: readonly RecoveryDecision[]): string | undefined {
+  if (unit.status === "blocked") return unit.reason;
+  if (unit.status !== "aborted") return undefined;
+  const abort = [...decisions].reverse().find((d) => d.action === "abort");
+  return abort ? `aborted under ${abort.policy.name} v${abort.policy.version}: ${abort.cause}` : undefined;
+}
+
 export async function readInstance(dir: string, now: () => number = Date.now): Promise<InstanceView> {
   const store = new ExecutionStore(dir, now);
   const auditLog = new AuditLog(dir);
@@ -237,16 +258,22 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   const spans = await projectSpans(dir);
   const units: UnitView[] = [];
   for (const unit of await store.listUnits()) {
+    const attemptRecords = await store.listAttempts(unit.unitId);
+    const decisions = await store.listDecisions(unit.unitId);
+    const audit = await auditLog.forUnit(unit.unitId);
+    const owed = obligations.filter((o) => o.unit === unit.unitId);
+    const budgets = (await Promise.all(attemptRecords.map((a) => store.getBudget(unit.unitId, a.attempt)))).filter((b) => b !== undefined);
     units.push({
       unit,
       contract: await store.getContract(unit.unitId, unit.contract.version),
       report: await store.getReport(unit.unitId, unit.contract.version),
-      attemptRecords: await store.listAttempts(unit.unitId),
+      attemptRecords,
       budget: unit.attempts > 0 ? await store.getBudget(unit.unitId, unit.attempts) : await store.getBudget(unit.unitId, 1),
-      decisions: await store.listDecisions(unit.unitId),
-      audit: await auditLog.forUnit(unit.unitId),
-      obligations: obligations.filter((o) => o.unit === unit.unitId),
+      decisions,
+      audit,
+      obligations: owed,
       timeline: timelineFor(spans, unit.unitId),
+      trajectory: unitTrajectory({ unit, attempts: attemptRecords, decisions, verdicts: audit.verdicts, obligations: owed, budgets, history: await store.listTransitions(unit.unitId) }),
     });
   }
   let manifest: InstanceManifest | undefined;
@@ -260,7 +287,7 @@ export async function readInstance(dir: string, now: () => number = Date.now): P
   }
   const leaseStore = new LeaseStore(path.join(dir, LEASES_RELATIVE_DIR), now);
   const leases = (await leaseStore.list()).map((lease) => ({ lease, live: leaseStore.isLive(lease) }));
-  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions(), manifest, ...(manifestProblem ? { manifestProblem } : {}) };
+  return { dir, units, leases, signals: await ledger.unrouted(), obligations, memory: await new MemoryStore(dir, now).states(), interactions: await ledger.interactions(), predictions: foldPredictions(await ledger.entries()), manifest, ...(manifestProblem ? { manifestProblem } : {}) };
 }
 
 export async function readStatus(options: ReadStatusOptions): Promise<StatusView> {
@@ -295,6 +322,10 @@ export function renderStatusText(view: StatusView): string {
       lines.push(`  interaction ${policy.name} v${policy.version}: waits ${Object.entries(policy.timeoutsMs).map(([k, ms]) => `${k} ${Math.round(ms / 1000)}s`).join(", ")}; ${policy.attention.blockingPerAttempt} blocking interrupt(s) per attempt; remind after ${Math.round(policy.reminderAfterMs / 60_000)} min`);
       for (const p of policy.people) lines.push(`    ${p.name}: up to ${p.resolveUpTo}${p.acceptRisk ? ", may accept risk" : ""}${p.actAsS5 ? ", may act as S5" : ""}`);
     }
+    for (const policy of d.intelligence) {
+      lines.push(`  intelligence ${policy.name} v${policy.version}: ${policy.sensors.length} sensor(s); programs under ${Math.round(policy.programTimeoutMs / 1000)}s`);
+      for (const s of policy.sensors) lines.push(`    ${s.name} (${s.provenance}): ${s.glob !== undefined ? `glob ${s.glob}` : `every ${Math.round((s.schedule?.everyMs ?? 0) / 1000)}s, ${s.program?.argv.join(" ")}`}; affects ${s.affects.join(", ")} at ${s.severity}; current ${Math.round(s.expiresAfterMs / 3_600_000)}h`);
+    }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {
       lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}`);
@@ -310,12 +341,14 @@ export function renderStatusText(view: StatusView): string {
     lines.push(`instance ${i.dir}`);
     lines.push(`  manifest: ${i.manifest ? `definition ${i.manifest.definition.name} at ${i.manifest.definition.harnessRevision.slice(0, 7)} (${i.manifest.definition.registry} regulators, pi ${i.manifest.definition.pi}), initialized ${i.manifest.initializedAt.slice(0, 10)} by ${i.manifest.initializedBy}${i.manifest.writablePaths ? `; writable ${i.manifest.writablePaths.join(", ")}` : ""}${i.manifest.protectedPaths ? `; protected ${i.manifest.protectedPaths.join(", ")}` : ""}` : i.manifestProblem ? `! ${i.manifestProblem}` : "none (not initialized with `regulator init`)"}`);
     lines.push(`  units: ${i.units.length}`);
-    for (const { unit, report, attemptRecords, budget, decisions, audit, obligations } of i.units) {
+    for (const { unit, report, attemptRecords, budget, decisions, audit, obligations, trajectory } of i.units) {
       const last = attemptRecords.at(-1);
       const routed = decisions.at(-1);
       const verdict = audit.verdicts.at(-1);
       const owed = obligations.filter((o) => o.status === "open" || o.status === "acknowledged");
-      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unit.reason ? `  — ${unit.reason}` : ""}`);
+      lines.push(`    ${unit.status.padEnd(10)} ${unit.unitId}  ${unit.unitType}  contract ${unit.contract.id} v${unit.contract.version}  attempts ${unit.attempts}${last ? ` (last: ${last.outcome})` : ""}${report ? "  reported" : ""}${budget ? `  budget ${summarizeLedger(budget)}` : ""}${routed ? `  routed ${routed.cause}→${routed.action} (${routed.policy.name} v${routed.policy.version})` : ""}${verdict ? `  audit ${summarizeVerdict(verdict)}` : ""}${owed.length ? `  owed ${owed.map((o) => `${o.consumer}${o.blocks ? "!" : ""}`).join(",")}` : ""}${unitWhy(unit, decisions) ? `  — ${unitWhy(unit, decisions)}` : ""}`);
+      if (trajectory.problem) lines.push(`      ! replay: ${trajectory.problem}`);
+      if (trajectory.basis === "reconstructed") lines.push("      history: reconstructed from the records (this unit's moves were written before the store kept a status history)");
     }
     lines.push(`  leases: ${i.leases.length}`);
     for (const { lease, live } of i.leases) lines.push(`    ${live ? "live   " : "expired"} ${lease.unitId}  ${lease.owner}  until ${new Date(lease.expiresAt).toISOString()}`);
@@ -331,6 +364,16 @@ export function renderStatusText(view: StatusView): string {
     const current = i.memory.filter((m) => m.status === "current");
     lines.push(`  memory: ${current.length} current of ${i.memory.length}`);
     for (const m of current) lines.push(`    ${m.id.slice(0, 8)}  ${m.subject}: ${m.note}  (by ${m.recordedBy}${m.unit ? ` in ${m.unit}` : ""}; review by ${m.reviewBy.slice(0, 10)})`);
+    const openPredictions = i.predictions.filter((p) => p.status === "open");
+    const precision = precisionOf(i.predictions.flatMap((p) => p.horizons.flatMap((h) => h.resolutions)));
+    lines.push(`  predictions: ${openPredictions.length} open of ${i.predictions.length}${precision.resolved ? `; ${precision.confirmed} confirmed, ${precision.disconfirmed} disconfirmed, ${precision.inconclusive} inconclusive of ${precision.resolved} resolved (precision ${precision.precision!.toFixed(2)}; inconclusive counts against)` : ""}`);
+    for (const p of i.predictions) {
+      const horizons = p.horizons.map((h) => h.horizon.kind === "live"
+        ? `live ${h.status}: ${h.resolutions.length}/${h.horizon.count} ${h.horizon.unitTypes.join("|")} unit(s)${h.resolutions.length ? ` (${h.resolutions.map((r) => `${"unit" in r.resolvedBy ? r.resolvedBy.unit : "report"} ${r.outcome}`).join(", ")})` : ""}`
+        : `probe ${h.status}${h.resolutions.length ? ` (${h.resolutions[0]!.outcome})` : ""}`).join("; ");
+      const decided = p.proposals.map((x) => `${x.messageId.slice(0, 8)} ${x.disposition ?? x.status ?? "unrouted"}`).join(", ");
+      lines.push(`    ${p.status.padEnd(17)} ${p.signal.id.slice(0, 8)}  ${p.prediction.metric} ${p.prediction.direction} by ${p.prediction.magnitude} (p=${p.prediction.probability})  ${horizons}${decided ? `  bet on by ${decided}` : ""}  ${p.signal.subject}`);
+    }
     lines.push(`  unrouted signals: ${i.signals.length}`);
     for (const signal of i.signals) lines.push(`    ${signal.kind}  ${signal.source}→${signal.destination}  ${signal.subject}${"unit" in signal && signal.unit ? `  (unit ${signal.unit})` : ""}`);
   }

@@ -3,7 +3,7 @@
 The control plane: the `regulator` CLI (`src/cli.ts`), the S3 loop (`src/controller.ts`),
 the stores and the host seam (`src/host.ts`), headless tests beside them, and the
 definition beside the code: `registry/`,
-`identity/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
+`identity/`, `advice/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
 `settings.json`. `BOUNDARY.md` and `registry/REGULATORS.md` are generated from the
 registry records.
 
@@ -19,3 +19,9 @@ registry records.
   `contracts/finance/`; the worked example is
   [`docs/examples/personal-finance.md`](../../docs/examples/personal-finance.md) and
   `src/finance.test.ts` runs its August close scripted.
+- **Third workload:** `workload/portfolio.json` over `fixture-portfolio/`, with the
+  `manager` profile (the `auditor` reused), `policies/portfolio.json` and
+  `contracts/portfolio/`; the worked example is
+  [`docs/examples/portfolio.md`](../../docs/examples/portfolio.md), the authoring guide
+  written from it is [`docs/guide/authoring-a-workload.md`](../../docs/guide/authoring-a-workload.md),
+  and `src/portfolio.test.ts` runs its September close scripted.
