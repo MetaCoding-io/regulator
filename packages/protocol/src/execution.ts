@@ -125,16 +125,16 @@ export type UnitTransitionRecord = UnitTransitionRow extends infer R
 
 /**
  * The schema of a line: one object per row of the table, so a line that is not a transition the loop declares does
- * not validate. A row that does not block declares `reason` as a property nothing satisfies, and does not leave
- * the refusal to `additionalProperties`: under the pinned typebox (1.0.0) `Value.Check` tests an undeclared key
- * against an unanchored pattern of the declared ones, so `reason`, which contains `on`, would pass as additional.
+ * not validate. A row that does not block declares no `reason`, and `additionalProperties: false` refuses one:
+ * typebox anchors and escapes the declared keys when it checks that from 1.0.50 on (1.0.0 did not, and let an
+ * undeclared key through when its name contained a declared one; #191, pinned by `additional-properties.test.ts`).
  */
 export const UnitTransitionRecordSchema = Type.Union(UNIT_TRANSITIONS.map((row) => Type.Object({
   from: Type.Literal(row.from),
   to: Type.Literal(row.to),
   on: Type.Literal(row.on),
   at: NonEmpty,
-  reason: row.to === "blocked" ? NonEmpty : Type.Optional(Type.Never()),
+  ...(row.to === "blocked" ? { reason: NonEmpty } : {}),
 }, { additionalProperties: false })));
 
 export function isUnitTransitionRecord(value: unknown): value is UnitTransitionRecord {
