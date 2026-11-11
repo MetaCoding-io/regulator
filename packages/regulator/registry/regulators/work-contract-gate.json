@@ -29,9 +29,7 @@
       "unit",
       "contract"
     ],
-    "resources": [
-      "execution store"
-    ]
+    "resources": [".regulator/units/"]
   },
   "authority": {
     "may": [

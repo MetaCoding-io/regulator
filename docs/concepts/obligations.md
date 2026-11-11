@@ -30,7 +30,11 @@ message kind, and the rule names the severity at which a message of that kind op
 obligation, and for which consumer. Below the line the message is *noted* with the
 reason and stays in the trace. An intelligence signal past its expiry is noted as well,
 and never becomes an obligation. An intelligence signal that names affected units opens
-one obligation per unit, so each veto lands on the unit the concern is about.
+one obligation per unit, so each veto lands on the unit the concern is about; an entry
+of the form `type:<unitType>` opens one that names a unit *type* and no unit, for a unit
+dispatched after the signal was raised. A declared sensor's signal
+([intelligence policy](/reference/definition#intelligence-policy)) names types this way,
+since the unit it concerns usually does not exist yet when the sensor fires.
 
 The second source is a recovery decision the loop cannot apply on its own. When the
 [recovery policy](/reference/definition#recovery-policy) answers a blocked unit with a
@@ -82,10 +86,12 @@ the emitter said.
 ### The veto
 
 `progressionVeto` is the check the loop runs before a dispatch and before a close. It
-collects every open obligation with `blocks: true` that names this unit, plus every one
-that names *no* unit. The second case is deliberate: an audit finding about the instance
-itself, such as the base failing its checks after a merge, holds every unit until S3
-dispositions it. `regulator obligations` marks the ones that currently veto.
+collects every open obligation with `blocks: true` that names this unit, every one that
+names this unit's *type* and no unit, plus every one that names neither. The last case
+is deliberate: an audit finding about the instance itself, such as the base failing its
+checks after a merge, holds every unit until S3 dispositions it. The type case is a
+sensor's: a drift signal raised before `plan-rebalance` was dispatched holds it when it
+is. `regulator obligations` marks the ones that currently veto.
 
 ## Lifecycle
 
@@ -151,8 +157,11 @@ delivery is recorded as an event with the channel. After the policy's `reminderA
 passes with no disposition, it is delivered again and marked as a reminder.
 `regulator remind` runs one tick of that. `regulator watch` runs the ticks and forwards
 each new outbox line to a channel command, keeping a cursor in `.regulator/outbox.cursor`
-so that a restart forwards nothing twice. Delivery is not a disposition: an obligation
-stays open until someone closes it.
+so that a restart forwards nothing twice; in the same tick it runs the sensors the
+[intelligence policy](/reference/definition#intelligence-policy) declares and routes
+what they raise, and raises one advisory obligation when an intelligence signal expires
+while an obligation it opened is still open. Delivery is not a disposition: an
+obligation stays open until someone closes it.
 
 ## Reading them
 

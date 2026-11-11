@@ -21,6 +21,7 @@ import { RegulatoryEventStore, VSM_DATABASE_RELATIVE_PATH } from "./event-store.
 import { ExecutionStore } from "./execution-store.js";
 import { MemoryStore } from "./memory.js";
 import { ObligationLedger } from "./obligations.js";
+import { ownConsumption } from "./policy.js";
 import { REGULATOR_DIR } from "./paths.js";
 import { isMessage, readEntries } from "./signals.js";
 
@@ -197,7 +198,8 @@ export async function projectSpans(root: string, options: ProjectSpansOptions = 
           status: budget.exhausted ? "error" : "unset",
           attributes: attrs({
             [GENAI.operation]: "chat", [GENAI.requestModel]: budget.models[0], [GENAI.responseModel]: budget.models.at(-1), [VSM_ATTR.regulator]: REGULATOR_FOR.budget!,
-            [VSM_ATTR.unit]: unit.unitId, [VSM_ATTR.attempt]: a.attempt, "vsm.usage.tokens": budget.consumed.tokens, "vsm.usage.turns": budget.consumed.turns, "vsm.usage.cost": budget.consumed.cost,
+            [VSM_ATTR.unit]: unit.unitId, [VSM_ATTR.attempt]: a.attempt, "vsm.usage.tokens": ownConsumption(budget).tokens, "vsm.usage.turns": ownConsumption(budget).turns, "vsm.usage.cost": ownConsumption(budget).cost,
+            ...(budget.carried ? { "vsm.budget.carried.attempt": budget.carried.attempt, "vsm.budget.carried.tokens": budget.carried.consumed.tokens } : {}),
             "vsm.budget.tokens": budget.ceiling.tokens, "vsm.budget.turns": budget.ceiling.turns, ...(budget.exhausted ? { "vsm.budget.exhausted": budget.exhausted.dimension } : {}), "vsm.compactions": budget.compactions.length,
           }),
           events: budget.compactions.map((c) => ({ name: "compaction", time: c.at, attributes: attrs({ reason: c.reason, preserved: c.preserved }) })),

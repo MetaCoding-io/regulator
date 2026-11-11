@@ -1,0 +1,10 @@
+{
+  "name": "managed-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Course fixture: a portfolio under management as plain files with its own checks. The domain of the portfolio workload.",
+  "scripts": {
+    "test": "node --test"
+  }
+}

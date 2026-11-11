@@ -13,7 +13,8 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { isRegulatorRecord, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
+import { DEFINITION_WRITERS, INSTANCE_STORES, instanceStoreFor, isRegulatorRecord, type PathologyRow, type RegulatorRecord, enforcementPointName, unknownEnforcementPoint, type EnforcementPoint } from "@metacoding.io/regulator-protocol";
+import { checkPathologies, loadPathologies } from "./pathologies.js";
 
 export interface RegistryProblem {
   file: string;
@@ -23,6 +24,12 @@ export interface RegistryProblem {
 export interface LoadedRegistry {
   records: RegulatorRecord[];
   problems: RegistryProblem[];
+  /** What is worth saying but does not fail the check: today, an active record no pathology row names (#57). */
+  warnings: RegistryProblem[];
+  /** The pathology catalog's rows (`pathologies.json`, #57), each naming the regulators that absorb it by id. */
+  pathologies: PathologyRow[];
+  /** Record id → the card's file stem (`reg.audit.closeout-gate.v1` → `closeout-gate`), the short name the prose uses. */
+  shortNames: Map<string, string>;
   /** Whether `mechanism.implementation` and `evidence.tests` paths were checked against the filesystem (a source checkout), or only carried as provenance (an installed package). */
   filesVerified: boolean;
 }
@@ -41,11 +48,12 @@ export function formatEnforcementPoint(point: EnforcementPoint): string {
   return `\`${enforcementPointName(point)}\`${point.note ? ` (${point.note})` : ""}`;
 }
 
-/** Load every `regulators/*.json` record under `registryDir`, validating shape only. */
+/** Load every `regulators/*.json` record under `registryDir`, and the pathology rows beside them, validating shape only. */
 export async function loadRegistry(registryDir: string): Promise<LoadedRegistry> {
   const dir = path.join(registryDir, "regulators");
   const records: RegulatorRecord[] = [];
   const problems: RegistryProblem[] = [];
+  const shortNames = new Map<string, string>();
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json")).sort();
   for (const file of files) {
     let parsed: unknown;
@@ -63,8 +71,11 @@ export async function loadRegistry(registryDir: string): Promise<LoadedRegistry>
       continue;
     }
     records.push(parsed);
+    shortNames.set(parsed.id, path.basename(file, ".json"));
   }
-  return { records, problems, filesVerified: false };
+  const pathologies = await loadPathologies(registryDir);
+  problems.push(...pathologies.problems);
+  return { records, problems, warnings: [], pathologies: pathologies.rows, shortNames, filesVerified: false };
 }
 
 /**
@@ -107,10 +118,18 @@ export async function checkRegistry(registryDir: string, root: string, options: 
     // Lesson 14: a regulator that cannot be switched off cannot be shown to help, and one with no retirement condition only grows.
     if (record.status === "active" && !record.ablation) loaded.problems.push({ file, message: "active regulator names no ablation switch (`none` is allowed, with a note saying why)" });
     if (record.status === "active" && !record.retirement) loaded.problems.push({ file, message: "active regulator states no retirement condition" });
+    // A resource under `.regulator/` is a store the instance keeps (#153): the list is closed, so a figure can draw who writes where.
+    for (const resource of record.scope?.resources ?? []) {
+      if (resource.startsWith(".regulator/") && !instanceStoreFor(resource)) loaded.problems.push({ file, message: `scope.resources names "${resource}", which is no store of INSTANCE_STORES; the instance keeps ${INSTANCE_STORES.map((s) => s.path).join(", ")}` });
+    }
     if (options.today && record.status === "active" && record.ownership.reviewBy < options.today) {
       loaded.problems.push({ file, message: `review overdue since ${record.ownership.reviewBy}: review the record, then move ownership.reviewBy or retire it` });
     }
   }
+  // #57: a pathology row names what absorbs it by id; a row naming a record that is not active fails here.
+  const pathologies = checkPathologies(loaded.pathologies, loaded.records);
+  loaded.problems.push(...pathologies.problems);
+  loaded.warnings.push(...pathologies.warnings);
   return loaded;
 }
 
@@ -192,6 +211,20 @@ export function renderBoundaryMarkdown(records: readonly RegulatorRecord[]): str
     "to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.",
     "",
   ];
+  // Who writes the definition (#110): the accept-path split, rendered from DEFINITION_WRITERS so the statement cannot
+  // name a path the list does not, and the list cannot carry a class the statement does not show.
+  lines.push("## Who writes the definition", "",
+    "Every definition file is proposable (INV-002: a proposal changes nothing). What differs is the path an accepted",
+    "proposal takes, declared once as `DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol`: the write gate, the",
+    "bash watch and the closeout diff protect the instance paths below, `regulator check` refuses a definition directory",
+    "in no class, and a test holds every command named here against the CLI.", "",
+    "| Class | Paths | Proposed by | Lands through | Probed by | Refused to |", "| --- | --- | --- | --- | --- | --- |");
+  for (const w of DEFINITION_WRITERS) {
+    const paths = [...w.seed, ...(w.instance ? [w.instance] : [])].map((p) => `\`${p}\``).join(", ");
+    const lands = w.instance ? `\`${w.acceptedBy}\`${w.promotedBy ? `, then \`${w.promotedBy}\`` : ""}` : `${w.acceptedBy}${w.gap ? `; ${w.gap}` : ""}`;
+    lines.push(`| ${w.class} | ${paths} | ${w.proposedBy} | ${lands} | ${w.probedBy} | ${w.refusedTo} |`);
+  }
+  lines.push("", "A path not named here is not known to be covered: a definition directory in no class does not pass `regulator check`,", "and an instance path outside the list is protected only if the project's conventions or its manifest declare it.", "");
   for (const r of gates) {
     lines.push(`## ${r.name} (\`${r.id}\`)`, "");
     lines.push(`Enforced at ${r.mechanism.enforcementPoints.map(formatEnforcementPoint).join(", ") || "(nowhere)"} in \`${r.mechanism.implementation}\`; ${r.vsmFunction}, ${r.mechanism.level}.`, "");

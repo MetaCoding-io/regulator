@@ -53,7 +53,24 @@ export const PolicyDefinitionSchema = Type.Object({
    * here, and `check`, `doctor` and the session measure against the limit that applies.
    */
   identity: Type.Optional(Type.Object({
-    maxChars: Type.Integer({ minimum: 1000 }),
+    maxChars: Type.Optional(Type.Integer({ minimum: 1000 })),
+    /**
+     * The behavioral canary: a marker every reply must begin with, rendered as a rule beside the identity, and the
+     * number of consecutive replies without it before the host records a finding. `{unit}` in the marker is the unit id.
+     * Unset, no canary: nothing is rendered and nothing is read.
+     */
+    canary: Type.Optional(Type.Object({
+      marker: Type.String({ minLength: 1, maxLength: 40 }),
+      misses: Type.Integer({ minimum: 1 }),
+    }, { additionalProperties: false })),
+  }, { additionalProperties: false })),
+  /**
+   * The profile's room in the prompt (#110): the characters of a profile's advice file a unit's prompt carries before
+   * the rendering is cut. Unset, the default (`ADVICE_CONTEXT_MAX_CHARS` in core, 4000); `check`, `doctor` and the
+   * session measure against the limit that applies, warn with the cut, and refuse nothing.
+   */
+  advice: Type.Optional(Type.Object({
+    maxChars: Type.Integer({ minimum: 100 }),
   }, { additionalProperties: false })),
   /** S2's declared numbers (lesson 12): what counts as oscillation. */
   coordination: Type.Optional(Type.Object({

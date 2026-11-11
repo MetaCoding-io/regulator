@@ -6,6 +6,34 @@ A gate protects the calls that reach it. This statement lists, for every mechani
 enforced and what it does not cover — the routes around it. A route that is not named here is not known
 to be covered. Nothing below is a sandbox: real isolation comes from the operating system or a container.
 
+## Who writes the definition
+
+Every definition file is proposable (INV-002: a proposal changes nothing). What differs is the path an accepted
+proposal takes, declared once as `DEFINITION_WRITERS` in `@metacoding.io/regulator-protocol`: the write gate, the
+bash watch and the closeout diff protect the instance paths below, `regulator check` refuses a definition directory
+in no class, and a test holds every command named here against the CLI.
+
+| Class | Paths | Proposed by | Lands through | Probed by | Refused to |
+| --- | --- | --- | --- | --- | --- |
+| identity | `identity/`, `regulator/identity/` | `propose_policy_change` | `identity accept`, then `identity promote` | an eval arm's `identity` switch toggles the whole set; no per-file probe | every tool; `advice accept` (closed file list) |
+| advice | `advice/`, `regulator/advice/` | a typed `harness-edit` (`HarnessEditSchema`: diagnosis references, a diff by profile, the id of a signal with a `prediction` block; checked against the stores at `advice accept`) or a plain proposal | `advice accept`, then `advice promote` | the prediction's horizons: a probe horizon resolves from a committed report by fingerprint, a live horizon from the next N units after acceptance (#138); an eval arm's `advice` override is slice 3 (accept-path note §8, after #46) | every tool; `identity accept` (closed file list) |
+| declaration | `profiles/`, `workload/`, `policies/`, `evals/`, `contracts/`, `registry/`, `drift/`, `fixture/`, `fixture-finance/`, `fixture-injection/`, `fixture-oscillation/`, `fixture-poisoned-memory/`, `fixture-portfolio/` | a plain proposal, `requestedChange` as text | a merged change to the definition's repository; a unit of work against the definition's repository under a contract, with `regulator check` and the tests at closeout and a merge by a person, waits for the definition's repository to run under the loop (accept-path note §6); until then the path is a pull request a person writes | the definition's own CI | `identity accept` and `advice accept`, by construction |
+
+A path not named here is not known to be covered: a definition directory in no class does not pass `regulator check`,
+and an instance path outside the list is protected only if the project's conventions or its manifest declare it.
+
+## Advice decision path (`reg.authority.advice-decision.v1`)
+
+Enforced at `cli:advice accept` (proposal owed to S5, actAsS5, clean tree, declared profile's file named by the harness-edit payload (checked against the stores first) or by a plain proposal's subject, non-empty and under advice.maxChars; authorizeWrite s5-authority, git commit, ledger.resolve accepted citing the prediction when there is one), `cli:advice reject` (ledger.resolve rejected) in `src/cli.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- Who may act as S5 is the interaction policy's `actAsS5` grant, checked before the write; the name on `--by` is asserted, not authenticated. A grant narrower than S5 for advice alone (`acceptAdvice`) is an interaction-policy decision not taken (accept-path note §9).
+- The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
+- An advice file is text. Nothing checks that an accepted edit is advice rather than a rule in disguise; the `glossary-lint` analogue for advice does not exist. The person's reading and, once the reflector lands, the live horizon are the only pressure (docs/DEBT.md row 43).
+- The probe rule — accept a `harness-edit` only after its probe horizon resolves — is not here. The prediction record and the typed payload landed (#138, prediction-resolution), so a `harness-edit` is checked against the stores and its live horizon opens at acceptance; refusing one that was never probed waits for the probe arm (accept-path note §8, slice 3, after #46).
+- It changes the instance's advice, not the definition's seed: a decision accepted in one instance does not reach another. `advice promote` carries it to the seed; instances initialized earlier keep their own copy, and `regulator upgrade` (#53) seeds only a file an instance lacks, never one it has (docs/DEBT.md row 44).
+
 ## Algedonic delivery (`reg.algedonic.delivery.v1`)
 
 Enforced at `loop:routeAndDeliver` (deliverPending: undelivered → outbox, journaled, ledger.deliver; remindDue: remindable → outbox, reminder), `cli:signals route` (deliverPending after routing), `cli:remind` (remindDue) in `src/deliver.ts`; S5, deterministic-gate.
@@ -15,6 +43,17 @@ Not covered:
 - The outbox is a file; `regulator watch` forwards each new line to the channel command the deployment names, and nothing beyond that command reaches a person. Supervising the watcher and choosing the channel are the deployment's.
 - Reminders run at the loop's steps, on `regulator remind`, and on each `regulator watch` tick; an instance with no watcher running reminds nobody until someone runs something.
 - One outbox for the instance, not one per person: an obligation owed to 'a person' is delivered to whoever reads the outbox, and the interaction policy's people say who may answer, not who was told.
+
+## Behavioral canary (`reg.audit.behavioral-canary.v1`)
+
+Enforced at `host:before_agent_start` (render the rule), `host:message_end` (read the reply) in `../regulator-pi/src/identity.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The marker is a proxy for attention, and the rule is advice. A model that keeps the marker and still hallucinates is not seen; a model that drops it for a harmless reason is. A reply with no text (tool calls only) is not counted either way. The finding is advisory for these reasons, and it is one signal among the host's, not a verdict.
+- It reads a prefix: the marker after leading whitespace. A marker inside a code fence, after a heading, or paraphrased is a miss, and a model that puts it first and nothing else right is a hit.
+- S3 can act on the finding under a declared rule, and no shipped policy declares one. The recovery router classifies an attempt that ended without a report and carries the finding as `context-degradation`, and a recovery policy with a rule for the cause answers with a retry in a fresh session on the degraded attempt's ledger. The cause is last in the router's precedence by rule: a recorded outcome (a budget halt, a refused report, a failed closeout, an error), an oscillation signal and a failure the session observed each win, and the finding is then evidence on the decision and not its cause. The shipped recovery policy names no rule for it, so such an attempt is routed as `no-report`, and under the shipped routing policy the advisory finding is noted as trace and opens no obligation: the fresh session on the same budget is still a person's decision (docs/DEBT.md row 42). The first live report (evals/reports/drift-live-2026-11-08.json) is why: the canary fell silent in 12 of 18 treatment units, each closed on the attempt in which it fell silent, and no attempt was refused, so no silence has yet preceded a failure. Under either policy nothing stops the model mid-attempt.
+- Misses are counted per session, as the thrash detector's edits are: a unit resumed in a new session starts at zero, and the first reply of a session is judged like every other.
 
 ## Behaviour check (export-signature) (`reg.audit.behaviour-check.v1`)
 
@@ -37,8 +76,9 @@ Not covered:
 - The wall-clock ceiling is measured from the attempt's first session start, not from dispatch; time spent loading extensions or waiting on a rate limit counts against the unit.
 - A halt reaches the orchestrator as an aborted session plus the ledger's exhausted marker, and the marker is what says it was a halt (the router reads it before failing over); a session opened on the attempt without the guard — no policy, no lease — records nothing, and the loop sees no-report.
 - Attempts are the orchestrator's ceiling (runUnit), not the session's; a unit re-dispatched by hand outside runUnit is not counted.
+- A command unit (a unit type whose runner is a program, reg.control.command-runner.v1) is not metered by this guard: no session opens, so no turn end and no tool call reaches it. The loop's runner meters wall-clock alone — the policy's ceiling for the unit type is the timeout the program runs under — and writes the ledger once at the end with tokens, cost and turns zero by construction; a run past the ceiling is marked exhausted on the wall-clock dimension and refused as a dispatch error. Nothing halts a program before that timeout, and no other ceiling applies to it.
 
-## Canary watch (`reg.audit.canary-watch.v1`)
+## Credential canary watch (`reg.audit.canary-watch.v1`)
 
 Enforced at `host:tool_result` (redact), `host:message_end` (record) in `../regulator-pi/src/authority.ts`; S3*, deterministic-gate.
 
@@ -59,15 +99,52 @@ Not covered:
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
 
+## Command runner (a unit that runs a program) (`reg.control.command-runner.v1`)
+
+Enforced at `loop:runUnit` (the dispatcher is the runner's for a `command` unit type (commandDispatcher), never the host's; a contract delegating a reported choice or leaving a decision unresolved to a command unit is refused before anything is claimed; the attempt record carries the program's file, hash and exit), `check:checkDefinition` (checkCommandRunner in core: no argv, no file under the definition, arbitrary execution granted, an output outside the writable paths, an output under a consent grant), `cli:unit dispatch` (no host is loaded for a unit type that runs a program), `cli:unit drive` (the same) in `src/runner.ts`; S3, deterministic-gate.
+
+Not covered:
+
+- The host trusts the declared command to be the workload's program, as it trusts `npm test` to be the project's suite, and inspects nothing beyond its effect declaration (the profile, read by the definition check) and its outputs: what the program imports, what it reads, and anything it reaches by an absolute path, a network call or a process it spawns are unseen. The diff against the worktree before the run catches what remains in the worktree after it; a write outside the worktree is not caught, and a write under a protected prefix inside it is caught twice, here and by identity-untouched at closeout.
+- A program cannot ask, so its outputs may not sit under a consent grant of its profile; the definition check refuses the declaration. Work whose output needs a person's yes is split: the program proposes under an unguarded prefix, and a session that can ask confirms and writes under the guarded one. Nothing derives the split; the workload declares it.
+- The budget is wall-clock alone: the policy's ceiling for the unit type, and the runner's own timeout below it, as the timeout the program runs under. Tokens, cost and turns are zero by construction. CPU and the size of what a program writes are not metered (open questions §3 named both; docs/DEBT.md row 49).
+- The lease the loop took at start is not renewed while the program runs, so a program that runs longer than the lease's TTL outlives its claim; the wall-clock ceiling, not the lease, bounds it. A session's gates — the profile grant, the write gate, the pause gate, the lease gate on every tool call — are not exercised by a program, which calls no tool; its reach is checked once at the declaration and once after the run.
+- A program's report carries no judgment, so a contract for a command unit fixes what a session's contract would delegate (the portfolio's lot ordering and extent are fixed decisions on the program's contract). A program's stdout is the only channel for a report; a program that writes its summary elsewhere reports `exit 0` and the tail of whatever it printed.
+
+## Declared tool (a workload's own action, with an effect contract) (`reg.control.declared-tool.v1`)
+
+Enforced at `tool:declared` (execute (runDeclaredTool in src/declared-tools.ts): the arguments checked against the declared schema, the program run in the worktree with them on stdin, a write outside the declared outputs undone and the call refused, a non-zero exit or a timeout refused with what the program said; the file, hash, exit and writes recorded as a regulator:declared-tool session entry), `host:tool_call` (the consent gate (../regulator-pi/src/authority.ts, consentRequiredFor in core): a call of a declared tool whose effect is irreversible is refused without an accepted consent obligation on the unit whose recorded call covers it, derived from the declaration with no profile grant naming the tool), `host:session_start` (the status line says which tools the definition declares and which of them the gate derives consent for; the profiles extension sets the surface by name, as for a built-in, and describes the derived consent in the profile section), `check:checkDefinition` (checkDeclaredTools in core: a built-in's or another workload's name, a non-object schema, arbitrary execution, an effect that disagrees with the outputs, no program file under the definition, an output outside the project or under a harness-owned prefix, a granting profile that writes under the outputs directly (refused) or grants a shell beside them (warned); readOnlyViolations and isReadOnlyProfile read the declared effects) in `../regulator-pi/src/declared-tools.ts`; S3, typed-tool.
+
+Not covered:
+
+- The host trusts the declared program to be the workload's, as the command runner trusts its program and the host trusts `npm test`: what it imports, reads or reaches by an absolute path, a network call or a process it spawns is unseen, and the effect is what the workload declared, not what the program does. The diff of the worktree around the run catches what remains in the worktree; the definition check catches the declaration's own inconsistencies (an effect that writes with no outputs, outputs with an effect that does not write) and nothing further.
+- Consent is derived from one value of one axis, `sideEffects: "irreversible"`. A declared tool whose side effects are `unknown` derives nothing: an unknown effect is a declaration that says nothing, and a gate derives nothing from nothing — the read-only check refuses such a tool to a read-only profile, and a profile that wants a yes on it names it in `consent[]`. Nothing is derived from `filesystem`, `execution` or `network`.
+- The derived consent is enforced on the tool's calls. A profile that grants the tool and may write under its outputs by a plain `write` or `edit` is refused by `regulator check`, and one that grants a shell beside it is warned about; but an instance manifest that declares the outputs' prefix writable widens the session's write grant past the profile's, and the definition check cannot see it: `regulator doctor` refuses such a manifest (`manifest-writable`) and says which line to drop by hand, since the manifest is a person's declaration that `upgrade` never rewrites.
+- A declared tool's effect is not journaled through the effect journal: its reach is its outputs in the worktree, where the diff around the run observes what it wrote and the closeout's checks judge it, and a call that did not finish leaves nothing under them. A declared tool whose irreversibility lies outside the tree would have nothing to reconcile against, which is why the implementation is a program writing files and nothing moves money.
+- The session's other effect gates — the lease gate, the pause gate, the budget gate — read the built-in table and treat a declared tool as a tool of undeclared effect: refused while paused or past the ceiling, and needing a live lease, whatever its declared effect. Safe, and imprecise for a declared read-only tool, which could pass where a read-only built-in does. The gates that reason about a declared effect are the consent gate and the definition check.
+- The host reads the declared tools from the definition it was built beside (the lab's root), as every extension reads its policy and settings; a session run under another definition root registers that definition's tools only when the dispatcher is told the root, which no host flag carries yet (docs/DEBT.md row 50). The scripted close and the tests pass the root explicitly.
+
 ## Definition check (`reg.identity.definition-check.v1`)
 
-Enforced at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close) in `src/registry-cli.ts`; S5, deterministic-gate.
+Enforced at `cli:check` (checkDefinition, under pnpm check), `check:checkDefinition` (a unit type declared contract-less must run under a profile that is read-only by declared effect), `check:checkDefinition` (a unit type that requires a contract must run under a profile that grants report_result, or no unit of the type could ever close), `check:checkDefinition` (advice: a file per declared profile, no file for an undeclared profile, no profile with both inline advice and a file; an advice file over the policy's advice.maxChars is a warning), `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (definition-writers)), `check:checkDefinition` (consent grants (#60): a guarded tool the profile does not grant, a guarded path outside its writable paths, a pattern on a tool without arbitrary execution or one that is not a regular expression, are refused; a guarded write beside bash with no pattern covering the path is a warning naming the profile and the path) in `src/registry-cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - Shape and references only: a profile that grants bash to a unit type whose contract forbids writes is a valid definition. Whether the declaration is a good one is the capstone's viability case.
 - It runs under `pnpm check` and `regulator check`, not at dispatch: an instance started from an edited definition between checks runs on the edit.
-- The identity checked is the definition's seed; an instance's copy is checked by the identity-untouched check at closeout, not here.
+- The identity and advice checked are the definition's seeds; an instance's copies are checked by the identity-untouched check at closeout and reported by `doctor`, not here.
+- An advice file is checked for shape and size, not for content: nothing says whether a line is advice or a rule in disguise (docs/DEBT.md row 43).
+
+## Definition writers (the accept-path split) (`reg.identity.definition-writers.v1`)
+
+Enforced at `check:checkDefinition` (a definition directory in no class of DEFINITION_WRITERS is refused (src/, dist/ and node_modules/ are the package's, not the definition's)), `cli:check` (under pnpm check and regulator check), `cli:docs` (renderBoundaryMarkdown: the "Who writes the definition" section from the list) in `../protocol/src/definition-writers.ts`; S5, deterministic-gate.
+
+Not covered:
+
+- The declaration class has no mechanism of its own: a profile grant, a unit type, a check, a policy, a suite or an extension lands as a pull request a person writes with `pnpm check` as the gate, not as a unit of work under the loop with `regulator check` at closeout. BOUNDARY.md's row says so; the mechanism waits for the definition's repository to run as an instance (accept-path note §6; docs/DEBT.md row 45).
+- Directories only: a file at the definition root (`settings.json`, `BOUNDARY.md`, `package.json`) is in no class and is not checked, and the fixtures are listed by name in the declaration class rather than derived from the eval suites that use them.
+- It names the paths and the commands; it does not check that a class's accept command writes only under its instance path. That is each command's own check (`authorizeWrite` under S5 authority, a closed file list), evidenced on its card.
+- A plain proposal's class is read off its subject (the path it names); only a `harness-edit` names its target in a typed payload (`HarnessEditSchema`, #138), and only for the advice class. A typed payload for the identity and declaration classes is not designed.
 
 ## Disposition authority (`reg.authority.disposition-authority.v1`)
 
@@ -86,7 +163,7 @@ Enforced at `cli:doctor` (every check, ok or not, with its detail; the exit code
 Not covered:
 
 - It checks what the definition and the instance say about themselves; a broken model provider, a missing API key or a full disk are Pi's and the deployment's to notice.
-- Definition drift is detected by revision, registry count and Pi pin; a definition changed without a commit (a dirty working tree) reads as unchanged.
+- Definition drift is detected by revision, registry count, Pi pin and package version, and doctor says to run `regulator upgrade` when the package is newer; it upgrades nothing, and after an upgrade it reports what the manifest's history says, not what the person did with the note's non-mechanical bullets. A definition changed without a commit (a dirty working tree) reads as unchanged, and a head the version number does not distinguish (the unreleased head) reads as drift by revision alone.
 - Exit 1 is the whole enforcement: a CI job that does not run it, or ignores its exit code, is unregulated. Nothing else calls doctor.
 
 ## Effect journal (`reg.coordination.effect-journal.v1`)
@@ -102,14 +179,15 @@ Not covered:
 
 ## Eval harness and graders (`reg.assurance.eval-harness.v1`)
 
-Enforced at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: outcome and trajectory graders, no judge model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch) in `src/evals.ts`; S3*, deterministic-gate.
+Enforced at `cli:eval` (runSuite: one instance per arm × repetition, the tasks through driveUnit; contractForArm / workloadForArm change only what the definition declares; graders.ts: the fifteen built-in outcome and trajectory graders (an advisory audit finding is not an invariant violation) and the declared graders a suite pre-registers, run after each unit; no judge model; the fingerprint hashes each declared grader's file; a live run reads the host's available models first and refuses a route whose declared primary has no key unless --accept-fallback is passed; each run carries the models its attempts' ledgers name and the fingerprint carries their union as modelsObserved beside the declared model), `check:checkDefinition` (suites and committed reports validate; ablation arms name their switch; a suite pre-registers only built-in metrics or ones a workload declares with a grader file under the definition, with at most one optimisation target, and a judged metric is refused until its instrument record carries a held-out score) in `src/evals.ts`; S3*, deterministic-gate.
 
 Not covered:
 
-- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks. The committed reports say `scripted:` in their fingerprint for that reason; a live run is the drill, and its numbers are the ones that count for retirement. The live path itself is covered headlessly (the dispatcher opens and binds a session with no model, ../regulator-pi/src/dispatcher.test.ts); what a model does under the gates is not.
+- A scripted unit never runs a session: the session gates (profile grant, write gate, bash watch, canary watch, budget guard) are not exercised, only the loop and the closeout checks, and the four `scripted:` reports are the graders' validation, not evidence about a model. The first live report (`evals/reports/drift-live-2026-11-08.json`: three repetitions of control and treatment on `anthropic/claude-sonnet-4-5`, every session bound and metered) is the evidence that exists; it covers two of the six arms, one model, one fixture on which that model did not drift, so it prices regulation and measures no gate catching anything. The ablation arms under a model and a fixture that pulls toward drift (#130) are what the next report owes.
 - The harness throws two kinds of switch — a host check, a checkpoint extension for a live arm. A regulator whose switch is `loop:`, `policy:` or `none` has no ablation arm the harness can run; the lifecycle view says so rather than pretending.
 - Repetitions are what the suite declares; at n=3 few intervals separate, and the lift's `separated` flag is a screen, not a test. Contamination (a fixture leaking into a prompt or a model's training data) is not detected; the fixture is small and public.
-- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines. They are validated against three scripted learner-style units, not against a model's actual drift.
+- Graders are pattern and structure: vocabulary drift is a word list, a rule in prose is a regular expression over added lines, an invariant violation is a non-advisory audit finding on an invariant or a failing identity-untouched or export-signature check. They are validated against four scripted learner-style units, not against a model's actual drift. The first live report's `invariantViolations` was computed before advisory findings were excluded and counts the behavioral canary's twenty-eight silence findings; its interpretation says so, and the recorded values stand as the record of what the grader did.
+- A declared grader is run as the workload declared it, and that is all the harness checks: that its command names a file under the definition (hashed into the fingerprint), that it exits clean, and that its lines name the metric it was declared for. Whether the number it emits measures what the declaration says is the workload's correctness, evidenced by the workload's own tests (the portfolio's turnover by its fixture's), not by this record. A judged metric — one that names an instrument — is refused until the instrument record exists with its held-out score, so no declared metric is a model's judgment yet.
 
 ## Evidence preflight (`reg.control.evidence-preflight.v1`)
 
@@ -141,22 +219,23 @@ Not covered:
 - The comment half is blocking wherever the workload declares the check; the commit-message half is blocking unless the workload's check entry says `commitMessages: advisory`, in which case a word there is recorded as evidence and a finding at advisory and refuses nothing. `software-development` declares the attenuation; `personal-finance` does not. A word in a commit message still costs a unit that a workload has not attenuated an attempt.
 - The glossary section is parsed from prose; a malformed line is silently not a term. `regulator check` does not validate the section.
 
-## Identity promotion (the release path) (`reg.authority.identity-promotion.v1`)
+## Identity and advice promotion (the release path) (`reg.authority.identity-promotion.v1`)
 
-Enforced at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition) in `src/cli.ts`; S5, deterministic-gate.
+Enforced at `cli:identity promote` (authorized as S5; identical-content and dirty-definition refusals; trial validation of the seed set; authorizeWrite s5-authority; git commit in the definition), `cli:advice promote` (the same, for advice/<profile>.md: a declared profile, identical-content and dirty-definition refusals, trial validation of the advice set against the declared profiles) in `src/cli.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - It promotes a file, not a decision: the obligation that decided it stays in the instance's ledger, and the commit message names the instance and its revision, not the obligation id. Linking the two across repositories is a convention, not a check.
 - The definition's own review (a pull request, `pnpm check`) is outside this command: the commit lands on whatever branch the definition has checked out.
-- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity is its own, proposed against and decided there).
+- Instances initialized before the promotion keep their own copy; nothing pushes the new seed into them (an instance's identity and advice are its own, proposed against and decided there). `regulator upgrade` (#53) seeds a file the instance lacks — the advice set of an instance initialized before #110, a profile's file added since — and never overwrites one that exists, so a promotion reaches an older instance only as a bullet of the migration note a person reads (docs/DEBT.md row 44).
 
-## Identity-untouched check (`reg.audit.identity-untouched-check.v1`)
+## Identity-untouched check (the instance's harness-owned files) (`reg.audit.identity-untouched-check.v1`)
 
 Enforced at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration) in `../checks/src/verify.ts`; S3*, deterministic-gate.
 
 Not covered:
 
+- Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
 - It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
@@ -170,7 +249,7 @@ Not covered:
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
-- Protected paths are the identity directory, the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
 
 ## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
 
@@ -185,12 +264,12 @@ Not covered:
 
 ## Instance manifest (regulator init) (`reg.identity.instance-manifest.v1`)
 
-Enforced at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:doctor` (readManifest, schema-validated; drift from the definition revision), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint) in `src/instance.ts`; S5, deterministic-gate.
+Enforced at `cli:init` (initInstance: refusals; identity seed; manifest written and validated; commit), `cli:upgrade` (upgradeInstance: the definition check, the clean base, the plan from the changelog's migration notes, the seed and ignore steps, the report fingerprint read from evals/reports/, the manifest rewritten, one commit; --check applies nothing; --by checked as S5), `cli:doctor` (readManifest, schema-validated; drift from the definition revision and the package version; the upgrade history), `host:session_start` (profiles: declared writable prefixes replace the profile's, never widen a read-only one), `loop:auditUnit` (declared protected prefixes and writable prefixes for identity-untouched and glossary-lint) in `src/instance.ts`; S5, deterministic-gate.
 
 Not covered:
 
 - The declaration is trusted as written: a person who declares `/` writable has granted everything; init checks the shape of a prefix, not its wisdom.
-- The manifest records the definition's revision at init and `doctor` reports drift from it, but nothing migrates an instance to a newer definition: the upgrade path is a person reading OPERATING.md, and the manifest is not rewritten.
+- `regulator upgrade` applies three mechanical steps and prints the rest: a decided file is never changed, so a change to the identity seed or an advice seed reaches an instance only as the note's words, and a promoted seed reaches no instance that keeps its own copy. The non-mechanical bullets are a person's to read and act on, and nothing records that they did. The fingerprint it records is read from a committed report whose `harnessRevision` is the target's; a head no report ran at records `none`, which is the shipped definition's state until the live report (#46) is committed.
 - Only `write` and `edit` honour the declared prefixes in the session; the shell is granted un-gated by path, as before (docs/DEBT.md row 8).
 
 ## Intelligence intake (`reg.intelligence.intelligence-intake.v1`)
@@ -201,17 +280,19 @@ Not covered:
 
 - The tool trusts the profile grant to keep it in research units: an implement unit given the tool would be recorded as S4. The intelligence profile is what puts the tool in a session's surface; nothing in the tool checks the unit type.
 - Evidence refs are stamped with the revision they were read at, but a ref to something outside the repository (an advisory URL, a registry version) is a claim the closeout gate cannot verify; only file refs are checked at HEAD.
-- Expiry is the unit's estimate; the router notes expired intelligence and nothing re-raises a research obligation when a finding an active unit relied on goes stale.
+- Expiry is the unit's estimate. The router notes intelligence that has already expired when it is routed; a signal that expires while an obligation it opened is still open is re-raised once, as an advisory obligation, by the watcher's tick (`sensor-intake`, #123) — so nothing says so in an instance whose watcher is not running, and the advisory releases nothing by itself.
 - One question per contract by convention, not by mechanism: a research unit may call the tool as often as it likes within its budget.
 
 ## Interaction contract (ask_human) (`reg.algedonic.interaction-contract.v1`)
 
-Enforced at `tool:ask_human` (execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout) in `../regulator-pi/src/algedonic.ts`; S5, typed-tool.
+Enforced at `tool:ask_human` (execute: AskHumanInputSchema, CONTINUES_WITHOUT_ANSWER, attention budget, ledger.openObligation / requestInteraction / answerInteraction / resolve; ctx.ui.confirm / select / input with the policy's timeout; a consent records `call`), `host:tool_call` (the consent gate (../regulator-pi/src/authority.ts, consentGate in src/consent.ts, consentRequiredFor in core): a call under the profile's consent grant, or of a workload-declared tool whose effect is irreversible (#121), is refused without an accepted consent obligation on the unit whose recorded call covers it; an amended yes rewrites the arguments before the tool runs), `host:tool_result` (a call that ran with amended arguments says which fields changed), `cli:answer` (--amend <json> on a consent given with a yes; refused on a no, another kind or a consent that recorded no call), `check:checkDefinition` (a consent grant names a tool the profile grants and a path it may write; a bash pattern is a regular expression; bash beside a guarded write with no covering pattern warns (the sandbox bypass)) in `../regulator-pi/src/algedonic.ts`; S5, typed-tool.
 
 Not covered:
 
 - The dialog answer is attributed to the OS user of the session (or the `person` option), not to an authenticated identity; in a session run by hand that is the person at the keyboard, which is what the record says.
-- Whether an action is irreversible is the model's to notice: the tool contracts what consent means, and the profile advice says when to ask; nothing derives 'this needs consent' from the tool's effects (an effect-derived consent check is a later lesson).
+- A consent grant is enforced on the named tool's calls only, and the one thing derived from an effect is the consent on a workload-declared tool whose side effects are irreversible (#121, `declared-tool`): a built-in's effect derives nothing, so a profile that wants a yes on a built-in names it in `consent[]`. A profile that grants bash beside a guarded write leaves the path reachable through the shell, which no path gates: `regulator check` warns unless a bash pattern covers the path, and the warning refuses nothing.
+- A consent the gate can hold is one that recorded its call: a question asked without `call` is a yes the record holds and the gate cannot match, so the guarded call is refused and the unit told to ask naming the call. The gate matches the arguments the record names and no more; for the shipped path grant that is the path, so a yes for a path holds for whatever content is written there; for a declared tool it is the arguments the question named, so a yes for one proposed list holds for that list and no other.
+- The dialog stays yes or no. Pi's confirm takes no structured input, so an answer with amended arguments comes only from `regulator answer --amend`; the gate reads the profile from the `profile` flag at session start, as the profile grant does, and a `/profile` switch in a session run by hand does not move the grant.
 - A recap is owed to a person and never delivered by this tool beyond the outbox; a person who never reads the outbox never corrects anything, which is the recap's contract — the work was reversible.
 
 ## Operational memory store (`reg.control.memory-store.v1`)
@@ -231,8 +312,8 @@ Enforced at `host:dispatcher` (piDispatcher: model choice, failover; attemptEnd:
 Not covered:
 
 - Failover starts a fresh session: the fallback model does not see what the primary did, only the contract. The attempt's ledger is resumed, so the primary's spend counts against the same ceiling and the fallback has less to work with.
-- Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch.
-- Failover with a model is exercised only live (the lesson's drill); the headless test covers the open-and-bind path and the halt-versus-failure decision, not a provider failing mid-route.
+- Availability means Pi's registry knows the model and an API key is configured, not that the provider still serves it or the account can pay: a retired model (google/gemini-2.5-flash, 2026-09-29) or an account without credits fails on the first call and costs one session; nothing checks the route against the provider before dispatch. The converse is as silent: with only a fallback's key in the shell the dispatcher runs every unit on that fallback and records it in the ledger alone (the fourth live drift run, 2026-11-08, ran thirty-six units on the last fallback). The dispatcher is right to; the eval harness is the one that refuses, since its report is declared on the primary.
+- Failover with a model is exercised only live (the lesson's drill), and no live run has yet seen a provider fail mid-route: five runs saw choice by availability and the budget guard's halts. The headless test covers the open-and-bind path, the halt-versus-failure decision and the availability lookup, not a provider failing (docs/DEBT.md row 15).
 
 ## Obligation router (`reg.control.obligation-router.v1`)
 
@@ -261,7 +342,7 @@ Enforced at `host:tool_call` (paused → block unless read-only effect or report
 
 Not covered:
 
-- The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does.
+- The session gate keys on TOOL_EFFECTS by tool name: a tool the effect table does not know is refused (safe), and a read-only tool that lies about its effect runs. The table is the effect declaration; this gate does not inspect what a tool does, and it does not read the effects a workload declares on its own tools (#121), which are refused while paused as undeclared ones are — right for an irreversible one, stricter than declared for a read-only one.
 - The pause is per session: a unit dispatched again by hand (`unit dispatch` after a manual `obligation resolve`) starts unpaused, because the obligation is closed; the veto is the only hold across sessions, and it is the obligation's, not this gate's.
 - A paused unit holds its lease and its worktree while it waits, and by default nothing expires the wait: a question nobody answers is visible in the read model and the outbox (`algedonic-delivery`), and stays. The interaction policy may declare `waitCeilingMs`; past it the loop routes the unit under the recovery policy's `timeout` cause and releases the lease, but the question stays open with its veto — nothing answers on anyone's behalf, and the worktree is kept for the attempt that follows the answer.
 
@@ -286,6 +367,19 @@ Not covered:
 - A base that moves between the trial and the landing is refused (`base-moved`), not re-trialed: the next close tries again from the new base. Inside one loop the lease and the veto make this a person's intervention, not a race.
 - An inconclusive trial (no test script discovered) lands, recorded as such; only a failing check refuses.
 
+## Prediction resolution (`reg.assurance.prediction-resolution.v1`)
+
+Enforced at `loop:resolvePredictions` (after a unit's status becomes closed (closeVerifiedUnit) or aborted (routeUnit): every open live horizon naming the unit's type gets one reading from unitGrader (src/predictions.ts, the eval harness's graders over one unit); probe horizons from committedReports by SHA-256; a disconfirmed live horizon appends a policy-proposal to S5 and routes it), `cli:advice accept` (a harness-edit is read against the stores first (checkHarnessEdit: units, attempts, trajectory moments, evidence at the revision, signals; the prediction carries the block; the profile is declared); the target is the payload's, a disagreeing --file is refused, the disposition cites the prediction) in `../core/src/predictions.ts`; S3*, deterministic-gate.
+
+Not covered:
+
+- The probe rule is not here: `advice accept` does not refuse a `harness-edit` whose probe horizon has not resolved, because nothing produces a probe report yet. The probe arm (`EvalArmSchema`'s `advice` override) and the refusal are slice 3 of the accept-path split, after the live report (#46); until then a probe horizon resolves only against a report a person committed and named by its fingerprint.
+- A live horizon reads one unit's grader value against a committed report's arm mean, with no interval on the unit's side: one value either reaches the baseline moved by the magnitude or it does not. The probe horizon uses the arm's 95% interval. At three repetitions few intervals separate, so a probe resolves inconclusive more often than a live horizon; inconclusive counts against the prediction either way.
+- The next N units are counted by the fold over the regulatory log — the resolutions recorded against the horizon — not by a scan of the execution store or an index, so the log is re-read at every close and abort, linear in its length, as the obligation ledger already is. A unit of a named type that closed before the horizon opened (before the harness-edit was accepted) is not a reading, by design: the edit was not in effect.
+- A report's fingerprint is the SHA-256 of its committed file, so an interpretation edited after the fact is a different report and a prediction naming the old fingerprint resolves against nothing; `regulator check` does not warn about a prediction whose named report is absent, the resolution's reason does.
+- The outcome graders run over the instance from its first commit, as the eval harness runs them from the fixture commit, so on a long-lived instance `boundaryViolations`, `vocabularyDrift` and `memoryRules` are cumulative, not the closing unit's alone; the trajectory counts and a declared grader are per unit or per run as their graders define them. A metric no grader observes here — another workload's declared metric, a name that is neither — is an inconclusive reading with that reason, never a zero.
+- Nothing in this slice produces a prediction: a person appends the signal, or the reflector will. `report_intelligence` does not take the block, and no `regulator intelligence report` command exists (open questions §2). A signal's three-valued `confidence` is still recorded and never calibrated; the instrument record kind that would grade it waits on resolved predictions and a live report.
+
 ## Profile write grant (`reg.control.profile-write-grant.v1`)
 
 Enforced at `host:session_start`, `host:tool_call` in `../regulator-pi/src/profiles.ts`; S3, deterministic-gate.
@@ -293,8 +387,9 @@ Enforced at `host:session_start`, `host:tool_call` in `../regulator-pi/src/profi
 Not covered:
 
 - Positive grant covers write and edit only; the implement profile grants bash, which is not path-gated.
-- Read-only means declared read-only effects (effects.ts); a tool with an undeclared effect is refused from read-only profiles, not audited.
+- Read-only means declared read-only effects (effects.ts, with the effects a workload declares on its own tools beside the built-ins since #121); a tool with an undeclared effect is refused from read-only profiles, not audited.
 - Lexical path check only, as for the vendor write gate.
+- The grant covers what a unit writes directly. A workload-declared tool (#121) writes under its own declared outputs, which need not lie inside the profile's writable paths — the portfolio's trades/pending/ is under no write grant and reachable through place_trade alone — so a prefix outside this grant is not a prefix nothing can write; the definition check and the declared-tool card say what reaches it.
 
 ## Progression veto (`reg.control.progression-veto.v1`)
 
@@ -333,7 +428,7 @@ Enforced at `loop:routeUnit` (after a blocked outcome), `loop:driveUnit` (the au
 
 Not covered:
 
-- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation.
+- Classification is a fixed precedence over recorded facts; a failure with two causes is routed by the first the precedence finds. A check-failure whose root cause is environmental is routed as check-failure, because the orchestrator's record wins over the session's observation. `context-degradation` is last in the precedence, and that is a rule: the behavioral canary's finding classifies only an attempt that ended without a report and that no recorded outcome, oscillation signal or session observation explains, since each of those names something a fresh context does not fix and the canary's marker is a proxy. It is read by the finding's invariant inside the attempt's own start and end (any S3* finding naming the invariant counts), never by its prose and never from an earlier attempt. A cause that rests on an advisory finding is routed only under a rule the policy declares; with none, the unit is routed as `no-report`, never by the fallback, and on every cause the finding is evidence on the decision. The shipped policy declares no rule (docs/DEBT.md row 42).
 - Remediate, replan, clarify and pause are recorded and the unit waits on an obligation for the consumer the routing policy names; nothing in the loop performs them. A person who resolves the obligation is checked against the interaction policy's people but not authenticated.
 - Occurrences are counted per cause per unit, by design: a unit that alternates between two causes never reaches the third action of either rule and is stopped by the attempt ceiling, and the alternation is visible in its decisions and obligations. A policy that wants a global count declares shorter rules.
 - Escalation is an algedonic signal in the regulatory log and an obligation owed to a person, delivered to the outbox and reminded under the interaction policy. The outbox is a file: no channel beyond it exists in the lab.
@@ -380,6 +475,19 @@ Not covered:
 - The proposed content is a file the person supplies; nothing derives it from the proposal's requestedChange, and nothing diffs it against what was asked. The person decides that the file is the proposal.
 - It changes the instance's identity, not the definition's seed: a decision accepted in one instance does not propagate to the next fixture. Promoting a decision into the definition is a commit to packages/regulator/identity/ by hand.
 
+## Sensor intake (S4 declared in the definition) (`reg.intelligence.sensor-intake.v1`)
+
+Enforced at `cli:watch` (applicableSensors narrows the policy to the sensors of the workloads the instance runs (its units' workloads, or --workload's); runSensors in the tick: a due program runs in the instance with no outputs (a stray write is undone and the run refused), the last line is read against SensorOutputSchema, a firing is appended as an intelligence-signal under the sensor's provenance and deduplicated against the current signals of the same claim, a failure is an advisory operational-signal, an expired held signal is one advisory obligation; then routeMessages), `check:checkDefinition` (checkIntelligencePolicy in core: an undeclared affected unit type, a provenance that is not sensor:<name>, a program with no file under the definition or with outputs, neither trigger or both, a schedule without a program, a glob with one, a glob that is not a pattern, a sensor declared twice), `loop:runUnit` (progressionVeto(ledger, unitId, unitType): an open blocking obligation with unitType and no unit holds every unit of the type at dispatch and at close, named in the refusal) in `src/sensors.ts`; S4, deterministic-gate.
+
+Not covered:
+
+- A sensor's threshold is the definition's claim about what matters, not evidence that it does: the drift band, the harvest inputs, the intervals and the expiries are numbers a person wrote into benchmark.json, harvest.json, tax.json and the policy, and nothing measures whether a firing was worth a person's attention. The eval harness has no metric over sensor firings.
+- The program is trusted as the command runner's is: the watcher inspects nothing beyond its argv's file (hashed) and the absence of writes in the instance. What it reads, imports or reaches by an absolute path or a network call is unseen, and a program that writes outside the instance is not caught.
+- A glob sensor sees names, not content: a file rewritten under a name the cursor has seen is no event, and the first tick seeds the cursor with what exists and fires on nothing, so an export that landed while the watcher was down and before its first tick is a person's to raise. The schedule is the watcher process's wall-clock: nothing runs while the watcher is not running, and an interval missed several times over runs once. Which sensors apply is read off the instance's units' workloads, so a fresh instance runs none until its first unit or until `--workload` says which it is.
+- Deduplication is by the claim's text under one provenance: a sensor whose claim carries a number that changes every tick raises a signal every tick while the first is current, and a resolved claim stays quiet until its signal expires even if the person wanted to hear it again sooner. The shipped sensors put the export date in the claim so it changes with the data and not with the clock.
+- The harvest-threshold sensor reads the household's harvest inputs (harvest.json, tax.json) and fires on the arithmetic the plan-harvest contract fixes and the suite recomputes (harvestEvaluation in the fixture's lib/portfolio.js; #181, which paid docs/DEBT.md row 51), so it carries no number of its own. The arithmetic is still the household's model, not a tax authority's: the benefit is the loss at the lot's rate with no account of the deferral or of the capital-loss limits, and the opportunity cost is one option price on one volatility number. The sensor answers the first of the contract's three reasons to leave a lot only: a lot it names can still be left as blocked by a recent buy or for want of a replacement.
+- Provenance is the declaration's word: `sensor:<name>` says which sensor the watcher ran, not that the program is the sensor the name suggests. A person's `regulator intelligence report` under `human:<name>` provenance, the other half of open questions §2, does not exist yet.
+
 ## Span projection (OpenTelemetry GenAI) (`reg.assurance.span-projection.v1`)
 
 Enforced at `cli:spans` (projectSpans: a schema-validated SpanRecord per record; redact on every string attribute), `cli:eval` (reportSpans: one span per eval run) in `../core/src/spans.ts`; S3*, type.
@@ -410,6 +518,18 @@ Not covered:
 - Liveness is expiry-only: a live process that stops heartbeating and a dead one look the same until the TTL passes; there is no fencing token yet.
 - The lease covers the working directory by path; a tool that writes elsewhere by absolute path is outside the lease — the identity write gate refuses absolute paths, but bash is not path-gated.
 - Leases are files on one machine; nothing coordinates across hosts.
+- A command unit (reg.control.command-runner.v1) holds the lease the loop took at start and nothing renews it while the program runs: a program that runs longer than the TTL outlives its claim, and the wall-clock ceiling, not the lease, is what bounds it. The tool-call refusal here is not exercised by a program, which calls no tool; what keeps two units off one checkout for a program is the loop taking the lease before the run and the runner writing only in the unit's own worktree.
+
+## Unit lifecycle (`reg.control.unit-lifecycle.v1`)
+
+Enforced at `loop:runUnit` (ExecutionStore.transition, on the record the step holds: dispatch, dispatch-refused, attempt-failed, verified; the table is UNIT_TRANSITIONS in ../protocol/src/execution.ts), `loop:closeUnit` (re-verified, re-audit-refused), `loop:routeUnit` (routed-waiting, abort), `loop:finishUnit` (reintegrated, reintegration-refused (closeVerifiedUnit, after the trial)), `cli:status` (unitTrajectory (../core/src/trajectory.ts): the status history read on every unit view, with the why from the records, which the control room steps through) in `../core/src/execution-store.ts`; S3, type.
+
+Not covered:
+
+- The compiler holds the table only where the caller holds the unit's record in a known status: the loop's four steps do, each on the record it read or was returned. A caller that names the unit by id (a test, a future command) and every record read from disk are checked by the store at runtime, by the same table. The three rows that share blocked → blocked (a resumed dispatch refused, a re-audit refused, a waiting decision) are written with their trigger and are distinct lines of the history; the unit record alone still holds only the status and its reason, so which row a unit last took is read from the history, not from `unit.json`.
+- A transition is two writes, the history line and then the unit record, and they are not atomic: a process that dies between them leaves a history that ends one move ahead of the record. The trajectory says so (the history ends where the record does not) and nothing repairs it. A unit whose moves were written before the history existed has none, or one that begins partway (an older build blocked it and this one resumed it): its path is reconstructed whole from the attempt, verdict, decision and obligation records, as it was before the history, with the three record-less moves placed at the record that follows, and the trajectory and each inferred step say that it is a reconstruction. `regulator upgrade` writes no history for such a unit: a line is the store's record of a move it made.
+- The why is what the records say, and the history carries none beyond a blocked unit's reason. A record that carries no rationale — an attempt that ended `error`, a verdict with no reasons — gives its step a detail string and nothing more; the trajectory does not read the transcript to improve on it. A line is joined to its record by its trigger and its order, so a record written without its transition, or a transition without its record, is a stated problem and not a guessed pairing.
+- A status written around the store is caught where the history, the records and the unit record disagree: a hand edit of `unit.json` alone, or a line appended alone. An edit that writes both consistently, as a path through the table, is not caught; the files are plain and nothing signs them.
 
 ## Vendor write gate (`reg.authority.vendor-write-gate.v1`)
 
@@ -434,6 +554,7 @@ Not covered:
 
 These regulators do not enforce; they inform. A rule that only they carry is not enforced.
 
+- Advice context (`reg.identity.advice-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what keeps the file what a person decided is the write gate (identity-write-gate), the bash watch and the identity-untouched check.
 - Contract advice section (`reg.control.contract-advice.v1`, prompt): Prompt text: the model may ignore it, and a long transcript may push it out of attention. Everything it says that matters is also a gate.
 - Contract-preserving compaction (`reg.control.contract-preserving-compaction.v1`, model-judgment): The conversation summary is model judgement: it can be wrong, and nothing checks it. Only the deterministic block is guaranteed.
 - Identity context (`reg.identity.identity-context.v1`, prompt): Level 5 by design: what is rendered is advice. A model can ignore it; what makes identity binding is the write gate (identity-write-gate) and the identity-untouched check, and the drift suite measures the gap.

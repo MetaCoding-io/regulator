@@ -45,8 +45,18 @@ export const TOOL_EFFECTS: Readonly<Record<string, ToolEffect>> = {
   ask_human: { filesystem: "none", execution: "none", network: "none", sideEffects: "irreversible" },
 };
 
-export function effectOf(toolName: string): ToolEffect | undefined {
-  return TOOL_EFFECTS[toolName];
+/** The declared effect of a tool: a built-in's from the table, or a workload-declared tool's (#121) when the caller passes the declared set. */
+export function effectOf(toolName: string, effects: Readonly<Record<string, ToolEffect>> = TOOL_EFFECTS): ToolEffect | undefined {
+  return effects[toolName];
+}
+
+/**
+ * The built-in table with a workload's declared tools beside it (#121): what a profile is judged by once the
+ * definition declares tools of its own. A built-in keeps its own declaration; the definition check refuses a
+ * declared tool that takes a built-in's name, so the two never disagree in a definition that passes.
+ */
+export function withDeclaredEffects(declared: Readonly<Record<string, ToolEffect>>): Readonly<Record<string, ToolEffect>> {
+  return { ...declared, ...TOOL_EFFECTS };
 }
 
 /** Effect-free: reads and nothing else. What a paused unit may still do (the pause gate), stricter than read-only: a record is an effect too. */

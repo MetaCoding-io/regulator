@@ -226,5 +226,5 @@ test("checkpoint 6 loads into a real Pi session next to checkpoint 5 and writes 
   await session.waitForIdle();
   const ledger = await new ExecutionStore(repo).getBudget(contract.unitId, 1);
   assert.equal(ledger?.attempt, 1);
-  assert.equal(ledger?.ceiling.tokens, 400_000, "the implement ceiling from policies/default.json");
+  assert.equal(ledger?.ceiling.tokens, 800_000, "the implement ceiling from policies/default.json");
 });

@@ -7,6 +7,8 @@
  */
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import { ToolEffectSchema } from "./effects.js";
+import { MetricDeclarationSchema } from "./metrics.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
 
@@ -35,11 +37,80 @@ export function checkOptions(entries: readonly CheckEntry[]): Record<string, Che
   return Object.fromEntries(entries.flatMap((e) => (typeof e === "string" ? [] : [[e.name, e.options] as const])));
 }
 
+/** A project-relative prefix a program may write under: never absolute, never `..` at the root; compared by prefix as a profile's writable paths are. */
+const OutputPrefix = Type.String({ minLength: 1, pattern: "^(?!\\.\\.(/|$))[^/\\\\][^\\\\]*$" });
+
+/**
+ * How a unit of the type runs (#122). A `session` is a model under the profile's grant, opened by the host; the
+ * default when the field is absent, and the only kind before #122. A `command` is a program the control plane runs
+ * itself, with its own process runner, in the unit's worktree: no host, no model, no tools. Its argv is in the shape a
+ * declared grader has — the first entry naming a file under the definition is the program's file, and its hash goes into
+ * the attempt record so a report can say what produced it; the program is run with the contract path and the attempt
+ * in its environment, under the policy's wall-clock ceiling for the unit type as its one budget (tokens and turns are
+ * zero by construction), and `outputs` are the prefixes it may write under — its whole reach. Its exit and its last
+ * stdout line are the report. The profile stays on the unit type for both kinds: for a command runner it is the effect
+ * declaration the read-only check and the consent refusal read, not a tool grant, and the definition check refuses a
+ * command runner whose profile grants arbitrary execution or whose outputs fall under a consent grant (a program cannot
+ * ask, so it may not write where a yes is required) or outside the profile's writable paths.
+ */
+/**
+ * A program the control plane runs itself, the one shape two declarations share: a command runner's (#122) and a
+ * declared tool's (#121). The argv is in the shape a declared grader has — the first entry naming a file under the
+ * definition is the program's file, hashed into the record of what ran — and `outputs` are the prefixes it may write
+ * under, its whole reach: a write anywhere else is undone and refused.
+ */
+const ProgramFields = {
+  /** The program, as the host runs it: an argv whose first entry naming a file under the definition is the program's file. */
+  argv: Type.Array(NonEmpty, { minItems: 1 }),
+  /** The program's own limit, when it declares one below the ceiling it runs under (the policy's wall-clock for a unit type; the host's tool timeout for a declared tool); the lesser applies. */
+  timeoutMs: Type.Optional(Type.Integer({ minimum: 1 })),
+  /** The prefixes the program may write under. A write anywhere else is undone and refused; empty means the program writes nothing. */
+  outputs: Type.Array(OutputPrefix),
+};
+export const ProgramSchema = Type.Object(ProgramFields, { additionalProperties: false });
+export type Program = Static<typeof ProgramSchema>;
+
+export const SessionRunnerSchema = Type.Object({ kind: Type.Literal("session") }, { additionalProperties: false });
+export const CommandRunnerSchema = Type.Object({ kind: Type.Literal("command"), ...ProgramFields }, { additionalProperties: false });
+export const RunnerSchema = Type.Union([SessionRunnerSchema, CommandRunnerSchema]);
+export type SessionRunner = Static<typeof SessionRunnerSchema>;
+export type CommandRunner = Static<typeof CommandRunnerSchema>;
+export type Runner = Static<typeof RunnerSchema>;
+
+/**
+ * A tool the workload declares (#121): a name, the description and the parameters schema the model sees, its
+ * *effect* in the shape every built-in declares (`ToolEffectSchema`), and the program that implements it. The host
+ * registers a declared tool generically from the definition, knowing nothing of the domain; a profile grants it by
+ * name as it grants a built-in, and reasons about it by its declared effect — a read-only profile may not be granted
+ * one whose effect is not read-only. The implementation is a program in the command runner's shape, run in the
+ * unit's worktree with the call's arguments on stdin as JSON, its outputs its whole reach; what it prints last is
+ * what the model is told. A declared tool whose `sideEffects` is `irreversible` needs a person's recorded yes for
+ * the call before it runs: the consent is derived from this declaration by the gate, with no `consent[]` entry on
+ * any profile, and it is the one effect the gate derives anything from.
+ */
+export const DeclaredToolSchema = Type.Object({
+  /** The tool's name as the model calls it; may not collide with a built-in's, and is one workload's. */
+  name: Type.String({ pattern: "^[a-z][a-z0-9_]*$" }),
+  /** What the tool does, for the model: the description Pi shows beside the schema. */
+  description: NonEmpty,
+  /** The parameters schema the model sees, as JSON Schema; an object schema (`"type": "object"`), as every tool's is. */
+  parameters: Type.Record(Type.String(), Type.Unknown()),
+  /** What happens in the world when it runs, on the four axes every built-in declares. */
+  effect: ToolEffectSchema,
+  /** The program that implements it: argv under the definition, outputs as its reach, an optional timeout. */
+  program: ProgramSchema,
+}, { additionalProperties: false });
+export type DeclaredTool = Static<typeof DeclaredToolSchema>;
+
+export const SESSION_RUNNER: SessionRunner = { kind: "session" };
+
 export const UnitTypeSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   description: NonEmpty,
-  /** The capability profile a unit of this type is dispatched under (lesson 04). */
+  /** The capability profile a unit of this type is dispatched under (lesson 04); for a command runner, its effect declaration. */
   profile: NonEmpty,
+  /** How a unit of this type runs (#122): a session under the profile's grant (the default), or a declared program. */
+  runner: Type.Optional(RunnerSchema),
   /** The harness-run checks that verify a unit of this type (consumed from lesson 09): a name, or a name with options. */
   checks: Type.Array(CheckEntrySchema),
   /** Whether a unit of this type may be dispatched without a work contract. */
@@ -48,11 +119,31 @@ export const UnitTypeSchema = Type.Object({
 }, { additionalProperties: false });
 export type UnitType = Static<typeof UnitTypeSchema>;
 
+/** The runner a unit type declares, with `session` as the default when the field is absent. */
+export function runnerOf(type: Pick<UnitType, "runner">): Runner {
+  return type.runner ?? SESSION_RUNNER;
+}
+
+export function isCommandRunner(runner: Runner): runner is CommandRunner {
+  return runner.kind === "command";
+}
+
 export const WorkloadDefinitionSchema = Type.Object({
   name: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
   version: Type.Integer({ minimum: 1 }),
   description: NonEmpty,
   unitTypes: Type.Array(UnitTypeSchema, { minItems: 1 }),
+  /**
+   * The metrics this workload declares, each with its grader (#129): named `workload:<this workload>/<metric>`, so a
+   * declaration lives beside what owns it. A suite pre-registers a declared name as it does a built-in one.
+   */
+  metrics: Type.Optional(Type.Array(MetricDeclarationSchema)),
+  /**
+   * The tools this workload declares (#121), each with its effect contract and the program that implements it.
+   * Registered by the host from the definition; granted by a profile by name; a declared tool with an irreversible
+   * effect is one the gate derives consent for.
+   */
+  tools: Type.Optional(Type.Array(DeclaredToolSchema)),
 }, { additionalProperties: false });
 export type WorkloadDefinition = Static<typeof WorkloadDefinitionSchema>;
 
