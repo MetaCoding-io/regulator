@@ -13,7 +13,7 @@
  * Pi-free. Delivery to a real channel is the lab's; this decides.
  */
 import {
-  CONTINUES_WITHOUT_ANSWER, severityAtLeast,
+  CONTINUES_WITHOUT_ANSWER, assertNever, severityAtLeast,
   type Disposition, type InteractionKind, type InteractionPolicy, type ObligationState, type Person, type Severity,
 } from "@metacoding.io/regulator-protocol";
 
@@ -35,8 +35,13 @@ export function dispositionForAnswer(kind: InteractionKind, answer: string): Dis
       return YES.test(answer) ? "accepted" : "rejected";
     case "uat":
       return YES.test(answer) ? "verified" : "rejected";
-    default:
+    // What the three have in common is that the answer is content, not a verdict: it is taken as given.
+    case "recap":
+    case "choice":
+    case "clarification":
       return "fixed";
+    default:
+      return assertNever(kind, "interaction kind");
   }
 }
 

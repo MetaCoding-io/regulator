@@ -31,9 +31,10 @@ seam in full and lists what a host must write back for the loop to read.
 
 ## `@metacoding.io/regulator-pi`
 
-This package is the Pi host, the only host today. It holds eleven session extensions,
-each covering one concern: `tools`, `profiles`, `coordination`, `contract`, `budget`,
-`recovery`, `evidence`, `authority`, `intelligence`, `identity` and `algedonic`. They
+This package is the Pi host, the only host today. It holds twelve session extensions,
+each covering one concern: `tools`, `declared-tools`, `profiles`, `coordination`,
+`contract`, `budget`, `recovery`, `evidence`, `authority`, `intelligence`, `identity`
+and `algedonic`. They
 are declared under `pi.extensions`, so `pi install <path>` can load them into a session
 that someone runs by hand. The package also holds the dispatcher, which runs a unit's
 session through the Pi SDK with the definition's settings, together with the write gate
@@ -107,5 +108,5 @@ this seam is tracked as [#58](https://github.com/MetaCoding-io/regulator/issues/
 All six packages are released together at one version (`0.1.4` today). A release is cut
 from a `v*` tag, and only after `pnpm check` passes on both supported Node versions. The
 [changelog](/project/changelog) is the packages' own. The course,
-[Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), pins the
+[Viable Agents](https://regulator.metacoding.io/), pins the
 version that each cohort builds against.

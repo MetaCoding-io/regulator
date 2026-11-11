@@ -156,3 +156,32 @@ test("disposition by decision: retry, repair and abort resolve the unit's open S
   assert.equal(abort, undefined);
   assert.equal((await ledger.get(wait!.id))?.status, "open", "a wait obligation is a person's to close, not the router's");
 });
+
+test("a unit-type hold (#123): an intelligence signal naming `type:<unitType>` opens one blocking obligation with the type and no unit, the veto matches it for every unit of that type at dispatch and for no other, an escalation carries the type, and a disposition releases every unit of the type", async (t) => {
+  const dir = await root(t);
+  const ledger = new ObligationLedger(dir, tick);
+  const { unit: _unit, ...sensorRaised } = intelligence("s1", { affectedUnits: ["type:plan-rebalance", "u9"], claim: "VTI is past the band", provenance: "sensor:drift-band" });
+  await appendSignal(dir, sensorRaised as VsmMessage);
+  const routed = await routeMessages(ledger, { policy, now: tick });
+  assert.deepEqual(routed.opened.map((o) => [o.unit, o.unitType, o.blocks, o.consumer]), [[undefined, "plan-rebalance", true, "S3"], ["u9", undefined, true, "S3"]], "one obligation per entry: the type hold has no unit, the unit hold has no type");
+  assert.deepEqual((await progressionVeto(ledger, "p3-plan-rebalance", "plan-rebalance")).map((o) => o.unitType), ["plan-rebalance"], "a unit of the type, dispatched after the signal, is held");
+  assert.deepEqual((await progressionVeto(ledger, "p3-plan-rebalance")).map((o) => o.unitType), [], "the caller must say the unit's type; a bare unit id is not held by a type");
+  assert.deepEqual(await progressionVeto(ledger, "p2-propose-target", "propose-target"), [], "another type is not held");
+  assert.deepEqual((await progressionVeto(ledger, "u9", "review")).map((o) => o.unit), ["u9"], "the unit hold works as before");
+  // An instance-wide hold (no unit, no type: the base failing its checks after a merge) still holds every unit; a type hold holds only its type.
+  const { unit: _u, ...instanceFinding } = finding("f1", "x", "blocking");
+  await appendSignal(dir, instanceFinding as VsmMessage);
+  const { opened } = await routeMessages(ledger, { policy, now: tick });
+  const [instanceWide] = opened;
+  assert.deepEqual([instanceWide?.unit, instanceWide?.unitType, instanceWide?.blocks], [undefined, undefined, true]);
+  assert.deepEqual((await progressionVeto(ledger, "p2-propose-target", "propose-target")).map((o) => o.id), [instanceWide!.id], "the instance-wide hold reaches every type; the type hold does not");
+  await ledger.resolve(instanceWide!.id, { by: "S3", disposition: "fixed", rationale: "the base passes again" });
+  const typeHold = routed.opened[0]!;
+  const successor = await ledger.escalate(typeHold.id, { by: "S3", to: "human", rationale: "a person decides" });
+  assert.equal(successor.unitType, "plan-rebalance", "the escalation carries the type hold");
+  assert.deepEqual((await progressionVeto(ledger, "p3-plan-rebalance", "plan-rebalance")).map((o) => o.id), [successor.id]);
+  await ledger.resolve(successor.id, { by: "alice", disposition: "replan", rationale: "plan the rebalance" });
+  assert.deepEqual(await progressionVeto(ledger, "p3-plan-rebalance", "plan-rebalance"), [], "dispositioned: every unit of the type may be dispatched");
+  const persisted = (await readSignals(dir)).find((m) => m.id === "s1");
+  assert.equal(persisted?.kind === "intelligence-signal" ? persisted.provenance : undefined, "sensor:drift-band", "the provenance is on the record");
+});

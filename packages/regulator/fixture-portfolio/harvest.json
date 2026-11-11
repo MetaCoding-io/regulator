@@ -1,0 +1,5 @@
+{
+  "description": "The household's inputs to a harvest's arithmetic, read by the checks under test/ and by a plan-harvest unit. tradingCostRate is the cost of one leg as a fraction of its value (the spread and the commission at the custodian); trackingVolatility is the annualised volatility of a replacement's return against the fund it replaces, from which the opportunity cost of holding the replacement through the wash-sale window is priced as an at-the-money option on the tracking difference. A loss is worth harvesting when its tax benefit, at the rate the lot's holding period earns under tax.json, exceeds the trading cost of both legs and that opportunity cost. The person's numbers; a unit never writes this file.",
+  "tradingCostRate": 0.0005,
+  "trackingVolatility": 0.02
+}

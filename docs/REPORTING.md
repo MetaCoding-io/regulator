@@ -12,7 +12,7 @@ That database has lived beside the instance's other records since lesson 15; the
 ## Default authority and explicit host binding
 
 These three tools make up the generic reporting extension, and they sit outside a unit's
-session: the eleven extensions the Pi host declares do not include them, and a unit
+session: the twelve extensions the Pi host declares do not include them, and a unit
 reports through `report_result` instead ([session tools](reference/tools.md)). The
 repository's root `pnpm pi` script registers all three but grants no reporting
 capabilities, so under that script every reporting call is denied. An unmapped context

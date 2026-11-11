@@ -4,7 +4,7 @@
 
 regulator (formerly VSM-Pi) is an agent harness on [Pi](https://pi.dev/) with an explicit cybernetic control plane. It asks whether Stafford Beer's Viable System Model can be made operational inside an autonomous software-development system—not as five chatbot personas, but as explicit functions, authority boundaries, typed channels, verification gates, and feedback loops—and it provides its own orchestrator to find out.
 
-The course, [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html), builds regulator lesson by lesson in its own repository: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
+The course, [Viable Agents](https://regulator.metacoding.io/), builds regulator lesson by lesson in its own repository: the product, `regulator` (`packages/regulator` with its Pi host `packages/regulator-pi`), is the reference build the lessons are written against. [GSD-Pi](https://github.com/open-gsd/gsd-pi) appears throughout the course as a comparison—another system's answer to the same problems—not as a dependency.
 
 The project starts from a simple premise:
 
@@ -46,15 +46,15 @@ When adding a feature, prefer mechanisms in this order:
 
 ## Documentation
 
-The user documentation is a VitePress site built from `docs/`: <https://metacoding-io.github.io/regulator/> — getting started, running units, operating, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from the registry, the concepts, the glossary and the pathology catalog. `pnpm --filter regulator-docs dev` serves it locally; the reference pages are generated from the product by `docs/scripts/generate.mjs`, so the site never carries a second copy of what the code states. `docs/archive/` is design history and is not part of the site.
+The user documentation is a VitePress site built from `docs/`: <https://docs.regulator.metacoding.io/> — getting started, running units, operating, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from the registry, the concepts, the glossary and the pathology catalog. `pnpm --filter regulator-docs dev` serves it locally; the reference pages are generated from the product by `docs/scripts/generate.mjs`, so the site never carries a second copy of what the code states. `docs/archive/` is design history and is not part of the site.
 
 ## Where it is
 
 Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`regulator`) and the read-only control room over it (`control-room`).
 
-Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over two workloads (software development, personal finance), the regulator registry of forty-three records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
+Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over three workloads (software development, personal finance, a managed portfolio), the regulator registry of forty-nine records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
-The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the live-model report is still owed (`docs/DEBT.md`).
+The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the first live-model report is committed (`packages/regulator/evals/reports/drift-live-2026-11-08.json`, with its interpretation beside it), and the ablation arms under a model are what the next one owes.
 
 No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the control-plane pattern proves useful.
 
@@ -78,14 +78,16 @@ vsm/example/      Example committed S5 artifacts
 
 ## Course: Viable Agents
 
-regulator is also what a course builds. [Viable Agents](https://metacoding-io.github.io/regulator-website/index.html) walks
+regulator is also what a course builds. [Viable Agents](https://regulator.metacoding.io/) walks
 fifteen lessons, one module of the product per lesson: each opens with a regulatory
 question an autonomous agent forces on you, derives the mechanism that answers it, and
 shows it in Pi, in GSD-Pi as the comparison case, and here. The course is a private
 repository; what it shares with the product is public in `docs/`: the
 [glossary](docs/GLOSSARY.md), the [pathology catalog](docs/PATHOLOGIES.md) and the
 [worked example](docs/examples/personal-finance.md) of a household ledger under the
-same control plane.
+same control plane, the [second](docs/examples/portfolio.md) of a managed portfolio, and
+the [authoring guide](docs/guide/authoring-a-workload.md) written from them.
+
 ## Status
 
 Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,

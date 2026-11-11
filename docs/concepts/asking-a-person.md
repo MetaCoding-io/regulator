@@ -91,12 +91,74 @@ and nothing answers on anyone's behalf.
 A person answers from the CLI:
 
 ```sh
-regulator answer <obligation> --by <who> --answer <text>
+regulator answer <obligation> --by <who> --answer <text> [--amend <json>]
 ```
 
 The name is checked against the interaction policy's people before anything is written.
 The answer resolves the obligation, and the next attempt starts with the answer as its
 hint: the question, who answered, and what they decided.
+
+### The consent grant
+
+Whether an action needs consent is not left to the model to notice. A capability
+profile declares it, as `consent[]`: a tool, with the path prefixes under which `write`
+and `edit` need a yes, or the command pattern under which `bash` does, or a bare tool
+name for a tool whose every call does. The shipped `bookkeeper` guards `write` and
+`edit` under `payments/pending/`, and every other profile guards nothing; the
+`manager`'s trade list is guarded another way, below. The [definition reference](/reference/definition#capability-profiles)
+has the field.
+
+The grant is enforced by the host's tool-call interception, before the tool runs. A
+guarded call runs only when the obligation ledger holds a consent obligation for the
+unit, resolved as accepted, whose recorded call covers it: a consent question names the
+call a yes authorizes (`call`: the tool and the arguments the grant matches, the path
+for a write), and the interception matches that record, not the hint the next attempt
+was given and not the attempt number. So a yes on attempt 1 holds on attempt 3 for the
+same path after a check failure sent the unit back to repair, and a different path, or
+a different tool on the same path, asks again. Silence, a question still owed, and a no
+each refuse the call; the refusal is recorded as an `operational-signal` with the unit,
+the tool, the path and the reason, and the unit is told to ask with `ask_human`
+`kind=consent`.
+
+A yes may change one thing. `--amend <json>` on the answer carries the arguments the
+person wants the call to run with, recorded on the answer and in the disposition; the
+interception runs the amended call in place of the one the unit proposed, and the tool
+result names the fields that changed. An amendment the tool's schema refuses, or one
+that would move a write to another path, is a rejection. The dialog in an interactive
+session stays yes or no.
+
+What the grant does not do is reach past the named tool. A profile that grants `bash`
+beside a guarded write leaves the path reachable through the shell, which no path
+gates; `regulator check` warns about that profile and that path unless a `bash` pattern
+entry covers it.
+
+### Consent derived from a declared effect
+
+One thing is derived rather than declared, and it is the only thing the control plane
+derives from an effect. A workload may declare [tools of its
+own](/reference/tools#tools-a-workload-declares), each with an effect on the four axes
+every built-in declares. A declared tool whose `sideEffects` is `irreversible` needs a
+person's recorded yes for exactly the call before it runs, with no `consent[]` entry
+naming it: the same interception reads the workload's declared effects beside the
+profile's grants, derives a bare grant on every call of the tool, and refuses a call
+without the yes as it refuses a write under a path grant, with the same
+`operational-signal` (naming the derivation) and the same instruction to ask. The
+record the gate matches is the call with the arguments the question named, so a yes
+for one proposed trade list holds for that list across attempts and for no other.
+
+The shipped case is the portfolio's `place_trade`. The `manager` profile has no write
+grant on `trades/pending/` at all; the tool is the one way a pending list comes to
+exist, its program copies the proposed list byte for byte after the yes, and the
+careless scripted unit that calls it without asking is refused before the file exists.
+The derivation stops at workload-declared tools. `ask_human` and `notify_owner` are
+irreversible too and are the control plane's channels to a person, so consent on them
+would be circular; a built-in's effect derives nothing, and a profile that wants a yes
+on one names it in `consent[]`. `regulator check` refuses a profile that grants an
+irreversible declared tool beside a plain `write` or `edit` under its outputs, since a
+write there would need no yes, and `regulator doctor` refuses an instance manifest
+whose writable prefixes reach them. The [declared
+tool](/reference/regulators#reg-control-declared-tool-v1) record says what else the
+derivation does not cover.
 
 ## Attention is a budget
 
@@ -130,9 +192,6 @@ only the fact that it did.
 The [registry records](/reference/regulators) for the interaction contract, delivery,
 the outbox watcher and disposition authority state their limitations. In short:
 
-- Whether an action needs consent is the model's to notice. The tool defines what
-  consent means once it is asked for; nothing yet derives "this needs consent" from a
-  tool's declared effects.
 - A dialog answer is trusted to the terminal. An answer typed into a session's dialog
   is attributed to the session's user and is not checked against the interaction
   policy, whereas the CLI path does check. Neither path authenticates the name
