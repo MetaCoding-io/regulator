@@ -1,7 +1,7 @@
 {
   "name": "portfolio",
   "version": 1,
-  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Two of them run a program rather than a session (#122): the rebalance plan and the harvest candidates are arithmetic over the tree, written under trades/proposed/ and checked by the host like a model's work. The workload declares one tool (#121), place_trade, whose declared effect is irreversible: the one way a trade list comes to exist under trades/pending/, and a call the harness refuses until a person's yes for it is on the record, with no profile naming it. Nothing here trades: a trade list is a file a person executes at the custodian.",
+  "description": "The periodic close of a portfolio under management: the third workload definition, and the second worked example's. Unit types are the steps of a close; each names the profile it runs under and the checks the host runs on its output — the portfolio's own test suite, run by the orchestrator, is the arithmetic. Two of them run a program rather than a session (#122): the rebalance plan and the harvest candidates are arithmetic over the tree, written under trades/proposed/ and checked by the host like a model's work; the harvest itself is a session (#124), since which candidates to take and what replaces each is a judgment the contract bounds and the unit reports. The workload declares one tool (#121), place_trade, whose declared effect is irreversible: the one way a trade list, rebalance or harvest, comes to exist under trades/pending/, and a call the harness refuses until a person's yes for it is on the record, with no profile naming it. Nothing here trades: a trade list is a file a person executes at the custodian.",
   "unitTypes": [
     {
       "name": "ingest-positions",
@@ -54,7 +54,7 @@
     },
     {
       "name": "confirm-trades",
-      "description": "Put the proposed trade list to a person — one consent question naming every trade, the lots each sell comes from and the tax it realises — and, after the yes, place it with place_trade, the workload's declared tool, which writes it unchanged under trades/pending/, where a file is a commitment. A session: it asks, which a program cannot; the copy is the tool's, not the model's, and the consent is derived from the tool's declared effect, so a call without the yes is refused before the file exists. The host checks that the pending list is the proposed one and that it keeps the band, the lots and the wash-sale window.",
+      "description": "Put a proposed trade list — the program's rebalance, or a plan-harvest unit's harvest list — to a person — one consent question naming every trade, the lots each sell comes from and the tax it realises — and, after the yes, place it with place_trade, the workload's declared tool, which writes it unchanged under trades/pending/, where a file is a commitment. A session: it asks, which a program cannot; the copy is the tool's, not the model's, and the consent is derived from the tool's declared effect, so a call without the yes is refused before the file exists. The host checks that the pending list is the proposed one and that it keeps the rules of its kind: the band, the lots and the wash-sale window for a rebalance; the harvest rules, set by set, for a harvest.",
       "profile": "manager",
       "checks": [
         "run_checks",
@@ -89,8 +89,21 @@
       "requiresContract": true
     },
     {
+      "name": "plan-harvest",
+      "description": "Turn the harvest candidates into a harvest list: for every candidate lot the program found at a loss, decide whether its tax benefit covers the trading cost of both legs and the opportunity cost of the window by harvest.json's arithmetic, whether a recent buy inside the wash-sale window blocks it, and which other ticker of its exchangeable set replaces it, and write the sells and their replacement buys under trades/proposed/ as harvest-plan-<date>.json — a list of kind harvest, planned over the positions after the agreed rebalance list of the date, with every candidate not taken accounted for and why. A session: the choice is delegated and reported, which a program cannot do. The host checks the list set by set — every sell a candidate worth taking, every buy from the sold ticker's set and never a ticker the list sells, every set inside the band, no wash sale against the lots, the fills or the other lists of the window — and the consent and the copy under trades/pending/ are confirm-trades's, through place_trade.",
+      "profile": "manager",
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "glossary-lint"
+      ],
+      "requiresContract": true
+    },
+    {
       "name": "review",
-      "description": "Read the period's lots, target, proposed and pending trade lists, harvest candidates and review against the custodian's exports and say what does not agree. Read-only: it reports, and the host's run of the portfolio's checks is the evidence.",
+      "description": "Read the period's lots, target, proposed and pending trade lists (the rebalance and the harvest), harvest candidates and review against the custodian's exports and say what does not agree. Read-only: it reports, and the host's run of the portfolio's checks is the evidence.",
       "profile": "auditor",
       "checks": [
         "run_tests",
@@ -124,14 +137,14 @@
   "tools": [
     {
       "name": "place_trade",
-      "description": "Place the trade list a person has agreed to: copy the list the plan-rebalance program wrote, trades/proposed/<date>.json, byte for byte to trades/pending/<date>.json, where a file is a commitment the household executes at the custodian. The one way a pending list comes to exist; nothing is moved or traded by it. Its effect is irreversible, so the harness refuses the call until a person's yes for exactly this call is on the record: ask first with ask_human kind=consent, naming every trade, the lots each sell comes from and the tax it realises, with call {\"tool\": \"place_trade\", \"arguments\": {\"proposed\": \"trades/proposed/<date>.json\"}}. Refuses a list that is not a trade list, and never replaces a pending file.",
+      "description": "Place the trade list a person has agreed to: copy the proposed list — trades/proposed/<date>.json, the plan-rebalance program's, or trades/proposed/harvest-plan-<date>.json, a plan-harvest unit's — byte for byte to the same name under trades/pending/, where a file is a commitment the household executes at the custodian. The one way a pending list comes to exist; nothing is moved or traded by it. Its effect is irreversible, so the harness refuses the call until a person's yes for exactly this call is on the record: ask first with ask_human kind=consent, naming every trade, the lots each sell comes from and the tax it realises, with call {\"tool\": \"place_trade\", \"arguments\": {\"proposed\": \"trades/proposed/<name>.json\"}}. Refuses a list that is not a trade list of the kind its name says, and never replaces a pending file.",
       "parameters": {
         "type": "object",
         "properties": {
           "proposed": {
             "type": "string",
-            "pattern": "^trades/proposed/[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$",
-            "description": "The list the plan-rebalance program computed, trades/proposed/<date>.json: what the person was asked about, and what is placed byte for byte"
+            "pattern": "^trades/proposed/(harvest-plan-)?[0-9]{4}-[0-9]{2}-[0-9]{2}\\.json$",
+            "description": "The list the person was asked about, placed byte for byte: trades/proposed/<date>.json, the plan-rebalance program's rebalance, or trades/proposed/harvest-plan-<date>.json, a plan-harvest unit's harvest"
           }
         },
         "required": [

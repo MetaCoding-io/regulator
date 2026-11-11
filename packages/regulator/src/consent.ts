@@ -19,6 +19,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { ObligationLedger, appendSignal, consentFor, consentRequiredFor, describeConsentRequirement, normalizeConsentCall, severityForKind, type ConsentVerdict } from "@metacoding.io/regulator-core";
+import { assertNever } from "@metacoding.io/regulator-protocol";
 import type { CapabilityProfile, ConsentCall, InteractionRequest, OperationalSignal, ToolEffect } from "@metacoding.io/regulator-protocol";
 
 export interface ConsentGateOptions {
@@ -57,13 +58,14 @@ export function consentInstruction(call: ConsentCall): string {
   return `Ask first: ask_human with kind=consent, an action stating what a yes authorizes, and call ${JSON.stringify(recorded)}; the harness refuses this call until a person's yes for that call is on the record, and holds the yes across attempts. Do not work around the refusal.`;
 }
 
-function explain(verdict: ConsentVerdict, unitId: string | undefined): string {
+/** Why a verdict that is not a yes refuses the call. The parameter is the refusing verdicts only: a status added to `ConsentVerdict` has to be listed here or excluded here. */
+function explain(verdict: Exclude<ConsentVerdict, { status: "accepted" }>, unitId: string | undefined): string {
   const unit = unitId ? `unit ${unitId}` : "this session (no unit)";
   switch (verdict.status) {
     case "absent": return `no consent for this call is on the record for ${unit}`;
     case "pending": return `the consent question for this call (obligation ${verdict.obligation.id.slice(0, 8)}) has no answer yet, and silence is not consent`;
     case "rejected": return `${verdict.obligation.closedBy ?? "a person"} refused consent for this call (obligation ${verdict.obligation.id.slice(0, 8)}): do not perform it`;
-    default: return "";
+    default: return assertNever(verdict, "consent verdict");
   }
 }
 

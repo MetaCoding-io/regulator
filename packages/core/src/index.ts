@@ -13,22 +13,22 @@ export { PATHOLOGIES_FILE, PATHOLOGY_END_MARKER, checkPathologies, loadPathologi
 export { renderViabilityMarkdown, type AblationArm, type ViabilityOptions } from "./viability.js";
 export { LeaseHeldError, LeaseStore, ThrashDetector, type AcquireOptions, type Lease, type ThrashDetectorOptions, type ThrashSignal } from "./coordination.js";
 export { checkContract, checkResultReport, renderContractSection, type ContractProblem, type ReportProblem } from "./contracts.js";
-export { ExecutionStore } from "./execution-store.js";
+export { ExecutionStore, type ReasonFor, type UnitAt } from "./execution-store.js";
 export { appendEntry, appendSignal, isMessage, readEntries, readSignals } from "./signals.js";
 export {
   ObligationLedger, dispositionByDecision, effectiveSeverity, foldObligations, isOpen, progressionVeto, routeMessages, unroutedMessages,
   type InteractionState, type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
 } from "./obligations.js";
-export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, INSTANCE_MANIFEST_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR } from "./paths.js";
-export { BudgetMeter, ceilingFor, chooseModels, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
+export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, INSTANCE_MANIFEST_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, UNIT_STATUS_HISTORY_FILE, WORKTREES_RELATIVE_DIR } from "./paths.js";
+export { BudgetMeter, carriedLedger, ceilingFor, chooseModels, ownConsumption, renderPreservedContext, routeFor, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
 export {
-  ATTEMPT_ACTIONS, TERMINAL_ACTIONS, causeFromError, classifyFailure, decideRecovery, hintFor, questionFor, routeBlockedUnit,
+  ATTEMPT_ACTIONS, LEDGER_CARRYING_CAUSES, TERMINAL_ACTIONS, carriesLedger, causeFromError, causeUnderPolicy, classifyFailure, decideRecovery, hintFor, questionFor, routeBlockedUnit,
   type Classification, type DecideOptions, type Decided, type FailureContext, type RouteOptions,
 } from "./recovery.js";
 export { EffectJournal, effectKey, type EffectState } from "./effect-journal.js";
 export { AuditLog, type UnitAudit } from "./audit-log.js";
 export { checkFilesystemPath, expandToolPath, isUnderProtectedPath, prepareWritePath, type PrepareWriteOptions, type PreparedWrite, type WriteRefusal } from "./authority.js";
-export { BehavioralCanary, CANARY_UNIT_PLACEHOLDER, canaryMarker, renderCanarySection, type BehavioralCanaryPolicy, type CanaryObservation } from "./canary.js";
+export { BehavioralCanary, CANARY_INVARIANT, CANARY_UNIT_PLACEHOLDER, canaryMarker, renderCanarySection, type BehavioralCanaryPolicy, type CanaryObservation } from "./canary.js";
 export { IDENTITY_CONTEXT_MAX_CHARS, IDENTITY_FILES, checkAuthorityRefs, identityContextBudget, identityMaxChars, type IdentityContextBudget, parseForbiddenTerms, parseInvariants, readIdentity, renderIdentitySection, type AuthorityContext, type AuthorityProblem, type ForbiddenTerm, type IdentityFile, type IdentitySet, type Invariant } from "./identity.js";
 export { MemoryStore, renderMemorySection, type MemoryState, type RecordMemoryInput } from "./memory.js";
 export { checkDefinition, type CheckedDefinition, type DefinitionProblem } from "./definition.js";
@@ -42,6 +42,7 @@ export {
 } from "./declared-tools.js";
 export { declaredMetricsOf, fileSha256, graderFile, instrumentHeldOutScore, type DeclaredMetric } from "./metrics.js";
 export { checkCommandRunner, checkProgram, commandRunnerShapeHints, normalizeOutput, type CheckCommandRunnerOptions } from "./runners.js";
+export { checkIntelligencePolicy, globToRegExp, isCurrentSensorSignal, matchesGlob, sensorOf, sensorSignals, type CheckIntelligencePolicyOptions, type CurrentSensorSignal } from "./sensors.js";
 export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer, remindable, severityForKind, undelivered, type DispositionAsk } from "./interaction.js";
 export { formatSummary, lifts, summarize, summarizeArms, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";

@@ -9,8 +9,10 @@
   runner, with `plan-rebalance` and `harvest-losses` as programs writing under `trades/proposed/` and a `confirm-trades` session that
   asks and copies the list under `trades/pending/`; the consent decision is recorded in §3 under the S1 table. Phase 2a landed ([#121](https://github.com/MetaCoding-io/regulator/issues/121), 2026-10-27): `place_trade`, a tool the workload declares with an
   irreversible effect, from which the gate derives the consent; the path grant on `trades/pending/` and the advice line are gone, and the
-  landed paragraphs are in §3 and §5 row 2. Phase 2's other items are
-  [#123](https://github.com/MetaCoding-io/regulator/issues/123) and [#124](https://github.com/MetaCoding-io/regulator/issues/124), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
+  landed paragraphs are in §3 and §5 row 2. Phase 2d landed ([#124](https://github.com/MetaCoding-io/regulator/issues/124), 2026-11-08): the harvest
+  as a session unit type, `plan-harvest`, with its contract's two bounds, the wash-sale check live over a harvest list by its
+  kind, and the lots adjusted after an executed wash sale; the landed paragraphs are under §1 and in §6. Phase 2's remaining item is
+  [#123](https://github.com/MetaCoding-io/regulator/issues/123), open for work; Phase 3 is filed as [#125](https://github.com/MetaCoding-io/regulator/issues/125),
   blocked on the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138)); its other blocker, the
   open-metric row, landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129) with this workload's turnover as the first declared metric. All six are sub-issues of
   #61 so they are found together. Filed 2026-10-25, ahead of the order §8 first gave, so
@@ -61,6 +63,32 @@ first and most domains lack: the domain's own deterministic checks.
 | Expected returns updated by views with stated confidence | 12.3 | a judgment entering the pipeline as a typed, bounded input (§4) |
 | The probability a plan succeeds over a horizon | 5.5, 5.6 | a prediction that resolves (§4) |
 | A glide path by reinforcement learning | 6.1 to 6.4 | advice: an optimiser's output a person may adopt, never a decision |
+
+**Landed (2026-11-08, #124; rows 4 to 6).** Row 4, the wash-sale check, is live over a
+harvest list: `washSales` in `lib/portfolio.js` keeps its per-ticker rule over the lot
+history and the fills for a rebalance list, and takes two options for a harvest list — the
+other lists of the window, so the agreed rebalance's buy of 29 VXUS on the same day blocks
+a VXUS harvest, and the exchangeable sets, under which the check runs set by set: a buy
+must come from the set of a ticker the list sells and never be a ticker the list sells,
+at a gain as at a loss. The security stays the ticker, as `tax.json` defines the wash sale
+and as `universe.json` presumes when it calls the sets "not substantially identical"; a
+set is the pool a replacement comes from, and reading it as the identity would refuse the
+swap the sets exist for. Row 5, the cost-basis adjustment, is one derivation in
+`replayLedger`: as the fills replay, a loss sale with shares of the ticker acquired inside
+the window — a lot still held after that day's sells, or a buy within the window after —
+has the loss on as many shares disallowed and carried into the replacement lot's basis
+(`basisAdjustment`, `washedFrom` in `lots.csv`), earliest acquisition first, and the sold
+lot is marked in `lots.json`; the scripted ingest writes what that function derives and the
+suite's reconciliation compares against the same function, so a lots file at the fill
+price alone is refused by name. Row 6, benefit against costs, is `harvestEvaluation` over
+`harvest.json`'s two numbers: the benefit at the lot's rate, two legs of trading cost on
+the lot's value, and the opportunity cost as an at-the-money option on the tracking
+difference over the window (value × volatility × √(days/365) / √(2π)); the list carries the
+three numbers per sell and the suite recomputes them. A list has a kind, `rebalance` by
+default or `harvest` (`harvest-plan-<date>.json`), and the suite judges by kind: the band
+ticker by ticker for a rebalance, set by set for a harvest. Not done, said in the example's
+§5: the deferral in the benefit, the holding period a replacement lot would inherit, and
+a second jurisdiction's reading of the sets.
 
 The book's own position on verification is instructive. Chapter 10 §10.1.3 prefers
 `cvxpy` over `scipy.optimize` because a disciplined convex program either solves or
@@ -114,6 +142,7 @@ verified about it is regulatory state.
 | `plan-rebalance` | command (§5): `node workload/portfolio/plan-rebalance.mjs` | manager, as an effect declaration | `trades/proposed/` | same |
 | `confirm-trades` | session | manager | `reports/`; `trades/pending/` through `place_trade` alone (#121) | same |
 | `harvest-losses` | command (§5): `node workload/portfolio/harvest-losses.mjs` | manager, as an effect declaration | `trades/proposed/harvest-` | same |
+| `plan-harvest` (#124) | session | manager | `trades/proposed/harvest-plan-`; `lots/`, `targets/`, `reports/` by grant | same |
 | `review` | session | auditor | nothing | `run_tests`, `inherited-tests`, `identity-untouched` |
 | `close-period` | session | auditor | nothing | — |
 
@@ -196,6 +225,22 @@ The contract for `plan-rebalance` sorts its decisions into the three kinds:
 
 The contract for `propose-target` delegates one thing that is judgment and bounds it:
 the expected-return inputs. §4 says how.
+
+**Landed (2026-11-08, #124).** The harvest contract is a session's, `plan-harvest`, not
+the candidates program's: the loop refuses at dispatch a contract that delegates a
+reported choice to a command unit, and the harvest delegates two. Fixed: the sets, the
+window and rates, the inputs in `harvest.json`, the candidates file and the lots, the
+positions after the agreed rebalance list of the date as what the list is planned over,
+and `trades/proposed/harvest-plan-<date>.json` as the one place it is written. Delegated,
+each with a required report: which eligible candidates to harvest, ordered by benefit net
+of costs and reported per lot with the benefit and the two costs, with every candidate not
+taken accounted for by one of three reasons (benefit below costs, blocked by a recent buy,
+no replacement available) that the suite recomputes against the list as it stands; and
+which ETF of the sold ticker's set replaces it, never the same ticker, never one the list
+sells, never one sold at a loss inside the window. Unresolved, *defer*: a candidate whose
+ticker no set names. The confirmation is the rebalance's `confirm-trades` under a second
+contract over the harvest list, and `place_trade`'s schema and program admit the harvest
+list by name and copy it to the same name under `trades/pending/`.
 
 ### S3\* — How do we know the plan is right without believing the unit?
 
@@ -284,7 +329,7 @@ the outbox and reminded about. A view the unit wants and does not have is a
 | The report's return is the time-weighted return | 2, a deterministic check | — |
 | Consent before a trade list | 2, the gate deriving it from `place_trade`'s declared effect, plus 3, the tool's effect contract, plus 2, the pause gate | — (landed, #121) |
 | Which lot a sale comes from | 4, judgment bounded by the tax ordering, reported | the ordering is a rule; the choice among equals is the unit's |
-| Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | 14.3.3's ordering is advice; the check is what refuses a wrong one |
+| Which exchangeable ETF replaces a harvested one | 4, judgment bounded by the set and the wash-sale check | 14.3.3's ordering is advice; the check is what refuses a wrong one (landed, #124: the check also refuses a ticker the list sells, and a candidate left without a reason the arithmetic confirms) |
 | The expected-return inputs | 4, judgment bounded by the view's confidence cap | it is judgment; the cap is fixed, the view is reported |
 | Tone, thoroughness, "check the lots first" | 5, advice in the profile | advice by definition |
 
@@ -320,7 +365,7 @@ and against its seam, in the order the phases (§6) need it.
 | The domain's checks in Node | 2 | `test/portfolio.test.js` under `npm test`, discovered as the ledger's are (`packages/checks/src/conventions.ts`) | nothing new. **Decided here:** the checks are ported to plain JavaScript. They are arithmetic (sums, bands, date windows, lot reconciliation, a time-weighted return); none needs an optimiser. The alternative, declared checks for a non-Node domain (the ArticleMiner note §4.1), stays the right slice for ArticleMiner and is not forced by this workload |
 | A `place_trade` tool with a declared effect | 3 | a workload-declared tool with `sideEffects: "irreversible"` (`packages/protocol/src/effects.ts`), writing under `trades/pending/` | **Landed (2026-10-27, #121).** `tools[]` on the workload definition (`DeclaredToolSchema`: name, description, parameters, effect, program), registered by the host's `declared-tools` extension and run through `runDeclaredTool` under the tool's declared outputs with the arguments on stdin; `consentRequiredFor` in core derives a bare grant from a declared tool's irreversible effect beside the profile's `consent[]`, read by the host's interception and the lab's `consentGate` alike, so `--amend` and consent across attempts hold as for a path grant; `readOnlyViolations`, `isReadOnlyProfile` and `effectOf` read the declared effects; `regulator check` refuses a declared tool with a built-in's name, a non-object schema, arbitrary execution, an effect that disagrees with its outputs, no program file, or a granting profile that writes under its outputs directly, and `regulator doctor` refuses an instance manifest whose writable prefixes reach them. The record is `declared-tool`; this workload was the case, as #60 needed, without a tool that moves money |
 | The `command` runner for `plan-rebalance` and `harvest-losses` | 2 | the workload definition's unit type gains a `runner` (open questions §3) | landed as [#122](https://github.com/MetaCoding-io/regulator/issues/122): `runner: { kind: "command", argv, timeoutMs?, outputs[] }` on the unit type, the loop running the program itself through the same dispatcher seam under the policy's `wallClockMs`, the program's file hashed into the attempt record, its exit and last stdout line as the report, a write outside `outputs` undone and refused, and the definition check refusing a program without a file under the definition, under a shell-granting profile, or writing outside the writable paths or under a consent grant (`command-runner`). The two programs are plain JavaScript over `lib/portfolio.js`, not the book's Python: the arithmetic needed no optimiser, as §5's first row found for the checks |
-| Sensors declared in the definition | 2 | `policies/intelligence.json` with `sensors[]` (open questions §2) | proposed; no issue. Three sensors here: a path glob over `positions/` and `prices/`, a drift-band command, a harvest-threshold command |
+| Sensors declared in the definition | 2 | `policies/intelligence.json` with `sensors[]` (open questions §2) | landed as [#123](https://github.com/MetaCoding-io/regulator/issues/123): the fifth policy kind, each sensor with a provenance of its own name, the unit types it affects (held through `type:<unitType>` entries on the signal and a `unitType` on the obligation, matched by the veto at dispatch), a severity, an expiry, and a schedule with a program in the command runner's shape that declares no outputs, or a glob. `regulator watch` runs them, routes what fires, and raises one advisory when a held signal expires. The three here: `drift-band` and `harvest-threshold` as programs over `lib/portfolio.js` under `workload/portfolio/sensors/`, `new-export` as a glob `{positions,prices}/*`. The harvest minimum was `--minimum 150` on the declaration until #124's costs file existed (DEBT row 51); [#181](https://github.com/MetaCoding-io/regulator/issues/181) paid it: the sensor fires when `harvestEvaluation` gives an open lot a positive net over `harvest.json` and `tax.json`, the threshold "net of costs" §3 names, and the argv carries nothing. The record is `sensor-intake` |
 | Workload-declared metrics and graders | 2 | `workload/<name>.json` gains `metrics[]`, each with its grader argv; `EVAL_METRICS` becomes the built-in set (open questions §6, the ArticleMiner note §4.6) | landed as [#129](https://github.com/MetaCoding-io/regulator/issues/129): `workload:portfolio/turnover`, the one-way turnover the latest target implies against the custodian's positions, by `workload/portfolio/turnover.mjs` over `lib/portfolio.js`, pre-registered by `evals/portfolio-turnover.json`. The book's other summary statistics (13.4.4: tax cost, spread cost, mean and maximum deviation) and the backtester as the grader are #125's to declare the same way |
 | The prediction record | 3 | the intelligence signal with `horizon` and a numeric `confidence` (open questions §4; the Harness² note §8 orders it second after #110) | designed; sequenced behind the accept-path split |
 
@@ -354,6 +399,22 @@ where a session still asks); the three sensors ([#123](https://github.com/MetaCo
 exchangeable sets and the wash-sale check live, the benefit-versus-cost check over the candidates the harvest program now
 lists, and the lots adjusted for an executed wash sale (14.2.2) ([#124](https://github.com/MetaCoding-io/regulator/issues/124)). Each is its own issue against the seam named in §5.
 
+**Landed (2026-11-08, #124).** The harvest is a third unit in the chain the runner made:
+`harvest-losses`, a program, finds the candidates; `plan-harvest`, a session under the
+`manager` profile, takes those worth taking with a replacement from the set and accounts
+for the rest; `confirm-trades`, under a second contract, asks once about the harvest list
+and places it with `place_trade`, whose schema and program now admit
+`harvest-plan-<date>.json`. The fixture gained `harvest.json` (INV-007 extends to it), a
+list `kind` the suite judges by, the set-by-set harvest check, the wash-sale check over
+the other lists of the window, and the lots' `basisAdjustment` and `washedFrom` columns
+with the sold lots marked in `lots.json`, derived by `replayLedger` for the ingest and
+the reconciliation check alike. The scripted `manager` harvests BND into AGG and leaves
+the two VXUS lots with their reasons; the scripted `careless` buys BND back and is refused
+at the first attempt by the wash-sale check by name. The washed-loss scenario runs on a
+copy of the fixture with October added, since the committed dates are load-bearing (the
+example's §5). Nothing new in the control plane; the policy gains ceilings for the new
+type. What remains of Phase 2 is #123.
+
 **Phase 3 — evidence.** A suite over the fixture's price history with the book's
 backtester as the grader and its summary statistics as pre-registered metrics; arms with
 and without the band check and the wash-sale check, so the two regulators the workload
@@ -381,7 +442,7 @@ limitation. [#125](https://github.com/MetaCoding-io/regulator/issues/125); waits
 Build Phase 1 ([#120](https://github.com/MetaCoding-io/regulator/issues/120)), with §3's tables as the acceptance criteria and §5's
 first row as its one recorded decision. Phase 2's issues ([#121](https://github.com/MetaCoding-io/regulator/issues/121) to
 [#124](https://github.com/MetaCoding-io/regulator/issues/124)) open for work when #120 is merged, each against the seam §5 names;
-#121 and #122 have landed, and #124 now starts from the candidates its program lists.
+#121, #122 and #124 have landed; #123 remains.
 Phase 3 ([#125](https://github.com/MetaCoding-io/regulator/issues/125)) becomes a milestone row after the prediction record ([#138](https://github.com/MetaCoding-io/regulator/issues/138));
 the open-metric row ([#129](https://github.com/MetaCoding-io/regulator/issues/129)) has landed.
 
