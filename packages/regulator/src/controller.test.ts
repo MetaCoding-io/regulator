@@ -303,7 +303,7 @@ test("context-degradation (#133): S3 opens the retry it decided under the cause 
   assert.deepEqual([opened[1]?.attempt, opened[1]?.consumed.tokens, opened[1]?.ceiling.tokens, opened[1]?.models, opened[1]?.exhausted], [2, 150_000, 400_000, [], undefined]);
   const trajectory = await unitTrajectory(repo, "u1");
   assert.deepEqual([trajectory.metrics.tokens, trajectory.metrics.turns], [180_000, 15], "150,000 and 30,000: the carried consumption is attempt 1's and is counted there");
-  assert.match((await import("@metacoding.io/regulator-core")).summarizeLedger((await store.getBudget("u1", 2))!), /^180000\/400000 tok \(45%\), 15\/60 turns, 150000 tok and 12 turns carried from attempt 1$/);
+  assert.match((await import("@metacoding.io/regulator-core")).summarizeLedger((await store.getBudget("u1", 2))!), /^180000\/400000 tok \(45%\), cost 0\.5, 15\/60 turns, 150000 tok and 12 turns carried from attempt 1$/);
 });
 
 test("recovery: oscillation routes to clarify with a question and stops; environment routes to remediate; abort releases the claim and the unit is aborted, not deleted", async (t) => {

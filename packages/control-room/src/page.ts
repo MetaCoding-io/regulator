@@ -451,11 +451,13 @@ const PAGE = String.raw`<!doctype html>
       html += "</table>";
     }
     if (!(d.reports || []).length) html += "<p class='empty'>no committed report under evals/reports/: the arms above have not been run, or the run was not kept</p>";
-    for (const r of d.reports || []) {
+    for (const [ri, r] of (d.reports || []).entries()) {
       const fp = r.fingerprint;
+      const costOnly = !!(d.reportsCostOnly || [])[ri];
       const metrics = Object.keys((r.arms[0] || { metrics: {} }).metrics);
-      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators" + (r.baseline && !r.baseline.discriminates ? " " + chip("cost only") : "") + "</p>";
+      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators" + (costOnly ? " " + chip("cost only") : "") + "</p>";
       // A baseline that discriminates (#201): a cost-only report's ablation arms had nothing to catch and are not retirement evidence.
+      if (costOnly && !r.baseline) html += "<p class='banner'>nothing to catch: cost only — computed from the runs of a report written before the baseline check; its ablation arms do not count toward a retirement condition</p>";
       if (r.baseline) html += "<p class='banner'>" + (r.baseline.discriminates
         ? "baseline " + esc(r.baseline.arm) + " failed on " + r.baseline.metrics.filter((m) => m.failed).map((m) => esc(m.metric) + " (max " + m.max + ")").join(", ")
         : "nothing to catch: cost only — baseline " + esc(r.baseline.arm) + " is 0 at its maximum on " + r.baseline.metrics.map((m) => esc(m.metric)).join(", ") + "; its ablation arms do not count toward a retirement condition") + "</p>";

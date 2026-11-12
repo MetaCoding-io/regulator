@@ -41,6 +41,8 @@ export interface DefinitionView {
   /** Eval suites and committed reports (lesson 14): the assurance view's source. */
   evals: EvalSuite[];
   reports: EvalReport[];
+  /** Per committed report, in the order of `reports`: whether it is cost-only (#201), computed for a report written before the field. */
+  reportsCostOnly: boolean[];
   /** Per active regulator: when it is due for review, how it is ablated, whether a committed report covers that, and when it may retire (lesson 14). */
   lifecycle: LifecycleRow[];
   problems: string[];
@@ -112,6 +114,19 @@ export interface ReadStatusOptions {
   definitionDir?: string;
   instanceDir?: string;
   now?: () => number;
+}
+
+/**
+ * Whether a committed report is cost-only (#201): its baseline failed on no pre-registered outcome metric. The report's
+ * own field when it carries one; for a report written before the field, computed the same way from its runs under the
+ * suite's baseline, on the metrics the report summarized. A report whose suite is not declared, or that pre-registered
+ * no outcome metric, is not labelled.
+ */
+export function reportIsCostOnly(report: EvalReport, suites: readonly EvalSuite[]): boolean {
+  if (report.baseline) return isCostOnly(report);
+  const suite = suites.find((s) => s.name === report.suite.name);
+  const check = suite ? baselineCheck(report.runs, Object.keys(report.arms[0]?.metrics ?? {}), suite.baseline) : undefined;
+  return check ? !check.discriminates : false;
 }
 
 export async function readDefinition(dir: string, now: () => number = Date.now): Promise<DefinitionView> {
@@ -197,13 +212,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     }
   }
   const today = now();
-  // Whether a report is cost-only (#201): the field when the report carries it; for an older report, computed the same way from its runs under the suite's baseline.
-  const costOnly = (rep: EvalReport): boolean => {
-    if (rep.baseline) return !rep.baseline.discriminates;
-    const suite = evals.find((s) => s.name === rep.suite.name);
-    const check = suite ? baselineCheck(rep.runs, Object.keys(rep.arms[0]?.metrics ?? {}), suite.baseline) : undefined;
-    return check ? !check.discriminates : false;
-  };
+  const costOnly = (rep: EvalReport): boolean => reportIsCostOnly(rep, evals);
   const lifecycle: LifecycleRow[] = registry.records.filter((r) => r.status === "active").map((r) => {
     const ablatedIn = evals.filter((s) => s.arms.some((a) => a.ablates === r.id)).map((s) => s.name);
     const arms = new Set(evals.flatMap((s) => s.arms.filter((a) => a.ablates === r.id).map((a) => `${s.name}:${a.name}`)));
@@ -235,6 +244,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     identity,
     evals,
     reports,
+    reportsCostOnly: reports.map(costOnly),
     lifecycle,
     problems,
     declared,
@@ -340,7 +350,7 @@ export function renderStatusText(view: StatusView): string {
     }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {
-      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}${isCostOnly(r) ? "; nothing to catch: cost only" : ""}`);
+      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}${reportIsCostOnly(r, d.evals) ? "; nothing to catch: cost only" : ""}`);
       for (const a of r.arms) lines.push(`    ${a.arm.padEnd(20)} n=${a.runs}  ${["closed", "refusals", "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules"].filter((m) => a.metrics[m]).map((m) => `${m} ${formatSummary(a.metrics[m]!, 2)}`).join("  ")}`);
     }
     const overdue = d.lifecycle.filter((l) => l.overdueDays > 0);

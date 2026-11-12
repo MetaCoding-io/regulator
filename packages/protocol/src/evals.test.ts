@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Value } from "typebox/value";
 import {
+  BUILT_IN_METRIC_DIRECTIONS, EvalArmSchema, OUTCOME_METRICS, isCostOnly, isOutcomeMetric,
   EVAL_METRICS, EnvironmentFingerprintSchema, EvalMetricSchema, EvalReportSchema, EvalSuiteSchema, GraderOutputSchema, GraderVerdictSchema, MetricDeclarationSchema, MetricEntrySchema,
   declaredMetrics, isBuiltInMetric, isDeclaredMetricName, metricNames, optimisedMetrics, parseDeclaredMetric,
 } from "./index.js";
@@ -11,10 +12,11 @@ const declaration = {
   grader: { argv: ["node", "workload/portfolio/turnover.mjs"] },
 };
 
-test("the fifteen built-in metrics are exactly what they were, and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
+test("the sixteen built-in metrics are the fifteen they were and cacheWrite (#201), and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
   assert.deepEqual([...EVAL_METRICS], [
     "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
     "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
+    "cacheWrite",
   ]);
   for (const m of EVAL_METRICS) {
     assert.equal(Value.Check(EvalMetricSchema, m), true, m);
@@ -88,4 +90,29 @@ test("a grader verdict may be declared, and the fingerprint carries each declare
   assert.equal(Value.Check(EvalReportSchema, report), true);
   assert.equal(Value.Check(EvalReportSchema, { ...report, suite: { ...report.suite, optimise: "workload:portfolio/turnover" } }), true, "the report says which metric an optimiser could select on");
   assert.equal(Value.Check(EvalReportSchema, { ...report, suite: { ...report.suite, optimise: "closed" } }), false, "never a built-in");
+});
+
+test("every built-in has a direction (#201), and the outcome metrics are the five graders of kind outcome, each a count of drift where zero is clean", () => {
+  assert.deepEqual(Object.keys(BUILT_IN_METRIC_DIRECTIONS).sort(), [...EVAL_METRICS].sort());
+  assert.equal(BUILT_IN_METRIC_DIRECTIONS.closed, "higher");
+  assert.deepEqual(EVAL_METRICS.filter((m) => BUILT_IN_METRIC_DIRECTIONS[m] === "none"), ["escalations", "memoryFacts", "refusals"]);
+  assert.deepEqual([...OUTCOME_METRICS], ["boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "suiteWeakened"]);
+  for (const m of OUTCOME_METRICS) assert.equal(BUILT_IN_METRIC_DIRECTIONS[m], "lower", m);
+  assert.equal(isOutcomeMetric("invariantViolations"), false, "a trajectory count is not an outcome");
+  assert.equal(isOutcomeMetric("workload:portfolio/turnover"), false, "a declared metric has a direction and no clean value");
+});
+
+test("an arm may name a route (#201) by the name a policy gives it; the report's per-task table and baseline check are optional, so a report written before them still validates, and cost-only is read off the check", () => {
+  const arm = { name: "tier", description: "d", extensions: [], checks: ["run_tests"], identity: true };
+  assert.equal(Value.Check(EvalArmSchema, { ...arm, route: "research" }), true);
+  assert.equal(Value.Check(EvalArmSchema, { ...arm, route: "anthropic/claude-haiku-4-5" }), false, "a route is named, not a model");
+  const fingerprint = { node: "v22", platform: "linux", arch: "x64", pi: "0.87.0", harnessRevision: "abc", dispatcher: "pi", model: "m/x", registry: 1, policies: {} };
+  const report = { suite: { name: "drift", version: 1 }, generatedAt: "t", fingerprint, arms: [], lifts: [], runs: [], interpretation: "read", interpretedBy: "alice" };
+  assert.equal(Value.Check(EvalReportSchema, report), true, "an older report: no tasks, no baseline");
+  const baseline = { arm: "control", metrics: [{ metric: "boundaryViolations", max: 0, failed: false }], discriminates: false };
+  const tasks = [{ task: "d1", arms: [{ arm: "control", n: 3, means: { closed: 1 } }], differences: [{ arm: "treatment", metric: "closed", delta: -1, direction: "higher", leads: "control" }] }];
+  assert.equal(Value.Check(EvalReportSchema, { ...report, tasks, baseline, fingerprint: { ...fingerprint, modelsByArm: { control: ["m/x"] } }, arms: [{ arm: "tier", runs: 0, metrics: {}, route: { name: "research", primary: "m/y" }, modelsObserved: ["m/y"] }] }), true);
+  assert.equal(Value.Check(EvalReportSchema, { ...report, tasks: [{ ...tasks[0], differences: [{ ...tasks[0]!.differences[0], separated: true }] }] }), false, "no separation flag at the task level");
+  assert.equal(isCostOnly({ baseline }), true);
+  assert.equal(isCostOnly({}), false, "a report without the check is not labelled by the field; the views compute it from the runs");
 });

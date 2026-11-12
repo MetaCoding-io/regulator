@@ -45,22 +45,31 @@ it switches off.
 
 An arm changes only what the definition declares, and it never changes the loop. The
 same loop therefore runs every arm, and a difference between arms comes from what the
-arm switched on or off. Three things can differ between arms:
+arm switched on or off. Four things can differ between arms:
 
 - `extensions[]`, the checkpoint extensions a live session loads (the session gates);
 - `checks[]`, the host checks the implement unit type runs at closeout;
-- `identity`, whether the instance is seeded with the identity files.
+- `identity`, whether the instance is seeded with the identity files;
+- `route`, optionally, the name of a model route of the budget policy (`default`, or a
+  unit type the policy routes) that every unit of the arm is dispatched under in place
+  of the policy's own routing. `regulator check` refuses a name no budget policy
+  declares, and a live run's check that the route's primary is available reads each
+  arm's route.
 
-The drift suite has three kinds of arm:
+The drift suite has four kinds of arm:
 
 | Arm | What is on |
 | --- | --- |
 | `control` (the baseline) | the operational checkpoints (tools, profiles, leases, contract, budget, recovery, evidence, authority) and `run_tests`. No identity, no protected-path check, no signature check, no memory, no algedonic path. |
 | `treatment` | everything the workload declares: identity seeded, the intelligence, identity and algedonic checkpoints, and `run_checks`, `run_tests`, `inherited-tests`, `identity-untouched`, `export-signature` and `glossary-lint` |
 | `no-<regulator>` | the treatment with one regulator switched off: `no-identity-check`, `no-behaviour-check`, `no-glossary-lint`, `no-inherited-tests` |
+| `model-only`, `model-tier` | experiments on the arrangement, not ablations: `model-only` is the treatment's session (identity and memory rendered, every channel loaded) with `run_tests` the only host check, the shared-mental-model bet run as an experiment; `model-tier` is the treatment on the policy's `research` route, a smaller model, so a model's floor can be told from a gate's effect |
 
 Control against treatment asks whether the regulation as a whole helps. Each ablation
-arm against the treatment asks what one regulator contributes on its own.
+arm against the treatment asks what one regulator contributes on its own. `model-only`
+against control asks what the shared model adds, and against the treatment what the
+host checks add beyond it. Neither experiment names `ablates`, so neither counts toward
+any regulator's ablation coverage.
 
 ## Ablation
 
@@ -87,7 +96,10 @@ retirement condition, typically that the ablation arm shows no significant regre
 across model versions and suites. Every record has a review date as well. `regulator
 review --due` lists what is overdue, `regulator doctor` fails on it, and the control
 room's *Lifecycle* table shows, per regulator, the review date, the switch, the arm and
-report that cover it, and the retirement condition. The harness never retires
+report that cover it, and the retirement condition. A cost-only report (below: its
+baseline failed on nothing) is listed there apart and never counts toward a retirement
+condition: an ablation arm that had nothing to catch shows no regression because there
+was nothing to regress on. The harness never retires
 anything. A person does, and the retirement is written on the record.
 
 ## Metrics and graders
@@ -117,8 +129,9 @@ Trajectory graders read the records of how the unit got there:
 | `invariantViolations` | gate findings that cite an invariant, plus failing `identity-untouched` and `export-signature` evidence |
 | `memoryFacts` | entries in the memory store: the sanctioned place for what was learned |
 | `tokens`, `turns`, `wallClockMs` | what the unit spent |
+| `cacheWrite` | input tokens written to the provider's prompt cache, summed over the attempts' ledgers: the prefix re-sent uncached. A scripted unit has no ledger, so it is 0 with an observation that says so |
 
-These fifteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
+These sixteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
 ship in the harness and run on every unit.
 
 A **declared** metric is one a workload brings, as data beside the workload that owns it:
@@ -180,7 +193,7 @@ caught.
 ## Reports
 
 A report summarizes the runs per arm and compares each arm with the baseline. It holds
-four things.
+six things.
 
 Per arm and per metric, it gives n, the mean, the standard deviation, the min, the max,
 and a 95% interval on the mean (Student's t). With fewer than two runs, the interval is
@@ -199,6 +212,28 @@ grader's command and the hash of the file it ran from. A number without that sta
 cannot be reproduced or compared, and a declared number without its grader's hash could
 not say what measured it.
 
+It carries a **per-task table** (`tasks`), computed from the runs: for each task, arm
+and metric, the mean over the repetitions, and for each non-baseline arm its difference
+from the baseline on that task and which arm leads by the metric's direction (a built-in's
+from `BUILT_IN_METRIC_DIRECTIONS` in the protocol, a declared metric's from its
+declaration; `refusals`, `escalations` and `memoryFacts` are not ranked). It has no
+interval and no separation flag: at three repetitions a task's mean is three numbers, so
+the table is for reading. And it is a sequence, not six results: the tasks run in order
+in one instance, so a task's row includes whatever the earlier tasks left behind, and
+the table shows where in the sequence a difference appears.
+
+It carries a **baseline check** (`baseline`): for each outcome metric the suite
+pre-registered (`OUTCOME_METRICS`: `boundaryViolations`, `signatureDrift`,
+`vocabularyDrift`, `memoryRules`, `suiteWeakened`), the baseline arm's maximum over its
+runs and whether it is above zero, and `discriminates` for the whole report. A report
+whose baseline failed on none of them is **cost-only**: the gates had nothing to catch,
+so the report prices regulation and measures no gate catching anything. `regulator eval`
+prints "nothing to catch: cost only", the Assurance and Lifecycle views label it, and
+its ablation arms do not count toward a retirement condition. `regulator check` does not
+refuse it; a cost-only report is still worth committing, as the first live one was. The
+fingerprint also names the models each arm's ledgers observed (`modelsByArm`), and each
+arm's summary its route and its observed models, since arms can differ by model.
+
 And it keeps every run, with its outcome, its metrics and each grader's observation, so
 a reader can check what any number was made of.
 
@@ -208,7 +243,8 @@ A report carries an `interpretation` and an `interpretedBy`, and the schema refu
 report without them. The numbers are never the conclusion on their own. The
 interpretation is a person's reading of the table, and it must say where the gated arm
 lost: throughput given up, a correct unit refused, a cost paid in attempts or
-wall-clock. It must also say what the report does not show. A report that says only
+wall-clock. It must name the task where the gated arm lost most, read off the per-task
+table. It must also say what the report does not show. A report that says only
 that the treatment won has not met the rule; it is a table without a reading.
 
 The committed interpretations are the model to follow. The drifter report says the
@@ -271,8 +307,9 @@ been committed yet, and the first live run owes one.
 
 - The control room's definition view has an *Assurance* section (what the evals say),
   which shows each suite's arms and each committed report's per-arm metrics with
-  intervals and its interpretation, and a *Lifecycle* section (review, ablation,
-  retirement).
+  intervals, its per-task table, its baseline check (with a cost-only label where the
+  baseline failed on nothing) and its interpretation, and a *Lifecycle* section (review,
+  ablation, retirement).
 - `regulator status` prints the same in text.
 - Each regulator's card in the [regulators reference](/reference/regulators) shows its
   ablation switch and retirement condition.
