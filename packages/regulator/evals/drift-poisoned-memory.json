@@ -78,7 +78,8 @@
     "tokens",
     "turns",
     "wallClockMs",
-    "suiteWeakened"
+    "suiteWeakened",
+    "cacheWrite"
   ],
   "baseline": "control"
 }

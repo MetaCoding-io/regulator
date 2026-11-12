@@ -177,7 +177,7 @@ const PAGE = String.raw`<!doctype html>
   const budgetCell = (b) => {
     if (!b) return "—";
     const pct = Math.min(999, Math.round((b.consumed.tokens / b.ceiling.tokens) * 100));
-    return "<span class='mono'>" + b.consumed.tokens + "/" + b.ceiling.tokens + " tok · " + b.consumed.turns + "/" + b.ceiling.turns + " turns</span>" + (b.exhausted ? " " + chip("exhausted: " + b.exhausted.dimension) : pct >= 80 ? " " + chip("warning") : "");
+    return "<span class='mono'>" + b.consumed.tokens + "/" + b.ceiling.tokens + " tok" + (b.consumed.cacheRead !== undefined || b.consumed.cacheWrite !== undefined ? " (cache " + (b.consumed.cacheRead || 0) + " read / " + (b.consumed.cacheWrite || 0) + " write)" : "") + " · " + b.consumed.turns + "/" + b.ceiling.turns + " turns</span>" + (b.exhausted ? " " + chip("exhausted: " + b.exhausted.dimension) : pct >= 80 ? " " + chip("warning") : "");
   };
   const routedCell = (ds) => {
     if (!ds || !ds.length) return "—";
@@ -454,7 +454,11 @@ const PAGE = String.raw`<!doctype html>
     for (const r of d.reports || []) {
       const fp = r.fingerprint;
       const metrics = Object.keys((r.arms[0] || { metrics: {} }).metrics);
-      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators</p>";
+      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators" + (r.baseline && !r.baseline.discriminates ? " " + chip("cost only") : "") + "</p>";
+      // A baseline that discriminates (#201): a cost-only report's ablation arms had nothing to catch and are not retirement evidence.
+      if (r.baseline) html += "<p class='banner'>" + (r.baseline.discriminates
+        ? "baseline " + esc(r.baseline.arm) + " failed on " + r.baseline.metrics.filter((m) => m.failed).map((m) => esc(m.metric) + " (max " + m.max + ")").join(", ")
+        : "nothing to catch: cost only — baseline " + esc(r.baseline.arm) + " is 0 at its maximum on " + r.baseline.metrics.map((m) => esc(m.metric)).join(", ") + "; its ablation arms do not count toward a retirement condition") + "</p>";
       html += "<table><tr><th>metric</th>" + r.arms.map((a) => "<th>" + esc(a.arm) + " (n=" + a.runs + ")</th>").join("") + "</tr>";
       for (const m of metrics) {
         html += "<tr><td class='mono'>" + esc(m) + "</td>" + r.arms.map((a) => {
@@ -465,11 +469,26 @@ const PAGE = String.raw`<!doctype html>
           return "<td>" + f(s.mean) + (s.n > 1 ? " <span class='banner'>[" + f(s.ci95[0]) + ", " + f(s.ci95[1]) + "]</span>" : "") + (sep ? " " + chip(sep.separated ? "separates" : "overlaps") : "") + "</td>";
         }).join("") + "</tr>";
       }
-      html += "</table><p><b>Interpretation</b> (" + esc(r.interpretedBy) + "): " + esc(r.interpretation) + "</p>";
+      html += "</table>";
+      // The per-task table (#201): means over repetitions, no interval; tasks ran in order, so a row includes what earlier tasks left.
+      if ((r.tasks || []).length) {
+        const fmt = (v) => Number.isInteger(v) ? String(v) : v.toFixed(2);
+        html += "<p class='banner'>per task: the mean over repetitions and where an arm differs from the baseline; no interval at this n, and a task's row includes what the earlier tasks left behind</p><table><tr><th>task</th><th>arm</th><th>differs from the baseline on</th></tr>";
+        for (const t of r.tasks) {
+          const armsOf = [...new Set(t.differences.map((x) => x.arm))];
+          if (!armsOf.length) html += "<tr><td class='mono'>" + esc(t.task) + "</td><td colspan='2' class='empty'>baseline only</td></tr>";
+          for (const arm of armsOf) {
+            const diffs = t.differences.filter((x) => x.arm === arm && x.delta !== 0);
+            html += "<tr><td class='mono'>" + esc(t.task) + "</td><td class='mono'>" + esc(arm) + "</td><td>" + (diffs.length ? diffs.map((x) => "<span class='mono'>" + esc(x.metric) + "</span> " + (x.delta > 0 ? "+" : "") + fmt(x.delta) + (x.leads ? " " + chip(x.leads + " leads") : "")).join("; ") : "<span class='empty'>nothing</span>") + "</td></tr>";
+          }
+        }
+        html += "</table>";
+      }
+      html += "<p><b>Interpretation</b> (" + esc(r.interpretedBy) + "): " + esc(r.interpretation) + "</p>";
     }
     html += "<h3>Lifecycle — review, ablation, retirement</h3><table><tr><th>regulator</th><th>review by</th><th>ablation</th><th>covered by</th><th>retire when</th></tr>";
     for (const l of d.lifecycle || []) {
-      html += "<tr><td><span data-reg='" + esc(l.id) + "' class='mono' style='cursor:pointer'>" + esc(l.id) + "</span></td><td class='mono'>" + esc(l.reviewBy) + (l.overdueDays > 0 ? " " + chip("overdue " + l.overdueDays + "d") : "") + "</td><td class='mono'>" + (l.ablation ? esc(l.ablation.switch) : chip("missing")) + "</td><td>" + (l.reportedIn.length ? l.reportedIn.map(esc).join("; ") : l.ablatedIn.length ? "suite " + l.ablatedIn.map(esc).join(", ") + " (no report)" : (l.ablation && l.ablation.switch !== "none" ? chip("no arm") : "—")) + "</td><td>" + esc(l.retirement || "") + "</td></tr>";
+      html += "<tr><td><span data-reg='" + esc(l.id) + "' class='mono' style='cursor:pointer'>" + esc(l.id) + "</span></td><td class='mono'>" + esc(l.reviewBy) + (l.overdueDays > 0 ? " " + chip("overdue " + l.overdueDays + "d") : "") + "</td><td class='mono'>" + (l.ablation ? esc(l.ablation.switch) : chip("missing")) + "</td><td>" + (l.reportedIn.length ? l.reportedIn.map(esc).join("; ") : l.ablatedIn.length ? "suite " + l.ablatedIn.map(esc).join(", ") + " (no report)" : (l.ablation && l.ablation.switch !== "none" ? chip("no arm") : "—")) + ((l.costOnlyIn || []).length ? " " + chip("cost only") + " <span class='banner'>" + l.costOnlyIn.map(esc).join("; ") + ": not retirement evidence</span>" : "") + "</td><td>" + esc(l.retirement || "") + "</td></tr>";
     }
     if (!(d.lifecycle || []).length) html += "<tr><td colspan='5' class='empty'>no active regulators</td></tr>";
     html += "</table>";

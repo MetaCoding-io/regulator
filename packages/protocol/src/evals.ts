@@ -16,7 +16,7 @@
  * has no ablation evidence, rather than pretending one exists.
  */
 import { Type, type Static } from "typebox";
-import { DeclaredMetricNameSchema, isDeclaredMetricName } from "./metrics.js";
+import { DeclaredMetricNameSchema, MetricDirectionSchema, isDeclaredMetricName, type MetricDirection } from "./metrics.js";
 import { CheckEntrySchema } from "./workload.js";
 import { Value } from "typebox/value";
 
@@ -41,18 +41,52 @@ export const EvalArmSchema = Type.Object({
   /** The registry record this arm switches off, when it is an ablation arm. */
   ablates: Type.Optional(NonEmpty),
   switch: Type.Optional(AblationSwitchSchema),
+  /**
+   * The model route of the budget policy this arm's units are dispatched under, by name, in place of what the policy
+   * would route them to (#201, the Exo note §4 item 4): `default`, or a unit type the policy routes under
+   * `models.byUnitType`. Absent, the policy routes each unit as it always does. A model-tier arm differs from another arm
+   * in this alone, so the intelligence floor can be told from a gate's effect. `regulator check` refuses a name no
+   * budget policy declares; a run refuses a name the policy it runs under does not.
+   */
+  route: Type.Optional(Type.String({ pattern: "^[a-z][a-z0-9-]*$" })),
 }, { additionalProperties: false });
 export type EvalArm = Static<typeof EvalArmSchema>;
 
-/** The built-in set: the fifteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
+/** The built-in set: the sixteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
 export const EVAL_METRICS = [
   "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
   "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
+  "cacheWrite",
 ] as const;
 export const BuiltInMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
 export type BuiltInMetric = Static<typeof BuiltInMetricSchema>;
 export function isBuiltInMetric(name: string): name is BuiltInMetric {
   return (EVAL_METRICS as readonly string[]).includes(name);
+}
+
+/**
+ * Which way is better on each built-in, as a declared metric states it (#201, the eval-driven note §4.1): what the
+ * per-task table reads to say which arm leads. `none` is a quantity reported and not ranked: a refusal or an escalation
+ * is a gate or a person doing their work as often as it is a cost, and a fact remembered is a count until a task needs it
+ * (agent-memory note §6 item 4).
+ */
+export const BUILT_IN_METRIC_DIRECTIONS: Readonly<Record<(typeof EVAL_METRICS)[number], MetricDirection>> = {
+  closed: "higher", attempts: "lower", tokens: "lower", turns: "lower", wallClockMs: "lower", retries: "lower",
+  escalations: "none", invariantViolations: "lower", boundaryViolations: "lower", signatureDrift: "lower",
+  vocabularyDrift: "lower", memoryRules: "lower", memoryFacts: "none", refusals: "none", suiteWeakened: "lower",
+  cacheWrite: "lower",
+};
+
+/**
+ * The outcome metrics (#201, the eval-driven note §4.2): the five built-ins whose graders read the resulting environment
+ * (`kind: "outcome"` in `graders.ts`), each a count of drift where zero is clean. A baseline arm whose maximum over its runs
+ * is zero on every one of these that the suite pre-registered gave the gates nothing to catch. A declared metric is not on
+ * the list: it carries a direction and no clean value, so "above zero" says nothing about it.
+ */
+export const OUTCOME_METRICS = ["boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "suiteWeakened"] as const satisfies ReadonlyArray<(typeof EVAL_METRICS)[number]>;
+export type OutcomeMetric = (typeof OUTCOME_METRICS)[number];
+export function isOutcomeMetric(name: string): name is OutcomeMetric {
+  return (OUTCOME_METRICS as readonly string[]).includes(name);
 }
 /** A metric a suite may pre-register: one of the built-ins, or a name a workload or an instrument declares (#129). */
 export const EvalMetricSchema = Type.Union([BuiltInMetricSchema, DeclaredMetricNameSchema]);
@@ -160,6 +194,8 @@ export const EnvironmentFingerprintSchema = Type.Object({
   policies: Type.Record(Type.String(), Type.Integer({ minimum: 1 })),
   /** Each declared grader the suite pre-registered: its command and the hash of the file it ran from, so the report can say what measured it (#129). Absent when the suite declares nothing. */
   graders: Type.Optional(Type.Array(GraderFingerprintSchema)),
+  /** The models each arm's ledgers name, by arm (#201): arms can differ by model once an arm names a route. Absent for a scripted run. */
+  modelsByArm: Type.Optional(Type.Record(Type.String(), Type.Array(NonEmpty))),
 }, { additionalProperties: false });
 export type EnvironmentFingerprint = Static<typeof EnvironmentFingerprintSchema>;
 
@@ -167,6 +203,10 @@ export const ArmSummarySchema = Type.Object({
   arm: NonEmpty,
   runs: Type.Integer({ minimum: 0 }),
   metrics: Type.Record(Type.String(), MetricSummarySchema),
+  /** The route the arm named (#201), and its primary: what this arm was declared on when it differs from the report's model. */
+  route: Type.Optional(Type.Object({ name: NonEmpty, primary: NonEmpty }, { additionalProperties: false })),
+  /** The models this arm's runs' ledgers name, in order of first use; absent for a scripted run. Arms can differ by model, so the report-wide list is not enough. */
+  modelsObserved: Type.Optional(Type.Array(NonEmpty)),
 }, { additionalProperties: false });
 export type ArmSummary = Static<typeof ArmSummarySchema>;
 
@@ -180,6 +220,51 @@ export const LiftSchema = Type.Object({
 }, { additionalProperties: false });
 export type Lift = Static<typeof LiftSchema>;
 
+/** One arm on one task: the mean over its repetitions per metric, and how many runs that is. */
+export const TaskArmMeansSchema = Type.Object({
+  arm: NonEmpty,
+  n: Type.Integer({ minimum: 0 }),
+  means: Type.Record(Type.String(), Type.Number()),
+}, { additionalProperties: false });
+export type TaskArmMeans = Static<typeof TaskArmMeansSchema>;
+
+/** A non-baseline arm against the baseline on one task and metric: the difference of means, and which leads by the metric's direction. */
+export const TaskDifferenceSchema = Type.Object({
+  arm: NonEmpty,
+  metric: NonEmpty,
+  /** This arm's mean less the baseline's, on this task. */
+  delta: Type.Number(),
+  direction: MetricDirectionSchema,
+  /** The arm that leads on this task: absent when the means are equal or the metric is not ranked (`direction: "none"`). */
+  leads: Type.Optional(NonEmpty),
+}, { additionalProperties: false });
+export type TaskDifference = Static<typeof TaskDifferenceSchema>;
+
+/**
+ * The per-task table (#201, the eval-driven note §4.1): per task, arm and metric, the mean over repetitions, and each
+ * non-baseline arm's difference from the baseline. No interval and no `separated` flag: at three repetitions a task's
+ * mean is three numbers, and the table is for reading. Tasks run in order in one instance, so a task's row includes what
+ * the earlier tasks left behind; the table shows where in the sequence a difference appears, not independent results.
+ */
+export const TaskSummarySchema = Type.Object({
+  task: NonEmpty,
+  arms: Type.Array(TaskArmMeansSchema),
+  differences: Type.Array(TaskDifferenceSchema),
+}, { additionalProperties: false });
+export type TaskSummary = Static<typeof TaskSummarySchema>;
+
+/**
+ * Whether the baseline arm failed at all (#201, the eval-driven note §4.2): per outcome metric the suite pre-registered,
+ * the baseline's maximum over its runs and whether it is above zero. `discriminates` is false when none is: the gates had
+ * nothing to catch, the report is cost-only, and its ablation arms are not evidence toward a retirement condition.
+ */
+export const BaselineCheckSchema = Type.Object({
+  arm: NonEmpty,
+  metrics: Type.Array(Type.Object({ metric: NonEmpty, max: Type.Number(), failed: Type.Boolean() }, { additionalProperties: false }), { minItems: 1 }),
+  discriminates: Type.Boolean(),
+}, { additionalProperties: false });
+export type BaselineCheck = Static<typeof BaselineCheckSchema>;
+
 export const EvalReportSchema = Type.Object({
   suite: Type.Object({
     name: NonEmpty,
@@ -192,6 +277,10 @@ export const EvalReportSchema = Type.Object({
   arms: Type.Array(ArmSummarySchema),
   lifts: Type.Array(LiftSchema),
   runs: Type.Array(EvalRunSchema),
+  /** The per-task table, computed from `runs` (#201). Absent on a report written before it existed. */
+  tasks: Type.Optional(Type.Array(TaskSummarySchema)),
+  /** Whether the baseline failed at all on the pre-registered outcome metrics (#201). Absent on an older report, or when the suite pre-registers no outcome metric. */
+  baseline: Type.Optional(BaselineCheckSchema),
   /** A person's reading of the numbers, including where the gated arm lost. Required: a report without one is a table. */
   interpretation: NonEmpty,
   interpretedBy: NonEmpty,
@@ -208,6 +297,11 @@ export const UNINTERPRETED_MARKER = "not yet interpreted by a person";
 /** True when a report still carries the placeholder interpretation or interpreter. */
 export function isUninterpreted(report: Pick<EvalReport, "interpretation" | "interpretedBy">): boolean {
   return report.interpretedBy.trim() === UNINTERPRETED_BY || report.interpretation.includes(UNINTERPRETED_MARKER);
+}
+
+/** True when the report says its baseline failed on no pre-registered outcome metric: nothing to catch, cost only. */
+export function isCostOnly(report: Pick<EvalReport, "baseline">): boolean {
+  return report.baseline?.discriminates === false;
 }
 
 export function isEvalSuite(value: unknown): value is EvalSuite {

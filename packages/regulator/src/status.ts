@@ -13,11 +13,11 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { summarizeVerdict } from "@metacoding.io/regulator-checks";
 import {
-  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, foldPredictions, formatSummary, precisionOf, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
+  AuditLog, ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, baselineCheck, LEASES_RELATIVE_DIR, LeaseStore, MemoryStore, ObligationLedger, checkRegistry, foldPredictions, formatSummary, precisionOf, projectSpans, readIdentity, summarizeLedger, timelineFor, unitTrajectory,
   type IdentitySet, type InteractionState, type MemoryState, type PredictionState, type RegistryProblem, type TimelineEntry, type UnitAudit, type UnitTrajectory,
 } from "@metacoding.io/regulator-core";
 import {
-  CapabilityProfileSchema, EvalReportSchema, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
+  CapabilityProfileSchema, EvalReportSchema, isCostOnly, EvalSuiteSchema, PolicyDefinitionSchema, WorkloadDefinitionSchema, assertValid, isIntelligencePolicy, isInteractionPolicy, isPolicyDefinition, isRecoveryPolicy, isRoutingPolicy,
   InstanceManifestSchema,
   type AttemptRecord, type BudgetLedger, type CapabilityProfile, type EvalReport, type EvalSuite, type InstanceManifest, type IntelligencePolicy, type InteractionPolicy, type Lease, type ObligationState, type PolicyDefinition, type RecoveryDecision, type RecoveryPolicy, type RegulatorRecord, type ResultReport,
   type RoutingPolicy, type UnitRecord, type VsmMessage, type WorkContract, type WorkloadDefinition,
@@ -57,9 +57,11 @@ export interface LifecycleRow {
   overdueDays: number;
   ablation: { switch: string; note: string } | undefined;
   retirement: string | undefined;
-  /** Suites with an arm that ablates this regulator, and committed reports that ran such an arm. */
+  /** Suites with an arm that ablates this regulator, and committed reports that ran such an arm and whose baseline failed at all: evidence toward the retirement condition. */
   ablatedIn: string[];
   reportedIn: string[];
+  /** Committed reports that ran such an arm and are cost-only (#201): the baseline failed on no pre-registered outcome metric, so the arm had nothing to catch and is not evidence toward retirement. */
+  costOnlyIn: string[];
 }
 
 export interface UnitView {
@@ -195,13 +197,23 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     }
   }
   const today = now();
+  // Whether a report is cost-only (#201): the field when the report carries it; for an older report, computed the same way from its runs under the suite's baseline.
+  const costOnly = (rep: EvalReport): boolean => {
+    if (rep.baseline) return !rep.baseline.discriminates;
+    const suite = evals.find((s) => s.name === rep.suite.name);
+    const check = suite ? baselineCheck(rep.runs, Object.keys(rep.arms[0]?.metrics ?? {}), suite.baseline) : undefined;
+    return check ? !check.discriminates : false;
+  };
   const lifecycle: LifecycleRow[] = registry.records.filter((r) => r.status === "active").map((r) => {
     const ablatedIn = evals.filter((s) => s.arms.some((a) => a.ablates === r.id)).map((s) => s.name);
     const arms = new Set(evals.flatMap((s) => s.arms.filter((a) => a.ablates === r.id).map((a) => `${s.name}:${a.name}`)));
+    const ran = reports.filter((rep) => rep.arms.some((a) => arms.has(`${rep.suite.name}:${a.arm}`)));
+    const label = (rep: EvalReport) => `${rep.suite.name} v${rep.suite.version} (${rep.fingerprint.dispatcher})`;
     return {
       id: r.id, name: r.name, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((today - Date.parse(r.ownership.reviewBy)) / 86_400_000),
       ablation: r.ablation, retirement: r.retirement?.condition, ablatedIn,
-      reportedIn: reports.filter((rep) => rep.arms.some((a) => arms.has(`${rep.suite.name}:${a.arm}`))).map((rep) => `${rep.suite.name} v${rep.suite.version} (${rep.fingerprint.dispatcher})`),
+      reportedIn: ran.filter((rep) => !costOnly(rep)).map(label),
+      costOnlyIn: ran.filter(costOnly).map(label),
     };
   });
   const declared: DefinitionView["declared"] = ["registry"];
@@ -328,11 +340,11 @@ export function renderStatusText(view: StatusView): string {
     }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {
-      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}`);
+      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}${isCostOnly(r) ? "; nothing to catch: cost only" : ""}`);
       for (const a of r.arms) lines.push(`    ${a.arm.padEnd(20)} n=${a.runs}  ${["closed", "refusals", "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules"].filter((m) => a.metrics[m]).map((m) => `${m} ${formatSummary(a.metrics[m]!, 2)}`).join("  ")}`);
     }
     const overdue = d.lifecycle.filter((l) => l.overdueDays > 0);
-    lines.push(`  lifecycle: ${d.lifecycle.length} active regulator(s), ${overdue.length} overdue for review, ${d.lifecycle.filter((l) => l.ablatedIn.length).length} with an ablation arm, ${d.lifecycle.filter((l) => l.reportedIn.length).length} with a committed ablation report`);
+    lines.push(`  lifecycle: ${d.lifecycle.length} active regulator(s), ${overdue.length} overdue for review, ${d.lifecycle.filter((l) => l.ablatedIn.length).length} with an ablation arm, ${d.lifecycle.filter((l) => l.reportedIn.length).length} with a committed ablation report${d.lifecycle.some((l) => l.costOnlyIn.length) ? `, ${d.lifecycle.filter((l) => l.costOnlyIn.length && !l.reportedIn.length).length} with cost-only reports alone` : ""}`);
     for (const l of overdue) lines.push(`    overdue ${l.overdueDays}d  ${l.id}  (review by ${l.reviewBy})`);
     for (const problem of [...d.registry.problems.map((p) => `${p.file}: ${p.message}`), ...d.problems]) lines.push(`  ! ${problem}`);
   }

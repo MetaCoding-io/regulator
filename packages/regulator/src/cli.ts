@@ -711,8 +711,10 @@ ${rationale}`]]) {
       // say nothing; the eval refuses before spending unless the person accepts the fallback, and the report then says so.
       const available = await live.host.availableModels?.();
       if (available) {
-        const missing = unavailablePrimaries(await Promise.all(suite.tasks.map((f) => loadContract(path.join(labRoot, f)))), evalPolicy, available);
-        const where = missing.map((m) => `${m.unitType}: ${m.primary} (available fallbacks: ${m.fallbacksAvailable.join(", ") || "none"})`).join("; ");
+        // Each arm is checked on the route it is dispatched under: a model-tier arm names its own (#201).
+        const selected = suite.arms.filter((a) => !arms.length || arms.includes(a.name) || a.name === suite.baseline);
+        const missing = unavailablePrimaries(await Promise.all(suite.tasks.map((f) => loadContract(path.join(labRoot, f)))), evalPolicy, available, selected);
+        const where = missing.map((m) => `${m.unitType}${m.arms ? ` under ${m.arms.join(", ")}` : ""}: ${m.primary} (available fallbacks: ${m.fallbacksAvailable.join(", ") || "none"})`).join("; ");
         if (missing.length && !rest.includes("--accept-fallback")) throw new Error(`the route's primary is not available — ${where}. A key for its provider is missing from this shell (available: ${available.join(", ") || "none"}). Export it, or pass --accept-fallback to run on the declared fallback and have the report's fingerprint say which model ran`);
         if (missing.length) console.log(`accepting the fallback — ${where}`);
         else console.log(`models: every route primary is available (${available.length} model(s) with a key)`);
@@ -729,8 +731,26 @@ ${rationale}`]]) {
     // A built-in is a count, read to one decimal; a declared rate or score needs its digits.
     for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s, isBuiltInMetric(m) ? 1 : 4)}`).join("; ")}`);
     for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
+    // The per-task table (#201): means only, no interval at this n; a task's row includes what the earlier tasks left behind.
+    if (report.tasks?.length) {
+      console.log(`per task (the mean over repetitions; no interval: a task's mean is ${reps ?? suite.repetitions} number(s); tasks ran in order in one instance, so a row includes what earlier tasks left):`);
+      const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2));
+      for (const t of report.tasks) {
+        const differing = t.differences.filter((d) => d.delta !== 0);
+        console.log(`  ${t.task}: ${t.arms.map((a) => `${a.arm} n=${a.n}`).join(", ")}${differing.length ? "" : `; no arm differs from ${suite.baseline}`}`);
+        for (const arm of [...new Set(differing.map((d) => d.arm))]) console.log(`    ${arm} vs ${suite.baseline}: ${differing.filter((d) => d.arm === arm).map((d) => `${d.metric} ${d.delta > 0 ? "+" : ""}${fmt(d.delta)}${d.leads ? ` (${d.leads} leads)` : ""}`).join("; ")}`);
+      }
+    }
+    // A baseline that discriminates (#201): a report where the baseline failed on no outcome metric gave the gates nothing to catch.
+    if (report.baseline) {
+      const failed = report.baseline.metrics.filter((m) => m.failed);
+      console.log(report.baseline.discriminates
+        ? `baseline ${report.baseline.arm} failed on ${failed.map((m) => `${m.metric} (max ${m.max})`).join(", ")}: there was something to catch`
+        : `nothing to catch: cost only — baseline ${report.baseline.arm} is 0 at its maximum on ${report.baseline.metrics.map((m) => m.metric).join(", ")}; its ablation arms are not evidence toward a retirement condition`);
+    }
     const observedModels = report.fingerprint.modelsObserved ?? [];
     if (observedModels.length) console.log(`models observed: ${observedModels.join(", ")}${observedModels.length === 1 && observedModels[0] === report.fingerprint.model ? "" : ` — the run was declared on ${report.fingerprint.model}; the interpretation must say so`}`);
+    for (const a of report.arms) if (a.route || (a.modelsObserved && Object.keys(report.fingerprint.modelsByArm ?? {}).length > 1)) console.log(`  ${a.arm}: ${a.route ? `route ${a.route.name} (${a.route.primary}); ` : ""}observed ${a.modelsObserved?.join(", ") || "none"}`);
     const out = flag("out");
     if (out) {
       await mkdir(path.dirname(path.resolve(out)), { recursive: true });
