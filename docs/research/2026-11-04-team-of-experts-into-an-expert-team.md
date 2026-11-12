@@ -188,6 +188,12 @@ pre-registered drift metrics and the interpretation rule as they are, would say 
 the gates add beyond the shared model, and, with §3.2's count, what the shared model
 adds to the handoff. The course's lesson on identity is the place the result belongs.
 
+**Landed (2026-11-12)** with #201's suite changes: `model-only` in `evals/drift.json`,
+`identity: true`, `checks: ["run_tests"]`, and the treatment's eleven extensions unchanged,
+so it differs from the treatment in the host checks alone and from control in the identity
+and the three extensions that render and carry it. It names no `ablates`. It runs first in
+the second live report.
+
 ## 5. What to do with it
 
 | Slice | Level | Seam | Where it lands |

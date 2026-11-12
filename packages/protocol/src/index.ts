@@ -420,11 +420,12 @@ export {
   type ConsentCall, type InteractionChannel, type InteractionEvent, type InteractionKind, type InteractionOutcome, type InteractionPolicy, type InteractionRequest, type Person,
 } from "./interaction.js";
 export {
-  ArmSummarySchema, AblationSwitchSchema, BuiltInMetricSchema, EVAL_METRICS, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
+  ArmSummarySchema, AblationSwitchSchema, BUILT_IN_METRIC_DIRECTIONS, BaselineCheckSchema, BuiltInMetricSchema, EVAL_METRICS, OUTCOME_METRICS, TaskArmMeansSchema, TaskDifferenceSchema, TaskSummarySchema, EnvironmentFingerprintSchema, EvalArmSchema, EvalMetricSchema, EvalReportSchema, EvalRunSchema, EvalSuiteSchema,
   GraderFingerprintSchema, GraderVerdictSchema, HARNESS_SWITCH_KINDS, LiftSchema, MetricEntrySchema, MetricSummarySchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER,
-  declaredMetrics, isBuiltInMetric, isEvalReport, isEvalSuite, isUninterpreted, metricName, metricNames, optimisedMetrics,
+  declaredMetrics, isBuiltInMetric, isCostOnly, isOutcomeMetric, isEvalReport, isEvalSuite, isUninterpreted, metricName, metricNames, optimisedMetrics,
   type AblationSwitch, type ArmSummary, type BuiltInMetric, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
   type GraderFingerprint, type GraderVerdict, type Lift, type MetricEntry, type MetricSummary,
+  type BaselineCheck, type OutcomeMetric, type TaskArmMeans, type TaskDifference, type TaskSummary,
 } from "./evals.js";
 export {
   DECLARED_METRIC_PATTERN, DeclaredMetricNameSchema, GraderCommandSchema, GraderOutputSchema, MetricDeclarationSchema, MetricDirectionSchema, MetricKindSchema,

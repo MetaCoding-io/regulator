@@ -32,6 +32,7 @@ import { checkDeclaredTools, declaredEffectsOfWorkloads, declaredToolsOf } from 
 import { identityContextBudget, identityMaxChars, readIdentity, type IdentitySet } from "./identity.js";
 import { readOnlyViolations, withDeclaredEffects } from "./effects.js";
 import { declaredMetricsOf, graderFile, instrumentHeldOutScore } from "./metrics.js";
+import { namedRoute, routeNames } from "./policy.js";
 import { isReadOnlyProfile } from "./profiles.js";
 import { checkCommandRunner, commandRunnerShapeHints } from "./runners.js";
 import { checkIntelligencePolicy } from "./sensors.js";
@@ -243,6 +244,8 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         for (const check of checkNames(arm.checks)) if (!(HOST_CHECK_NAMES as readonly string[]).includes(check)) problem(`evals/${file}`, `arm "${arm.name}" names check "${check}", which the host does not run`);
         if (arm.ablates && !arm.switch) problem(`evals/${file}`, `arm "${arm.name}" ablates ${arm.ablates} but names no switch`);
         if (arm.switch?.startsWith("check:") && checkNames(arm.checks).includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
+        // A model-tier arm (#201) names a route of a budget policy; a name no budget policy declares would dispatch on a guess.
+        if (arm.route && !out.policies.some((p) => namedRoute(p, arm.route!))) problem(`evals/${file}`, `arm "${arm.name}" names route "${arm.route}", which no budget policy declares (${out.policies.map((p) => `${p.name}: ${routeNames(p).join(", ")}`).join("; ") || "no budget policy"})`);
       }
       // Pre-registration over declared metrics (#129): a declared name the definition does not carry is refused, not
       // warned about — a report summarizes only what was declared before the run. At most one declared metric is marked

@@ -47,10 +47,22 @@ export function carriedLedger(prior: BudgetLedger, attempt: number, now: () => n
 export function ownConsumption(ledger: BudgetLedger): BudgetConsumed {
   const carried = ledger.carried?.consumed;
   if (!carried) return { ...ledger.consumed };
+  const cache = (key: "cacheRead" | "cacheWrite") => (ledger.consumed[key] === undefined ? {} : { [key]: Math.max(0, ledger.consumed[key]! - (carried[key] ?? 0)) });
   return {
     tokens: Math.max(0, ledger.consumed.tokens - carried.tokens), cost: Math.max(0, ledger.consumed.cost - carried.cost),
     wallClockMs: Math.max(0, ledger.consumed.wallClockMs - carried.wallClockMs), turns: Math.max(0, ledger.consumed.turns - carried.turns),
+    ...cache("cacheRead"), ...cache("cacheWrite"),
   };
+}
+
+/** The names of the model routes a budget policy declares: `default`, and each unit type it routes under `models.byUnitType`. */
+export function routeNames(policy: PolicyDefinition): string[] {
+  return ["default", ...Object.keys(policy.models.byUnitType ?? {}).filter((n) => n !== "default")];
+}
+
+/** The route a policy declares under a name (`routeNames`), or undefined when it declares none by that name. */
+export function namedRoute(policy: PolicyDefinition, name: string): ModelRoute | undefined {
+  return name === "default" ? policy.models.default : policy.models.byUnitType?.[name];
 }
 
 export interface EvidencePointer {
@@ -113,6 +125,8 @@ export class BudgetMeter {
   recordUsage(usage: TokenUsage): void {
     this.#ledger.consumed.tokens += usage.totalTokens;
     this.#ledger.consumed.cost += usage.cost;
+    this.#ledger.consumed.cacheRead = (this.#ledger.consumed.cacheRead ?? 0) + usage.cacheRead;
+    this.#ledger.consumed.cacheWrite = (this.#ledger.consumed.cacheWrite ?? 0) + usage.cacheWrite;
   }
 
   recordTurn(): void {
@@ -179,5 +193,8 @@ export function renderPreservedContext(contract: WorkContract, ledger: BudgetLed
 /** What the `regulator status` read model and the control room show per unit. */
 export function summarizeLedger(ledger: BudgetLedger): string {
   const pct = (a: number, b: number) => `${Math.min(999, Math.round((a / b) * 100))}%`;
-  return `${ledger.consumed.tokens}/${ledger.ceiling.tokens} tok (${pct(ledger.consumed.tokens, ledger.ceiling.tokens)}), ${ledger.consumed.turns}/${ledger.ceiling.turns} turns${ledger.carried ? `, ${ledger.carried.consumed.tokens} tok and ${ledger.carried.consumed.turns} turns carried from attempt ${ledger.carried.attempt}` : ""}${ledger.exhausted ? `, exhausted: ${ledger.exhausted.dimension}` : ""}`;
+  const { cacheRead, cacheWrite, cost } = ledger.consumed;
+  // Cache read and write are part of the token count, shown beside it once the ledger keeps them (#201); cost once there is any.
+  const cache = cacheRead === undefined && cacheWrite === undefined ? "" : `, cache ${cacheRead ?? 0} read / ${cacheWrite ?? 0} write`;
+  return `${ledger.consumed.tokens}/${ledger.ceiling.tokens} tok (${pct(ledger.consumed.tokens, ledger.ceiling.tokens)})${cache}, ${cost > 0 ? `cost ${Number(cost.toFixed(4))}, ` : ""}${ledger.consumed.turns}/${ledger.ceiling.turns} turns${ledger.carried ? `, ${ledger.carried.consumed.tokens} tok and ${ledger.carried.consumed.turns} turns carried from attempt ${ledger.carried.attempt}` : ""}${ledger.exhausted ? `, exhausted: ${ledger.exhausted.dimension}` : ""}`;
 }

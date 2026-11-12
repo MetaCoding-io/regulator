@@ -7,7 +7,7 @@
  * have refused, and a clean trajectory can leave drift no gate measures.
  *
  * Every grader returns a number and the observation behind it. None of them
- * is a judge model. These are the built-in set, the fifteen metrics of
+ * is a judge model. These are the built-in set, the sixteen metrics of
  * `EVAL_METRICS`; a *declared* grader (#129, at the end of this file) is a
  * workload's or an instrument's own command, run the same way after a unit.
  */
@@ -108,13 +108,15 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   const audit = await new AuditLog(repo).forUnit(unitId);
   const obligations = (await new ObligationLedger(repo).obligations()).filter((o) => o.unit === unitId);
   const signals = (await readSignals(repo)).filter((m) => m.unit === unitId);
-  let tokens = 0, turns = 0;
+  let tokens = 0, turns = 0, cacheWrite = 0, ledgers = 0, cacheKept = 0;
   const models: string[] = [];
   for (const a of attempts) {
     const b = await store.getBudget(unitId, a.attempt);
     // An attempt that continues an earlier attempt's ledger (#133) carries that consumption: the unit's cost counts it once.
     tokens += b ? ownConsumption(b).tokens : 0;
     turns += b ? ownConsumption(b).turns : 0;
+    if (b) ledgers++;
+    if (b?.consumed.cacheWrite !== undefined) { cacheKept++; cacheWrite += ownConsumption(b).cacheWrite ?? 0; }
     for (const m of b?.models ?? []) if (!models.includes(m)) models.push(m);
   }
   const wallClockMs = attempts.reduce((sum, a) => sum + Math.max(0, Date.parse(a.endedAt) - Date.parse(a.startedAt)), 0);
@@ -131,9 +133,12 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
     { grader: "invariantViolations", kind: "trajectory", value: invariantViolations, observation: invariantViolations ? [...gateFindings.map((f) => `${f.invariant}: ${f.subject}`), ...failingChecks.map((r) => `${r.check}: ${r.observation.split("\n")[0]}`)].join("; ") : "no invariant touched" },
     { grader: "refusals", kind: "trajectory", value: refusals, observation: refusals ? attempts.filter((a) => a.outcome === "check-failure" || a.outcome === "invalid-report").map((a) => `attempt ${a.attempt}: ${a.outcome}${a.detail ? ` — ${a.detail.split("\n")[0]}` : ""}`).join("; ") : "no attempt refused" },
     { grader: "escalations", kind: "trajectory", value: escalations, observation: escalations ? obligations.filter((o) => o.consumer === "human").map((o) => o.subject).join("; ") : "nothing owed to a person" },
+    // Cache-write tokens over the attempts' ledgers (#201): the prefix the provider had to write, which is what a change to
+    // the rendered identity, advice or contract costs on the next turn. A scripted unit runs no session and has no ledger.
+    { grader: "cacheWrite", kind: "trajectory", value: cacheWrite, observation: !ledgers ? "no ledger: a scripted unit runs no session, so nothing was metered" : cacheKept < ledgers ? `${cacheWrite} cache-write token(s) over ${cacheKept} of ${ledgers} ledger(s); the rest were written before the ledger kept cache counts` : `${cacheWrite} cache-write token(s) over ${ledgers} ledger(s)` },
   ];
   return {
-    metrics: { closed: unit?.status === "closed" ? 1 : 0, attempts: unit?.attempts ?? 0, tokens, turns, wallClockMs, refusals, retries, escalations, invariantViolations },
+    metrics: { closed: unit?.status === "closed" ? 1 : 0, attempts: unit?.attempts ?? 0, tokens, turns, wallClockMs, refusals, retries, escalations, invariantViolations, cacheWrite },
     graders,
     models,
   };

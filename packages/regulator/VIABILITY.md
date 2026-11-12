@@ -66,7 +66,7 @@ the reasoning lives, and a team states it here for its own rules.
 | `disposition-authority` | `disposition-by-anyone` | deterministic-gate | `cli:answer`, `cli:obligation ack`, `cli:obligation resolve`, `cli:obligation escalate`, `cli:memory retract`, `cli:unit accept`, `cli:identity accept`, `cli:identity reject`, `cli:identity promote` | `policy:interaction.people` | 3 |
 | `doctor` | `works-on-my-laptop` | deterministic-gate | `cli:doctor` | `none` | 3 |
 | `effect-journal` | `duplicated-effect` | deterministic-gate | `tool:notify_owner`, `host:session_start` | `extension:recovery` | 4 |
-| `eval-harness` | `regulation-without-evidence` | deterministic-gate | `cli:eval`, `check:checkDefinition` | `none` | 5 |
+| `eval-harness` | `regulation-without-evidence` | deterministic-gate | `cli:eval`, `check:checkDefinition` | `none` | 6 |
 | `evidence-preflight` | `claimed-evidence` | deterministic-gate | `host:tool_result`, `host:tool_call` | `extension:evidence` | 3 |
 | `failure-observer` | `opaque-failure` | deterministic-gate | `host:tool_execution_end`, `host:agent_end` | `extension:recovery` | 3 |
 | `glossary-lint` | `vocabulary-drift` | deterministic-gate | `loop:runHostChecks`, `loop:auditUnit` | `check:glossary-lint` | 3 |
@@ -162,7 +162,7 @@ which it would be removed. A regulator whose switch is `none` cannot be shown to
 
 The statement is [`BOUNDARY.md`](BOUNDARY.md), rendered from the same records: for every mechanical regulator, where it is
 enforced and the routes around it, with the accept paths of the definition. This case carries the count, not a second
-copy: 193 stated limitations across 51 active regulators, of which 47 enforce and 4 advise or judge,
+copy: 194 stated limitations across 51 active regulators, of which 47 enforce and 4 advise or judge,
 counted per regulator in the ledger's last column. A gate with no stated limitation does not pass `regulator check`, so a
 count of zero there is an advice or judgment record, and a limitation that names later work has a row in
 [`docs/DEBT.md`](../../docs/DEBT.md).
@@ -172,7 +172,7 @@ count of zero there is an advice or judgment record, and a limitation that names
 Two kinds of evidence stand behind the registry. The tests a card cites run under `pnpm check` at every revision and show
 the mechanism does what the card says, without a model. The eval harness compares arms over a scenario — control
 against treatment, and a treatment with one regulator off against the full treatment — and that is the evidence that a
-regulator helps. In the definition, the `drift-poisoned-memory` suite declares 2 arms, 0 of them ablation arms; the `drift` suite declares 6 arms, 4 of them ablation arms; the `portfolio-turnover` suite declares 2 arms, 0 of them ablation arms.
+regulator helps. In the definition, the `drift-poisoned-memory` suite declares 2 arms, 0 of them ablation arms; the `drift` suite declares 8 arms, 4 of them ablation arms; the `portfolio-turnover` suite declares 2 arms, 0 of them ablation arms.
 
 **No ablation result is reported here.** The live report over the drift scenario is [#46](https://github.com/MetaCoding-io/regulator/issues/46)'s
 work and is not yet committed. The committed reports ran scripted units, so they validate the graders and say nothing

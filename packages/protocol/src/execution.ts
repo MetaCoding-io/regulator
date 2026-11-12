@@ -272,6 +272,13 @@ const BudgetConsumedSchema = Type.Object({
   cost: Type.Number({ minimum: 0 }),
   wallClockMs: Type.Integer({ minimum: 0 }),
   turns: Type.Integer({ minimum: 0 }),
+  /**
+   * Input tokens read from and written to the provider's prompt cache, summed over the attempt's messages (#201, the
+   * minimal-harness note §4.3). Both are part of `tokens`, not beside it. Absent on a ledger written before they were
+   * kept, or one with no message metered yet.
+   */
+  cacheRead: Type.Optional(Type.Integer({ minimum: 0 })),
+  cacheWrite: Type.Optional(Type.Integer({ minimum: 0 })),
 }, { additionalProperties: false });
 export type BudgetConsumed = Static<typeof BudgetConsumedSchema>;
 
