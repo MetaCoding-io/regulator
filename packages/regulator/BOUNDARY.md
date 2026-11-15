@@ -95,7 +95,7 @@ Enforced at `loop:auditUnit` (after the report check, before reintegration), `lo
 Not covered:
 
 - Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.
-- The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
+- The environment is named, not matched: every record carries the host's node, platform and arch and, since #178, the toolchain by hash (a Nix store path, an environment lock or the package lock, read from the worktree the check ran in), so two records under different toolchains are distinguishable. Nothing compares that hash with the target platform's; a check that passes here and fails there is not caught (docs/DEBT.md row 4, the half that stays the deployment's).
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
 
@@ -239,7 +239,7 @@ Not covered:
 - Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
-- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
+- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2), unless one expectation carries its exemption, which binds it to that criterion; a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
 
 ## Identity write gate (`reg.authority.identity-write-gate.v1`)
 
@@ -250,7 +250,7 @@ Not covered:
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
-- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/, and the environment files flake.nix, flake.lock, devenv.nix, devenv.lock, devenv.yaml when present, less any the session's contract exempts, #178); a path the project protects by convention nobody declared is not protected.
 
 ## Inherited tests check (`reg.audit.inherited-tests-check.v1`)
 
