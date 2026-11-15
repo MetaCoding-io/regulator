@@ -548,7 +548,7 @@ test("a probe (#200) reruns one arm beside the same arm with one advice file rep
   const other = { ...committed, fingerprint: { ...committed.fingerprint, suite: { file: "evals/drift.json", sha256: "0".repeat(64) } } };
   await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/x.json", bytes: JSON.stringify(other) } }), /the probe must run under the suite its baseline ran under: evals\/reports\/x\.json names evals\/drift\.json at 000000000000…, and evals\/drift\.json is now [0-9a-f]{12}…\. A harness-edit and a change to the suite it is probed under are not one change/);
   await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, baselineArm: "model-tier" }), /has no arm "model-tier"; the probe reruns an arm the baseline ran/);
-  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, metric: "workload:portfolio/turnover" }), /the prediction stakes "workload:portfolio\/turnover", which suite drift v2 does not pre-register/);
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, metric: "workload:portfolio/turnover" }), /the prediction stakes "workload:portfolio\/turnover", which suite drift v3 does not pre-register/);
 
   // One repetition of the first two tasks, kept, so the instances can be compared file for file.
   const short = { ...suite, tasks: suite.tasks.slice(0, 2), repetitions: 1 };

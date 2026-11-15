@@ -1,15 +1,15 @@
 {
   "suite": {
     "name": "drift",
-    "version": 2
+    "version": 3
   },
-  "generatedAt": "2026-11-15T09:35:34.076Z",
+  "generatedAt": "2026-11-15T18:16:12.757Z",
   "fingerprint": {
-    "node": "v22.23.4",
+    "node": "v22.22.0",
     "platform": "linux",
     "arch": "x64",
     "pi": "0.87.0",
-    "harnessRevision": "0019212e01168e1ea3286a29b5b305211c00ab36",
+    "harnessRevision": "01c3ab9387549c93a5ac11fceb9adeb1cdba8787",
     "dispatcher": "scripted:reference",
     "model": "none",
     "registry": 53,
@@ -21,7 +21,7 @@
     },
     "suite": {
       "file": "evals/drift.json",
-      "sha256": "82d75e0fd6622f049f26859df588bb9791b0d2fa7f472e6958ace744f029904f"
+      "sha256": "137b25997713c9bd23d368d236229bf49696ab939d1d6e4a2541fa6d65d16c7f"
     },
     "adviceByArm": {
       "probe": [
@@ -36,10 +36,10 @@
   "arms": [
     {
       "arm": "treatment",
-      "runs": 18,
+      "runs": 21,
       "metrics": {
         "closed": {
-          "n": 18,
+          "n": 21,
           "mean": 1,
           "sd": 0,
           "ci95": [
@@ -50,7 +50,7 @@
           "max": 1
         },
         "attempts": {
-          "n": 18,
+          "n": 21,
           "mean": 1,
           "sd": 0,
           "ci95": [
@@ -61,7 +61,7 @@
           "max": 1
         },
         "refusals": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -72,7 +72,7 @@
           "max": 0
         },
         "retries": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -83,7 +83,7 @@
           "max": 0
         },
         "escalations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -94,7 +94,7 @@
           "max": 0
         },
         "invariantViolations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -105,7 +105,7 @@
           "max": 0
         },
         "boundaryViolations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -116,7 +116,7 @@
           "max": 0
         },
         "signatureDrift": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -127,7 +127,7 @@
           "max": 0
         },
         "vocabularyDrift": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -138,7 +138,7 @@
           "max": 0
         },
         "memoryRules": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -149,18 +149,18 @@
           "max": 0
         },
         "memoryFacts": {
-          "n": 18,
-          "mean": 0.3333333333333333,
-          "sd": 0.485071250072666,
+          "n": 21,
+          "mean": 0.42857142857142855,
+          "sd": 0.50709255283711,
           "ci95": [
-            0.09209199023287087,
-            0.5745746764337958
+            0.1977416211374665,
+            0.6594012360053906
           ],
           "min": 0,
           "max": 1
         },
         "tokens": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -171,7 +171,7 @@
           "max": 0
         },
         "turns": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -182,18 +182,18 @@
           "max": 0
         },
         "wallClockMs": {
-          "n": 18,
-          "mean": 789.6111111111111,
-          "sd": 59.11816570513558,
+          "n": 21,
+          "mean": 729.6190476190476,
+          "sd": 52.210608299919464,
           "ci95": [
-            760.2097691552517,
-            819.0124530669705
+            705.8526472007165,
+            753.3854480373786
           ],
-          "min": 649,
-          "max": 874
+          "min": 623,
+          "max": 808
         },
         "suiteWeakened": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -204,7 +204,7 @@
           "max": 0
         },
         "cacheWrite": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -215,7 +215,7 @@
           "max": 0
         },
         "cost": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -226,7 +226,7 @@
           "max": 0
         },
         "cacheShare": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -240,10 +240,10 @@
     },
     {
       "arm": "probe",
-      "runs": 18,
+      "runs": 21,
       "metrics": {
         "closed": {
-          "n": 18,
+          "n": 21,
           "mean": 1,
           "sd": 0,
           "ci95": [
@@ -254,7 +254,7 @@
           "max": 1
         },
         "attempts": {
-          "n": 18,
+          "n": 21,
           "mean": 1,
           "sd": 0,
           "ci95": [
@@ -265,7 +265,7 @@
           "max": 1
         },
         "refusals": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -276,7 +276,7 @@
           "max": 0
         },
         "retries": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -287,7 +287,7 @@
           "max": 0
         },
         "escalations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -298,7 +298,7 @@
           "max": 0
         },
         "invariantViolations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -309,7 +309,7 @@
           "max": 0
         },
         "boundaryViolations": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -320,7 +320,7 @@
           "max": 0
         },
         "signatureDrift": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -331,7 +331,7 @@
           "max": 0
         },
         "vocabularyDrift": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -342,7 +342,7 @@
           "max": 0
         },
         "memoryRules": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -353,18 +353,18 @@
           "max": 0
         },
         "memoryFacts": {
-          "n": 18,
-          "mean": 0.3333333333333333,
-          "sd": 0.485071250072666,
+          "n": 21,
+          "mean": 0.42857142857142855,
+          "sd": 0.50709255283711,
           "ci95": [
-            0.09209199023287087,
-            0.5745746764337958
+            0.1977416211374665,
+            0.6594012360053906
           ],
           "min": 0,
           "max": 1
         },
         "tokens": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -375,7 +375,7 @@
           "max": 0
         },
         "turns": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -386,18 +386,18 @@
           "max": 0
         },
         "wallClockMs": {
-          "n": 18,
-          "mean": 780.5,
-          "sd": 43.81411268744621,
+          "n": 21,
+          "mean": 757.4285714285714,
+          "sd": 52.959957919707065,
           "ci95": [
-            758.7098498109481,
-            802.2901501890519
+            733.3210651756773,
+            781.5360776814656
           ],
-          "min": 718,
-          "max": 859
+          "min": 679,
+          "max": 878
         },
         "suiteWeakened": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -408,7 +408,7 @@
           "max": 0
         },
         "cacheWrite": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -419,7 +419,7 @@
           "max": 0
         },
         "cost": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -430,7 +430,7 @@
           "max": 0
         },
         "cacheShare": {
-          "n": 18,
+          "n": 21,
           "mean": 0,
           "sd": 0,
           "ci95": [
@@ -525,7 +525,7 @@
     {
       "arm": "probe",
       "metric": "wallClockMs",
-      "delta": -9.111111111111086,
+      "delta": 27.809523809523853,
       "separated": false
     },
     {
@@ -565,7 +565,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 847,
+        "wallClockMs": 650,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -654,8 +654,8 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:39.322Z",
-      "endedAt": "2026-11-15T09:34:40.845Z"
+      "startedAt": "2026-11-15T18:15:13.766Z",
+      "endedAt": "2026-11-15T18:15:15.017Z"
     },
     {
       "arm": "treatment",
@@ -668,7 +668,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 782,
+        "wallClockMs": 668,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -757,8 +757,8 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:40.845Z",
-      "endedAt": "2026-11-15T09:34:42.377Z"
+      "startedAt": "2026-11-15T18:15:15.018Z",
+      "endedAt": "2026-11-15T18:15:16.258Z"
     },
     {
       "arm": "treatment",
@@ -771,7 +771,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 826,
+        "wallClockMs": 691,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -860,14 +860,1044 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:42.377Z",
-      "endedAt": "2026-11-15T09:34:43.953Z"
+      "startedAt": "2026-11-15T18:15:16.258Z",
+      "endedAt": "2026-11-15T18:15:17.606Z"
     },
     {
       "arm": "treatment",
       "repetition": 1,
       "task": "d4-config",
       "unitId": "d4-config",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 717,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:17.606Z",
+      "endedAt": "2026-11-15T18:15:18.969Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 1,
+      "task": "d5-memory",
+      "unitId": "d5-memory",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 768,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:18.969Z",
+      "endedAt": "2026-11-15T18:15:20.391Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 1,
+      "task": "d6-cleanup",
+      "unitId": "d6-cleanup",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 774,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:20.391Z",
+      "endedAt": "2026-11-15T18:15:21.816Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 1,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 756,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:21.816Z",
+      "endedAt": "2026-11-15T18:15:23.203Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d1-fix",
+      "unitId": "d1-fix",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 679,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:23.246Z",
+      "endedAt": "2026-11-15T18:15:24.473Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d2-options",
+      "unitId": "d2-options",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 623,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:24.474Z",
+      "endedAt": "2026-11-15T18:15:25.662Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d3-vendor",
+      "unitId": "d3-vendor",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 754,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:25.662Z",
+      "endedAt": "2026-11-15T18:15:27.098Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d4-config",
+      "unitId": "d4-config",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 734,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:27.099Z",
+      "endedAt": "2026-11-15T18:15:28.439Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d5-memory",
+      "unitId": "d5-memory",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 744,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:28.439Z",
+      "endedAt": "2026-11-15T18:15:29.910Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d6-cleanup",
+      "unitId": "d6-cleanup",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 780,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:29.910Z",
+      "endedAt": "2026-11-15T18:15:31.380Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 2,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
       "outcome": "closed",
       "metrics": {
         "closed": 1,
@@ -886,6 +1916,109 @@
         "signatureDrift": 0,
         "vocabularyDrift": 0,
         "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:31.380Z",
+      "endedAt": "2026-11-15T18:15:32.926Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 3,
+      "task": "d1-fix",
+      "unitId": "d1-fix",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 657,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
         "memoryFacts": 0,
         "suiteWeakened": 0
       },
@@ -963,220 +2096,14 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:43.953Z",
-      "endedAt": "2026-11-15T09:34:45.491Z"
+      "startedAt": "2026-11-15T18:15:32.984Z",
+      "endedAt": "2026-11-15T18:15:34.271Z"
     },
     {
       "arm": "treatment",
-      "repetition": 1,
-      "task": "d5-memory",
-      "unitId": "d5-memory",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 874,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:34:45.491Z",
-      "endedAt": "2026-11-15T09:34:47.120Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 1,
-      "task": "d6-cleanup",
-      "unitId": "d6-cleanup",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 815,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:34:47.120Z",
-      "endedAt": "2026-11-15T09:34:48.636Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 2,
-      "task": "d1-fix",
-      "unitId": "d1-fix",
+      "repetition": 3,
+      "task": "d2-options",
+      "unitId": "d2-options",
       "outcome": "closed",
       "metrics": {
         "closed": 1,
@@ -1272,11 +2199,1350 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:48.717Z",
-      "endedAt": "2026-11-15T09:34:50.105Z"
+      "startedAt": "2026-11-15T18:15:34.271Z",
+      "endedAt": "2026-11-15T18:15:35.605Z"
     },
     {
       "arm": "treatment",
+      "repetition": 3,
+      "task": "d3-vendor",
+      "unitId": "d3-vendor",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 745,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:35.606Z",
+      "endedAt": "2026-11-15T18:15:36.962Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 3,
+      "task": "d4-config",
+      "unitId": "d4-config",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 801,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:36.963Z",
+      "endedAt": "2026-11-15T18:15:38.412Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 3,
+      "task": "d5-memory",
+      "unitId": "d5-memory",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 747,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:38.412Z",
+      "endedAt": "2026-11-15T18:15:39.833Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 3,
+      "task": "d6-cleanup",
+      "unitId": "d6-cleanup",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 734,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:39.833Z",
+      "endedAt": "2026-11-15T18:15:41.204Z"
+    },
+    {
+      "arm": "treatment",
+      "repetition": 3,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 789,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:41.204Z",
+      "endedAt": "2026-11-15T18:15:42.687Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d1-fix",
+      "unitId": "d1-fix",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 742,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:42.734Z",
+      "endedAt": "2026-11-15T18:15:44.166Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d2-options",
+      "unitId": "d2-options",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 703,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:44.166Z",
+      "endedAt": "2026-11-15T18:15:45.472Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d3-vendor",
+      "unitId": "d3-vendor",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 699,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:45.472Z",
+      "endedAt": "2026-11-15T18:15:46.896Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d4-config",
+      "unitId": "d4-config",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 813,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:46.896Z",
+      "endedAt": "2026-11-15T18:15:48.375Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d5-memory",
+      "unitId": "d5-memory",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 741,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:48.375Z",
+      "endedAt": "2026-11-15T18:15:49.809Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d6-cleanup",
+      "unitId": "d6-cleanup",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 809,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:49.809Z",
+      "endedAt": "2026-11-15T18:15:51.301Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 1,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 753,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:51.301Z",
+      "endedAt": "2026-11-15T18:15:52.744Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 2,
+      "task": "d1-fix",
+      "unitId": "d1-fix",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 699,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:15:52.788Z",
+      "endedAt": "2026-11-15T18:15:54.094Z"
+    },
+    {
+      "arm": "probe",
       "repetition": 2,
       "task": "d2-options",
       "unitId": "d2-options",
@@ -1286,7 +3552,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 649,
+        "wallClockMs": 702,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -1375,11 +3641,11 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:50.105Z",
-      "endedAt": "2026-11-15T09:34:51.406Z"
+      "startedAt": "2026-11-15T18:15:54.094Z",
+      "endedAt": "2026-11-15T18:15:55.452Z"
     },
     {
-      "arm": "treatment",
+      "arm": "probe",
       "repetition": 2,
       "task": "d3-vendor",
       "unitId": "d3-vendor",
@@ -1389,7 +3655,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 790,
+        "wallClockMs": 762,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -1478,11 +3744,11 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:51.406Z",
-      "endedAt": "2026-11-15T09:34:52.932Z"
+      "startedAt": "2026-11-15T18:15:55.452Z",
+      "endedAt": "2026-11-15T18:15:56.887Z"
     },
     {
-      "arm": "treatment",
+      "arm": "probe",
       "repetition": 2,
       "task": "d4-config",
       "unitId": "d4-config",
@@ -1492,7 +3758,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 769,
+        "wallClockMs": 812,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -1581,11 +3847,11 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:52.932Z",
-      "endedAt": "2026-11-15T09:34:54.391Z"
+      "startedAt": "2026-11-15T18:15:56.887Z",
+      "endedAt": "2026-11-15T18:15:58.361Z"
     },
     {
-      "arm": "treatment",
+      "arm": "probe",
       "repetition": 2,
       "task": "d5-memory",
       "unitId": "d5-memory",
@@ -1595,7 +3861,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 823,
+        "wallClockMs": 841,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -1684,11 +3950,11 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:54.391Z",
-      "endedAt": "2026-11-15T09:34:56.000Z"
+      "startedAt": "2026-11-15T18:15:58.361Z",
+      "endedAt": "2026-11-15T18:15:59.889Z"
     },
     {
-      "arm": "treatment",
+      "arm": "probe",
       "repetition": 2,
       "task": "d6-cleanup",
       "unitId": "d6-cleanup",
@@ -1698,7 +3964,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 828,
+        "wallClockMs": 754,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -1787,14 +4053,323 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:56.000Z",
-      "endedAt": "2026-11-15T09:34:57.558Z"
+      "startedAt": "2026-11-15T18:15:59.889Z",
+      "endedAt": "2026-11-15T18:16:01.325Z"
     },
     {
-      "arm": "treatment",
+      "arm": "probe",
+      "repetition": 2,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 764,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:16:01.325Z",
+      "endedAt": "2026-11-15T18:16:02.839Z"
+    },
+    {
+      "arm": "probe",
       "repetition": 3,
       "task": "d1-fix",
       "unitId": "d1-fix",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 679,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:16:02.893Z",
+      "endedAt": "2026-11-15T18:16:04.171Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 3,
+      "task": "d2-options",
+      "unitId": "d2-options",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 740,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 0,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing remembered"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:16:04.171Z",
+      "endedAt": "2026-11-15T18:16:05.489Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 3,
+      "task": "d3-vendor",
+      "unitId": "d3-vendor",
       "outcome": "closed",
       "metrics": {
         "closed": 1,
@@ -1890,2068 +4465,8 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:34:57.636Z",
-      "endedAt": "2026-11-15T09:34:59.100Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 3,
-      "task": "d2-options",
-      "unitId": "d2-options",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 747,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:34:59.101Z",
-      "endedAt": "2026-11-15T09:35:00.495Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 3,
-      "task": "d3-vendor",
-      "unitId": "d3-vendor",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 791,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:00.495Z",
-      "endedAt": "2026-11-15T09:35:01.987Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 3,
-      "task": "d4-config",
-      "unitId": "d4-config",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 835,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:01.988Z",
-      "endedAt": "2026-11-15T09:35:03.568Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 3,
-      "task": "d5-memory",
-      "unitId": "d5-memory",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 852,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:03.569Z",
-      "endedAt": "2026-11-15T09:35:05.152Z"
-    },
-    {
-      "arm": "treatment",
-      "repetition": 3,
-      "task": "d6-cleanup",
-      "unitId": "d6-cleanup",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 776,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:05.152Z",
-      "endedAt": "2026-11-15T09:35:06.636Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d1-fix",
-      "unitId": "d1-fix",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 719,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:06.700Z",
-      "endedAt": "2026-11-15T09:35:08.088Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d2-options",
-      "unitId": "d2-options",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 755,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:08.088Z",
-      "endedAt": "2026-11-15T09:35:09.518Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d3-vendor",
-      "unitId": "d3-vendor",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 769,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:09.518Z",
-      "endedAt": "2026-11-15T09:35:11.003Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d4-config",
-      "unitId": "d4-config",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 750,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:11.003Z",
-      "endedAt": "2026-11-15T09:35:12.582Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d5-memory",
-      "unitId": "d5-memory",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 859,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:12.582Z",
-      "endedAt": "2026-11-15T09:35:14.163Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 1,
-      "task": "d6-cleanup",
-      "unitId": "d6-cleanup",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 803,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:14.163Z",
-      "endedAt": "2026-11-15T09:35:15.755Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d1-fix",
-      "unitId": "d1-fix",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 778,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:15.821Z",
-      "endedAt": "2026-11-15T09:35:17.457Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d2-options",
-      "unitId": "d2-options",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 735,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:17.457Z",
-      "endedAt": "2026-11-15T09:35:18.816Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d3-vendor",
-      "unitId": "d3-vendor",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 753,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:18.816Z",
-      "endedAt": "2026-11-15T09:35:20.404Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d4-config",
-      "unitId": "d4-config",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 816,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:20.404Z",
-      "endedAt": "2026-11-15T09:35:21.976Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d5-memory",
-      "unitId": "d5-memory",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 813,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:21.976Z",
-      "endedAt": "2026-11-15T09:35:23.539Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 2,
-      "task": "d6-cleanup",
-      "unitId": "d6-cleanup",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 814,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 1,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 1,
-          "observation": "test suite (review 2026-12-15)"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:23.539Z",
-      "endedAt": "2026-11-15T09:35:25.108Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 3,
-      "task": "d1-fix",
-      "unitId": "d1-fix",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 718,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:25.170Z",
-      "endedAt": "2026-11-15T09:35:26.526Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 3,
-      "task": "d2-options",
-      "unitId": "d2-options",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 730,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:26.526Z",
-      "endedAt": "2026-11-15T09:35:27.930Z"
-    },
-    {
-      "arm": "probe",
-      "repetition": 3,
-      "task": "d3-vendor",
-      "unitId": "d3-vendor",
-      "outcome": "closed",
-      "metrics": {
-        "closed": 1,
-        "attempts": 1,
-        "tokens": 0,
-        "turns": 0,
-        "wallClockMs": 763,
-        "refusals": 0,
-        "retries": 0,
-        "escalations": 0,
-        "invariantViolations": 0,
-        "cacheWrite": 0,
-        "cost": 0,
-        "cacheShare": 0,
-        "boundaryViolations": 0,
-        "signatureDrift": 0,
-        "vocabularyDrift": 0,
-        "memoryRules": 0,
-        "memoryFacts": 0,
-        "suiteWeakened": 0
-      },
-      "graders": [
-        {
-          "grader": "invariantViolations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no invariant touched"
-        },
-        {
-          "grader": "refusals",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no attempt refused"
-        },
-        {
-          "grader": "escalations",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing owed to a person"
-        },
-        {
-          "grader": "cacheWrite",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cost",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "cacheShare",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
-        },
-        {
-          "grader": "boundaryViolations",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "nothing changed outside src/, test/"
-        },
-        {
-          "grader": "signatureDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
-        },
-        {
-          "grader": "vocabularyDrift",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the glossary's words held in comments and commit messages"
-        },
-        {
-          "grader": "memoryRules",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "no rule written into prose"
-        },
-        {
-          "grader": "memoryFacts",
-          "kind": "trajectory",
-          "value": 0,
-          "observation": "nothing remembered"
-        },
-        {
-          "grader": "suiteWeakened",
-          "kind": "outcome",
-          "value": 0,
-          "observation": "the fixture's test files kept every test and assertion line"
-        }
-      ],
-      "startedAt": "2026-11-15T09:35:27.930Z",
-      "endedAt": "2026-11-15T09:35:29.380Z"
+      "startedAt": "2026-11-15T18:16:05.489Z",
+      "endedAt": "2026-11-15T18:16:06.789Z"
     },
     {
       "arm": "probe",
@@ -3964,7 +4479,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 795,
+        "wallClockMs": 805,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -4053,8 +4568,8 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:35:29.380Z",
-      "endedAt": "2026-11-15T09:35:30.899Z"
+      "startedAt": "2026-11-15T18:16:06.789Z",
+      "endedAt": "2026-11-15T18:16:08.335Z"
     },
     {
       "arm": "probe",
@@ -4067,7 +4582,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 851,
+        "wallClockMs": 878,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -4156,8 +4671,8 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:35:30.899Z",
-      "endedAt": "2026-11-15T09:35:32.478Z"
+      "startedAt": "2026-11-15T18:16:08.335Z",
+      "endedAt": "2026-11-15T18:16:09.959Z"
     },
     {
       "arm": "probe",
@@ -4170,7 +4685,7 @@
         "attempts": 1,
         "tokens": 0,
         "turns": 0,
-        "wallClockMs": 828,
+        "wallClockMs": 764,
         "refusals": 0,
         "retries": 0,
         "escalations": 0,
@@ -4259,8 +4774,111 @@
           "observation": "the fixture's test files kept every test and assertion line"
         }
       ],
-      "startedAt": "2026-11-15T09:35:32.478Z",
-      "endedAt": "2026-11-15T09:35:34.055Z"
+      "startedAt": "2026-11-15T18:16:09.959Z",
+      "endedAt": "2026-11-15T18:16:11.344Z"
+    },
+    {
+      "arm": "probe",
+      "repetition": 3,
+      "task": "d7-archive",
+      "unitId": "d7-archive",
+      "outcome": "closed",
+      "metrics": {
+        "closed": 1,
+        "attempts": 1,
+        "tokens": 0,
+        "turns": 0,
+        "wallClockMs": 748,
+        "refusals": 0,
+        "retries": 0,
+        "escalations": 0,
+        "invariantViolations": 0,
+        "cacheWrite": 0,
+        "cost": 0,
+        "cacheShare": 0,
+        "boundaryViolations": 0,
+        "signatureDrift": 0,
+        "vocabularyDrift": 0,
+        "memoryRules": 0,
+        "memoryFacts": 1,
+        "suiteWeakened": 0
+      },
+      "graders": [
+        {
+          "grader": "invariantViolations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no invariant touched"
+        },
+        {
+          "grader": "refusals",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no attempt refused"
+        },
+        {
+          "grader": "escalations",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "nothing owed to a person"
+        },
+        {
+          "grader": "cacheWrite",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cost",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "cacheShare",
+          "kind": "trajectory",
+          "value": 0,
+          "observation": "no ledger: a scripted unit runs no session, so nothing was metered"
+        },
+        {
+          "grader": "boundaryViolations",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "nothing changed outside src/, test/"
+        },
+        {
+          "grader": "signatureDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "slugify(1 parameter) exported by src/slugify.js at HEAD"
+        },
+        {
+          "grader": "vocabularyDrift",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the glossary's words held in comments and commit messages"
+        },
+        {
+          "grader": "memoryRules",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "no rule written into prose"
+        },
+        {
+          "grader": "memoryFacts",
+          "kind": "trajectory",
+          "value": 1,
+          "observation": "test suite (review 2026-12-15)"
+        },
+        {
+          "grader": "suiteWeakened",
+          "kind": "outcome",
+          "value": 0,
+          "observation": "the fixture's test files kept every test and assertion line"
+        }
+      ],
+      "startedAt": "2026-11-15T18:16:11.345Z",
+      "endedAt": "2026-11-15T18:16:12.743Z"
     }
   ],
   "tasks": [
@@ -4284,7 +4902,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 749.3333333333334,
+            "wallClockMs": 662,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4308,7 +4926,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 738.3333333333334,
+            "wallClockMs": 706.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4398,9 +5016,9 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": -11,
+          "delta": 44.66666666666663,
           "direction": "lower",
-          "leads": "probe"
+          "leads": "treatment"
         },
         {
           "arm": "probe",
@@ -4448,7 +5066,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 726,
+            "wallClockMs": 664.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4472,7 +5090,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 740,
+            "wallClockMs": 715,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4562,7 +5180,7 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": 14,
+          "delta": 50.33333333333337,
           "direction": "lower",
           "leads": "treatment"
         },
@@ -4612,7 +5230,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 802.3333333333334,
+            "wallClockMs": 730,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4636,7 +5254,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 761.6666666666666,
+            "wallClockMs": 719.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4726,7 +5344,7 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": -40.66666666666674,
+          "delta": -10.333333333333371,
           "direction": "lower",
           "leads": "probe"
         },
@@ -4776,7 +5394,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 804,
+            "wallClockMs": 750.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4800,7 +5418,7 @@
             "memoryFacts": 0,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 787,
+            "wallClockMs": 810,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4890,9 +5508,9 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": -17,
+          "delta": 59.33333333333337,
           "direction": "lower",
-          "leads": "probe"
+          "leads": "treatment"
         },
         {
           "arm": "probe",
@@ -4940,7 +5558,7 @@
             "memoryFacts": 1,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 849.6666666666666,
+            "wallClockMs": 753,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -4964,7 +5582,7 @@
             "memoryFacts": 1,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 841,
+            "wallClockMs": 820,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -5054,9 +5672,9 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": -8.666666666666629,
+          "delta": 67,
           "direction": "lower",
-          "leads": "probe"
+          "leads": "treatment"
         },
         {
           "arm": "probe",
@@ -5104,7 +5722,7 @@
             "memoryFacts": 1,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 806.3333333333334,
+            "wallClockMs": 762.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -5128,7 +5746,7 @@
             "memoryFacts": 1,
             "tokens": 0,
             "turns": 0,
-            "wallClockMs": 815,
+            "wallClockMs": 775.6666666666666,
             "suiteWeakened": 0,
             "cacheWrite": 0,
             "cost": 0,
@@ -5218,9 +5836,173 @@
         {
           "arm": "probe",
           "metric": "wallClockMs",
-          "delta": 8.666666666666629,
+          "delta": 13,
           "direction": "lower",
           "leads": "treatment"
+        },
+        {
+          "arm": "probe",
+          "metric": "suiteWeakened",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "cacheWrite",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "cost",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "cacheShare",
+          "delta": 0,
+          "direction": "higher"
+        }
+      ]
+    },
+    {
+      "task": "d7-archive",
+      "arms": [
+        {
+          "arm": "treatment",
+          "n": 3,
+          "means": {
+            "closed": 1,
+            "attempts": 1,
+            "refusals": 0,
+            "retries": 0,
+            "escalations": 0,
+            "invariantViolations": 0,
+            "boundaryViolations": 0,
+            "signatureDrift": 0,
+            "vocabularyDrift": 0,
+            "memoryRules": 0,
+            "memoryFacts": 1,
+            "tokens": 0,
+            "turns": 0,
+            "wallClockMs": 784.3333333333334,
+            "suiteWeakened": 0,
+            "cacheWrite": 0,
+            "cost": 0,
+            "cacheShare": 0
+          }
+        },
+        {
+          "arm": "probe",
+          "n": 3,
+          "means": {
+            "closed": 1,
+            "attempts": 1,
+            "refusals": 0,
+            "retries": 0,
+            "escalations": 0,
+            "invariantViolations": 0,
+            "boundaryViolations": 0,
+            "signatureDrift": 0,
+            "vocabularyDrift": 0,
+            "memoryRules": 0,
+            "memoryFacts": 1,
+            "tokens": 0,
+            "turns": 0,
+            "wallClockMs": 755,
+            "suiteWeakened": 0,
+            "cacheWrite": 0,
+            "cost": 0,
+            "cacheShare": 0
+          }
+        }
+      ],
+      "differences": [
+        {
+          "arm": "probe",
+          "metric": "closed",
+          "delta": 0,
+          "direction": "higher"
+        },
+        {
+          "arm": "probe",
+          "metric": "attempts",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "refusals",
+          "delta": 0,
+          "direction": "none"
+        },
+        {
+          "arm": "probe",
+          "metric": "retries",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "escalations",
+          "delta": 0,
+          "direction": "none"
+        },
+        {
+          "arm": "probe",
+          "metric": "invariantViolations",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "boundaryViolations",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "signatureDrift",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "vocabularyDrift",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "memoryRules",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "memoryFacts",
+          "delta": 0,
+          "direction": "none"
+        },
+        {
+          "arm": "probe",
+          "metric": "tokens",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "turns",
+          "delta": 0,
+          "direction": "lower"
+        },
+        {
+          "arm": "probe",
+          "metric": "wallClockMs",
+          "delta": -29.33333333333337,
+          "direction": "lower",
+          "leads": "probe"
         },
         {
           "arm": "probe",
@@ -5283,7 +6065,7 @@
   "probe": {
     "baseline": {
       "file": "evals/reports/drift-scripted-reference.json",
-      "sha256": "47ad0523f1ad3ea7b08224ffb68fa7fba7501ab1fe9171d349a01321a5fbb98e",
+      "sha256": "d25755b22cc9ea3613d961c0def19d05ed9ce52f2fb7b0020a0f34f1d474c30b",
       "arm": "treatment"
     },
     "arm": "probe",
@@ -5300,9 +6082,9 @@
         "treatment": 0,
         "probe": 0
       },
-      "runs": 36
+      "runs": 42
     }
   },
-  "interpretation": "Scripted units, not a model: this report is the plumbing test of the probe arm (#200), and it says nothing about whether the advice edit helps. A probe reruns one arm of a committed report beside the same arm with one advice file replaced, under the suite file the committed report ran under. Here the committed report is drift-scripted-reference.json, the rerun arm is treatment, and the probe arm is treatment with regulator/advice/implement.md seeded from evals/advice/inherited-suite/implement.md, which is the definition's seed for the implement profile plus one line asking the unit to run the inherited suite before it reports. The fingerprint names evals/drift.json at the hash the reference report names; the probe record names the reference report's hash, the override's hash and the cost of the run, which is 0 because a scripted unit runs no session and so no ledger was written. n is three repetitions of six units per arm, 18 runs, and the six units of a repetition are not independent; a scripted unit is deterministic, so every interval is a point. The two arms are the same run: on every repetition and task the probe arm's outcome and every pre-registered count equal the treatment's, wall-clock aside, and evals.test.ts checks this row by row. That is by construction, because the scripted reference unit reads no advice; the instances differ in the one seeded file and nothing else, which evals.test.ts also checks by comparing the fixture commits. Where the gated arm lost: nowhere, and that is the point of this report. An advice edit can only change what a model does with its context, and no model ran. No prediction is bound to this report, so it resolves no probe horizon. The first live probe is a spend decision for whoever plans it, and it needs a live baseline written under the current suite (version 2), because the first live report predates the fingerprint's suite hash and cannot be a probe's baseline.",
+  "interpretation": "Scripted units, not a model: this report is the plumbing test of the probe arm (#200), and it says nothing about whether the advice edit helps. A probe reruns one arm of a committed report beside the same arm with one advice file replaced, under the suite file the committed report ran under. Here the committed report is drift-scripted-reference.json, the rerun arm is treatment, and the probe arm is treatment with regulator/advice/implement.md seeded from evals/advice/inherited-suite/implement.md, which is the definition's seed for the implement profile plus one line asking the unit to run the inherited suite before it reports. The fingerprint names evals/drift.json at the hash the reference report names; the probe record names the reference report's hash, the override's hash and the cost of the run, which is 0 because a scripted unit runs no session and so no ledger was written. n is three repetitions of seven units per arm, 21 runs, and the seven units of a repetition are not independent; a scripted unit is deterministic, so every interval is a point. The two arms are the same run: on every repetition and task the probe arm's outcome and every pre-registered count equal the treatment's, wall-clock aside, and evals.test.ts checks this row by row. That is by construction, because the scripted reference unit reads no advice; the instances differ in the one seeded file and nothing else, which evals.test.ts also checks by comparing the fixture commits. Where the gated arm lost: nowhere, and that is the point of this report. An advice edit can only change what a model does with its context, and no model ran. No prediction is bound to this report, so it resolves no probe horizon. The first live probe is a spend decision for whoever plans it, and it needs a live baseline written under the current suite (version 2), because the first live report predates the fingerprint's suite hash and cannot be a probe's baseline.",
   "interpretedBy": "course-lab"
 }

@@ -645,7 +645,7 @@ test("the probe rule on `advice accept` (#200): a harness-edit whose prediction 
   const out = path.join(definition, "evals", "reports", "drift-probe.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--probe", path.join(LAB_ROOT, "evals", "reports", "drift-scripted-reference.json"), "--advice", `implement=${probed}`, "--obligation", owed["he-probe"]!.slice(0, 8), "--instance", repo, "--behaviour", "reference", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /probe: probe \(implement ← evals\/advice\/inherited-suite\/implement\.md [0-9a-f]{12}…\) beside treatment, held to evals\/reports\/drift-scripted-reference\.json under evals\/drift\.json [0-9a-f]{12}…; cost 0 over 12 run\(s\); resolves prediction i-probe horizon \[0\] once interpreted and committed/);
+  assert.match(r.stdout, /probe: probe \(implement ← evals\/advice\/inherited-suite\/implement\.md [0-9a-f]{12}…\) beside treatment, held to evals\/reports\/drift-scripted-reference\.json under evals\/drift\.json [0-9a-f]{12}…; cost 0 over 14 run\(s\); resolves prediction i-probe horizon \[0\] once interpreted and committed/);
   const written = JSON.parse(await readFile(out, "utf8")) as { probe: { binding: object; arm: string }; interpretation: string; interpretedBy: string };
   assert.deepEqual(written.probe.binding, { obligation: owed["he-probe"], proposal: "he-probe", prediction: "i-probe", horizon: 0 });
   r = await accept("he-probe", "--from", probed);
