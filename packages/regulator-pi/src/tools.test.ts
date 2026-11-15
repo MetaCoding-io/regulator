@@ -16,7 +16,7 @@ test("discoverConventions reports facts, not README claims", async (t) => {
   assert.equal(c.testCommandSource, "node --test (test/ directory present)");
   assert.deepEqual(c.sourceDirs, ["src"]);
   assert.deepEqual(c.protectedPaths, ["vendor/"]);
-  assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/slugify.js", "protected-untouched"]);
+  assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/dated.js", "syntax:src/slugify.js", "protected-untouched"]);
 });
 
 test("registers three narrow tools with model-facing contracts", () => {
@@ -49,8 +49,10 @@ test("run_tests returns a bounded structured summary and honours a filter", asyn
   assert.ok(text.length < 700, `output stays small (${text.length} chars)`);
 
   const filtered = await run.execute("t2", { filter: "suffix" }, undefined, undefined, ctx as never);
-  const fd = filtered.details as { pass: number; fail: number };
-  assert.deepEqual([fd.pass, fd.fail], [1, 0]);
+  const fd = filtered.details as { pass: number; fail: number; failures: string[] };
+  // One matching test. Node's runner also reports each file with no matching test as one passing entry named after the
+  // file: test/archive.test.js and test/dated.test.js (#201 item 11) are two such files under this filter.
+  assert.deepEqual([fd.pass, fd.fail, fd.failures], [3, 0, []]);
 });
 
 test("run_tests throws when tests cannot run, returns when they ran and failed", async (t) => {
@@ -77,7 +79,7 @@ test("run_checks gives one verdict per check and notices a touched protected pat
 
   const clean = await checks.execute("c1", {}, undefined, undefined, ctx as never);
   const results = (clean.details as { results: CheckResult[] }).results;
-  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/slugify.js", true], ["protected-untouched", true]]);
+  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/dated.js", true], ["syntax:src/slugify.js", true], ["protected-untouched", true]]);
 
   await writeFile(path.join(cwd, "vendor/left-pad.js"), "// touched\n");
   const dirty = await checks.execute("c2", {}, undefined, undefined, ctx as never);
@@ -117,5 +119,5 @@ test("Pi 0.87.0 loads the built checkpoint and executes the typed tools in a rea
   assert.deepEqual((conventions.details as { testCommand: string[] }).testCommand, ["node", "--test"]);
   const checks = await tools.get("run_checks")!.execute("s2", {});
   const results = (checks.details as { results: CheckResult[] }).results;
-  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/slugify.js", true], ["protected-untouched", true]]);
+  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/dated.js", true], ["syntax:src/slugify.js", true], ["protected-untouched", true]]);
 });

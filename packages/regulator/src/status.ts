@@ -43,6 +43,8 @@ export interface DefinitionView {
   reports: EvalReport[];
   /** Per committed report, in the order of `reports`: whether it is cost-only (#201), computed for a report written before the field. */
   reportsCostOnly: boolean[];
+  /** Per committed report, in the order of `reports`: the version its suite is declared at now when that is not the version the report ran, else null (#201 item 11). A report is comparable only with reports of the same suite version. */
+  reportsSupersededBy: Array<number | null>;
   /** Per active regulator: when it is due for review, how it is ablated, whether a committed report covers that, and when it may retire (lesson 14). */
   lifecycle: LifecycleRow[];
   problems: string[];
@@ -124,9 +126,20 @@ export interface ReadStatusOptions {
  */
 export function reportIsCostOnly(report: EvalReport, suites: readonly EvalSuite[]): boolean {
   if (report.baseline) return isCostOnly(report);
-  const suite = suites.find((s) => s.name === report.suite.name);
+  // The suite the report ran is the one to read its baseline arm from; a report from an earlier version reads the current one, whose baseline names the same arm in every drift suite so far.
+  const suite = suites.find((s) => s.name === report.suite.name && s.version === report.suite.version) ?? suites.find((s) => s.name === report.suite.name);
   const check = suite ? baselineCheck(report.runs, Object.keys(report.arms[0]?.metrics ?? {}), suite.baseline) : undefined;
   return check ? !check.discriminates : false;
+}
+
+/**
+ * The version a report's suite is declared at now, when the report ran another one (#201 item 11), else undefined. A suite's
+ * version moves when its tasks, arms or pre-registered metrics change, so a report is comparable only with reports of the
+ * same version: the views name the newer version beside an older report instead of listing the two as one series.
+ */
+export function supersededBy(report: EvalReport, suites: readonly EvalSuite[]): number | undefined {
+  const declared = suites.filter((s) => s.name === report.suite.name).map((s) => s.version);
+  return declared.length && !declared.includes(report.suite.version) ? Math.max(...declared) : undefined;
 }
 
 export async function readDefinition(dir: string, now: () => number = Date.now): Promise<DefinitionView> {
@@ -217,7 +230,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     const ablatedIn = evals.filter((s) => s.arms.some((a) => a.ablates === r.id)).map((s) => s.name);
     const arms = new Set(evals.flatMap((s) => s.arms.filter((a) => a.ablates === r.id).map((a) => `${s.name}:${a.name}`)));
     const ran = reports.filter((rep) => rep.arms.some((a) => arms.has(`${rep.suite.name}:${a.arm}`)));
-    const label = (rep: EvalReport) => `${rep.suite.name} v${rep.suite.version} (${rep.fingerprint.dispatcher})`;
+    const label = (rep: EvalReport) => { const now = supersededBy(rep, evals); return `${rep.suite.name} v${rep.suite.version} (${rep.fingerprint.dispatcher}${now ? `; suite now v${now}` : ""})`; };
     return {
       id: r.id, name: r.name, reviewBy: r.ownership.reviewBy, overdueDays: Math.round((today - Date.parse(r.ownership.reviewBy)) / 86_400_000),
       ablation: r.ablation, retirement: r.retirement?.condition, ablatedIn,
@@ -245,6 +258,7 @@ export async function readDefinition(dir: string, now: () => number = Date.now):
     evals,
     reports,
     reportsCostOnly: reports.map(costOnly),
+    reportsSupersededBy: reports.map((r) => supersededBy(r, evals) ?? null),
     lifecycle,
     problems,
     declared,
@@ -350,7 +364,7 @@ export function renderStatusText(view: StatusView): string {
     }
     for (const suite of d.evals) lines.push(`  eval suite ${suite.name} v${suite.version}: ${suite.tasks.length} task(s); arms ${suite.arms.map((a) => a.name + (a.ablates ? ` (ablates ${a.ablates})` : "")).join(", ")}; ${suite.repetitions} repetition(s); baseline ${suite.baseline}`);
     for (const r of d.reports) {
-      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}${reportIsCostOnly(r, d.evals) ? "; nothing to catch: cost only" : ""}`);
+      lines.push(`  eval report ${r.suite.name} v${r.suite.version} at ${r.generatedAt.slice(0, 10)}: ${r.fingerprint.dispatcher} on ${r.fingerprint.model}, harness ${r.fingerprint.harnessRevision.slice(0, 7)}, interpreted by ${r.interpretedBy}${reportIsCostOnly(r, d.evals) ? "; nothing to catch: cost only" : ""}${supersededBy(r, d.evals) ? `; suite now v${supersededBy(r, d.evals)}: not comparable with v${supersededBy(r, d.evals)} reports` : ""}`);
       for (const a of r.arms) lines.push(`    ${a.arm.padEnd(20)} n=${a.runs}  ${["closed", "refusals", "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules"].filter((m) => a.metrics[m]).map((m) => `${m} ${formatSummary(a.metrics[m]!, 2)}`).join("  ")}`);
     }
     const overdue = d.lifecycle.filter((l) => l.overdueDays > 0);

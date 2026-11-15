@@ -66,7 +66,8 @@ export async function discoverConventions(cwd: string): Promise<ProjectConventio
   if (await exists(path.join(cwd, "vendor"))) conventions.protectedPaths.push("vendor/");
 
   for (const dir of conventions.sourceDirs) {
-    const entries = await readdir(path.join(cwd, dir), { withFileTypes: true });
+    // Sorted: readdir's order is the filesystem's, and the checks (and the evidence a report keeps) must not depend on it.
+    const entries = (await readdir(path.join(cwd, dir), { withFileTypes: true })).sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       if (!entry.isFile() || !/\.(m?js)$/.test(entry.name)) continue;
       const file = `${dir}/${entry.name}`;

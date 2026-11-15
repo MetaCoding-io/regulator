@@ -320,6 +320,7 @@ against scripted behaviours, or live, through the host.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the suite's name, its version and what it runs. The version bumps whenever `tasks[]`, `arms[]` or `metrics[]` change, and a report is comparable only with reports of the same suite version: a report records the version it ran, and the status and Assurance views mark one whose suite is now declared at a newer version |
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
 | `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target |

@@ -313,7 +313,7 @@ Limitations that become `DEBT.md` rows:
    carries the suite file's hash (`fingerprint.suite`), and a probe whose suite file hashes
    differently from its baseline's, or whose baseline predates the field, is refused before it
    runs; so the first live report cannot be a probe's baseline, and the first live probe needs a
-   live baseline under suite version 2. The held-out slice: a suite may declare `heldOut` tasks;
+   live baseline under the current suite version (3). The held-out slice: a suite may declare `heldOut` tasks;
    a probe then reads its metric over them alone, and resolves inconclusive by rule when the
    `harness-edit`'s diagnosis cites a unit that ran a held-out task's contract. No shipped suite
    declares one: declaring it in the drift suite would change no committed report's reading but
@@ -324,7 +324,7 @@ Limitations that become `DEBT.md` rows:
    could read, §9). A refusal is an `obligation-accept-refused` event on the obligation, which
    stays owed, and the prediction's fold counts refusals beside its outcomes. Two built-in
    metrics, `cost` and `cacheShare` (the budget ledger gains the uncached `input`), are
-   pre-registered in both drift suites (version 2), and the committed scripted probe
+   pre-registered in both drift suites (version 3; version 2 was #201's seventh task), and the committed scripted probe
    (`evals/reports/drift-probe-scripted-reference.json`) is the plumbing test.
 4. **The definition's repository as an instance** (§6), with the second host and the
    third workload.
