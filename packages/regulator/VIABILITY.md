@@ -216,7 +216,7 @@ its per-arm lift belongs; until then the honest entry is that the arm exists and
 | `outbox-watcher` | `src/deliver.test.ts`, `src/cli.test.ts` | not stated | none |
 | `pause-gate` | `../regulator-pi/src/algedonic.test.ts`, `src/controller.test.ts` | not stated | switch `extension:algedonic`; no arm declares it |
 | `pre-merge-trial` | `src/worktree.test.ts`, `src/controller.test.ts`, `src/instance.test.ts`, `src/finance.test.ts` | not stated | switch `loop:pre-merge`; no arm declares it |
-| `prediction-resolution` | `../protocol/src/prediction.test.ts`, `../core/src/predictions.test.ts`, `src/controller.test.ts`, `src/cli.test.ts`, `src/status.test.ts` | not stated | switch `loop:resolve-predictions`; no arm declares it |
+| `prediction-resolution` | `../protocol/src/prediction.test.ts`, `../core/src/predictions.test.ts`, `src/controller.test.ts`, `src/cli.test.ts`, `src/status.test.ts`, `src/evals.test.ts`, `../core/src/definition.test.ts` | not stated | switch `loop:resolve-predictions`; no arm declares it |
 | `profile-write-grant` | `../regulator-pi/src/profiles.test.ts` | not stated | switch `extension:profiles`; no arm declares it |
 | `progression-veto` | `src/controller.test.ts`, `../core/src/obligations.test.ts` | not stated | switch `loop:progression-veto`; no arm declares it |
 | `project-trust-rule` | `../regulator-pi/src/authority.test.ts`, `../regulator-pi/src/dispatcher.test.ts` | not stated | switch `loop:definition-loader`; no arm declares it |

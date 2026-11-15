@@ -45,7 +45,7 @@ it switches off.
 
 An arm changes only what the definition declares, and it never changes the loop. The
 same loop therefore runs every arm, and a difference between arms comes from what the
-arm switched on or off. Four things can differ between arms:
+arm switched on or off. Five things can differ between arms:
 
 - `extensions[]`, the checkpoint extensions a live session loads (the session gates);
 - `checks[]`, the host checks the implement unit type runs at closeout;
@@ -54,7 +54,12 @@ arm switched on or off. Four things can differ between arms:
   unit type the policy routes) that every unit of the arm is dispatched under in place
   of the policy's own routing. `regulator check` refuses a name no budget policy
   declares, and a live run's check that the route's primary is available reads each
-  arm's route.
+  arm's route;
+- `advice`, optionally, a map from a declared profile to an advice file under the
+  definition, seeded into each of the arm's instances in place of the definition's
+  `advice/<profile>.md`. `regulator check` refuses an undeclared profile, a missing or
+  empty file and one over `advice.maxChars`, and the fingerprint carries each file's hash
+  (`adviceByArm`). This is the probe arm, below.
 
 The drift suite has four kinds of arm:
 
@@ -130,8 +135,10 @@ Trajectory graders read the records of how the unit got there:
 | `memoryFacts` | entries in the memory store: the sanctioned place for what was learned |
 | `tokens`, `turns`, `wallClockMs` | what the unit spent |
 | `cacheWrite` | input tokens written to the provider's prompt cache, summed over the attempts' ledgers: the prefix re-sent uncached. A scripted unit has no ledger, so it is 0 with an observation that says so |
+| `cost` | the provider's cost, summed over the attempts' ledgers, in the provider's currency (direction lower). 0 with the same observation for a scripted unit |
+| `cacheShare` | input tokens read from the cache over all input tokens (uncached input, cache read and cache write), summed over the attempts whose ledgers keep the uncached input (direction higher). A ledger written before the field has no share, and a scripted unit gets the same observation as `cacheWrite` |
 
-These sixteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
+These eighteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
 ship in the harness and run on every unit.
 
 A **declared** metric is one a workload brings, as data beside the workload that owns it:
@@ -179,6 +186,39 @@ the edit. A disconfirmed live horizon opens an obligation owed to S5 to revert o
 re-decide, which is how an accepted edit becomes auditable by the graders that audit
 everything else. [Intelligence and memory](/concepts/intelligence-and-memory#predictions)
 has the record and its resolution rule.
+
+## The probe arm
+
+A proposed advice edit is run as an eval arm before a person decides.
+`regulator eval <suite> --probe <baseline report> --advice <profile>=<file>` reruns one
+arm of a committed report beside the same arm with one advice file replaced, under the same graders,
+repetitions and intervals. The probe arm is built at run time and never written into the
+suite, because a probe and a change to the suite it is probed under cannot be one change:
+the proposer would be graded on a test it also wrote. So the suite file must hash to what
+the baseline report's fingerprint names (`fingerprint.suite`), and a baseline written
+before the fingerprint carried that hash is refused as a probe's baseline. The advice file
+lives under `evals/advice/`, in the declaration class: it is an input to an eval, never a
+seed, and no instance is initialized with it.
+
+With `--obligation <id>`, the probe is bound to the `harness-edit` the obligation decides:
+the prediction names the arm the probe reruns (its baseline) and the arm under the change
+(its probe horizon), and the report's probe record carries the binding. A probe horizon
+names no report hash, since the hash of a file that does not exist yet cannot be
+predicted; it resolves against the committed report whose binding names it, once a person
+has interpreted that report. The report carries what the probe run cost (`probe.cost`).
+
+A suite may declare `heldOut` tasks. The tasks still run in order with the rest, since
+drift accumulates, but a probe reads its metric over the held-out runs alone, and a
+`harness-edit` whose diagnosis cites a unit that ran a held-out task's contract resolves
+inconclusive by rule: a score on the runs a proposal was derived from is the validation
+score, not the test. The live horizon stays the reading that counts, and the probe is the
+screen.
+
+`evals/reports/drift-probe-scripted-reference.json` is the committed probe: the treatment
+arm of the scripted reference report beside itself with the implement advice replaced.
+Its two arms are the same run, because a scripted unit reads no advice, and the test
+suite checks that the instances differ in the one seeded file and nothing else. It is the
+plumbing test; the first live probe is a spend decision.
 
 The rule stands beside INV-003 as a candidate invariant, recorded here and not promoted:
 *evidence for a proposal's diagnosis does not satisfy its effect; the effect is a
@@ -330,7 +370,8 @@ short:
 - Only `check:` and `extension:` switches can be thrown, and scripted runs can only
   throw `check:` switches. Every regulator whose switch is `loop:`, `policy:` or `none`,
   and every session gate under a scripted run, has no ablation evidence yet.
-- No probe arm runs a proposed advice edit before the decision, so `advice accept` does
-  not refuse a `harness-edit` that was never probed; a probe horizon resolves only
-  against a report a person committed. The probe arm and the probe rule are slice 3 of
-  the accept-path split, after the live report.
+- The committed probe is scripted, and a scripted unit reads no advice, so it shows the
+  plumbing and nothing about an edit. A live probe needs a live baseline under the
+  current suite: the first live report predates the fingerprint's suite hash and cannot
+  be one. No shipped suite declares a held-out slice, so a probe today reads every task,
+  including the ones a proposal may have been derived from.

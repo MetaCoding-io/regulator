@@ -179,6 +179,11 @@ definition file.
    answer Harness²'s open-world problem on its own terms: where there is a fixture,
    probe against it; where there is none, the proposal waits for a person, and the
    obligation says so.
+   **Landed (2026-11-15)** as [#200](https://github.com/MetaCoding-io/regulator/issues/200): an
+   arm's `advice` override, run by `regulator eval --probe` beside the arm the prediction names,
+   with the suite's graders, repetitions and intervals; the report resolves the prediction's
+   probe horizon, and `advice accept` refuses a `harness-edit` until it has resolved confirmed
+   or inconclusive (the [accept-path note §8](2026-10-18-accept-path-split.md#8-slices-in-order-with-what-done-means), item 3).
 
 3. **Lessons go to memory or to a proposal, never to the harness.** If a reflector is
    ever built, its output is one of two records that already exist: `remember`, when the
@@ -390,7 +395,7 @@ Order: the boundary split first, because every other row names it. The probe arm
 instrument card wait on the first live eval report (#46), since a calibration report
 needs live numbers to calibrate against.
 
-**Added 2026-10-25, from the two agent-engineering books** ([note](2026-10-25-agent-engineering-books.md)). Lanham (*AI Agents in Action*, 2nd ed., §9.1–9.3) names three loop layers: an inner loop in the agent, a task loop whose goal, plan, state and decision are in code, and a meta loop in which an agent controls the loop. The task loop is this project's S3 loop, and the meta loop is what `AGENTS.md` forbids. The reflector is neither: it holds none of decide, state or schedule, and a reader who places it as a "meta loop" has placed it wrong. Hur and Song (*Build an AI Agent (From Scratch)*, §10.4) gate deployment on an automatic pass-rate threshold against the previous version, and their quality flywheel's fourth step edits the evaluator (dataset, rubric, metrics) from production failures. The first is contradicted here and stays contradicted: the probe arm refuses adoption from a report without an interpretation. The second carries a rule this section had not stated: a `harness-edit` and a change to the suite it is probed under cannot be one change, and the probe runs under the suite at the baseline report's fingerprint, or the reflector grades itself on a test it also wrote. That is item 1 of §9 (the held-out slice) from the other side, and it goes into the probe arm's issue with it.
+**Added 2026-10-25, from the two agent-engineering books** ([note](2026-10-25-agent-engineering-books.md)). Lanham (*AI Agents in Action*, 2nd ed., §9.1–9.3) names three loop layers: an inner loop in the agent, a task loop whose goal, plan, state and decision are in code, and a meta loop in which an agent controls the loop. The task loop is this project's S3 loop, and the meta loop is what `AGENTS.md` forbids. The reflector is neither: it holds none of decide, state or schedule, and a reader who places it as a "meta loop" has placed it wrong. Hur and Song (*Build an AI Agent (From Scratch)*, §10.4) gate deployment on an automatic pass-rate threshold against the previous version, and their quality flywheel's fourth step edits the evaluator (dataset, rubric, metrics) from production failures. The first is contradicted here and stays contradicted: the probe arm refuses adoption from a report without an interpretation. The second carries a rule this section had not stated: a `harness-edit` and a change to the suite it is probed under cannot be one change, and the probe runs under the suite at the baseline report's fingerprint, or the reflector grades itself on a test it also wrote. That is item 1 of §9 (the held-out slice) from the other side, and it goes into the probe arm's issue with it. **Landed (2026-11-15)**, #200: a report's fingerprint carries its suite file's hash, the probe arm is built at run time rather than written into the suite, and `regulator eval --probe` refuses a probe whose suite file hashes differently from the one its baseline report names, or whose baseline predates the field. Adoption from a report without an interpretation is refused too: a probe horizon is read only from a report a person interpreted.
 
 ## 8. Three records: what was seen, what is expected, what was decided
 
@@ -581,7 +586,11 @@ description of it.
    needs either a held-out slice of tasks the reflector never reads, or the live horizon
    (§8) as the only resolution that counts, with the probe as a screen. The note's
    two-horizon rule already says the second; the first is cheaper and should be the
-   probe's definition.
+   probe's definition. **Landed (2026-11-15)**, #200: a suite may declare `heldOut` tasks;
+   a probe reads its metric over them alone, and a `harness-edit` whose diagnosis cites a unit
+   that ran a held-out task's contract resolves inconclusive by rule, with the reason on the
+   resolution. No shipped suite declares a slice yet; the drift suite's is declared when its
+   first live probe is planned.
 2. **One metric to optimise, many to report.** "When a measure becomes a target, it
    ceases to be a good measure" (4.2.4). The book optimises on one metric and evaluates
    the final program on several. Regulator's version is the §5 experiment: optimise

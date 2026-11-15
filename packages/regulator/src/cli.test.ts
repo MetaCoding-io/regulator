@@ -676,8 +676,8 @@ test("the probe rule on `advice accept` (#200): a harness-edit whose prediction 
   assert.equal(r.code, 0, r.stderr);
   assert.equal((await ledger.get(owed["plain"]!))?.disposition, "accepted");
   r = await regulator(repo, "status", "--instance", repo);
-  assert.match(r.stdout, /predictions: 2 open of 2; 1 confirmed, 0 disconfirmed, 0 inconclusive of 1 resolved \(precision 1\.00; inconclusive counts against\); 3 accept\(s\) refused by the probe rule\n/);
-  assert.match(r.stdout, /i-live {3}refusals lower by 0 \(p=0\.6\) {2}live awaiting-decision: 0\/3 implement unit\(s\) {2}bet on by he-live open {2}refused no-probe-horizon {2}/);
+  assert.match(r.stdout, /predictions: 1 open of 2; 1 confirmed, 0 disconfirmed, 0 inconclusive of 1 resolved \(precision 1\.00; inconclusive counts against\); 3 accept\(s\) refused by the probe rule\n/);
+  assert.match(r.stdout, /i-live {2}refusals lower by 0 \(p=0\.6\) {2}live awaiting-decision: 0\/3 implement unit\(s\) {2}bet on by he-live open {2}refused no-probe-horizon {2}/);
 });
 
 test("`regulator upgrade` from the outside (#53): --check prints the plan and changes nothing, applying is checked against the interaction policy as S5 before anything is written, the migration notes are printed under a heading per version crossed, the commit cites from and to, doctor reports the version and the history, and a second run says there is nothing to do", async (t) => {

@@ -170,7 +170,32 @@ arm before paying for the rest.
 
 `regulator status` prints each attempt's cache reads and writes beside its tokens and
 cost, and `cacheWrite` is a pre-registered metric of the drift suites, so the cost row
-can say how much of the gated arm's extra tokens was a prefix re-sent uncached.
+can say how much of the gated arm's extra tokens was a prefix re-sent uncached, and
+`cacheShare` and `cost` beside it say how much of the input the cache served and what
+the run cost.
+
+## A probe of an advice edit
+
+A `harness-edit` is accepted only after its probe resolves. The probe reruns one arm of
+a committed report beside the same arm with the proposed advice file, under the suite
+file that report ran under:
+
+1. Put the proposed file under `evals/advice/<name>/<profile>.md` in the definition.
+2. From the instance that holds the proposal, run it bound to the obligation:
+
+   ```sh
+   regulator eval packages/regulator/evals/drift.json --probe packages/regulator/evals/reports/<baseline>.json \
+     --advice implement=packages/regulator/evals/advice/<name>/implement.md --obligation <id> --out <report>
+   ```
+
+   The prediction names the two arms. A baseline report written before the fingerprint
+   carried its suite file's hash is refused, and so is a suite file that has changed since
+   the baseline ran: regenerate the baseline first, as its own change. A live probe spends
+   what one arm of the suite spends, twice; plan it as a live run.
+3. Interpret the report and commit it under `evals/reports/`. Then `regulator advice
+   accept <id> --by <you> --from <the probed file> --rationale <text>` resolves the probe
+   and applies the probe rule; a refusal is written to the regulatory log and the
+   obligation stays owed.
 
 ## Upgrading
 
