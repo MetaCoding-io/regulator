@@ -131,6 +131,47 @@ of exactly this kind.
 - `pi --mode json` / RPC for a non-Node host: a unit's session is an ordinary Pi
   session; the dispatcher (`dispatcher.ts`) is the SDK embedding to copy.
 
+## A live eval run
+
+A live `regulator eval` spends model time on every arm, repetition and task, and the
+first live report (`evals/reports/drift-live-2026-11-08.json`) showed that a run can
+cost hours and find nothing to catch: the model did not drift on the fixture, so the
+report priced regulation and measured no gate. Find that out for one repetition of one
+arm before paying for the rest.
+
+1. **Keys.** Export the key for the provider of every route the run will use: the
+   policy's own and any route an arm names (`model-tier` names `research`). `regulator
+   eval` asks the host which models it can run on and refuses a route whose primary is
+   missing, naming the arm, unless you pass `--accept-fallback`; then the report's
+   fingerprint and each arm's summary say which model ran.
+2. **The baseline alone, once.** Run the suite's baseline arm by itself for one
+   repetition (`--arm` selects arms, and the baseline is always run):
+
+   ```sh
+   regulator eval packages/regulator/evals/drift.json --arm control --reps 1 --out /tmp/baseline.json
+   ```
+
+   The last lines say whether the baseline failed on any pre-registered outcome metric
+   (`boundaryViolations`, `signatureDrift`, `vocabularyDrift`, `memoryRules`,
+   `suiteWeakened`): "baseline control failed on …", or "nothing to catch: cost only".
+3. **Pay for the other arms only if it drifted.** If the baseline failed somewhere, run
+   the arms the plan names at the suite's repetitions. If it did not, the arms would
+   measure cost and nothing else: run the suites whose fixture pulls toward drift
+   (`evals/drift-poisoned-memory.json`, the `confident` row) instead, and keep the drift
+   suite's arms as a cost row only. The baseline-alone output is not committed; the
+   report you commit is the full run.
+4. **Interpret, then commit.** Write the interpretation by the rule
+   ([evidence about the regulators](../../docs/concepts/evidence-about-the-regulators.md)):
+   where the gated arm lost, the task where it lost most (the per-task table `regulator
+   eval` prints under the arm table), what the report does not show, and whether it is
+   cost-only. Re-run nothing to add it: pass `--interpretation <file> --by <you>` with
+   the run, or write it into the report before committing. A cost-only report is still
+   committed; its ablation arms do not count toward any retirement condition.
+
+`regulator status` prints each attempt's cache reads and writes beside its tokens and
+cost, and `cacheWrite` is a pre-registered metric of the drift suites, so the cost row
+can say how much of the gated arm's extra tokens was a prefix re-sent uncached.
+
 ## Upgrading
 
 Two things move under an instance: the definition (a package version, with a git

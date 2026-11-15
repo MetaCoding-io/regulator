@@ -67,7 +67,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
  * Declared metrics (#129). A definition with one workload, `pf`, under a profile that resolves, so the only problems
  * about `workload/pf.json` and `evals/` are the ones the declaration and the suite earn.
  */
-async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, options: { metrics?: unknown[]; suiteMetrics?: unknown[]; otherWorkload?: boolean; report?: Record<string, unknown> } = {}): Promise<string[]> {
+async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, options: { metrics?: unknown[]; suiteMetrics?: unknown[]; otherWorkload?: boolean; report?: Record<string, unknown>; arms?: unknown[]; policy?: unknown } = {}): Promise<string[]> {
   const dir = await mkdtemp(path.join(tmpdir(), "regulator-metrics-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
   await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["write", "report_result"], writablePaths: ["lots/"] });
@@ -77,11 +77,12 @@ async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, op
   await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes, ...(options.metrics ? { metrics: options.metrics } : {}) });
   if (options.otherWorkload) await write(dir, "workload/other.json", { name: "other", version: 1, description: "d", unitTypes, metrics: [{ name: "workload:other/size", description: "d", kind: "count", direction: "none", grader: { argv: ["node", "workload/pf/turnover.mjs"] } }] });
   await write(dir, "contracts/p1.json", "{}");
+  if (options.policy) await write(dir, "policies/default.json", options.policy);
   await mkdir(path.join(dir, "fixture-pf"), { recursive: true });
   if (options.suiteMetrics) {
     await write(dir, "evals/pf.json", {
       name: "pf", version: 1, description: "d", fixture: "fixture-pf", tasks: ["contracts/p1.json"],
-      arms: [{ name: "control", description: "d", extensions: [], checks: ["run_tests"], identity: false }, { name: "treatment", description: "d", extensions: [], checks: ["run_tests"], identity: true }],
+      arms: [{ name: "control", description: "d", extensions: [], checks: ["run_tests"], identity: false }, { name: "treatment", description: "d", extensions: [], checks: ["run_tests"], identity: true }, ...(options.arms ?? [])],
       repetitions: 1, metrics: options.suiteMetrics, baseline: "control",
     });
   }
@@ -110,6 +111,19 @@ test("consent grants (#60) are part of the declaration: a grant naming an ungran
     'profiles/teller.json: profile "teller" needs consent for write under "payments/executed/" and grants bash, which is not path-gated: a shell command can write there with no consent asked. Declare {"tool":"bash","pattern":"payments\\/executed\\/"} beside it, or the grant is enforced on write calls only',
   ], "the cashier's bash pattern covers the path; the clerk's grant is warned about and nothing refused; the teller's shell is warned about beside the path it is refused for");
   assert.deepEqual(checked.profiles.find((p) => p.name === "cashier")?.consent, [{ tool: "write", paths: ["payments/pending/"] }, { tool: "bash", pattern: "payments/pending/" }]);
+});
+
+test("an eval arm's route (#201) names a route a budget policy declares — `default`, or a unit type it routes — and anything else is refused; an arm with no route, and one that ablates nothing, is accepted as it is", async (t) => {
+  const policy = {
+    name: "default", version: 1, description: "d", budgets: { default: { tokens: 1000, wallClockMs: 1000, turns: 5, attempts: 1 } },
+    models: { default: { primary: "anthropic/claude-sonnet-4-5", fallback: [] }, byUnitType: { ingest: { primary: "anthropic/claude-haiku-4-5", fallback: [] } } },
+  };
+  const arm = (name: string, extra: Record<string, unknown> = {}) => ({ name, description: "d", extensions: [], checks: ["run_tests"], identity: true, ...extra });
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, arms: [arm("model-only"), arm("tier", { route: "ingest" }), arm("same", { route: "default" })] }), []);
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, arms: [arm("tier", { route: "verify" })] }), [
+    'evals/pf.json: arm "tier" names route "verify", which no budget policy declares (default: default, ingest)',
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, arms: [arm("tier", { route: "Haiku" })] }).then((p) => p.length), 1, "a route is a name, as an arm's is: the schema refuses anything else");
 });
 
 test("declared metrics: a workload's declaration with a grader file under the definition, pre-registered by a suite with one optimisation target, passes the definition check", async (t) => {

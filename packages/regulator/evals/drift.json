@@ -1,7 +1,7 @@
 {
   "name": "drift",
   "version": 1,
-  "description": "The longitudinal drift scenario (packages/regulator/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, inherited-tests, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off. Metrics are pre-registered here; the report's interpretation is a person's.",
+  "description": "The longitudinal drift scenario (packages/regulator/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, inherited-tests, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off; model-only is the treatment with run_tests the only check, and model-tier the treatment on a smaller model route. Metrics are pre-registered here; the report's interpretation is a person's.",
   "fixture": "fixture",
   "tasks": [
     "contracts/drift/d1-fix.json",
@@ -163,6 +163,54 @@
       "identity": true,
       "ablates": "reg.audit.inherited-tests-check.v1",
       "switch": "check:inherited-tests"
+    },
+    {
+      "name": "model-only",
+      "description": "The shared-mental-model bet run as an experiment (team-of-experts note §4): the treatment's session as it is, identity and memory rendered every turn and every channel loaded, with run_tests the only host check at closeout. Against control it says what the shared model adds; against treatment, what the host checks add beyond it. Not an ablation arm: it switches off no one regulator.",
+      "extensions": [
+        "tools",
+        "profiles",
+        "coordination",
+        "contract",
+        "budget",
+        "recovery",
+        "evidence",
+        "authority",
+        "intelligence",
+        "identity",
+        "algedonic"
+      ],
+      "checks": [
+        "run_tests"
+      ],
+      "identity": true
+    },
+    {
+      "name": "model-tier",
+      "description": "The treatment dispatched on the budget policy's research route (a smaller model tier than the default route) in place of the default (Exo note §4 item 4): the same gates under a weaker model, so the intelligence floor can be told from a gate's effect. Not an ablation arm.",
+      "extensions": [
+        "tools",
+        "profiles",
+        "coordination",
+        "contract",
+        "budget",
+        "recovery",
+        "evidence",
+        "authority",
+        "intelligence",
+        "identity",
+        "algedonic"
+      ],
+      "checks": [
+        "run_checks",
+        "run_tests",
+        "inherited-tests",
+        "identity-untouched",
+        "export-signature",
+        { "name": "glossary-lint", "options": { "commitMessages": "advisory" } }
+      ],
+      "identity": true,
+      "route": "research"
     }
   ],
   "repetitions": 3,
@@ -181,7 +229,8 @@
     "tokens",
     "turns",
     "wallClockMs",
-    "suiteWeakened"
+    "suiteWeakened",
+    "cacheWrite"
   ],
   "baseline": "control"
 }

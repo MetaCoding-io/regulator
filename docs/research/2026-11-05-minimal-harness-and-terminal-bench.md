@@ -206,6 +206,12 @@ state in their `cost` prose what a change to the file costs in cache writes on t
 turn. Mechanism level: reporting over records that exist. Seam: `BudgetLedgerSchema`,
 `EVAL_METRICS`.
 
+**Landed in part (2026-11-12)** with #201's suite changes: the ledger keeps `cacheRead` and
+`cacheWrite` per attempt, `regulator status` prints them beside tokens and cost, and
+`cacheWrite` is a built-in metric with a trajectory grader over the attempts' ledgers (0,
+with an observation saying so, for a scripted unit). The `cost` prose on `advice-context`
+and `identity-context` is still owed; `cacheShare` and `cost` as metrics are #200's.
+
 ### 4.4 The reviewer's model as a declared choice
 
 `mini` lets `models.json` name the reviewer's model separately from the worker's and does

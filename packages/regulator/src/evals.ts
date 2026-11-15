@@ -17,8 +17,8 @@
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { fileSha256, graderFile, lifts, loadRegistry, routeFor, summarizeArms } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
+import { baselineCheck, fileSha256, graderFile, lifts, loadRegistry, namedRoute, routeFor, routeNames, summarizeArms, taskTable } from "@metacoding.io/regulator-core";
+import { EvalSuiteSchema, assertValid, type MetricDirection, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
 import { blockedDetail, driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
@@ -77,6 +77,18 @@ export function workloadForArm(workload: WorkloadDefinition, arm: EvalArm): Work
   return { ...workload, unitTypes: workload.unitTypes.map((t) => (t.checks.length ? { ...t, checks: [...arm.checks] } : t)) };
 }
 
+/**
+ * The policy as an arm runs under it: when the arm names a route (#201), every unit of the arm is dispatched on that route
+ * of the policy, in place of what the policy would route it to; budgets, the canary and everything else are the policy's.
+ * A name the policy does not declare is refused, since a run on a route nobody declared would be a run on a guess.
+ */
+export function policyForArm(policy: PolicyDefinition, arm: EvalArm): PolicyDefinition {
+  if (!arm.route) return policy;
+  const route = namedRoute(policy, arm.route);
+  if (!route) throw new Error(`arm "${arm.name}" names route "${arm.route}", which policy ${policy.name} v${policy.version} does not declare (it declares ${routeNames(policy).join(", ")})`);
+  return { ...policy, models: { default: { primary: route.primary, fallback: [...route.fallback] } } };
+}
+
 /** The classes each host check can produce evidence for. */
 const PRODUCES: Readonly<Record<string, readonly string[]>> = { run_tests: ["test"], run_checks: ["command"], "identity-untouched": ["command"], "export-signature": ["runtime"], "inherited-tests": ["test"] };
 
@@ -116,7 +128,7 @@ export async function declaredGradersFor(suite: EvalSuite, root: string): Promis
   return out;
 }
 
-export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[] }): Promise<EnvironmentFingerprint> {
+export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>> }): Promise<EnvironmentFingerprint> {
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: root });
   const [policy, recovery, routing, interaction] = await Promise.all([loadPolicy(options.policyPath), loadRecoveryPolicy(), loadRoutingPolicy(), loadInteractionPolicy()]);
   const graders: GraderFingerprint[] = [];
@@ -130,6 +142,7 @@ export async function fingerprintFor(exec: Exec, root: string, options: { dispat
     policies: { [policy.name]: policy.version, [recovery.name]: recovery.version, [routing.name]: routing.version, [interaction.name]: interaction.version },
     ...(graders.length ? { graders } : {}),
     ...(options.modelsObserved?.length ? { modelsObserved: [...options.modelsObserved] } : {}),
+    ...(options.modelsByArm && Object.values(options.modelsByArm).some((m) => m.length) ? { modelsByArm: Object.fromEntries(Object.entries(options.modelsByArm).filter(([, m]) => m.length).map(([arm, m]) => [arm, [...m]])) } : {}),
   };
 }
 
@@ -139,14 +152,20 @@ export async function fingerprintFor(exec: Exec, root: string, options: { dispat
  * eval refuses, because the report names the primary and the arms were pre-registered on it (the fourth live drift
  * run, 2026-11-08, ran every unit on the route's last fallback with only that provider's key in the shell).
  */
-export function unavailablePrimaries(tasks: readonly WorkContract[], policy: PolicyDefinition, available: readonly string[]): Array<{ unitType: string; primary: string; fallbacksAvailable: string[] }> {
+export function unavailablePrimaries(tasks: readonly WorkContract[], policy: PolicyDefinition, available: readonly string[], arms: readonly EvalArm[] = []): Array<{ unitType: string; primary: string; fallbacksAvailable: string[]; arms?: string[] }> {
   const set = new Set(available);
-  const out = new Map<string, { unitType: string; primary: string; fallbacksAvailable: string[] }>();
-  for (const contract of tasks) {
-    if (out.has(contract.unitType)) continue;
-    const route = routeFor(policy, contract.unitType);
-    if (set.has(route.primary)) continue;
-    out.set(contract.unitType, { unitType: contract.unitType, primary: route.primary, fallbacksAvailable: route.fallback.filter((f) => set.has(f)) });
+  const out = new Map<string, { unitType: string; primary: string; fallbacksAvailable: string[]; arms?: string[] }>();
+  // Each arm is dispatched under its own route when it names one (#201); without arms, the policy's routing as declared.
+  const routed = arms.length ? arms.map((arm) => ({ arm: arm.name, policy: policyForArm(policy, arm) })) : [{ arm: undefined, policy }];
+  for (const { arm, policy: p } of routed) {
+    for (const contract of tasks) {
+      const route = routeFor(p, contract.unitType);
+      if (set.has(route.primary)) continue;
+      const key = `${contract.unitType}\u0000${route.primary}`;
+      const seen = out.get(key);
+      if (seen) { if (arm && !seen.arms!.includes(arm)) seen.arms!.push(arm); continue; }
+      out.set(key, { unitType: contract.unitType, primary: route.primary, fallbacksAvailable: route.fallback.filter((f) => set.has(f)), ...(arm ? { arms: [arm] } : {}) });
+    }
   }
   return [...out.values()];
 }
@@ -173,10 +192,13 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
     tasks.push({ file, contract });
   }
   const declared = await declaredGradersFor(suite, root);
+  // An arm that names a route runs under it; one the policy does not declare is refused before anything runs.
+  const policies = new Map(arms.map((arm) => [arm.name, policyForArm(policy, arm)]));
   const fixture = path.join(root, suite.fixture);
   const runs: EvalRun[] = [];
   // What the ledgers say the run was on, in order of first use: the fingerprint's `modelsObserved`, beside the declared model.
   const observed: string[] = [];
+  const observedByArm: Record<string, string[]> = {};
 
   for (const arm of arms) {
     for (let repetition = 1; repetition <= repetitions; repetition++) {
@@ -189,11 +211,13 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
         for (const task of tasks) {
           const startedAt = stamp();
           const { final } = await driveUnit(exec, {
-            repo: instance, contract: contractForArm(task.contract, arm), workload: workloadForArm(workloads.get(task.contract.workload.name)!, arm), policy, policyPath, recovery, routing, interaction, regulators,
+            repo: instance, contract: contractForArm(task.contract, arm), workload: workloadForArm(workloads.get(task.contract.workload.name)!, arm), policy: policies.get(arm.name)!, policyPath, recovery, routing, interaction, regulators,
             owner: options.owner, now, dispatcher: options.dispatcherFor(arm, task, instance),
           });
           const trajectory = await unitTrajectory(instance, task.contract.unitId);
           for (const m of trajectory.models) if (!observed.includes(m)) observed.push(m);
+          const armObserved = (observedByArm[arm.name] ??= []);
+          for (const m of trajectory.models) if (!armObserved.includes(m)) armObserved.push(m);
           const ctx: GraderContext = {
             repo: instance, baseRevision, writable: manifest?.writablePaths ?? ["src/", "test/"],
             ...(task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature") ? { signature: task.contract.expectedEvidence.find((e) => e.check?.kind === "export-signature")! } : {}),
@@ -219,17 +243,29 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
       }
     }
   }
-  const summaries = summarizeArms(runs, metricNames(suite.metrics));
+  const metrics = metricNames(suite.metrics);
+  // The arm summary names the route an arm was declared on and the models its ledgers name (#201): arms can differ by model.
+  const summaries = summarizeArms(runs, metrics).map((s) => {
+    const arm = arms.find((a) => a.name === s.arm);
+    return { ...s, ...(arm?.route ? { route: { name: arm.route, primary: policies.get(arm.name)!.models.default.primary } } : {}), ...(observedByArm[s.arm]?.length ? { modelsObserved: [...observedByArm[s.arm]!] } : {}) };
+  });
   const [optimise] = optimisedMetrics(suite.metrics);
+  const directions: Record<string, MetricDirection> = Object.fromEntries(declared.map((g) => [g.declaration.name, g.declaration.direction]));
+  const baseline = baselineCheck(runs, metrics, suite.baseline);
   return {
     suite: { name: suite.name, version: suite.version, ...(optimise ? { optimise } : {}) }, generatedAt: stamp(),
-    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed }),
+    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed, modelsByArm: observedByArm }),
     arms: summaries, lifts: lifts(summaries, suite.baseline), runs,
+    tasks: taskTable(runs, metrics, suite.baseline, directions),
+    ...(baseline ? { baseline } : {}),
     interpretation: options.interpretation, interpretedBy: options.interpretedBy,
   };
 }
 
-/** Which registry records the suite's ablation arms switch off, and which active records no arm covers. */
+/**
+ * Which registry records the suite's ablation arms switch off, and which active records no arm covers. Only an arm that
+ * names `ablates` counts: `model-only` and a model-tier arm are experiments on the arrangement, not a regulator's row.
+ */
 export function ablationCoverage(suite: EvalSuite, regulatorIds: readonly string[]): { covered: string[]; uncovered: string[]; unknown: string[] } {
   const covered = suite.arms.flatMap((a) => (a.ablates ? [a.ablates] : []));
   return { covered: covered.filter((id) => regulatorIds.includes(id)), uncovered: regulatorIds.filter((id) => !covered.includes(id)), unknown: covered.filter((id) => !regulatorIds.includes(id)) };

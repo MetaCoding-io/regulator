@@ -133,7 +133,7 @@ test("the committed definition passes the definition check: profiles, workload, 
   assert.deepEqual(definition.identity.invariants.map((i) => i.id), ["INV-001", "INV-002", "INV-003", "INV-004"]);
   assert.equal(definition.routing[0]?.floors?.length, 1);
   assert.deepEqual(definition.interaction[0]?.people.map((p) => p.name), ["course-lab", "alice", "bob"]);
-  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift-poisoned-memory", 2, 6], ["drift", 6, 6], ["portfolio-turnover", 2, 2]], "the drift suite, the same tasks over the poisoned-memory fixture (#130) and the portfolio's turnover suite are part of the declaration");
+  assert.deepEqual(definition.evals.map((s) => [s.name, s.arms.length, s.tasks.length]), [["drift-poisoned-memory", 2, 6], ["drift", 8, 6], ["portfolio-turnover", 2, 2]], "the drift suite, the same tasks over the poisoned-memory fixture (#130) and the portfolio's turnover suite are part of the declaration");
   assert.deepEqual(definition.reports.map((r) => `${r.suite.name} ${r.fingerprint.dispatcher}`).sort(), ["drift pi", "drift scripted:confident", "drift scripted:drifter", "drift scripted:reference", "drift scripted:self-certifier", "drift scripted:sloppy", "drift-poisoned-memory scripted:reference"], "the five scripted validations, the scripted reference over the poisoned-memory fixture, and the first live report, through the Pi host");
 });
 

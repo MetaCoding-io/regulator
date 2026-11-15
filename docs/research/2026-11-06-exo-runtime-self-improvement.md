@@ -201,7 +201,11 @@ Ordered by cost.
    should name the model each arm ran, and the reflector's calibration report should run
    at two tiers before it says a proposal helps. An arm today differs in extensions,
    checks and identity (`EvalArmSchema`); a `route` override naming a model route of the
-   budget policy is the field it lacks. Level 2.
+   budget policy is the field it lacks. Level 2. **Landed (2026-11-12)** with #201's suite
+   changes: `route` on `EvalArmSchema` names a route of the budget policy (`default`, or a
+   unit type it routes), checked by `regulator check` and read by the primary check; each
+   arm's summary and the fingerprint name the models observed per arm; `model-tier` in the
+   drift suite is the treatment on the `research` route. #200's probe arm cites the field.
 
 5. **Agent-built tools: domain until reused, declared when promoted.** Exo's efficiency
    came from procedures the agent wrote and reused, not from prompt edits (§5.2.1, §5.4.2).

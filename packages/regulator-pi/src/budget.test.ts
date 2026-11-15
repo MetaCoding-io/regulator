@@ -31,7 +31,8 @@ async function contracted(repo: string): Promise<{ contract: WorkContract; file:
   return { contract, file: path.join(repo, UNITS_RELATIVE_DIR, contract.unitId, "contract.v1.json") };
 }
 
-const usage = (totalTokens: number, cost = 0) => ({ type: "message_end", message: { role: "assistant", usage: { input: totalTokens, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens, cost: { total: cost } } } });
+// A tenth of every message is read from the provider's cache and a twentieth written to it (#201): the guard keeps both per attempt.
+const usage = (totalTokens: number, cost = 0) => ({ type: "message_end", message: { role: "assistant", usage: { input: totalTokens, output: 0, cacheRead: totalTokens / 10, cacheWrite: totalTokens / 20, totalTokens, cost: { total: cost } } } });
 const turnEnd = { type: "turn_end", turnIndex: 0, message: {}, toolResults: [] };
 
 test("budget guard: the ledger is written at start, counts usage and turns, and the first ceiling crossed halts the attempt and refuses every effectful tool", async (t) => {
@@ -67,7 +68,7 @@ test("budget guard: the ledger is written at start, counts usage and turns, and 
   assert.equal(state.aborts, 1, "the ceiling halts the attempt");
   assert.match(notices.at(-1)?.message ?? "", /budget exhausted \(tokens\)/);
   const ledger = (await store.getBudget(contract.unitId, 1)) as BudgetLedger;
-  assert.deepEqual(ledger.consumed, { tokens: 1100, cost: 0.03, wallClockMs: 1000, turns: 2 });
+  assert.deepEqual(ledger.consumed, { tokens: 1100, cost: 0.03, wallClockMs: 1000, turns: 2, cacheRead: 110, cacheWrite: 55 }, "cache read and write are summed beside the tokens (#201)");
   assert.equal(ledger.exhausted?.dimension, "tokens");
   assert.deepEqual(ledger.models, ["anthropic/claude-sonnet-4-5", "openai/gpt-5"]);
   const refused = handlers.get("tool_call")!(write, ctx) as { block: boolean; reason: string };
@@ -141,7 +142,7 @@ test("budget guard: a fallback session on the same attempt resumes the ledger â€
   assert.equal(b.state.aborts, 1, "the ceiling is the attempt's, so the fallback crosses it with what the primary spent");
   const halted = (await store.getBudget(contract.unitId, 1)) as BudgetLedger;
   assert.equal(halted.exhausted?.dimension, "tokens");
-  assert.deepEqual(halted.consumed, { tokens: 1100, cost: 0.03, wallClockMs: 2000, turns: 2 });
+  assert.deepEqual(halted.consumed, { tokens: 1100, cost: 0.03, wallClockMs: 2000, turns: 2, cacheRead: 110, cacheWrite: 55 }, "the fallback session adds its cache counts to the primary's");
 
   // A third session on the halted attempt (the router must not open one; if something does, the halt holds).
   const third = mockPi();

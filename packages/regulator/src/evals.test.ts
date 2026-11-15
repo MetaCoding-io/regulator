@@ -5,11 +5,12 @@ import path from "node:path";
 import test from "node:test";
 import { UNINTERPRETED_BY, UNINTERPRETED_MARKER, declaredMetrics, isEvalReport, isUninterpreted, metricNames, type EvalReport, type EvalRun } from "@metacoding.io/regulator-protocol";
 import { ExecutionStore, MemoryStore, ObligationLedger, checkDefinition, loadRegistry, readSignals, renderMemorySection } from "@metacoding.io/regulator-core";
-import { EVALS_DIR, ablationCoverage, loadSuite, runSuite, workloadForArm } from "./evals.js";
+import { EVALS_DIR, ablationCoverage, loadSuite, policyForArm, runSuite, unavailablePrimaries, workloadForArm } from "./evals.js";
 import { BEHAVIOURS, CONFIDENT_CLAIM, scriptedDispatchers } from "./evals-scripted.js";
 import { gitExec } from "./git-support.js";
 import { MEMORY_SEED_FILE, initFixture } from "./unit.js";
 import { LAB_ROOT, loadWorkload } from "./workload.js";
+import { loadPolicy } from "./policy.js";
 
 const suiteP = loadSuite(path.join(EVALS_DIR, "drift.json"));
 const poisonedP = loadSuite(path.join(EVALS_DIR, "drift-poisoned-memory.json"));
@@ -23,10 +24,24 @@ test("the drift suite is a declared part of the definition: its arms name what t
     ["control", 1, null, null], ["treatment", 6, null, null],
     ["no-identity-check", 5, "reg.audit.identity-untouched-check.v1", "check:identity-untouched"], ["no-behaviour-check", 5, "reg.audit.behaviour-check.v1", "check:export-signature"],
     ["no-glossary-lint", 5, "reg.audit.glossary-lint.v1", "check:glossary-lint"], ["no-inherited-tests", 5, "reg.audit.inherited-tests-check.v1", "check:inherited-tests"],
+    ["model-only", 1, null, null], ["model-tier", 6, null, null],
   ]);
   const ids = (await loadRegistry(path.join(LAB_ROOT, "registry"))).records.map((r) => r.id);
   const coverage = ablationCoverage(suite, ids);
   assert.deepEqual(coverage.unknown, []);
+  // The model-only arm (#201) is the treatment's session with run_tests alone at closeout: it differs from the treatment in
+  // its checks and nothing else, and from control in the identity and the three extensions that render and carry it.
+  const arm = (name: string) => suite.arms.find((a) => a.name === name)!;
+  assert.deepEqual([arm("model-only").extensions, arm("model-only").identity, arm("model-only").ablates, arm("model-only").route], [arm("treatment").extensions, true, undefined, undefined]);
+  assert.deepEqual(workloadForArm(await loadWorkload(), arm("model-only")).unitTypes.map((t) => t.checks), workloadForArm(await loadWorkload(), arm("control")).unitTypes.map((t) => t.checks), "its closeout is control's");
+  // The model-tier arm (#201) is the treatment on the policy's research route: the same gates, a smaller model.
+  const { route: _route, name: _n, description: _d, ...tier } = arm("model-tier");
+  const { name: _tn, description: _td, ...treatment } = arm("treatment");
+  assert.deepEqual(tier, treatment, "the model-tier arm differs from the treatment in its route alone");
+  const policy = await loadPolicy();
+  assert.equal(policyForArm(policy, arm("model-tier")).models.default.primary, policy.models.byUnitType!.research!.primary);
+  assert.notEqual(policy.models.byUnitType!.research!.primary, policy.models.default.primary, "the route is a second tier a live run can use, under the same provider's key as the default");
+  assert.ok(!coverage.covered.includes("model-only") && coverage.covered.length === 4, "neither arm is an ablation arm: the coverage is the four checks'");
   assert.deepEqual(coverage.covered, ["reg.audit.identity-untouched-check.v1", "reg.audit.behaviour-check.v1", "reg.audit.glossary-lint.v1", "reg.audit.inherited-tests-check.v1"]);
   assert.ok(coverage.uncovered.length > 20, "most regulators have no ablation arm yet, and the lifecycle view says so");
   const workload = await loadWorkload();
@@ -65,7 +80,18 @@ test("the harness validates its graders against five scripted learner-style unit
     assert.deepEqual(Object.keys(report.arms[0]!.metrics), metricNames(suite.metrics), "pre-registered metrics only");
     assert.equal(report.fingerprint.modelsObserved, undefined, `${behaviour}: a scripted unit runs no session, so no ledger names a model`);
     assert.ok(report.runs.every((r) => r.models === undefined), `${behaviour}: no run claims a model`);
+    assert.ok(report.runs.every((r) => r.metrics.cacheWrite === 0 && /no ledger/.test(r.graders.find((g) => g.grader === "cacheWrite")!.observation)), `${behaviour}: a scripted unit has no ledger, and cacheWrite says so rather than claim a zero was measured`);
+    assert.deepEqual(report.tasks!.map((t) => t.task), suite.tasks.map((f) => path.basename(f, ".json")), `${behaviour}: one row per task, in the order they ran`);
+    assert.ok(report.tasks!.every((t) => t.arms.length === 2 && t.arms.every((a) => a.n === 1)), `${behaviour}: one repetition, so each mean is one number`);
   }
+  // A baseline that discriminates (#201): the reference and the confident unit leave nothing on main for a gate to catch under
+  // control — the confident one is refused by run_tests already — so their reports are cost-only; the drifter and the sloppy
+  // unit drift under control, and the self-certifier weakens the suite.
+  assert.deepEqual(BEHAVIOURS.map((b) => [b, reports.get(b)!.baseline!.discriminates]), BEHAVIOURS.map((b) => [b, !["reference", "confident"].includes(b)]));
+  assert.deepEqual(reports.get("drifter")!.baseline!.metrics.filter((m) => m.failed).map((m) => m.metric), ["boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules"]);
+  // Per task (#201): the drifter's gated arm loses most on d1, where the signature it re-drifts first is refused, and the table says which arm leads.
+  const d1 = reports.get("drifter")!.tasks!.find((t) => t.task === "d1-fix")!;
+  assert.deepEqual(d1.differences.find((d) => d.metric === "closed"), { arm: "treatment", metric: "closed", delta: -1, direction: "higher", leads: "control" });
 
   // Reference: everything closes, nothing drifts, under both arms. The treatment costs nothing extra because nothing was refused.
   const reference = reports.get("reference")!;
@@ -263,8 +289,8 @@ test("the committed reports validate, report on the committed suite, and carry a
   }
 });
 
-test("the fifteen built-ins are unchanged: every committed drift report re-summarizes byte-identical from its own runs under the new code, and re-serializes to the bytes on disk", async () => {
-  const { lifts, summarizeArms } = await import("@metacoding.io/regulator-core");
+test("the built-ins are unchanged: every committed drift report re-summarizes byte-identical from its own runs, on the metrics it pre-registered, under the new code, and re-serializes to the bytes on disk; its per-task table and baseline check regenerate too, and the live report's baseline check says cost-only", async () => {
+  const { baselineCheck, lifts, summarizeArms, taskTable } = await import("@metacoding.io/regulator-core");
   const suites = new Map((await Promise.all([suiteP, poisonedP])).map((s) => [s.name, s]));
   for (const s of suites.values()) assert.deepEqual(declaredMetrics(s.metrics), [], `the ${s.name} suite declares nothing new; its fifteen are the built-in set`);
   const dir = path.join(EVALS_DIR, "reports");
@@ -273,10 +299,22 @@ test("the fifteen built-ins are unchanged: every committed drift report re-summa
     const report = JSON.parse(bytes) as EvalReport;
     const suite = suites.get(report.suite.name)!;
     assert.ok(isEvalReport(report), `${file} validates under the schema that now carries declared metrics`);
-    const arms = summarizeArms(report.runs, metricNames(suite.metrics));
+    // The metrics a report pre-registered are the ones its arms summarize: the suite may pre-register more since (cacheWrite, #201), and a live report is never regenerated.
+    const registered = Object.keys(report.arms[0]!.metrics);
+    assert.deepEqual(registered, metricNames(suite.metrics).filter((m) => registered.includes(m)), `${file}: its metrics are the suite's, in the suite's order`);
+    const arms = summarizeArms(report.runs, registered);
     assert.deepEqual(arms, report.arms, `${file}: the per-arm summaries regenerate from the committed runs`);
     assert.deepEqual(lifts(arms, suite.baseline), report.lifts, `${file}: the lifts regenerate`);
-    assert.equal(`${JSON.stringify({ ...report, arms, lifts: lifts(arms, suite.baseline) }, null, 2)}\n`, bytes, `${file}: byte-identical`);
+    const tasks = report.tasks ? { tasks: taskTable(report.runs, registered, suite.baseline) } : {};
+    const baseline = report.baseline ? { baseline: baselineCheck(report.runs, registered, suite.baseline)! } : {};
+    if (report.tasks) assert.deepEqual(tasks.tasks, report.tasks, `${file}: the per-task table regenerates`);
+    if (report.baseline) assert.deepEqual(baseline.baseline, report.baseline, `${file}: the baseline check regenerates`);
+    assert.equal(`${JSON.stringify({ ...report, arms, lifts: lifts(arms, suite.baseline), ...tasks, ...baseline }, null, 2)}\n`, bytes, `${file}: byte-identical`);
+    if (report.fingerprint.dispatcher === "pi") {
+      // The first live report predates the field and is never regenerated: computed from its runs, it is cost-only, as its interpretation says.
+      assert.equal(report.baseline, undefined);
+      assert.equal(baselineCheck(report.runs, registered, suite.baseline)!.discriminates, false, `${file}: the baseline failed on no outcome metric: nothing to catch, cost only`);
+    } else assert.ok(report.tasks && report.baseline, `${file}: a regenerated scripted report carries the per-task table and the baseline check`);
     assert.ok(report.runs.every((r) => r.graders.every((g) => g.kind !== "declared")), `${file}: no declared grader ran`);
     assert.equal(report.fingerprint.graders, undefined, `${file}: the fingerprint names no declared grader`);
   }
@@ -358,4 +396,31 @@ test("a live report says what it ran on: the models come from the attempts' ledg
   assert.deepEqual(unavailablePrimaries(tasks, policy, ["anthropic/claude-sonnet-4-5", "google/gemini-3.8-flash"]), [], "the primary has a key: nothing to refuse");
   assert.deepEqual(unavailablePrimaries(tasks, policy, ["google/gemini-3.8-flash"]), [{ unitType: "implement", primary: "anthropic/claude-sonnet-4-5", fallbacksAvailable: ["google/gemini-3.8-flash"] }], "only the last fallback has a key: the run would silently be on it");
   assert.deepEqual(unavailablePrimaries(tasks, policy, []), [{ unitType: "implement", primary: "anthropic/claude-sonnet-4-5", fallbacksAvailable: [] }]);
+});
+
+test("a model-tier arm (#201) is dispatched under the route it names and every other arm under the policy's routing; the arm summary and the fingerprint name what each arm was declared and observed on; an undeclared route is refused before anything runs, and a live run's primary check reads each arm's route", async () => {
+  const suite = await suiteP;
+  const policy = await loadPolicy();
+  const control = suite.arms.find((a) => a.name === "control")!;
+  const tier = { ...control, name: "tier", description: "control on the research route", route: "research" };
+  const fixtureSuite = { ...suite, tasks: [suite.tasks[0]!], arms: [control, tier], repetitions: 1, metrics: ["closed", "cacheWrite"] };
+  const routes: Record<string, string[]> = {};
+  const report = await runSuite(gitExec, {
+    suite: fixtureSuite, owner: "eval", now, dispatcher: "scripted:reference", model: "none", interpretation: "test", interpretedBy: "test",
+    dispatcherFor: (arm, task, instance) => {
+      const inner = scriptedDispatchers(gitExec, "reference", now)(arm, task, instance);
+      return (request) => { (routes[arm.name] ??= []).push(request.route.primary); return inner(request); };
+    },
+  });
+  assert.deepEqual(routes, { control: [policy.models.default.primary], tier: [policy.models.byUnitType!.research!.primary] });
+  assert.deepEqual(report.arms.map((a) => [a.arm, a.route]), [["control", undefined], ["tier", { name: "research", primary: policy.models.byUnitType!.research!.primary }]]);
+  assert.equal(report.fingerprint.modelsByArm, undefined, "a scripted unit runs no session: no arm observed a model");
+  assert.deepEqual(report.baseline?.metrics, undefined, "a suite that pre-registers no outcome metric carries no baseline check");
+  assert.equal(report.baseline, undefined);
+  await assert.rejects(runSuite(gitExec, { ...{ suite: { ...fixtureSuite, arms: [control, { ...tier, route: "verify" }] } }, owner: "eval", now, dispatcher: "scripted:reference", model: "none", interpretation: "t", interpretedBy: "t", dispatcherFor: scriptedDispatchers(gitExec, "reference", now) }), /arm "tier" names route "verify", which policy default v2 does not declare \(it declares default, plan, research, close\)/);
+  const { loadContract } = await import("./contract-file.js");
+  const contracts = [await loadContract(path.join(LAB_ROOT, suite.tasks[0]!))];
+  const sonnetOnly = [policy.models.default.primary];
+  assert.deepEqual(unavailablePrimaries(contracts, policy, sonnetOnly), [], "without arms, the policy's own routing");
+  assert.deepEqual(unavailablePrimaries(contracts, policy, sonnetOnly, [control, tier]), [{ unitType: "implement", primary: policy.models.byUnitType!.research!.primary, fallbacksAvailable: [], arms: ["tier"] }], "the tier arm's primary is the one the shell cannot run, and the refusal names the arm");
 });

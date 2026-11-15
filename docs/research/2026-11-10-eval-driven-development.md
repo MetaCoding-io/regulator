@@ -149,6 +149,12 @@ difference appears, not six independent results. And at three repetitions a per-
 mean is three numbers, so the table is for reading, with no interval and no `separated`
 flag.
 
+**Landed (2026-11-12)** with #201's suite changes: `tasks` on the report, `taskTable` in
+core, printed by `regulator eval` and rendered by the Assurance view; the directions it
+reads are `BUILT_IN_METRIC_DIRECTIONS` in `protocol` for the built-ins and the declaration
+for a declared metric, with `refusals`, `escalations` and `memoryFacts` not ranked. The two
+limits are on the `eval-harness` card and in the concept page.
+
 ### 4.2 A baseline that discriminates
 
 Give the report a derived statement of whether the baseline arm failed at all: for each
@@ -172,6 +178,16 @@ To settle before an issue:
 
 This was not added to #130: that issue was the two scripted foils and closed with #184.
 It is owed, with §4.1, before the next live run, and the two would be one issue in 0.2.
+
+**Decided and landed (2026-11-12)** with #201's suite changes. Which metrics count: a
+named list in `protocol`, `OUTCOME_METRICS`, the five graders of kind `outcome`, rather
+than a direction on the built-ins alone; the built-ins did gain directions, for §4.1's
+"which arm leads", but "above zero" needs a clean value as well as a direction, and only
+these five have one (a declared metric has a direction and no zero point, so it is not
+counted). Whether it refuses: it does not; the report carries `baseline.discriminates`,
+`regulator eval` prints "nothing to catch: cost only", and the lifecycle view lists a
+cost-only report's ablation arms apart and never toward a retirement condition. The first
+live report, computed from its runs, is cost-only. The procedure is in `OPERATING.md`.
 
 ### 4.3 From a record to a task
 
