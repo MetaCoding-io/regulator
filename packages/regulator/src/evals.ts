@@ -18,7 +18,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { baselineCheck, fileSha256, graderFile, lifts, loadRegistry, namedRoute, routeFor, routeNames, summarizeArms, taskTable } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, type MetricDirection, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
+import { EvalSuiteSchema, assertValid, type AdviceOverrideFingerprint, type FileHash, type ProbeRecord, type MetricDirection, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
 import { blockedDetail, driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
@@ -50,6 +50,8 @@ export type DispatcherFactory = (arm: EvalArm, task: TaskRef, instance: string) 
 
 export interface RunSuiteOptions {
   suite: EvalSuite;
+  /** The suite's file, relative to the root: hashed into the fingerprint (#200), so a probe can be held to the suite its baseline ran under. */
+  suiteFile?: string;
   /** The definition root the suite's paths are relative to. */
   root?: string;
   /** Arms to run; all of the suite's when omitted. The baseline is always included. */
@@ -128,7 +130,23 @@ export async function declaredGradersFor(suite: EvalSuite, root: string): Promis
   return out;
 }
 
-export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>> }): Promise<EnvironmentFingerprint> {
+/** Each arm's advice override as files under the root with their hashes (#200), in profile order; an arm with none is absent. */
+export async function adviceOverrides(root: string, arms: readonly EvalArm[]): Promise<Record<string, AdviceOverrideFingerprint[]>> {
+  const out: Record<string, AdviceOverrideFingerprint[]> = {};
+  for (const arm of arms) {
+    const entries = Object.entries(arm.advice ?? {}).sort(([a], [b]) => a.localeCompare(b));
+    if (!entries.length) continue;
+    out[arm.name] = [];
+    for (const [profile, file] of entries) {
+      const resolved = path.resolve(root, file);
+      if (path.relative(root, resolved).startsWith("..")) throw new Error(`arm "${arm.name}" overrides ${profile}'s advice with "${file}", which is not under the definition`);
+      out[arm.name]!.push({ profile, file: path.relative(root, resolved).split(path.sep).join("/"), sha256: await fileSha256(root, path.relative(root, resolved)) });
+    }
+  }
+  return out;
+}
+
+export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>>; suiteFile?: string; adviceByArm?: Readonly<Record<string, readonly AdviceOverrideFingerprint[]>> }): Promise<EnvironmentFingerprint> {
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: root });
   const [policy, recovery, routing, interaction] = await Promise.all([loadPolicy(options.policyPath), loadRecoveryPolicy(), loadRoutingPolicy(), loadInteractionPolicy()]);
   const graders: GraderFingerprint[] = [];
@@ -143,6 +161,8 @@ export async function fingerprintFor(exec: Exec, root: string, options: { dispat
     ...(graders.length ? { graders } : {}),
     ...(options.modelsObserved?.length ? { modelsObserved: [...options.modelsObserved] } : {}),
     ...(options.modelsByArm && Object.values(options.modelsByArm).some((m) => m.length) ? { modelsByArm: Object.fromEntries(Object.entries(options.modelsByArm).filter(([, m]) => m.length).map(([arm, m]) => [arm, [...m]])) } : {}),
+    ...(options.suiteFile ? { suite: { file: options.suiteFile, sha256: await fileSha256(root, options.suiteFile) } } : {}),
+    ...(options.adviceByArm && Object.keys(options.adviceByArm).length ? { adviceByArm: Object.fromEntries(Object.entries(options.adviceByArm).map(([arm, a]) => [arm, a.map((o) => ({ ...o }))])) } : {}),
   };
 }
 
@@ -194,6 +214,8 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   const declared = await declaredGradersFor(suite, root);
   // An arm that names a route runs under it; one the policy does not declare is refused before anything runs.
   const policies = new Map(arms.map((arm) => [arm.name, policyForArm(policy, arm)]));
+  // An arm's advice override (#200) is read from the definition and hashed before anything runs; a missing file refuses the run.
+  const adviceByArm = await adviceOverrides(root, arms);
   const fixture = path.join(root, suite.fixture);
   const runs: EvalRun[] = [];
   // What the ledgers say the run was on, in order of first use: the fingerprint's `modelsObserved`, beside the declared model.
@@ -204,7 +226,8 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
     for (let repetition = 1; repetition <= repetitions; repetition++) {
       const instance = path.join(await mkdtemp(path.join(tmpdir(), `regulator-eval-${arm.name}-${repetition}-`)), "instance");
       try {
-        await initFixture(exec, fixture, instance, now);
+        const advice = Object.fromEntries((adviceByArm[arm.name] ?? []).map((o) => [o.profile, path.join(root, o.file)]));
+        await initFixture(exec, fixture, instance, now, { advice });
         if (options.instance) await initInstance(exec, { repo: instance, definitionRoot: root, by: options.owner, now, ...options.instance });
         const manifest = await readManifest(instance);
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();
@@ -254,12 +277,83 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   const baseline = baselineCheck(runs, metrics, suite.baseline);
   return {
     suite: { name: suite.name, version: suite.version, ...(optimise ? { optimise } : {}) }, generatedAt: stamp(),
-    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed, modelsByArm: observedByArm }),
+    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed, modelsByArm: observedByArm, ...(options.suiteFile ? { suiteFile: options.suiteFile } : {}), adviceByArm }),
     arms: summaries, lifts: lifts(summaries, suite.baseline), runs,
     tasks: taskTable(runs, metrics, suite.baseline, directions),
     ...(baseline ? { baseline } : {}),
     interpretation: options.interpretation, interpretedBy: options.interpretedBy,
   };
+}
+
+export interface RunProbeOptions extends Omit<RunSuiteOptions, "arms" | "suite" | "suiteFile"> {
+  suite: EvalSuite;
+  /** The suite's file, relative to the root: its hash must equal the one the baseline report's fingerprint names. */
+  suiteFile: string;
+  /** The committed report the probe is held to: its file relative to the root and its bytes (the fingerprint a prediction names is their SHA-256). */
+  baseline: { file: string; bytes: Buffer | string };
+  /** The arm of the suite (and of the baseline report) the probe reruns, unchanged, beside the change. */
+  baselineArm: string;
+  /** The name of the arm under the change. */
+  probeArm: string;
+  /** The advice override, profile to file under the root. */
+  advice: Readonly<Record<string, string>>;
+  /** The harness-edit the probe tests, when it was run from one. */
+  binding?: NonNullable<ProbeRecord["binding"]>;
+  /** The metric the bound prediction stakes: refused before anything runs when the suite does not pre-register it. */
+  metric?: string;
+}
+
+/**
+ * Probe a proposed advice edit (#200; the Harness² note §4 item 2): rerun one arm of a committed report's suite as it ran,
+ * and beside it the same arm with one advice file replaced, with the graders, repetitions and intervals the harness
+ * already has. The probe arm is built here, not written into the suite, because a probe and a change to the suite it is
+ * probed under cannot be one change (Harness² §7, 2026-10-25): the suite file must hash to what the baseline report's
+ * fingerprint names, and a baseline written before the fingerprint carried the hash is refused as a probe's baseline.
+ * The report carries the probe record: what it was held to, the advice, the binding, the held-out reading and the cost.
+ */
+export async function runProbe(exec: Exec, options: RunProbeOptions): Promise<EvalReport> {
+  const root = options.root ?? LAB_ROOT;
+  const { suite, suiteFile } = options;
+  const baseline: unknown = JSON.parse(options.baseline.bytes.toString());
+  const { isEvalReport } = await import("@metacoding.io/regulator-protocol");
+  if (!isEvalReport(baseline)) throw new Error(`${options.baseline.file} is not an eval report`);
+  const suiteHash: FileHash = { file: suiteFile, sha256: await fileSha256(root, suiteFile) };
+  const held = baseline.fingerprint.suite;
+  if (!held) throw new Error(`${options.baseline.file} was written before a report's fingerprint carried its suite file's hash, so nothing says which suite it ran under; it cannot be a probe's baseline. Regenerate the baseline under the current suite first`);
+  if (held.file !== suiteHash.file || held.sha256 !== suiteHash.sha256) throw new Error(`the probe must run under the suite its baseline ran under: ${options.baseline.file} names ${held.file} at ${held.sha256.slice(0, 12)}…, and ${suiteHash.file} is now ${suiteHash.sha256.slice(0, 12)}…. A harness-edit and a change to the suite it is probed under are not one change; regenerate the baseline under the suite as it is, then probe`);
+  const base = suite.arms.find((a) => a.name === options.baselineArm);
+  if (!base) throw new Error(`suite ${suite.name} has no arm "${options.baselineArm}" (it has ${suite.arms.map((a) => a.name).join(", ")})`);
+  if (!baseline.arms.some((a) => a.arm === base.name)) throw new Error(`${options.baseline.file} has no arm "${base.name}"; the probe reruns an arm the baseline ran`);
+  if (suite.arms.some((a) => a.name === options.probeArm)) throw new Error(`the probe arm's name "${options.probeArm}" is already an arm of suite ${suite.name}`);
+  if (!Object.keys(options.advice).length) throw new Error("a probe overrides at least one advice file");
+  if (base.advice) throw new Error(`arm "${base.name}" already overrides advice; a probe is built on an arm that runs the seed`);
+  if (options.metric && !metricNames(suite.metrics).includes(options.metric)) throw new Error(`the prediction stakes "${options.metric}", which suite ${suite.name} v${suite.version} does not pre-register (${metricNames(suite.metrics).join(", ")}); a probe reports only what was pre-registered`);
+  const probe: EvalArm = { ...base, name: options.probeArm, description: `${base.name} with ${Object.keys(options.advice).sort().map((p) => `${p}'s advice`).join(" and ")} replaced (a probe, #200): nothing else differs`, advice: { ...options.advice } };
+  const report = await runSuite(exec, { ...options, suite: { ...suite, arms: [base, probe], baseline: base.name }, suiteFile });
+  const metrics = metricNames(suite.metrics);
+  let heldOut: ProbeRecord["heldOut"];
+  if (suite.heldOut?.length) {
+    const tasks: NonNullable<ProbeRecord["heldOut"]>["tasks"] = [];
+    for (const file of suite.heldOut) {
+      const contract = await loadContract(path.join(root, file));
+      tasks.push({ task: file, unitId: contract.unitId, contract: contract.id });
+    }
+    const ids = new Set(tasks.map((t) => t.unitId));
+    heldOut = { tasks, arms: summarizeArms(report.runs.filter((r) => ids.has(r.task)), metrics) };
+  }
+  const byArm: Record<string, number> = {};
+  for (const run of report.runs) byArm[run.arm] = (byArm[run.arm] ?? 0) + (run.metrics.cost ?? 0);
+  const record: ProbeRecord = {
+    baseline: { file: options.baseline.file, sha256: (await import("node:crypto")).createHash("sha256").update(options.baseline.bytes).digest("hex"), arm: base.name },
+    arm: probe.name,
+    advice: report.fingerprint.adviceByArm?.[probe.name] ?? [],
+    ...(options.binding ? { binding: { ...options.binding } } : {}),
+    ...(heldOut ? { heldOut } : {}),
+    cost: { total: Object.values(byArm).reduce((a, b) => a + b, 0), byArm, runs: report.runs.length },
+  };
+  // The probe record sits after the baseline check, before the interpretation: the key order is the schema's.
+  const { interpretation, interpretedBy, ...rest } = report;
+  return { ...rest, probe: record, interpretation, interpretedBy };
 }
 
 /**

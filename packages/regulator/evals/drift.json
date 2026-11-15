@@ -1,6 +1,6 @@
 {
   "name": "drift",
-  "version": 1,
+  "version": 2,
   "description": "The longitudinal drift scenario (packages/regulator/drift/SCENARIO.md): six related units against the slugkit fixture, run in order in one instance per repetition, so what an autonomous loop does to the boundaries accumulates. The control arm runs the loop with the operational checkpoints and the test suite only; the treatment arm adds identity, the identity-untouched, inherited-tests, export-signature and glossary-lint host checks, memory and the algedonic path. Each ablation arm is the treatment with one regulator switched off; model-only is the treatment with run_tests the only check, and model-tier the treatment on a smaller model route. Metrics are pre-registered here; the report's interpretation is a person's.",
   "fixture": "fixture",
   "tasks": [
@@ -230,7 +230,9 @@
     "turns",
     "wallClockMs",
     "suiteWeakened",
-    "cacheWrite"
+    "cacheWrite",
+    "cost",
+    "cacheShare"
   ],
   "baseline": "control"
 }

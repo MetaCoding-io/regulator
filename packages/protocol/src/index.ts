@@ -426,6 +426,7 @@ export {
   type AblationSwitch, type ArmSummary, type BuiltInMetric, type EnvironmentFingerprint, type EvalArm, type EvalMetric, type EvalReport, type EvalRun, type EvalSuite,
   type GraderFingerprint, type GraderVerdict, type Lift, type MetricEntry, type MetricSummary,
   type BaselineCheck, type OutcomeMetric, type TaskArmMeans, type TaskDifference, type TaskSummary,
+  AdviceOverrideFingerprintSchema, FileHashSchema, ProbeRecordSchema, type AdviceOverrideFingerprint, type FileHash, type ProbeRecord,
 } from "./evals.js";
 export {
   DECLARED_METRIC_PATTERN, DeclaredMetricNameSchema, GraderCommandSchema, GraderOutputSchema, MetricDeclarationSchema, MetricDirectionSchema, MetricKindSchema,

@@ -911,7 +911,7 @@ test("predictions resolve from the stores at close and abort (#138): a unit name
   assert.equal((await new ExecutionStore(repo).getUnit("u2"))?.status, "aborted");
   states = await readPredictions(repo);
   assert.deepEqual(states[0]!.horizons[0]!.resolutions.map((r) => [r.outcome, r.observed, r.resolvedBy]), [["confirmed", 1, { unit: "u1", unitType: "implement", status: "closed" }], ["disconfirmed", 0, { unit: "u2", unitType: "implement", status: "aborted" }]]);
-  assert.deepEqual([states[0]!.status, states[0]!.horizons[0]!.status, states[0]!.summary], ["resolved", "met", { confirmed: 1, disconfirmed: 1, inconclusive: 0, resolved: 2, precision: 0.5 }], "the next 2 implement units: met by the fold over the log, no scan");
+  assert.deepEqual([states[0]!.status, states[0]!.horizons[0]!.status, states[0]!.summary], ["resolved", "met", { confirmed: 1, disconfirmed: 1, inconclusive: 0, resolved: 2, precision: 0.5, refusals: 0 }], "the next 2 implement units: met by the fold over the log, no scan");
   owedS5 = (await ledger.open()).filter((o) => o.consumer === "S5");
   assert.deepEqual(owedS5.map((o) => o.subject.split(" ")[1]), ["p-disconfirm", "p-confirm"], "each disconfirmed live horizon is owed to S5 once");
   assert.equal((await new ExecutionStore(repo).listAttempts("u2")).length, 1, "the resolution changed nothing about the unit");

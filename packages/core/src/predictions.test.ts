@@ -7,7 +7,7 @@ import type { EvalReport, GraderVerdict, HarnessEdit, IntelligenceSignal, Policy
 import { AuditLog } from "./audit-log.js";
 import { ExecutionStore } from "./execution-store.js";
 import { ObligationLedger, routeMessages } from "./obligations.js";
-import { baselineValue, checkHarnessEdit, compareWithPrediction, foldPredictions, readPredictions, resolvePredictions, type CommittedReport } from "./predictions.js";
+import { baselineValue, checkHarnessEdit, compareWithPrediction, foldPredictions, precisionOf, probeRule, readPredictions, resolvePredictions, type CommittedReport } from "./predictions.js";
 import { appendSignal, readEntries } from "./signals.js";
 
 const routing: RoutingPolicy = {
@@ -109,10 +109,10 @@ test("live horizon, three outcomes from the stores: a unit of the named type clo
   assert.deepEqual(again.resolutions, []);
   states = await readPredictions(dir);
   assert.deepEqual(states.map((s) => [s.signal.id, s.status, s.summary]), [
-    ["p-confirm", "open", { confirmed: 1, disconfirmed: 0, inconclusive: 0, resolved: 1, precision: 1 }],
-    ["p-disconfirm", "resolved", { confirmed: 1, disconfirmed: 0, inconclusive: 0, resolved: 1, precision: 1 }],
-    ["p-inconclusive", "resolved", { confirmed: 0, disconfirmed: 0, inconclusive: 1, resolved: 1, precision: 0 }],
-    ["other-type", "open", { confirmed: 0, disconfirmed: 0, inconclusive: 0, resolved: 0, precision: undefined }],
+    ["p-confirm", "open", { confirmed: 1, disconfirmed: 0, inconclusive: 0, resolved: 1, precision: 1, refusals: 0 }],
+    ["p-disconfirm", "resolved", { confirmed: 1, disconfirmed: 0, inconclusive: 0, resolved: 1, precision: 1, refusals: 0 }],
+    ["p-inconclusive", "resolved", { confirmed: 0, disconfirmed: 0, inconclusive: 1, resolved: 1, precision: 0, refusals: 0 }],
+    ["other-type", "open", { confirmed: 0, disconfirmed: 0, inconclusive: 0, resolved: 0, precision: undefined, refusals: 0 }],
   ], "count 1 is met by one unit; count 2 stays open; inconclusive is counted and counts against");
 
   // u2 aborts with 3 refusals: p-confirm's second unit disconfirms (≥ 2) and meets the count; p-disconfirm is met already and is not resolved again.
@@ -127,7 +127,7 @@ test("live horizon, three outcomes from the stores: a unit of the named type clo
   assert.deepEqual(second.opened.map((o) => [o.consumer, o.concern, o.severity, o.blocks, o.sources, o.unit]), [["S5", "policy-proposal", "advisory", false, [proposal.id], undefined]], "routed under the routing policy: the policy's rule for a proposal names S5");
   assert.match(second.opened[0]?.subject ?? "", /^prediction p-confirm disconfirmed/);
   states = await readPredictions(dir);
-  assert.deepEqual(states[0]?.summary, { confirmed: 1, disconfirmed: 1, inconclusive: 0, resolved: 2, precision: 0.5 });
+  assert.deepEqual(states[0]?.summary, { confirmed: 1, disconfirmed: 1, inconclusive: 0, resolved: 2, precision: 0.5, refusals: 0 });
   assert.equal(states[0]?.status, "resolved", "two units resolved: the count is met");
   assert.equal(states[0]?.horizons[0]?.status, "met");
 
@@ -255,4 +255,75 @@ test("the host's reading of a harness-edit (#138): every diagnosis reference res
   assert.deepEqual(await checkHarnessEdit(dir, { ...edit, prediction: "f1" }), ['prediction: "f1" is an audit-finding, not an intelligence signal']);
   assert.deepEqual(await checkHarnessEdit(dir, { ...edit, prediction: "bare" }), ['prediction: intelligence signal "bare" carries no prediction block (metric, baseline, direction, magnitude, probability, horizons)']);
   assert.deepEqual(foldPredictions(await readEntries(dir)).map((s) => s.signal.id), ["p1"], "the fold sees the one signal with a block");
+});
+
+test("a bound probe horizon (#200) names no report: it resolves against the committed report whose probe record binds its prediction and index, read over the held-out slice when the suite declares one; a report still carrying the placeholder interpretation resolves nothing; a harness-edit whose diagnosis cites a held-out task's unit resolves inconclusive by rule, with the reason; a prediction that names its report by hash resolves as before", async (t) => {
+  const dir = await root(t);
+  const store = new ExecutionStore(dir, tick);
+  const contract = (unitId: string, id: string): WorkContract => ({
+    kind: "task", id, version: 1, unitId, unitType: "implement", workload: { name: "software-development", version: 1 },
+    objective: "o", constraintRefs: [], fixed: [], delegated: [], unresolved: [], expectedEvidence: [], provenance: { createdBy: "S3", createdAt: "t" },
+  });
+  // u-seen ran the held-out task's contract in the instance; u-other ran a task the slice does not hold out.
+  await store.createUnit(contract("u-seen", "tc-d6-cleanup"));
+  await store.createUnit(contract("u-other", "tc-d1-fix"));
+  const bound = (over: Partial<Prediction> = {}): Prediction => ({ ...prediction, baseline: { arm: "treatment" }, magnitude: 0, horizons: [{ kind: "probe", arm: "probe", disconfirmedBy: 2 }], ...over });
+  await appendSignal(dir, signal("p-clean", { prediction: bound() }));
+  await appendSignal(dir, signal("p-cites", { prediction: bound() }));
+  await appendSignal(dir, signal("p-named", { prediction: { ...bound(), horizons: [{ kind: "probe", report: PROBE, arm: "probe", disconfirmedBy: 2 }] } }));
+  const propose = (id: string, predictionId: string, unit: string) => appendSignal(dir, { id, timestamp: stamp(), source: "S4", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: "advice/implement.md", rationale: "r", requestedChange: { kind: "harness-edit", diagnosis: [{ unit, attempt: 1, revision: "abc1234", moment: "dispatch", evidence: [], signals: ["x"] }], change: { profile: "implement", diff: "+x" }, prediction: predictionId }, evidence: [] } as PolicyProposal);
+  await propose("he-clean", "p-clean", "u-other");
+  await propose("he-cites", "p-cites", "u-seen");
+  const heldOut = { tasks: [{ task: "contracts/drift/d6-cleanup.json", unitId: "d6-cleanup", contract: "tc-d6-cleanup" }], arms: [{ arm: "treatment", runs: 3, metrics: { refusals: summary(1, 0) } }, { arm: "probe", runs: 3, metrics: { refusals: summary(0, 0) } }] };
+  const probeReport = (fingerprint: string, predictionId: string, file: string, interpreted = true): CommittedReport => {
+    const r = report(fingerprint, { treatment: { refusals: summary(3) }, probe: { refusals: summary(3) } }, file);
+    return { ...r, report: { ...r.report, probe: { baseline: { file: "evals/reports/drift-scripted-reference.json", sha256: REPORT, arm: "treatment" }, arm: "probe", advice: [{ profile: "implement", file: "evals/advice/x/implement.md", sha256: "d".repeat(64) }], binding: { obligation: "o1", proposal: predictionId === "p-cites" ? "he-cites" : "he-clean", prediction: predictionId, horizon: 0 }, heldOut, cost: { total: 0, byArm: {}, runs: 36 } }, ...(interpreted ? {} : { interpretation: "Run by `regulator eval`; not yet interpreted by a person.", interpretedBy: "nobody yet" }) } };
+  };
+  const unread = [probeReport("e".repeat(64), "p-clean", "evals/reports/unread.json", false), probeReport("f".repeat(64), "p-cites", "evals/reports/unread-2.json", false)];
+  assert.deepEqual((await resolvePredictions(dir, { reports: unread, routing, now: tick })).resolutions, [], "a report nobody has interpreted is a table, and a probe is never read from one");
+  const read = [probeReport("1".repeat(64), "p-clean", "evals/reports/probe-clean.json"), probeReport("2".repeat(64), "p-cites", "evals/reports/probe-cites.json"), report(PROBE, { treatment: { refusals: summary(3) }, probe: { refusals: summary(1, 0) } }, "evals/reports/named.json")];
+  const resolved = await resolvePredictions(dir, { reports: [...unread, ...read], routing, now: tick });
+  assert.deepEqual(resolved.resolutions.map((r) => [r.predictionId, r.outcome, r.observed, r.baseline, r.interval, r.resolvedBy]), [
+    ["p-clean", "confirmed", 0, 1, [0, 0], { report: "1".repeat(64), arm: "probe" }],
+    ["p-cites", "inconclusive", 0, 1, [0, 0], { report: "2".repeat(64), arm: "probe" }],
+    ["p-named", "confirmed", 1, 3, [1, 1], { report: PROBE, arm: "probe" }],
+  ], "the bound probes read the held-out slice (0 against 1), not the whole run (3 against 3); the named probe reads its whole report");
+  assert.match(resolved.resolutions[0]!.evidence[0]!.observation!, /^arm "probe" over the held-out task\(s\) d6-cleanup: refusals mean 0 over 3 run\(s\)/);
+  assert.equal(resolved.resolutions[1]!.reason, `inconclusive by rule: the harness-edit's diagnosis cites unit "u-seen" (held-out task d6-cleanup), so the probe's held-out reading is not held out from the proposal; the live horizon is the reading that counts`);
+  assert.deepEqual((await resolvePredictions(dir, { reports: read, routing, now: tick })).resolutions, [], "each resolves once");
+});
+
+test("the probe rule (#200) over the folded state: refused when the prediction declares no probe horizon, when a probe horizon has no resolution, and when one resolved disconfirmed; allowed when every probe horizon resolved confirmed or inconclusive, citing each resolution; a refusal recorded on the log is counted beside the outcomes and never as one", async (t) => {
+  const dir = await root(t);
+  const probeOf = (over: Partial<Prediction>): Prediction => ({ ...prediction, baseline: { arm: "control" }, horizons: [{ kind: "probe", report: PROBE, arm: "advised", disconfirmedBy: 2 }, ...prediction.horizons], ...over });
+  await appendSignal(dir, signal("live-only"));
+  await appendSignal(dir, signal("unprobed", { prediction: probeOf({ horizons: [{ kind: "probe", arm: "advised", disconfirmedBy: 2 }] }) }));
+  await appendSignal(dir, signal("confirmed", { prediction: probeOf({}) }));
+  await appendSignal(dir, signal("inconclusive", { prediction: probeOf({ magnitude: 1.8 }) }));
+  await appendSignal(dir, signal("disconfirmed", { prediction: probeOf({ direction: "higher" }) }));
+  await resolvePredictions(dir, { reports: [report(PROBE, { control: { refusals: summary(3) }, advised: { refusals: summary(1, 0.5) } }, "evals/reports/drift-probe.json")], routing, now: tick });
+  const verdicts = Object.fromEntries((await readPredictions(dir)).map((s) => [s.signal.id, probeRule(s)]));
+  assert.deepEqual(Object.entries(verdicts).map(([id, v]) => [id, v.allowed, v.code, v.resolutions.map((r) => r.outcome)]), [
+    ["live-only", false, "no-probe-horizon", []],
+    ["unprobed", false, "unresolved", []],
+    ["confirmed", true, "probed", ["confirmed"]],
+    ["inconclusive", true, "probed", ["inconclusive"]],
+    ["disconfirmed", false, "disconfirmed", ["disconfirmed"]],
+  ]);
+  assert.match(verdicts["live-only"]!.reason, /^prediction live-only declares no probe horizon, so nothing can screen it before a decision/);
+  assert.match(verdicts["unprobed"]!.reason, /probe horizon \[0\] \(arm "advised"\) has no resolution: run `regulator eval <suite> --probe <baseline report> --obligation <id>`/);
+  assert.match(verdicts["confirmed"]!.reason, /^probe resolution [0-9a-f-]{36} confirmed \(refusals 1 against 3\)$/);
+  assert.match(verdicts["disconfirmed"]!.reason, /probe resolved disconfirmed \(resolution [0-9a-f]{8}: observed 1 is at or past the disconfirming value 2 \(predicted higher\)\)/);
+
+  // A refusal is a record: an obligation event that leaves the obligation owed, and that the prediction's fold counts.
+  await appendSignal(dir, { id: "he-1", timestamp: stamp(), source: "S4", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: "advice/implement.md", rationale: "r", requestedChange: { kind: "harness-edit", diagnosis: [{ unit: "u1", attempt: 1, revision: "abc1234", moment: "dispatch", evidence: [], signals: ["x"] }], change: { profile: "implement", diff: "+x" }, prediction: "live-only" }, evidence: [] } as PolicyProposal);
+  const ledger = new ObligationLedger(dir, tick);
+  await routeMessages(ledger, { policy: routing, now: tick });
+  const [owed] = (await ledger.obligations()).filter((o) => o.concern === "policy-proposal");
+  const refusal = await ledger.refuseAccept(owed!.id, { by: "alice", command: "advice accept", rule: "probe", code: "no-probe-horizon", proposal: "he-1", prediction: "live-only", reason: verdicts["live-only"]!.reason });
+  assert.equal((await ledger.get(owed!.id))?.status, "open", "still owed: a refusal decides nothing");
+  assert.deepEqual((await ledger.get(owed!.id))?.history.at(-1), refusal);
+  const [state] = (await readPredictions(dir)).filter((s) => s.signal.id === "live-only");
+  assert.deepEqual([state!.refusals.map((r) => r.code), state!.summary], [["no-probe-horizon"], { confirmed: 0, disconfirmed: 0, inconclusive: 0, resolved: 0, precision: undefined, refusals: 1 }]);
+  assert.deepEqual(precisionOf([], [refusal]).resolved, 0, "a refusal is not a reading");
 });

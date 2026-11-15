@@ -105,6 +105,21 @@ export const ObligationEventSchema = Type.Union([
   Type.Object({ type: Type.Literal("obligation-superseded"), ...EventBase, obligationId: NonEmpty, successor: NonEmpty, rationale: NonEmpty }, { additionalProperties: false }),
   /** A message routed as trace only: recorded, cited, and deliberately not an obligation. */
   Type.Object({ type: Type.Literal("message-noted"), ...EventBase, message: NonEmpty, reason: NonEmpty }, { additionalProperties: false }),
+  /**
+   * An accept command refused to decide the obligation (#200, the Exo note §4 item 6): who tried, which command, the rule
+   * that refused and why. The obligation's status does not change — it is still owed — and the refusal is evidence: a
+   * `harness-edit` refused by the probe rule names its prediction, so the prediction's fold can count it.
+   */
+  Type.Object({
+    type: Type.Literal("obligation-accept-refused"), ...EventBase, obligationId: NonEmpty,
+    command: Type.Literal("advice accept"),
+    rule: Type.Literal("probe"),
+    /** `no-probe-horizon`: the prediction declares none; `unresolved`: a probe horizon has no resolution; `disconfirmed`: one resolved disconfirmed. */
+    code: Type.Union([Type.Literal("no-probe-horizon"), Type.Literal("unresolved"), Type.Literal("disconfirmed")]),
+    proposal: NonEmpty,
+    prediction: NonEmpty,
+    reason: NonEmpty,
+  }, { additionalProperties: false }),
   /** The obligation was put in front of its consumer (lesson 13): where, and whether it was a reminder. */
   Type.Object({
     type: Type.Literal("obligation-delivered"), ...EventBase, obligationId: NonEmpty,

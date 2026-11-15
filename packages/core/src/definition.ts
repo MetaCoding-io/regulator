@@ -246,7 +246,23 @@ export async function checkDefinition(dir: string): Promise<CheckedDefinition> {
         if (arm.switch?.startsWith("check:") && checkNames(arm.checks).includes(arm.switch.slice("check:".length))) problem(`evals/${file}`, `arm "${arm.name}" switches off ${arm.switch} but still runs that check`);
         // A model-tier arm (#201) names a route of a budget policy; a name no budget policy declares would dispatch on a guess.
         if (arm.route && !out.policies.some((p) => namedRoute(p, arm.route!))) problem(`evals/${file}`, `arm "${arm.name}" names route "${arm.route}", which no budget policy declares (${out.policies.map((p) => `${p.name}: ${routeNames(p).join(", ")}`).join("; ") || "no budget policy"})`);
+        // A probe arm (#200) overrides a declared profile's advice with a file under the definition, inside the advice budget.
+        for (const [profile, adviceFile] of Object.entries(arm.advice ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
+          if (!out.profiles.some((p) => p.name === profile)) { problem(`evals/${file}`, `arm "${arm.name}" overrides the advice of profile "${profile}", which the definition does not declare (${out.profiles.map((p) => p.name).sort().join(", ") || "none"})`); continue; }
+          const resolved = path.resolve(dir, adviceFile);
+          if (path.relative(dir, resolved).startsWith("..") || path.isAbsolute(adviceFile)) { problem(`evals/${file}`, `arm "${arm.name}" overrides ${profile}'s advice with "${adviceFile}", which is not a file under the definition`); continue; }
+          let text: string;
+          try { text = await readFile(resolved, "utf8"); } catch { problem(`evals/${file}`, `arm "${arm.name}" overrides ${profile}'s advice with "${adviceFile}", which does not exist`); continue; }
+          if (!text.trim()) { problem(`evals/${file}`, `arm "${arm.name}" overrides ${profile}'s advice with "${adviceFile}", which is empty`); continue; }
+          const cut = adviceContextBudget(profile, text, adviceMaxChars(defaultPolicy));
+          if (cut.truncated) problem(`evals/${file}`, `arm "${arm.name}" overrides ${profile}'s advice with "${adviceFile}", which renders to ${cut.chars} characters over the ${cut.max} a unit's prompt carries (\`advice.maxChars\`): a probe of advice a unit would not see whole measures the cut, not the edit`);
+        }
       }
+      // The held-out slice (#200): task files the suite runs, named once each.
+      const heldOut = value.heldOut ?? [];
+      for (const task of heldOut) if (!value.tasks.includes(task)) problem(`evals/${file}`, `holds out "${task}", which is not one of its tasks`);
+      if (new Set(heldOut).size !== heldOut.length) problem(`evals/${file}`, "holds out a task twice");
+      if (heldOut.length && heldOut.length === value.tasks.length) problem(`evals/${file}`, "holds out every task: a held-out slice is the part a proposal was not derived from, so something must be left to derive it from");
       // Pre-registration over declared metrics (#129): a declared name the definition does not carry is refused, not
       // warned about — a report summarizes only what was declared before the run. At most one declared metric is marked
       // as the optimisation target; the built-ins are reported only.

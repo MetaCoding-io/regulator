@@ -48,13 +48,16 @@
  *   regulator identity reject <obligation> --by <who> --rationale <text>   decline a proposal owed to S5
  *   regulator identity promote <IDENTITY|INVARIANTS|GLOSSARY|BOUNDARIES>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path: copy the instance's accepted identity file into the definition's seed (the manifest's, or --definition) and commit it there
- *   regulator advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text>
+ *   regulator advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> [--definition <dir>]
  *                                                         the advice decision: write the proposed file into regulator/advice/ under S5 authority, commit it on the base
  *                                                         branch citing the obligation, and resolve the obligation as accepted. A `harness-edit` names its target in its
  *                                                         typed payload, which the host first checks against the stores (its diagnosis references resolve, its prediction
  *                                                         carries the block); --file, if given, must agree, the disposition cites the prediction's id and its live horizon
  *                                                         is open from the decision. A plain proposal names its target in its subject (`advice/<profile>.md`), and --file
- *                                                         must be that file, for a profile the definition declares
+ *                                                         must be that file, for a profile the definition declares. The probe rule (#200): a `harness-edit` is refused, and the
+ *                                                         refusal appended to the regulatory log, until every probe horizon of its prediction has resolved confirmed or
+ *                                                         inconclusive from a committed, interpreted report under the definition's evals/reports/; a prediction with no probe
+ *                                                         horizon, or one resolved disconfirmed, is refused. The file accepted must be the file the probe ran
  *   regulator advice reject <obligation> --by <who> --rationale <text>   decline an advice proposal owed to S5
  *   regulator advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]
  *                                                         the release path for advice: copy the instance's accepted advice file into the definition's seed and commit it there
@@ -66,6 +69,9 @@
  *   regulator spans [--json]                   the instance's records as OpenTelemetry GenAI spans, redacted (NDJSON with --json)
  *   regulator eval <suite.json> [--behaviour <reference|drifter|sloppy|self-certifier|manager|careless>] [--arm <name>]... [--reps <n>] [--out <file>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback]
  *                                 [--interpretation <file>] [--by <who>] [--keep] [--host <package>]   run a suite: scripted units headlessly, or live units through the host's dispatcher
+ *   regulator eval <suite.json> --probe <baseline report> --advice <profile>=<file> [--obligation <id> [--instance <dir>] | --arm <name> [--probe-arm <name>]] [options as above]
+ *                                 probe an advice edit: rerun one arm of a committed report under the same suite file (refused when it hashes differently) beside the same arm with the advice file replaced;
+ *                                 with --obligation, the harness-edit's prediction names the arms and the report binds its probe horizon
  *   regulator review [--due] [--within <days>]   the registry's review dates; --due lists what is overdue or due within the window
  *
  * Every `--by` that dispositions something is checked against the interaction policy's people: a name not listed may
@@ -81,14 +87,15 @@ import { fileURLToPath } from "node:url";
 import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
+import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, probeRule, resolvePredictions as resolveProbes, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isEvalReport, isUninterpreted, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText, unitWhy } from "./status.js";
 import { INTERACTION_POLICY_PATH, loadInteractionPolicy } from "./interaction-policy.js";
 import { INTELLIGENCE_POLICY_PATH, loadIntelligencePolicy, loadIntelligencePolicyIfPresent } from "./intelligence-policy.js";
-import { REPORTS_DIR, ablationCoverage, loadSuite, runSuite, unavailablePrimaries } from "./evals.js";
+import { REPORTS_DIR, ablationCoverage, loadSuite, runProbe, runSuite, unavailablePrimaries } from "./evals.js";
+import { committedReports, reportFingerprint } from "./predictions.js";
 import { loadHost } from "./host.js";
 import { isBehaviour, scriptedDispatchers } from "./evals-scripted.js";
 import { isPortfolioBehaviour, portfolioDispatchers } from "./portfolio-scripted.js";
@@ -111,7 +118,7 @@ const flag = (name: string): string | undefined => {
   return i >= 0 ? rest[i + 1] : undefined;
 };
 const usage = () => {
-  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --poisoned-memory | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--workload <name>] [--intelligence <file>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
+  console.error("usage: regulator status [--definition <dir>] [--instance <dir>] [--json] | fixture <dest> [--oscillation | --injection | --poisoned-memory | --finance | --portfolio] | unit start <id> [--type <unitType>] [--workload <name>] [--ttl <minutes>] [--host <package>] | unit finish <id> | unit status | contract check <file> | unit dispatch <contract.json> [--policy <file>] [--routing <file>] [--host <package>] [--quiet] | unit drive <contract.json> [--policy <file>] [--recovery <file>] [--routing <file>] | unit route <id> | unit show <id> | unit close <id> | unit accept <id> <criterion> --by <who> [--reject] [--note <text>] | unit evidence <id> | effects | obligations [--all] | obligation show <id> | obligation ack <id> --by <who> [--note <text>] | obligation resolve <id> --by <who> --disposition <d> --rationale <text> | obligation escalate <id> --by <who> --to <consumer> --rationale <text> | signals route | memory [--all] | memory retract <id> --by <who> --reason <text> | identity accept <obligation> --by <who> --file <name>.md --from <path> --rationale <text> | identity reject <obligation> --by <who> --rationale <text> | answer <obligation> --by <who> --answer <text> [--amend <json>] | remind | init [<dir>] [--writable a/,b/] [--protected x/] [--by <who>] | doctor [--json] [--today <date>] | upgrade [--by <who>] [--check] [--definition <dir>] | watch [--once] [--interval <ms>] [--workload <name>] [--intelligence <file>] [--exec <cmd>...] | identity promote <file>.md --by <who> --rationale <text> [--definition <dir>] | eval <suite.json> [--behaviour <name>] [--arm <name>] [--reps <n>] [--out <file>] [--interpretation <file>] [--by <who>] [--keep] [--host <package>] [--policy <file>] [--writable a/,b/] [--protected x/] [--accept-fallback] | spans [--json] | review [--due] [--within <days>] | check [--today <date>] | docs [--write | --check] | eval <suite.json> --probe <report.json> --advice <profile>=<file> [--obligation <id> [--instance <dir>] | --arm <name> [--probe-arm <name>]] | advice accept <obligation> --by <who> [--file <profile>.md] --from <path> --rationale <text> [--definition <dir>] | advice reject <obligation> --by <who> --rationale <text> | advice promote <profile>.md --by <who> --rationale <text> [--definition <dir>]");
   process.exit(2);
 };
 const routingP = () => loadRoutingPolicy(path.resolve(flag("routing") ?? ROUTING_POLICY_PATH));
@@ -606,19 +613,32 @@ ${rationale}`]]) {
       const repo = process.cwd();
       if (!(await isClean(realExec, repo))) throw new Error("the base checkout has uncommitted changes; an advice decision is committed on its own");
       const manifest = await readManifest(repo);
-      const definitionRoot = manifest?.definition.root ?? labRoot;
+      const definitionRoot = path.resolve(flag("definition") ?? manifest?.definition.root ?? labRoot);
       const declared = Object.keys(loadProfilesSync(path.join(definitionRoot, "profiles"))).sort();
       // The proposal's message, for the typed payload (#138). A harness-edit names its target by profile and bets on a prediction;
       // the host reads it against the stores before anything else, and --file, if given, must agree with it.
       const message = (await readSignals(repo)).find((m) => m.kind === "policy-proposal" && o.sources.includes(m.id));
       const edit: HarnessEdit | undefined = message?.kind === "policy-proposal" && isHarnessEdit(message.requestedChange) ? message.requestedChange : undefined;
       let profile: string;
+      let probed: { verdict: Extract<ReturnType<typeof probeRule>, { allowed: true }>; reports: Awaited<ReturnType<typeof committedReports>> } | undefined;
       if (edit) {
         const problems = await checkHarnessEdit(repo, edit, { declaredProfiles: declared });
         if (problems.length) throw new Error(`the proposal's harness-edit does not resolve against this instance: ${problems.join("; ")}. Nothing accepted`);
         profile = edit.change.profile;
         if (file !== undefined && file !== adviceFileName(profile)) throw new Error(`the proposal's payload names ${adviceFileName(profile)} (its change is against profile "${profile}"); --file must be that file, not ${file}`);
         file = adviceFileName(profile);
+        // The probe rule (#200): the committed reports resolve what they can first — a probe horizon is read from a report a
+        // person has interpreted and committed — and then the rule reads the prediction's folded state. A refusal is a record.
+        const reports = await committedReports(definitionRoot);
+        await resolveProbes(repo, { reports, routing: await routingP() });
+        const state = (await readPredictions(repo)).find((p) => p.signal.id === edit!.prediction);
+        if (!state) throw new Error(`prediction ${edit.prediction} is not in this instance's log`);
+        const verdict = probeRule(state);
+        if (!verdict.allowed) {
+          const refusal = await ledger.refuseAccept(o.id, { by: by!, command: "advice accept", rule: "probe", code: verdict.code, proposal: message!.id, prediction: state.signal.id, reason: verdict.reason });
+          throw new Error(`the probe rule refuses proposal ${o.id.slice(0, 8)} (${verdict.code}): ${verdict.reason}. Nothing accepted; the refusal is on the regulatory log as ${refusal.id.slice(0, 8)}`);
+        }
+        probed = { verdict, reports };
       } else {
         if (!file) { console.error("advice accept on a plain proposal needs --file <profile>.md: its subject names the file, and the decision writes that file"); usage(); }
         const named = profileOfAdviceFile(file!);
@@ -629,6 +649,15 @@ ${rationale}`]]) {
       }
       const content = await readFile(path.resolve(from!), "utf8");
       if (!content.trim()) throw new Error(`the proposed ${file} is empty; nothing to accept`);
+      // What was probed is what is accepted (#200): a probe report that recorded its advice override names the file's hash.
+      if (probed) {
+        const sha = reportFingerprint(content);
+        for (const r of probed.verdict.resolutions) {
+          const report = "report" in r.resolvedBy ? probed.reports.find((c) => c.fingerprint === (r.resolvedBy as { report: string }).report) : undefined;
+          const ran = report?.report.probe?.advice.find((a) => a.profile === profile);
+          if (ran && ran.sha256 !== sha) throw new Error(`the file to accept is not the file the probe ran: ${report!.file} probed ${ran.file} (${ran.sha256.slice(0, 12)}…), and ${path.basename(from!)} is ${sha.slice(0, 12)}…. Accept the probed file, or probe this one`);
+        }
+      }
       const policy = await loadPolicy(path.resolve(flag("policy") ?? path.join(definitionRoot, "policies", "default.json"))).catch(() => undefined);
       const budget = adviceContextBudget(profile, content, adviceMaxChars(policy));
       if (budget.truncated) throw new Error(`the proposed ${file} renders to ${budget.chars} characters and a unit's prompt carries ${budget.max} (\`advice.maxChars\`); shorten it, or raise the limit in the budget policy first`);
@@ -647,7 +676,7 @@ ${rationale}`]]) {
       // from this disposition — the fold reads the acceptance, so nothing else is written for it — and what it is over is said here.
       const bet = edit ? (await readSignals(repo)).find((m) => m.id === edit.prediction) : undefined;
       const live = bet?.kind === "intelligence-signal" ? (bet.prediction?.horizons ?? []).flatMap((h) => (h.kind === "live" ? [h] : [])) : [];
-      const horizonNote = edit ? ` Prediction ${edit.prediction}: ${live.length ? `its live horizon over the next ${live.map((h) => `${h.count} ${h.unitTypes.join("|")}`).join(" and ")} unit(s) is open from this decision` : "it names no live horizon"}; a disconfirming reading is owed to S5.` : "";
+      const horizonNote = edit ? ` Prediction ${edit.prediction}: ${probed ? `${probed.verdict.reason}; ` : ""}${live.length ? `its live horizon over the next ${live.map((h) => `${h.count} ${h.unitTypes.join("|")}`).join(" and ")} unit(s) is open from this decision` : "it names no live horizon"}; a disconfirming reading is owed to S5.` : "";
       await ledger.resolve(o.id, { by: by!, disposition: "accepted", rationale: `${rationale}. ${target} changed in ${sha.slice(0, 7)} on ${branch} under S5 authority.${horizonNote}` });
       const opened = edit ? (await readPredictions(repo)).find((p) => p.signal.id === edit.prediction)?.horizons.filter((h) => h.horizon.kind === "live").map((h) => h.status) ?? [] : [];
       console.log(`proposal ${o.id.slice(0, 8)} accepted by ${by} (S5): ${target} committed as ${sha.slice(0, 7)} on ${branch}; the obligation is resolved as accepted${edit ? `; prediction ${edit.prediction.slice(0, 8)} live horizon ${opened.length ? opened.join(", ") : "none"}` : ""}`);
@@ -720,25 +749,77 @@ ${rationale}`]]) {
         else console.log(`models: every route primary is available (${available.length} model(s) with a key)`);
       }
     }
-    const report = await runSuite(realExec, {
-      suite, ...(arms.length ? { arms } : {}), ...(reps === undefined ? {} : { repetitions: reps }),
+    // The suite's file, relative to the definition, is hashed into the fingerprint (#200): what a later probe is held to.
+    const suiteRelative = path.relative(labRoot, path.resolve(sub)).split(path.sep).join("/");
+    const suiteFile = suiteRelative.startsWith("..") || path.isAbsolute(suiteRelative) ? undefined : suiteRelative;
+    const probeFlag = flag("probe");
+    const probeSetup = probeFlag ? await (async () => {
+      // A probe (#200): one arm of a committed report rerun beside itself with an advice file replaced.
+      if (!suiteFile) throw new Error(`a probe's suite is a file under the definition (${labRoot}); ${sub} is not`);
+      const baselineFile = path.relative(labRoot, path.resolve(probeFlag)).split(path.sep).join("/");
+      if (!baselineFile.startsWith("evals/reports/")) throw new Error(`a probe's baseline is a committed report under evals/reports/; ${probeFlag} is not`);
+      const bytes = await readFile(path.join(labRoot, baselineFile));
+      const parsed: unknown = JSON.parse(bytes.toString("utf8"));
+      if (!isEvalReport(parsed)) throw new Error(`${baselineFile} is not an eval report`);
+      if (isUninterpreted(parsed)) throw new Error(`${baselineFile} carries the placeholder interpretation; a probe is held to a report a person has read`);
+      const advice: Record<string, string> = {};
+      for (const value of rest.flatMap((a, i) => (a === "--advice" && rest[i + 1] ? [rest[i + 1]!] : []))) {
+        const at = value.indexOf("=");
+        if (at < 1) throw new Error(`--advice takes <profile>=<file>, not "${value}"`);
+        const relative = path.relative(labRoot, path.resolve(value.slice(at + 1))).split(path.sep).join("/");
+        if (relative.startsWith("..")) throw new Error(`the probe's advice file ${value.slice(at + 1)} is not under the definition; probe files live under evals/advice/`);
+        advice[value.slice(0, at)] = relative;
+      }
+      const declaredProfiles = Object.keys(loadProfilesSync(path.join(labRoot, "profiles")));
+      for (const profile of Object.keys(advice)) if (!declaredProfiles.includes(profile)) throw new Error(`--advice names profile "${profile}", which the definition does not declare (${declaredProfiles.sort().join(", ")})`);
+      const obligationRef = flag("obligation");
+      if (!obligationRef) {
+        if (arms.length !== 1) throw new Error("an unbound probe names the one arm it reruns: --arm <name> (or bind it to a harness-edit with --obligation <id>)");
+        return { baseline: { file: baselineFile, bytes }, baselineArm: arms[0]!, probeArm: flag("probe-arm") ?? "probe", advice };
+      }
+      // Bound: the harness-edit's prediction names the arms, and the report records which horizon it resolves.
+      const instanceDir = path.resolve(flag("instance") ?? process.cwd());
+      const o = await findObligation(new ObligationLedger(instanceDir), obligationRef);
+      if (o.concern !== "policy-proposal" || o.consumer !== "S5" || (o.status !== "open" && o.status !== "acknowledged")) throw new Error(`obligation ${o.id.slice(0, 8)} is ${o.status} ${o.concern} owed to ${o.consumer}; a probe tests a proposal still owed to S5`);
+      const message = (await readSignals(instanceDir)).find((m) => m.kind === "policy-proposal" && o.sources.includes(m.id));
+      const edit = message?.kind === "policy-proposal" && isHarnessEdit(message.requestedChange) ? message.requestedChange : undefined;
+      if (!edit) throw new Error(`obligation ${o.id.slice(0, 8)} is a plain proposal: it bets on no prediction, so there is no horizon to bind. Run an unbound probe with --arm`);
+      const problems = await checkHarnessEdit(instanceDir, edit, { declaredProfiles });
+      if (problems.length) throw new Error(`the proposal's harness-edit does not resolve against ${instanceDir}: ${problems.join("; ")}`);
+      if (Object.keys(advice).join() !== edit.change.profile) throw new Error(`the harness-edit's change is against profile "${edit.change.profile}"; a bound probe overrides that one advice file and no other (--advice ${edit.change.profile}=<file>)`);
+      const state = (await readPredictions(instanceDir)).find((p) => p.signal.id === edit.prediction)!;
+      const horizon = state.horizons.find((h) => h.horizon.kind === "probe" && !h.horizon.report && h.status === "open");
+      if (!horizon || horizon.horizon.kind !== "probe") throw new Error(`prediction ${state.signal.id} has no open probe horizon without a named report to bind (${state.horizons.map((h) => `[${h.index}] ${h.horizon.kind} ${h.status}`).join(", ")}); \`advice accept\` will refuse it under the probe rule`);
+      const b = state.prediction.baseline;
+      if ("report" in b && b.report !== reportFingerprint(bytes)) throw new Error(`prediction ${state.signal.id}'s baseline is the report with fingerprint ${b.report.slice(0, 12)}…, and ${baselineFile} is ${reportFingerprint(bytes).slice(0, 12)}…; the probe is held to the baseline the prediction named`);
+      return { baseline: { file: baselineFile, bytes }, baselineArm: b.arm, probeArm: horizon.horizon.arm, advice, binding: { obligation: o.id, proposal: message!.id, prediction: state.signal.id, horizon: horizon.index }, metric: state.prediction.metric };
+    })() : undefined;
+    const common: Omit<Parameters<typeof runSuite>[1], "suite"> = {
+      ...(reps === undefined ? {} : { repetitions: reps }),
       dispatcherFor: behaviour ? (isBehaviour(behaviour) ? scriptedDispatchers(realExec, behaviour) : portfolioDispatchers(realExec, behaviour)) : (arm) => live!.host.dispatcher({ echo: false, extensions: arm.extensions.filter((e) => live!.host.extensions.includes(e)) }),
       owner: `${userInfo().username}@${hostname()}`, dispatcher: behaviour ? `scripted:${behaviour}` : "pi", model: behaviour ? "none" : evalPolicy.models.default.primary,
       policyPath: evalPolicyPath, ...(evalWritable || evalProtected ? { instance: { ...(evalWritable ? { writablePaths: evalWritable } : {}), ...(evalProtected ? { protectedPaths: evalProtected } : {}) } } : {}),
       interpretation, interpretedBy: flag("by") ?? (interpretationFile ? userInfo().username : UNINTERPRETED_BY), keepInstances: rest.includes("--keep"),
       onRun: (run, instance) => console.log(`  ${run.arm.padEnd(20)} rep ${run.repetition}  ${run.task.padEnd(12)} ${run.outcome.padEnd(8)} ${Object.entries(run.metrics).filter(([k]) => metricNames(suite.metrics).includes(k)).map(([k, v]) => `${k}=${v}`).join(" ")}${rest.includes("--keep") ? `  (${instance})` : ""}`),
-    });
+    };
+    const report = probeSetup
+      ? await runProbe(realExec, { suite, suiteFile: suiteFile!, ...probeSetup, ...common })
+      : await runSuite(realExec, { suite, ...(arms.length ? { arms } : {}), ...(suiteFile ? { suiteFile } : {}), ...common });
+    if (report.probe) {
+      const p = report.probe;
+      console.log(`probe: ${p.arm} (${p.advice.map((a) => `${a.profile} ← ${a.file} ${a.sha256.slice(0, 12)}…`).join(", ")}) beside ${p.baseline.arm}, held to ${p.baseline.file} under ${report.fingerprint.suite?.file} ${report.fingerprint.suite?.sha256.slice(0, 12)}…; cost ${p.cost.total} over ${p.cost.runs} run(s)${p.binding ? `; resolves prediction ${p.binding.prediction} horizon [${p.binding.horizon}] once interpreted and committed` : "; bound to no prediction"}${p.heldOut ? `; read over the held-out task(s) ${p.heldOut.tasks.map((t) => t.unitId).join(", ")}` : ""}`);
+    }
     // A built-in is a count, read to one decimal; a declared rate or score needs its digits.
     for (const a of report.arms) console.log(`${a.arm}: ${a.runs} run(s); ${Object.entries(a.metrics).map(([m, s]) => `${m} ${formatSummary(s, isBuiltInMetric(m) ? 1 : 4)}`).join("; ")}`);
-    for (const l of report.lifts) console.log(`  ${l.arm} vs ${suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
+    for (const l of report.lifts) console.log(`  ${l.arm} vs ${report.probe?.baseline.arm ?? suite.baseline}: ${l.metric} ${l.delta >= 0 ? "+" : ""}${Number.isInteger(l.delta) ? l.delta : l.delta.toFixed(2)}${l.separated ? " (intervals separate)" : ""}`);
     // The per-task table (#201): means only, no interval at this n; a task's row includes what the earlier tasks left behind.
     if (report.tasks?.length) {
       console.log(`per task (the mean over repetitions; no interval: a task's mean is ${reps ?? suite.repetitions} number(s); tasks ran in order in one instance, so a row includes what earlier tasks left):`);
       const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(2));
       for (const t of report.tasks) {
         const differing = t.differences.filter((d) => d.delta !== 0);
-        console.log(`  ${t.task}: ${t.arms.map((a) => `${a.arm} n=${a.n}`).join(", ")}${differing.length ? "" : `; no arm differs from ${suite.baseline}`}`);
-        for (const arm of [...new Set(differing.map((d) => d.arm))]) console.log(`    ${arm} vs ${suite.baseline}: ${differing.filter((d) => d.arm === arm).map((d) => `${d.metric} ${d.delta > 0 ? "+" : ""}${fmt(d.delta)}${d.leads ? ` (${d.leads} leads)` : ""}`).join("; ")}`);
+        console.log(`  ${t.task}: ${t.arms.map((a) => `${a.arm} n=${a.n}`).join(", ")}${differing.length ? "" : `; no arm differs from ${report.probe?.baseline.arm ?? suite.baseline}`}`);
+        for (const arm of [...new Set(differing.map((d) => d.arm))]) console.log(`    ${arm} vs ${report.probe?.baseline.arm ?? suite.baseline}: ${differing.filter((d) => d.arm === arm).map((d) => `${d.metric} ${d.delta > 0 ? "+" : ""}${fmt(d.delta)}${d.leads ? ` (${d.leads} leads)` : ""}`).join("; ")}`);
       }
     }
     // A baseline that discriminates (#201): a report where the baseline failed on no outcome metric gave the gates nothing to catch.

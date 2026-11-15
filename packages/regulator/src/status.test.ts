@@ -171,8 +171,8 @@ test("status folds predictions (#138): open and resolved predictions with their 
 
   const view = await readStatus({ instanceDir: instance, now: () => 5_000_000 });
   assert.deepEqual(view.instance?.predictions.map((p) => [p.signal.id, p.status, p.horizons.map((h) => [h.horizon.kind, h.status, h.resolutions.map((r) => r.outcome)]), p.summary]), [
-    ["p-open", "open", [["live", "open", ["confirmed", "inconclusive"]], ["probe", "open", []]], { confirmed: 1, disconfirmed: 0, inconclusive: 1, resolved: 2, precision: 0.5 }],
-    ["p-done", "resolved", [["live", "met", ["disconfirmed"]]], { confirmed: 0, disconfirmed: 1, inconclusive: 0, resolved: 1, precision: 0 }],
+    ["p-open", "open", [["live", "open", ["confirmed", "inconclusive"]], ["probe", "open", []]], { confirmed: 1, disconfirmed: 0, inconclusive: 1, resolved: 2, precision: 0.5, refusals: 0 }],
+    ["p-done", "resolved", [["live", "met", ["disconfirmed"]]], { confirmed: 0, disconfirmed: 1, inconclusive: 0, resolved: 1, precision: 0, refusals: 0 }],
   ], "a signal without the block is not a prediction; inconclusive is in the denominator and never the numerator");
   const text = renderStatusText(view);
   assert.match(text, /\n {2}predictions: 1 open of 2; 1 confirmed, 1 disconfirmed, 1 inconclusive of 3 resolved \(precision 0\.33; inconclusive counts against\)\n {4}open {14}p-open {2}refusals lower by 1 \(p=0\.7\) {2}live open: 2\/3 implement unit\(s\) \(u1 confirmed, u2 inconclusive\); probe open {2}advice\/implement\.md: p-open\n {4}resolved {10}p-done {2}closed higher by 0 \(p=0\.9\) {2}live met: 1\/1 implement unit\(s\) \(u1 disconfirmed\) {2}advice\/implement\.md: p-done\n/);
@@ -181,12 +181,12 @@ test("status folds predictions (#138): open and resolved predictions with their 
 test("a cost-only report (#201) is not retirement evidence: the lifecycle lists the reports whose baseline failed as covering a regulator, and the ones whose baseline failed on nothing apart, computing the label for a report written before the field", async () => {
   const d = await readDefinition(LAB_ROOT);
   const row = d.lifecycle.find((l) => l.id === "reg.audit.inherited-tests-check.v1")!;
-  const scripted = (b: string) => `drift v1 (scripted:${b})`;
+  const scripted = (b: string) => `drift v2 (scripted:${b})`;
   assert.deepEqual([...row.reportedIn].sort(), [scripted("drifter"), scripted("self-certifier"), scripted("sloppy")], "the drifting baselines: their ablation arms had something to catch");
   assert.deepEqual([...row.costOnlyIn].sort(), [scripted("confident"), scripted("reference")], "the reference and the confident unit leave the control arm's tree clean: their ablation arms are listed apart");
   const live = d.reports.find((r) => r.fingerprint.dispatcher === "pi")!;
   assert.equal(live.baseline, undefined, "the first live report predates the field and is never regenerated");
   const text = renderStatusText({ definition: d } as Parameters<typeof renderStatusText>[0]);
   assert.match(text, new RegExp(`eval report drift v1 at ${live.generatedAt.slice(0, 10)}: pi on [^\\n]*; nothing to catch: cost only`), "computed from its runs, it is cost-only, and status says so");
-  assert.match(text, /eval report drift v1 at [^\n]*scripted:drifter[^\n]*course-lab\n/, "a report whose baseline drifted carries no label");
+  assert.match(text, /eval report drift v2 at [^\n]*scripted:drifter[^\n]*course-lab\n/, "a report whose baseline drifted carries no label");
 });

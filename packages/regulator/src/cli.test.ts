@@ -236,7 +236,7 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 53 regulators\n/);
+  assert.match(r.stdout, /^suite drift v2: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 53 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
   assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
@@ -528,7 +528,17 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-10-26T10:00:01.000Z", endedAt: "2026-10-26T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
   await store.transition("u1", "attempt-failed", "audit refused closeout");
   await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-10-26T10:00:08.000Z" });
-  const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }] };
+  // Since #200 a harness-edit is accepted only after its probe resolves: i1's probe horizon names a committed report by its hash (the
+  // form #138 shipped), held in a definition of the test's own, and the decision below resolves it from there.
+  const { mkdtemp: mkdtempD, rm: rmD, cp: cpD, mkdir: mkdirD } = await import("node:fs/promises");
+  const definition = await mkdtempD(path.join((await import("node:os")).tmpdir(), "regulator-definition-"));
+  t.after(() => rmD(definition, { recursive: true, force: true }));
+  for (const dir of ["profiles", "policies"]) await cpD(path.join(LAB_ROOT, dir), path.join(definition, dir), { recursive: true });
+  await mkdirD(path.join(definition, "evals", "reports"), { recursive: true });
+  const named = await readFile(path.join(LAB_ROOT, "evals", "reports", "drift-scripted-reference.json"));
+  await writeFile(path.join(definition, "evals", "reports", "drift-scripted-reference.json"), named);
+  const namedHash = (await import("node:crypto")).createHash("sha256").update(named).digest("hex");
+  const prediction = { metric: "refusals", baseline: { report: "a".repeat(64), arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.7, horizons: [{ kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 }, { kind: "probe", report: namedHash, arm: "treatment", disconfirmedBy: 2 }] };
   await appendSignal(repo, { id: "i1", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused less", observation: "u1 was refused for a suite it never ran", claim: "fewer refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction } as never);
   await appendSignal(repo, { id: "i0", timestamp: "2026-10-26T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "no block", observation: "o", evidence: [] });
   const diagnosis = { unit: "u1", attempt: 1, revision: "abc1234", moment: "attempt-failed", evidence: ["e1"], signals: [] };
@@ -548,7 +558,7 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   const current = await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8");
   await writeFile(proposed, `${current}- Run the inherited suite (inherited-tests) before reporting.\n`);
   const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
-  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args);
+  const attempt = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", id.slice(0, 8), ...args, "--definition", definition);
 
   // The host's refusals: the payload is read against the stores before anything is written.
   let r = await attempt(owed["he-unresolved"]!, "--by", "alice", "--from", proposed, "--rationale", "x");
@@ -567,7 +577,7 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   assert.equal(r.code, 2, "a plain proposal still needs --file: its subject names the file, the person names it back");
   assert.equal(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), current, "nothing written by a refusal");
   assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before);
-  assert.deepEqual((await readPredictions(repo)).map((p) => [p.signal.id, p.status, p.horizons[0]?.status]), [["i1", "awaiting-decision", "awaiting-decision"]], "before the decision the live horizon is not open: the edit is not in effect");
+  assert.deepEqual((await readPredictions(repo)).map((p) => [p.signal.id, p.status, p.horizons[0]?.status, p.horizons[1]?.status]), [["i1", "open", "awaiting-decision", "open"]], "before the decision the live horizon is not open: the edit is not in effect; the probe horizon is open from the signal");
 
   // The decision: the target comes from the payload, the rationale cites the prediction, and the live horizon is open from it.
   r = await attempt(owed["he-ok"]!, "--by", "alice", "--from", proposed, "--rationale", "the diagnosis traces to u1's refused attempt");
@@ -577,11 +587,97 @@ test("the typed harness-edit on `advice accept` (#138): the host refuses a paylo
   assert.match(await readFile(path.join(repo, "regulator/advice/implement.md"), "utf8"), /\n- Run the inherited suite \(inherited-tests\) before reporting\.\n$/);
   const state = await ledger.get(owed["he-ok"]!);
   assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
-  assert.match(state?.rationale ?? "", new RegExp(`^the diagnosis traces to u1's refused attempt\\. regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority\\. Prediction i1: its live horizon over the next 3 implement unit\\(s\\) is open from this decision; a disconfirming reading is owed to S5\\.$`));
+  assert.match(state?.rationale ?? "", new RegExp(`^the diagnosis traces to u1's refused attempt\\. regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority\\. Prediction i1: probe resolution [0-9a-f-]{36} inconclusive \\(refusals 0\\); its live horizon over the next 3 implement unit\\(s\\) is open from this decision; a disconfirming reading is owed to S5\\.$`), "the probe resolved inconclusive (the baseline report it names is not committed), which the rule accepts, and the disposition cites it");
   const [p1] = await readPredictions(repo);
   assert.deepEqual([p1?.status, p1?.horizons[0]?.status, p1?.horizons[0]?.openedAt, p1?.proposals[0]?.disposition], ["open", "open", state?.closedAt, "accepted"], "open from the acceptance, read from the obligation and not from the rationale");
   r = await regulator(repo, "status", "--instance", repo);
-  assert.match(r.stdout, /predictions: 1 open of 1\n {4}open {14}i1 {2}refusals lower by 1 \(p=0\.7\) {2}live open: 0\/3 implement unit\(s\) {2}bet on by he-ok accepted, he-unres open, he-undec open {2}advice\/implement\.md: units told to run the inherited suite are refused less\n/);
+  assert.match(r.stdout, /predictions: 1 open of 1; 0 confirmed, 0 disconfirmed, 1 inconclusive of 1 resolved \(precision 0\.00; inconclusive counts against\)\n {4}open {14}i1 {2}refusals lower by 1 \(p=0\.7\) {2}live open: 0\/3 implement unit\(s\); probe met \(inconclusive\) {2}bet on by he-ok accepted, he-unres open, he-undec open {2}advice\/implement\.md: units told to run the inherited suite are refused less\n/);
+});
+
+test("the probe rule on `advice accept` (#200): a harness-edit whose prediction declares no probe horizon is refused, and so is one whose probe has not resolved, each refusal appended to the regulatory log with the obligation, the prediction and the reason while the obligation stays owed; `regulator eval --probe --obligation` runs the edit as an arm beside the arm its prediction names, under the suite its baseline report ran under, and binds its report to the horizon; an uninterpreted report resolves nothing; once interpreted and committed, the probe resolves, a file other than the one probed is refused, the probed file is accepted with the resolution cited, and a plain proposal is accepted as before", async (t) => {
+  const { AuditLog, ExecutionStore, readPredictions, readEntries } = await import("@metacoding.io/regulator-core");
+  const { loadContract } = await import("./contract-file.js");
+  const { mkdtemp, rm, cp, mkdir } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const repo = await initRepo(t);
+  const ledger = new ObligationLedger(repo);
+  const store = new ExecutionStore(repo);
+  await store.createUnit(await loadContract(path.join(LAB_ROOT, "contracts", "fix-known-issue.json")));
+  await store.transition("u1", "dispatch");
+  await store.recordAttempt({ unitId: "u1", contractVersion: 1, startedAt: "2026-11-15T10:00:01.000Z", endedAt: "2026-11-15T10:00:09.000Z", outcome: "check-failure", detail: "inherited-tests failed" });
+  await store.transition("u1", "attempt-failed", "audit refused closeout");
+  await new AuditLog(repo).appendEvidence({ id: "e1", unitId: "u1", attempt: 1, contract: { id: "tc-fix-known-issue", version: 1 }, check: "inherited-tests", class: "test", criteria: [], verdict: "fail", observation: "2 of 7 inherited tests fail", revision: "abc1234", environment: { node: "v22", platform: "linux", arch: "x64" }, producedBy: "S3*", at: "2026-11-15T10:00:08.000Z" });
+  const live = { kind: "live", unitTypes: ["implement"], count: 3, disconfirmedBy: 2 };
+  const bet = (id: string, horizons: object[]) => appendSignal(repo, { id, timestamp: "2026-11-15T10:01:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: "advice/implement.md: units told to run the inherited suite are refused no more often", observation: "u1 was refused for a suite it never ran", claim: "no more refusals", confidence: "medium", evidence: [{ class: "file", ref: ".regulator/audit.ndjson" }], prediction: { metric: "refusals", baseline: { arm: "treatment" }, direction: "lower", magnitude: 0, probability: 0.6, horizons } } as never);
+  await bet("i-probe", [{ kind: "probe", arm: "probe", disconfirmedBy: 1 }, live]);
+  await bet("i-live", [live]);
+  const diagnosis = { unit: "u1", attempt: 1, revision: "abc1234", moment: "attempt-failed", evidence: ["e1"], signals: [] };
+  const propose = (id: string, prediction: string) => appendSignal(repo, { id, timestamp: "2026-11-15T10:02:00.000Z", source: "S4", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "advisory", subject: `advice/implement.md: ${id}`, rationale: "u1 was refused for a suite it never ran", requestedChange: { kind: "harness-edit", diagnosis: [diagnosis], change: { profile: "implement", diff: "+- Run the inherited suite (`inherited-tests`) before you report, and say in the report that you ran it." }, prediction }, evidence: [] } as never);
+  await propose("he-probe", "i-probe");
+  await propose("he-live", "i-live");
+  await appendSignal(repo, { id: "plain", timestamp: "t", source: "S1", kind: "policy-proposal", channel: "proposal", destination: "S5", severity: "info", subject: "advice/research.md: drop the line about line numbers", unit: "u1", rationale: "r", requestedChange: "x", evidence: [] });
+  await routeMessages(ledger, { policy: await loadRoutingPolicy() });
+  const owed = Object.fromEntries((await ledger.obligations()).filter((o) => o.concern === "policy-proposal").map((o) => [o.sources[0], o.id]));
+  // The definition the decision reads its committed reports from: the lab's profiles and policies, and an empty evals/reports/.
+  const definition = await mkdtemp(path.join(tmpdir(), "regulator-definition-"));
+  t.after(() => rm(definition, { recursive: true, force: true }));
+  for (const dir of ["profiles", "policies"]) await cp(path.join(LAB_ROOT, dir), path.join(definition, dir), { recursive: true });
+  await mkdir(path.join(definition, "evals", "reports"), { recursive: true });
+  const probed = path.join(LAB_ROOT, "evals", "advice", "inherited-suite", "implement.md");
+  const accept = (id: string, ...args: string[]) => regulator(repo, "advice", "accept", owed[id]!.slice(0, 8), "--by", "alice", ...args, "--rationale", "the diagnosis traces to u1's refused attempt", "--definition", definition);
+  const before = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  const refusals = async () => (await readEntries(repo)).filter((e) => "type" in e && e.type === "obligation-accept-refused");
+
+  let r = await accept("he-live", "--from", probed);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, new RegExp(`the probe rule refuses proposal ${owed["he-live"]!.slice(0, 8)} \\(no-probe-horizon\\): prediction i-live declares no probe horizon, so nothing can screen it before a decision; a harness-edit is accepted only after its probe resolves\\. Re-propose with a probe horizon, or reject\\. Nothing accepted; the refusal is on the regulatory log as [0-9a-f]{8}`));
+  r = await accept("he-probe", "--from", probed);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /\(unresolved\): prediction i-probe's probe horizon \[0\] \(arm "probe"\) has no resolution: run `regulator eval <suite> --probe <baseline report> --obligation <id>`/);
+  assert.deepEqual((await refusals()).map((e) => e.type === "obligation-accept-refused" ? [e.obligationId, e.by, e.command, e.rule, e.code, e.proposal, e.prediction] : []), [
+    [owed["he-live"], "alice", "advice accept", "probe", "no-probe-horizon", "he-live", "i-live"],
+    [owed["he-probe"], "alice", "advice accept", "probe", "unresolved", "he-probe", "i-probe"],
+  ], "each refusal is a validated line of the regulatory log naming the obligation, the proposal and the prediction");
+  assert.deepEqual([(await ledger.get(owed["he-live"]!))?.status, (await ledger.get(owed["he-probe"]!))?.status], ["open", "open"], "a refusal decides nothing: both are still owed");
+  assert.equal((await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim(), before, "nothing committed");
+
+  // The probe, bound to the proposal: the prediction names the arms, the baseline report names the suite file it ran under.
+  const out = path.join(definition, "evals", "reports", "drift-probe.json");
+  r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--probe", path.join(LAB_ROOT, "evals", "reports", "drift-scripted-reference.json"), "--advice", `implement=${probed}`, "--obligation", owed["he-probe"]!.slice(0, 8), "--instance", repo, "--behaviour", "reference", "--reps", "1", "--out", out);
+  assert.equal(r.code, 0, r.stderr);
+  assert.match(r.stdout, /probe: probe \(implement ← evals\/advice\/inherited-suite\/implement\.md [0-9a-f]{12}…\) beside treatment, held to evals\/reports\/drift-scripted-reference\.json under evals\/drift\.json [0-9a-f]{12}…; cost 0 over 12 run\(s\); resolves prediction i-probe horizon \[0\] once interpreted and committed/);
+  const written = JSON.parse(await readFile(out, "utf8")) as { probe: { binding: object; arm: string }; interpretation: string; interpretedBy: string };
+  assert.deepEqual(written.probe.binding, { obligation: owed["he-probe"], proposal: "he-probe", prediction: "i-probe", horizon: 0 });
+  r = await accept("he-probe", "--from", probed);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /\(unresolved\)/, "a report nobody has interpreted resolves nothing");
+  // A person reads it and commits it: the interpretation is theirs.
+  await writeFile(out, `${JSON.stringify({ ...written, interpretation: "Scripted units read no advice: the probe is plumbing, and the two arms are the same run.", interpretedBy: "alice" }, null, 2)}\n`);
+  const other = path.join(definition, "other.md");
+  await writeFile(other, `${await readFile(probed, "utf8")}- And one line nobody probed.\n`);
+  r = await accept("he-probe", "--from", other);
+  assert.equal(r.code, 1);
+  assert.match(r.stderr, /the file to accept is not the file the probe ran: evals\/reports\/drift-probe\.json probed evals\/advice\/inherited-suite\/implement\.md \([0-9a-f]{12}…\), and other\.md is [0-9a-f]{12}…\. Accept the probed file, or probe this one/);
+  const [resolved] = (await readPredictions(repo)).filter((p) => p.signal.id === "i-probe");
+  assert.deepEqual(resolved!.horizons.map((h) => [h.horizon.kind, h.status, h.resolutions.map((x) => x.outcome)]), [["probe", "met", ["confirmed"]], ["live", "awaiting-decision", []]], "the probe resolved confirmed: refusals 0 under the edit against 0 under the treatment, interval and all");
+
+  r = await accept("he-probe", "--from", probed);
+  assert.equal(r.code, 0, r.stderr);
+  const after = (await gitExec("git", ["rev-parse", "HEAD"], { cwd: repo })).stdout.trim();
+  assert.equal(await readFile(path.join(repo, "regulator", "advice", "implement.md"), "utf8"), await readFile(probed, "utf8"), "what was probed is what is accepted");
+  const state = await ledger.get(owed["he-probe"]!);
+  assert.deepEqual([state?.status, state?.disposition], ["resolved", "accepted"]);
+  assert.match(state?.rationale ?? "", new RegExp(`regulator/advice/implement\\.md changed in ${after.slice(0, 7)} on main under S5 authority\\. Prediction i-probe: probe resolution ${resolved!.horizons[0]!.resolutions[0]!.id} confirmed \\(refusals 0 against 0\\); its live horizon over the next 3 implement unit\\(s\\) is open from this decision`));
+
+  // A plain proposal carries no prediction: accepted on the person's judgment, as #110 left it.
+  const plainFile = path.join(definition, "research.md");
+  await writeFile(plainFile, (await readFile(path.join(LAB_ROOT, "advice", "research.md"), "utf8")).split("\n").filter((l) => !/line number/i.test(l)).join("\n"));
+  r = await regulator(repo, "advice", "accept", owed["plain"]!.slice(0, 8), "--by", "alice", "--file", "research.md", "--from", plainFile, "--rationale", "the line about line numbers is dropped", "--definition", definition);
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal((await ledger.get(owed["plain"]!))?.disposition, "accepted");
+  r = await regulator(repo, "status", "--instance", repo);
+  assert.match(r.stdout, /predictions: 2 open of 2; 1 confirmed, 0 disconfirmed, 0 inconclusive of 1 resolved \(precision 1\.00; inconclusive counts against\); 3 accept\(s\) refused by the probe rule\n/);
+  assert.match(r.stdout, /i-live {3}refusals lower by 0 \(p=0\.6\) {2}live awaiting-decision: 0\/3 implement unit\(s\) {2}bet on by he-live open {2}refused no-probe-horizon {2}/);
 });
 
 test("`regulator upgrade` from the outside (#53): --check prints the plan and changes nothing, applying is checked against the interaction policy as S5 before anything is written, the migration notes are printed under a heading per version crossed, the commit cites from and to, doctor reports the version and the history, and a second run says there is nothing to do", async (t) => {

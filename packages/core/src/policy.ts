@@ -47,11 +47,11 @@ export function carriedLedger(prior: BudgetLedger, attempt: number, now: () => n
 export function ownConsumption(ledger: BudgetLedger): BudgetConsumed {
   const carried = ledger.carried?.consumed;
   if (!carried) return { ...ledger.consumed };
-  const cache = (key: "cacheRead" | "cacheWrite") => (ledger.consumed[key] === undefined ? {} : { [key]: Math.max(0, ledger.consumed[key]! - (carried[key] ?? 0)) });
+  const cache = (key: "cacheRead" | "cacheWrite" | "input") => (ledger.consumed[key] === undefined ? {} : { [key]: Math.max(0, ledger.consumed[key]! - (carried[key] ?? 0)) });
   return {
     tokens: Math.max(0, ledger.consumed.tokens - carried.tokens), cost: Math.max(0, ledger.consumed.cost - carried.cost),
     wallClockMs: Math.max(0, ledger.consumed.wallClockMs - carried.wallClockMs), turns: Math.max(0, ledger.consumed.turns - carried.turns),
-    ...cache("cacheRead"), ...cache("cacheWrite"),
+    ...cache("cacheRead"), ...cache("cacheWrite"), ...cache("input"),
   };
 }
 
@@ -127,6 +127,7 @@ export class BudgetMeter {
     this.#ledger.consumed.cost += usage.cost;
     this.#ledger.consumed.cacheRead = (this.#ledger.consumed.cacheRead ?? 0) + usage.cacheRead;
     this.#ledger.consumed.cacheWrite = (this.#ledger.consumed.cacheWrite ?? 0) + usage.cacheWrite;
+    this.#ledger.consumed.input = (this.#ledger.consumed.input ?? 0) + usage.input;
   }
 
   recordTurn(): void {
@@ -191,10 +192,23 @@ export function renderPreservedContext(contract: WorkContract, ledger: BudgetLed
 }
 
 /** What the `regulator status` read model and the control room show per unit. */
+/**
+ * The cache share of what a ledger consumed (#200, the Exo note §4 item 1): `cacheRead` over the whole input
+ * (`input + cacheRead + cacheWrite`). Undefined when the ledger keeps no uncached input (written before the field) or the
+ * input is zero: a share nobody metered is not a zero share.
+ */
+export function cacheShareOf(consumed: BudgetConsumed): number | undefined {
+  if (consumed.input === undefined) return undefined;
+  const whole = consumed.input + (consumed.cacheRead ?? 0) + (consumed.cacheWrite ?? 0);
+  return whole > 0 ? (consumed.cacheRead ?? 0) / whole : undefined;
+}
+
 export function summarizeLedger(ledger: BudgetLedger): string {
   const pct = (a: number, b: number) => `${Math.min(999, Math.round((a / b) * 100))}%`;
   const { cacheRead, cacheWrite, cost } = ledger.consumed;
   // Cache read and write are part of the token count, shown beside it once the ledger keeps them (#201); cost once there is any.
-  const cache = cacheRead === undefined && cacheWrite === undefined ? "" : `, cache ${cacheRead ?? 0} read / ${cacheWrite ?? 0} write`;
+  // The cache share (#200) beside them once the ledger keeps the uncached input: the part of the input served from the cache.
+  const share = cacheShareOf(ledger.consumed);
+  const cache = cacheRead === undefined && cacheWrite === undefined ? "" : `, cache ${cacheRead ?? 0} read / ${cacheWrite ?? 0} write${share === undefined ? "" : ` (share ${Math.round(share * 100)}%)`}`;
   return `${ledger.consumed.tokens}/${ledger.ceiling.tokens} tok (${pct(ledger.consumed.tokens, ledger.ceiling.tokens)})${cache}, ${cost > 0 ? `cost ${Number(cost.toFixed(4))}, ` : ""}${ledger.consumed.turns}/${ledger.ceiling.turns} turns${ledger.carried ? `, ${ledger.carried.consumed.tokens} tok and ${ledger.carried.consumed.turns} turns carried from attempt ${ledger.carried.attempt}` : ""}${ledger.exhausted ? `, exhausted: ${ledger.exhausted.dimension}` : ""}`;
 }

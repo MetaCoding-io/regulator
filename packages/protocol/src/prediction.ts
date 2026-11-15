@@ -56,12 +56,15 @@ export const PredictionBaselineSchema = Type.Union([
 export type PredictionBaseline = Static<typeof PredictionBaselineSchema>;
 
 /**
- * The probe horizon: an eval report, named by fingerprint, whose named arm ran the proposed change before anyone decided.
- * It resolves when a report with that fingerprint is read.
+ * The probe horizon: an eval report whose named arm ran the proposed change before anyone decided. Two ways to name the
+ * report (#200). Bound: `report` absent, and the horizon resolves against the committed report whose `probe.binding`
+ * names this prediction and this horizon's index — what `regulator eval --probe --obligation` writes, since a prediction
+ * made before its probe cannot know the hash of a file that does not exist yet. Named: `report` is the SHA-256 of a
+ * committed file, as #138 shipped it, and the horizon resolves when that file is read; older predictions stay valid.
  */
 export const ProbeHorizonSchema = Type.Object({
   kind: Type.Literal("probe"),
-  report: ReportFingerprintSchema,
+  report: Type.Optional(ReportFingerprintSchema),
   /** The arm under the change; its summary for the metric is what is observed. */
   arm: NonEmpty,
   /** The grader value at this horizon that counts against the prediction. */
@@ -135,6 +138,8 @@ export const PredictionResolutionSchema = Type.Object({
   baseline: Type.Optional(Type.Number()),
   /** The grader's verdict as the harness gives it, when a grader ran. */
   grader: Type.Optional(GraderVerdictSchema),
+  /** A probe's 95% interval on the arm's mean, when the reading was a report's (#200): what a rule over "the interval does not cross the baseline" reads. */
+  interval: Type.Optional(Type.Tuple([Type.Number(), Type.Number()])),
   /** How the outcome follows from the numbers, or why nothing could be read. */
   reason: NonEmpty,
   /** What the value was read from: the stores, a report. Never a unit's report. */

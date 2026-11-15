@@ -20,7 +20,7 @@ export {
   type InteractionState, type OpenObligationInput, type RouteMessagesOptions, type Routed, type Transition,
 } from "./obligations.js";
 export { AUDIT_RELATIVE_PATH, EFFECTS_RELATIVE_PATH, INSTANCE_MANIFEST_RELATIVE_PATH, MEMORY_RELATIVE_PATH, LEASES_RELATIVE_DIR, REGULATOR_DIR, SIGNALS_RELATIVE_PATH, TRACE_RELATIVE_PATH, UNITS_RELATIVE_DIR, UNIT_STATUS_HISTORY_FILE, WORKTREES_RELATIVE_DIR } from "./paths.js";
-export { BudgetMeter, carriedLedger, ceilingFor, chooseModels, namedRoute, ownConsumption, renderPreservedContext, routeFor, routeNames, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
+export { BudgetMeter, cacheShareOf, carriedLedger, ceilingFor, chooseModels, namedRoute, ownConsumption, renderPreservedContext, routeFor, routeNames, summarizeLedger, type BudgetMeterOptions, type EvidencePointer } from "./policy.js";
 export {
   ATTEMPT_ACTIONS, LEDGER_CARRYING_CAUSES, TERMINAL_ACTIONS, carriesLedger, causeFromError, causeUnderPolicy, classifyFailure, decideRecovery, hintFor, questionFor, routeBlockedUnit,
   type Classification, type DecideOptions, type Decided, type FailureContext, type RouteOptions,
@@ -47,8 +47,8 @@ export { checkDispositionAuthority, continuesWithoutAnswer, dispositionForAnswer
 export { baselineCheck, formatSummary, lifts, metricDirection, summarize, summarizeArms, taskTable, tQuantile975 } from "./evals.js";
 export { DEFAULT_SECRET_PATTERNS, REDACTED, REGULATOR_FOR, canaryValues, projectSpans, redact, reportSpans, timelineFor, type Attributes, type ProjectSpansOptions, type RedactionRules, type TimelineEntry } from "./spans.js";
 export {
-  baselineValue, checkHarnessEdit, compareWithPrediction, foldPredictions, isPrediction, isResolution, openLiveHorizons, precisionOf, readPredictions, resolvePredictions,
-  type CheckHarnessEditOptions, type CommittedReport, type Comparison, type HorizonState, type HorizonStatus, type PredictionPrecision, type PredictionProposal, type PredictionSignal, type PredictionState,
+  baselineValue, checkHarnessEdit, compareWithPrediction, foldPredictions, isAcceptRefusal, isPrediction, isResolution, openLiveHorizons, precisionOf, probeReportFor, probeRule, readPredictions, resolvePredictions,
+  type AcceptRefusal, type ProbeRuleVerdict, type CheckHarnessEditOptions, type CommittedReport, type Comparison, type HorizonState, type HorizonStatus, type PredictionPrecision, type PredictionProposal, type PredictionSignal, type PredictionState,
   type ResolvePredictionsOptions, type Resolved,
 } from "./predictions.js";
 export { unitTrajectory, type TrajectoryEvent, type TrajectoryInput, type TrajectoryStep, type UnitTrajectory } from "./trajectory.js";

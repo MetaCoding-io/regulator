@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { PolicyDefinition, WorkContract } from "@metacoding.io/regulator-protocol";
-import { BudgetMeter, carriedLedger, ceilingFor, chooseModels, namedRoute, ownConsumption, renderPreservedContext, routeFor, routeNames, summarizeLedger } from "./policy.js";
+import { BudgetMeter, cacheShareOf, carriedLedger, ceilingFor, chooseModels, namedRoute, ownConsumption, renderPreservedContext, routeFor, routeNames, summarizeLedger } from "./policy.js";
 
 const policy: PolicyDefinition = {
   name: "default", version: 1, description: "d",
@@ -50,12 +50,15 @@ test("budget meter: counts tokens, cost and turns; wall-clock from the injected 
   meter.recordUsage({ input: 500, output: 200, cacheRead: 200, cacheWrite: 0, totalTokens: 700, cost: 0.1 });
   meter.recordTurn();
   assert.deepEqual([meter.ledger.consumed.cacheRead, meter.ledger.consumed.cacheWrite], [320, 80], "cache read and write are summed per attempt (#201), as part of the tokens");
+  assert.equal(meter.ledger.consumed.input, 800, "the uncached input is summed too (#200): the cache share's denominator with the two cache counts");
+  assert.equal(cacheShareOf(meter.ledger.consumed), 320 / 1200, "the cache share is cache read over the whole input: 320 of 800 + 320 + 80");
+  assert.equal(cacheShareOf({ tokens: 10, cost: 0, wallClockMs: 0, turns: 1, cacheRead: 5, cacheWrite: 0 }), undefined, "a ledger written before the uncached input was kept has no share, not a zero one");
   assert.equal(meter.check(), "tokens", "1100 of 1000 tokens: the first dimension in order wins");
   assert.equal(meter.exhausted?.dimension, "tokens");
   meter.recordTurn(); meter.recordTurn();
   assert.equal(meter.check(), "tokens", "sticky: still the dimension that halted the attempt");
   assert.equal(meter.ledger.consumed.turns, 4);
-  assert.match(summarizeLedger(meter.ledger), /^1100\/1000 tok \(110%\), cache 320 read \/ 80 write, cost 0\.2, 4\/3 turns, exhausted: tokens$/);
+  assert.match(summarizeLedger(meter.ledger), /^1100\/1000 tok \(110%\), cache 320 read \/ 80 write \(share 27%\), cost 0\.2, 4\/3 turns, exhausted: tokens$/);
   assert.equal("attempts" in meter.ledger.ceiling, false, "attempts are the orchestrator's ceiling, not the session's");
 
   const turns = new BudgetMeter({ unitId: "u1", attempt: 1, ceiling: { tokens: 10, wallClockMs: 10, turns: 1, attempts: 1 }, now: () => clock });
@@ -104,10 +107,10 @@ test("a carried ledger (#133): the attempt that continues an earlier one opens o
 
   clock += 3_600_000; // the unit waited an hour between the attempts: that hour is nobody's wall clock
   const seeded = carriedLedger(ended, 2, () => clock);
-  assert.deepEqual(seeded.consumed, { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2, cacheRead: 0, cacheWrite: 0 }, "the ledger continues from what attempt 1 spent");
-  assert.deepEqual(seeded.carried, { attempt: 1, consumed: { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2, cacheRead: 0, cacheWrite: 0 } });
+  assert.deepEqual(seeded.consumed, { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2, cacheRead: 0, cacheWrite: 0, input: 600 }, "the ledger continues from what attempt 1 spent");
+  assert.deepEqual(seeded.carried, { attempt: 1, consumed: { tokens: 600, cost: 0.25, wallClockMs: 20_000, turns: 2, cacheRead: 0, cacheWrite: 0, input: 600 } });
   assert.deepEqual([seeded.attempt, seeded.models, seeded.compactions, seeded.exhausted], [2, [], [], undefined], "the models, the compactions and a halt are the earlier attempt's own");
-  assert.deepEqual(ownConsumption(seeded), { tokens: 0, cost: 0, wallClockMs: 0, turns: 0, cacheRead: 0, cacheWrite: 0 });
+  assert.deepEqual(ownConsumption(seeded), { tokens: 0, cost: 0, wallClockMs: 0, turns: 0, cacheRead: 0, cacheWrite: 0, input: 0 });
   assert.deepEqual(ownConsumption(ended), ended.consumed, "a ledger that carries nothing is all its own");
 
   const second = new BudgetMeter({ unitId: "u1", attempt: 2, ceiling, now: () => clock, model: "anthropic/claude-sonnet-4-5", resume: seeded });
@@ -119,9 +122,9 @@ test("a carried ledger (#133): the attempt that continues an earlier one opens o
   second.recordTurn();
   assert.equal(second.ledger.consumed.wallClockMs, 30_000, "20 s carried and 10 s of its own; the hour between is not counted");
   assert.equal(second.check(), undefined, "900 of 1000 tokens: there is budget left");
-  assert.deepEqual(ownConsumption(second.ledger), { tokens: 300, cost: 0.25, wallClockMs: 10_000, turns: 1, cacheRead: 0, cacheWrite: 40 }, "the cache counts are the attempt's own, less what it carried");
+  assert.deepEqual(ownConsumption(second.ledger), { tokens: 300, cost: 0.25, wallClockMs: 10_000, turns: 1, cacheRead: 0, cacheWrite: 40, input: 300 }, "the cache counts are the attempt's own, less what it carried");
   assert.equal(ownConsumption(ended).tokens + ownConsumption(second.ledger).tokens, second.ledger.consumed.tokens, "summed per attempt, each token is counted once");
-  assert.match(summarizeLedger(second.ledger), /^900\/1000 tok \(90%\), cache 0 read \/ 40 write, cost 0\.5, 3\/5 turns, 600 tok and 2 turns carried from attempt 1$/);
+  assert.match(summarizeLedger(second.ledger), /^900\/1000 tok \(90%\), cache 0 read \/ 40 write \(share 0%\), cost 0\.5, 3\/5 turns, 600 tok and 2 turns carried from attempt 1$/);
   second.recordUsage({ input: 100, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 100, cost: 0 });
   assert.equal(second.check(), "tokens", "the retry spends what the first attempt left, not a new allowance");
 
