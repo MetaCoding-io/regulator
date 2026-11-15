@@ -12,11 +12,13 @@ const declaration = {
   grader: { argv: ["node", "workload/portfolio/turnover.mjs"] },
 };
 
-test("the eighteen built-in metrics are the fifteen they were, cacheWrite (#201), and cost and cacheShare (#200), and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
+test("the twenty-eight built-in metrics are the fifteen they were, cacheWrite (#201), cost and cacheShare (#200), and the ten planner-quality counts (#49), and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
   assert.deepEqual([...EVAL_METRICS], [
     "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
     "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
     "cacheWrite", "cost", "cacheShare",
+    "fixedDeviations", "delegatedUnanswered", "emergentUncertainty", "replansDecided", "replansRequested",
+    "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer",
   ]);
   for (const m of EVAL_METRICS) {
     assert.equal(Value.Check(EvalMetricSchema, m), true, m);

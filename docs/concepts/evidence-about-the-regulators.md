@@ -47,8 +47,9 @@ never read two versions as one series. `regulator status` and the Assurance view
 report whose suite is declared at a newer version ("suite now v3: not comparable with v3
 reports"), and the Lifecycle view's labels carry the same note. `regulator eval` compares
 only the arms of the run it is making and reads no committed report. The drift suites
-went to version 2 when `d7-archive` was added (#201) and to version 3 when `cost` and
-`cacheShare` were pre-registered (#200); the first live report ran version 1.
+went to version 2 when `d7-archive` was added (#201), to version 3 when `cost` and
+`cacheShare` were pre-registered (#200), and to version 4 when the ten planner-quality
+counts were (#49); the first live report ran version 1.
 
 The [definition reference](/reference/definition#eval-suites) lists every field.
 `regulator check` validates each suite. The baseline must be one of the arms, arm names
@@ -153,8 +154,29 @@ Trajectory graders read the records of how the unit got there:
 | `cost` | the provider's cost, summed over the attempts' ledgers, in the provider's currency (direction lower). 0 with the same observation for a scripted unit |
 | `cacheShare` | input tokens read from the cache over all input tokens (uncached input, cache read and cache write), summed over the attempts whose ledgers keep the uncached input (direction higher). A ledger written before the field has no share, and a scripted unit gets the same observation as `cacheWrite` |
 
-These eighteen are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
-ship in the harness and run on every unit.
+Ten more trajectory graders (#49) read each attempt's result report against the
+contract version it answers, and the recovery decisions: the planner-quality counts,
+which are also the handoff benchmark of the team-of-experts note §3.2. Each is a miss at
+a handoff, so lower is better on every one. They read the report's typed fields and
+never its prose, and what the result-report gate already makes zero is not dressed up as
+a measure: a session's `report_result` refuses a report that leaves a required delegated
+choice unreported or an unresolved decision out.
+
+| Metric | What it counts |
+| --- | --- |
+| `fixedDeviations` | deviations of kind `fixed-decision` the reports record. A deviation a unit makes and does not report is not one: `signatureDrift` and the host checks see that |
+| `delegatedUnanswered` | the contract's delegated decisions a report gives no choice for: in a session, only those declared `requiredReport: false` |
+| `emergentUncertainty` | emergent decisions and residual uncertainties the reports record: what appeared unplanned. The planned side, the contract's unresolved decisions and how many were preserved or surfaced, is in the observation |
+| `replansDecided` | recovery decisions to `replan`: S3's, after a failure. The observation names any new contract version whose provenance has a predecessor |
+| `replansRequested` | emergent decisions, and unresolved decisions handled `policy-clarification` a report surfaced: the unit asking. Whether a replan was *caused by* the contract is a judgment, and waits on the instrument record kind |
+| `missesPerHandoff` | every miss above counted once (an emergent decision is one miss, not two), over the unit's attempts |
+| `missesAtContract`, `missesAtAttempt`, `missesAtBase`, `missesAtAnswer` | the same misses, by the seam the attempt they fell on was handed its work across: a first attempt the contract; a further attempt the previous one's worktree and hint; a further attempt after a person's answer, which the controller carries instead of a hint. The base seam has one typed record of a failure crossing it, a replan decided on a reintegration `conflict` |
+
+These twenty-eight are the **built-in** set (`EVAL_METRICS` in the protocol): their graders
+ship in the harness and run on every unit. Misses by boundary are four metrics rather
+than a table of their own on the report: as metrics they are summarized per arm with
+intervals, appear in the per-task table, and can be named by a prediction's horizon, and
+the arm summary is already the table.
 
 A **declared** metric is one a workload brings, as data beside the workload that owns it:
 `workload/<name>.json` carries `metrics[]`, each a namespaced name
