@@ -236,9 +236,9 @@ test("assurance from the outside (lesson 14): `spans` projects the instance's re
   const out = path.join(repo, "eval-report.json");
   r = await regulator(repo, "eval", path.join(LAB_ROOT, "evals", "drift.json"), "--behaviour", "reference", "--arm", "treatment", "--reps", "1", "--out", out);
   assert.equal(r.code, 0, r.stderr);
-  assert.match(r.stdout, /^suite drift v1: 6 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 53 regulators\n/);
+  assert.match(r.stdout, /^suite drift v2: 7 task\(s\), treatment × 1 repetition\(s\); scripted reference; ablation arms cover 4 of 53 regulators\n/);
   assert.match(r.stdout, /\n {2}control {14}rep 1 {2}d1-fix {7}closed {3}closed=1 /);
-  assert.match(r.stdout, /\ntreatment: 6 run\(s\); closed 1 \[1, 1\] n=6;/);
+  assert.match(r.stdout, /\ntreatment: 7 run\(s\); closed 1 \[1, 1\] n=7;/);
   assert.match(r.stdout, /\n {2}treatment vs control: closed \+0\n/);
   assert.match(r.stdout, /report written to .*eval-report\.json\n$/);
   const report = JSON.parse(await readFile(out, "utf8")) as { interpretation: string; interpretedBy: string; fingerprint: { dispatcher: string } };
