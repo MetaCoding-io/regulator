@@ -1,6 +1,6 @@
 # Nix read against the control plane: the environment as a named input to evidence
 
-- **Status:** open. §3.1 and §3.2 landed as [#178](https://github.com/MetaCoding-io/regulator/issues/178) (PR [#PRNUM](https://github.com/MetaCoding-io/regulator/pull/PRNUM), 2026-11-15); the rest of the next step is in §6.
+- **Status:** open. §3.1 and §3.2 landed as [#178](https://github.com/MetaCoding-io/regulator/issues/178) (PR [#206](https://github.com/MetaCoding-io/regulator/pull/206), 2026-11-15); the rest of the next step is in §6.
 - **Source:** Geoffrey Huntley, "the world hasn't figured out yet that you can literally
   just fix everything with a Nix overlay", <https://ghuntley.com/nix/> (7 Oct 2026), read
   2026-11-09. The post links a demo repository,
