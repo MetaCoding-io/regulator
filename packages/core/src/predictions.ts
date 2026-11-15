@@ -31,8 +31,8 @@
  */
 import { randomUUID } from "node:crypto";
 import {
-  isHarnessEdit,
-  type Disposition, type EvalReport, type GraderVerdict, type HarnessEdit, type IntelligenceSignal, type MetricSummary, type Obligation, type ObligationStatus,
+  isHarnessEdit, isUninterpreted,
+  type Disposition, type EvalReport, type ObligationEvent, type GraderVerdict, type HarnessEdit, type IntelligenceSignal, type MetricSummary, type Obligation, type ObligationStatus,
   type PolicyProposal, type Prediction, type PredictionDirection, type PredictionHorizon, type PredictionOutcome, type PredictionResolution, type RegulatoryEntry, type RoutingPolicy, type VsmSystem,
 } from "@metacoding.io/regulator-protocol";
 import { AuditLog } from "./audit-log.js";
@@ -91,6 +91,19 @@ export interface PredictionPrecision {
   resolved: number;
   /** confirmed / resolved; undefined until something resolved. */
   precision: number | undefined;
+  /**
+   * Accepts the probe rule refused on a harness-edit betting on the prediction (#200). Counted beside the outcomes and
+   * never in `resolved`: a refusal is not a reading, it is the record that a decision was asked for on a bet nothing had
+   * screened, which is what "inconclusive counts against" needs to see.
+   */
+  refusals: number;
+}
+
+/** A refusal by the probe rule, as the log records it. */
+export type AcceptRefusal = Extract<ObligationEvent, { type: "obligation-accept-refused" }>;
+
+export function isAcceptRefusal(entry: RegulatoryEntry): entry is AcceptRefusal {
+  return "type" in entry && entry.type === "obligation-accept-refused";
 }
 
 export interface PredictionState {
@@ -98,16 +111,18 @@ export interface PredictionState {
   prediction: Prediction;
   proposals: PredictionProposal[];
   horizons: HorizonState[];
+  /** The accepts the probe rule refused on proposals betting on this prediction, in log order (#200). */
+  refusals: AcceptRefusal[];
   summary: PredictionPrecision;
   /** `open` while any horizon is open; `resolved` once every horizon is met; otherwise what the horizons are waiting on. */
   status: "open" | "resolved" | "awaiting-decision" | "declined";
 }
 
-export function precisionOf(resolutions: readonly PredictionResolution[]): PredictionPrecision {
+export function precisionOf(resolutions: readonly PredictionResolution[], refusals: readonly AcceptRefusal[] = []): PredictionPrecision {
   const count = (outcome: PredictionOutcome) => resolutions.filter((r) => r.outcome === outcome).length;
   const confirmed = count("confirmed"), disconfirmed = count("disconfirmed"), inconclusive = count("inconclusive");
   const resolved = confirmed + disconfirmed + inconclusive;
-  return { confirmed, disconfirmed, inconclusive, resolved, precision: resolved ? confirmed / resolved : undefined };
+  return { confirmed, disconfirmed, inconclusive, resolved, precision: resolved ? confirmed / resolved : undefined, refusals: refusals.length };
 }
 
 /** The harness-edit proposals in the log that bet on a prediction, by the id their payload names. */
@@ -119,6 +134,7 @@ function proposalsBetting(entries: readonly RegulatoryEntry[], predictionId: str
 export function foldPredictions(entries: readonly RegulatoryEntry[]): PredictionState[] {
   const obligations = foldObligations(entries);
   const resolutions = entries.filter(isResolution);
+  const refused = entries.filter(isAcceptRefusal);
   return entries.filter(isPrediction).map((signal) => {
     const proposals: PredictionProposal[] = proposalsBetting(entries, signal.id).map((p) => {
       // The obligation the proposal opened — or its successor, which carries the message among its sources.
@@ -145,8 +161,9 @@ export function foldPredictions(entries: readonly RegulatoryEntry[]): Prediction
       return { index, horizon, status: "declined", note: `proposal ${declined.messageId.slice(0, 8)} was ${declined.disposition ?? declined.status} by ${declined.decidedBy ?? "nobody"}; the edit never took effect`, resolutions: mine };
     });
     const all = horizons.flatMap((h) => h.resolutions);
+    const refusals = refused.filter((r) => r.prediction === signal.id);
     const status: PredictionState["status"] = horizons.some((h) => h.status === "open") ? "open" : horizons.every((h) => h.status === "met") ? "resolved" : horizons.some((h) => h.status === "awaiting-decision") ? "awaiting-decision" : "declined";
-    return { signal, prediction: signal.prediction, proposals, horizons, summary: precisionOf(all), status };
+    return { signal, prediction: signal.prediction, proposals, horizons, refusals, summary: precisionOf(all, refusals), status };
   });
 }
 
@@ -208,6 +225,68 @@ export function baselineValue(prediction: Prediction, reports: readonly Committe
   const summary = armSummary(probe.report, b.arm, prediction.metric);
   if (!summary || Number.isNaN(summary.mean)) return { problem: `the probe report has no summary of ${prediction.metric} for arm "${b.arm}"` };
   return { value: summary.mean, source: probe.file ?? `report ${probe.fingerprint.slice(0, 12)}` };
+}
+
+/**
+ * The committed report a probe horizon resolves against (#200). A horizon that names its report by hash is read from that
+ * file, as #138 shipped it. A bound horizon (no `report`) is read from the report whose `probe.binding` names this
+ * prediction and this horizon's index and whose probe arm is the horizon's arm; when several do, the first by file name.
+ * Either way a report still carrying the placeholder interpretation resolves nothing: a probe is read from a report a
+ * person has read, never from a table (the Harness² note §7, "refuses adoption from a report without an interpretation").
+ */
+export function probeReportFor(horizon: Extract<PredictionHorizon, { kind: "probe" }>, predictionId: string, index: number, reports: readonly CommittedReport[]): CommittedReport | undefined {
+  const read = reports.filter((r) => !isUninterpreted(r.report));
+  if (horizon.report) return read.find((r) => r.fingerprint === horizon.report);
+  return [...read]
+    .sort((a, b) => (a.file ?? a.fingerprint).localeCompare(b.file ?? b.fingerprint))
+    .find((r) => r.report.probe?.binding?.prediction === predictionId && r.report.probe.binding.horizon === index && r.report.probe.arm === horizon.arm);
+}
+
+/**
+ * The held-out tasks a harness-edit's diagnosis cites (#200, the Harness² note §9 item 1). A diagnosis reference names a
+ * unit; it cites a held-out task when that unit, as the instance's execution store records it, was contracted from the
+ * task's contract (the same contract id), or — for a unit the store does not hold — when its id is the task's unit id.
+ * The proposals read are the probe's bound one, or every harness-edit betting on the prediction when it was not bound.
+ */
+async function heldOutCited(root: string, entries: readonly RegulatoryEntry[], predictionId: string, proposal: string | undefined, tasks: ReadonlyArray<{ task: string; unitId: string; contract: string }>): Promise<Array<{ unit: string; task: string }>> {
+  const edits = proposalsBetting(entries, predictionId).filter((p) => proposal === undefined || p.id === proposal);
+  const store = new ExecutionStore(root);
+  const out: Array<{ unit: string; task: string }> = [];
+  for (const ref of edits.flatMap((p) => p.requestedChange.diagnosis)) {
+    const unit = await store.getUnit(ref.unit);
+    const task = tasks.find((t) => (unit ? unit.contract.id === t.contract : ref.unit === t.unitId));
+    if (task && !out.some((o) => o.unit === ref.unit)) out.push({ unit: ref.unit, task: task.unitId });
+  }
+  return out;
+}
+
+/**
+ * The probe rule (#200; the accept-path note §5, the first of the two rules not in `identity accept`): what `advice
+ * accept` asks of the prediction a `harness-edit` bets on before it writes anything. Stated over the folded state alone,
+ * so another reader — an acceptance policy, if one is ever decided (Evolving Agent Teams note §8) — can apply the same
+ * rule and add its own conditions on top of the resolutions it returns.
+ *
+ *   no-probe-horizon  the prediction declares no probe horizon: nothing could ever screen it, so it is refused
+ *   unresolved        a probe horizon has no resolution yet: run the probe, have it interpreted, commit it
+ *   disconfirmed      a probe horizon resolved disconfirmed: the bet is lost at the screen, so it is refused
+ *   probed            every probe horizon resolved confirmed or inconclusive: a person may accept, and the
+ *                     disposition cites each resolution; inconclusive still counts against the prediction
+ */
+export type ProbeRuleVerdict =
+  | { allowed: true; code: "probed"; resolutions: PredictionResolution[]; reason: string }
+  | { allowed: false; code: "no-probe-horizon" | "unresolved" | "disconfirmed"; resolutions: PredictionResolution[]; reason: string };
+
+export function probeRule(state: PredictionState): ProbeRuleVerdict {
+  const probes = state.horizons.filter((h) => h.horizon.kind === "probe");
+  const id = state.signal.id;
+  if (!probes.length) return { allowed: false, code: "no-probe-horizon", resolutions: [], reason: `prediction ${id} declares no probe horizon, so nothing can screen it before a decision; a harness-edit is accepted only after its probe resolves. Re-propose with a probe horizon, or reject` };
+  const latest = probes.map((h) => ({ h, r: h.resolutions.at(-1) }));
+  const open = latest.filter((x) => !x.r);
+  if (open.length) return { allowed: false, code: "unresolved", resolutions: latest.flatMap((x) => (x.r ? [x.r] : [])), reason: `prediction ${id}'s probe horizon ${open.map((x) => `[${x.h.index}] (arm "${x.h.horizon.kind === "probe" ? x.h.horizon.arm : ""}")`).join(", ")} has no resolution: run \`regulator eval <suite> --probe <baseline report> --obligation <id>\`, interpret the report, commit it under evals/reports/, and accept again` };
+  const resolutions = latest.map((x) => x.r!);
+  const lost = resolutions.filter((r) => r.outcome === "disconfirmed");
+  if (lost.length) return { allowed: false, code: "disconfirmed", resolutions, reason: `prediction ${id}'s probe resolved disconfirmed (${lost.map((r) => `resolution ${r.id.slice(0, 8)}: ${r.reason}`).join("; ")}); an edit whose own screen read past the value it staked is not accepted on that bet. Reject it, or re-propose with a new prediction` };
+  return { allowed: true, code: "probed", resolutions, reason: resolutions.map((r) => `probe resolution ${r.id} ${r.outcome}${r.observed === undefined ? "" : ` (${r.metric} ${r.observed}${r.baseline === undefined ? "" : ` against ${r.baseline}`})`}`).join("; ") };
 }
 
 export interface ResolvePredictionsOptions {
@@ -289,22 +368,31 @@ export async function resolvePredictions(root: string, options: ResolvePredictio
           resolved.proposals.push(proposal);
         }
       } else if (h.horizon.kind === "probe") {
-        const { report: fingerprint, arm } = h.horizon;
-        const committed = reports.find((r) => r.fingerprint === fingerprint);
+        const index = h.index;
+        const committed = probeReportFor(h.horizon, signal.id, index, reports);
         if (!committed) continue;
-        const summary = armSummary(committed.report, arm, prediction.metric);
-        const base = baselineValue(prediction, reports, committed);
+        const { arm } = h.horizon;
+        const fingerprint = committed.fingerprint;
+        const probe = committed.report.probe;
+        // A suite with a held-out slice is read over it alone (#200): the probe's reading is the slice the proposal was not derived from.
+        const read = probe?.heldOut ? { ...committed, report: { ...committed.report, arms: probe.heldOut.arms } } : committed;
+        const summary = armSummary(read.report, arm, prediction.metric);
+        const base = baselineValue(prediction, reports, read);
         const source = committed.file ?? `report ${fingerprint.slice(0, 12)}`;
-        const evidence: PredictionResolution["evidence"] = [{ class: "file", ref: source, observation: summary ? `arm "${arm}": ${prediction.metric} mean ${summary.mean} over ${summary.n} run(s), 95% interval [${summary.ci95[0]}, ${summary.ci95[1]}]` : `arm "${arm}" has no summary of ${prediction.metric}` }];
+        const over = probe?.heldOut ? ` over the held-out task(s) ${probe.heldOut.tasks.map((t) => t.unitId).join(", ")}` : "";
+        const evidence: PredictionResolution["evidence"] = [{ class: "file", ref: source, observation: summary ? `arm "${arm}"${over}: ${prediction.metric} mean ${summary.mean} over ${summary.n} run(s), 95% interval [${summary.ci95[0]}, ${summary.ci95[1]}]` : `arm "${arm}" has no summary of ${prediction.metric}${over}` }];
         if (base.source && base.source !== source) evidence.push({ class: "file", ref: base.source, observation: `baseline ${base.value}` });
-        const compared = summary && !Number.isNaN(summary.mean)
-          ? compareWithPrediction({ observed: summary.mean, baseline: base.value, direction: prediction.direction, magnitude: prediction.magnitude, disconfirmedBy: h.horizon.disconfirmedBy, interval: summary.ci95 })
-          : { outcome: "inconclusive" as const, reason: `${source} has no summary of ${prediction.metric} for arm "${arm}"; nothing was read` };
+        const cited = probe?.heldOut ? await heldOutCited(root, entries, signal.id, probe.binding?.proposal, probe.heldOut.tasks) : [];
+        const compared = cited.length
+          ? { outcome: "inconclusive" as const, reason: `inconclusive by rule: the harness-edit's diagnosis cites ${cited.map((c) => `unit "${c.unit}" (held-out task ${c.task})`).join(", ")}, so the probe's held-out reading is not held out from the proposal; the live horizon is the reading that counts` }
+          : summary && !Number.isNaN(summary.mean)
+            ? compareWithPrediction({ observed: summary.mean, baseline: base.value, direction: prediction.direction, magnitude: prediction.magnitude, disconfirmedBy: h.horizon.disconfirmedBy, interval: summary.ci95 })
+            : { outcome: "inconclusive" as const, reason: `${source} has no summary of ${prediction.metric} for arm "${arm}"${over}; nothing was read` };
         resolution = {
-          type: "prediction-resolution", id: randomUUID(), at: stamp(), by, predictionId: signal.id, horizon: h.index,
+          type: "prediction-resolution", id: randomUUID(), at: stamp(), by, predictionId: signal.id, horizon: index,
           resolvedBy: { report: fingerprint, arm }, metric: prediction.metric, outcome: compared.outcome,
-          ...(summary && !Number.isNaN(summary.mean) ? { observed: summary.mean } : {}), ...(base.value === undefined ? {} : { baseline: base.value }),
-          reason: base.problem && summary ? `${compared.reason}. ${base.problem}` : compared.reason, evidence,
+          ...(summary && !Number.isNaN(summary.mean) ? { observed: summary.mean, interval: [summary.ci95[0], summary.ci95[1]] as [number, number] } : {}), ...(base.value === undefined ? {} : { baseline: base.value }),
+          reason: base.problem && summary && !cited.length ? `${compared.reason}. ${base.problem}` : compared.reason, evidence,
         };
         await appendEntry(root, resolution);
         resolved.resolutions.push(resolution);

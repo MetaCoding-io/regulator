@@ -40,6 +40,8 @@ export function foldObligations(entries: readonly RegulatoryEntry[]): Obligation
     const state = states.get(entry.obligationId);
     if (!state) throw new Error(`corrupt regulatory log: ${entry.type} for unknown obligation ${entry.obligationId}`);
     state.history.push(entry);
+    // A refused accept (#200) is evidence on the obligation's history; it decides nothing, so the status stays.
+    if (entry.type === "obligation-accept-refused") continue;
     if (entry.type === "obligation-delivered") {
       state.deliveries.push({ at: entry.at, channel: entry.channel, reminder: entry.reminder, ...(entry.target === undefined ? {} : { target: entry.target }) });
     } else if (entry.type === "obligation-acknowledged") {
@@ -185,6 +187,17 @@ export class ObligationLedger {
 
   async note(messageId: string, by: string, reason: string): Promise<void> {
     await this.#append({ type: "message-noted", id: randomUUID(), at: this.#stamp(), by, message: messageId, reason });
+  }
+
+  /**
+   * An accept command refused to decide the obligation (#200): appended as validated regulatory state, as an acceptance
+   * appends a disposition, so a refusal is counted and not only printed. The obligation stays as it was: still owed.
+   */
+  async refuseAccept(id: string, refusal: Omit<Extract<ObligationEvent, { type: "obligation-accept-refused" }>, "type" | "id" | "at" | "obligationId">): Promise<Extract<ObligationEvent, { type: "obligation-accept-refused" }>> {
+    await this.#live(id);
+    const event = { type: "obligation-accept-refused" as const, id: randomUUID(), at: this.#stamp(), obligationId: id, ...refusal };
+    await this.#append(event);
+    return event;
   }
 
   /** The obligation was put in front of its consumer (lesson 13). Delivery is not a disposition. */

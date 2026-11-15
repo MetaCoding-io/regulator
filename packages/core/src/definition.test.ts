@@ -67,7 +67,7 @@ test("checkDefinition: the declaration is checked as a whole — every file vali
  * Declared metrics (#129). A definition with one workload, `pf`, under a profile that resolves, so the only problems
  * about `workload/pf.json` and `evals/` are the ones the declaration and the suite earn.
  */
-async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, options: { metrics?: unknown[]; suiteMetrics?: unknown[]; otherWorkload?: boolean; report?: Record<string, unknown>; arms?: unknown[]; policy?: unknown } = {}): Promise<string[]> {
+async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, options: { metrics?: unknown[]; suiteMetrics?: unknown[]; otherWorkload?: boolean; report?: Record<string, unknown>; arms?: unknown[]; policy?: unknown; files?: Record<string, string>; heldOut?: string[]; tasks?: string[] } = {}): Promise<string[]> {
   const dir = await mkdtemp(path.join(tmpdir(), "regulator-metrics-"));
   t.after(() => rm(dir, { recursive: true, force: true }));
   await write(dir, "profiles/manager.json", { name: "manager", description: "d", tools: ["write", "report_result"], writablePaths: ["lots/"] });
@@ -77,11 +77,13 @@ async function metricsDefinition(t: { after(fn: () => Promise<void>): void }, op
   await write(dir, "workload/pf.json", { name: "pf", version: 1, description: "d", unitTypes, ...(options.metrics ? { metrics: options.metrics } : {}) });
   if (options.otherWorkload) await write(dir, "workload/other.json", { name: "other", version: 1, description: "d", unitTypes, metrics: [{ name: "workload:other/size", description: "d", kind: "count", direction: "none", grader: { argv: ["node", "workload/pf/turnover.mjs"] } }] });
   await write(dir, "contracts/p1.json", "{}");
+  await write(dir, "contracts/p2.json", "{}");
+  for (const [file, text] of Object.entries(options.files ?? {})) await write(dir, file, text);
   if (options.policy) await write(dir, "policies/default.json", options.policy);
   await mkdir(path.join(dir, "fixture-pf"), { recursive: true });
   if (options.suiteMetrics) {
     await write(dir, "evals/pf.json", {
-      name: "pf", version: 1, description: "d", fixture: "fixture-pf", tasks: ["contracts/p1.json"],
+      name: "pf", version: 1, description: "d", fixture: "fixture-pf", tasks: options.tasks ?? ["contracts/p1.json"], ...(options.heldOut ? { heldOut: options.heldOut } : {}),
       arms: [{ name: "control", description: "d", extensions: [], checks: ["run_tests"], identity: false }, { name: "treatment", description: "d", extensions: [], checks: ["run_tests"], identity: true }, ...(options.arms ?? [])],
       repetitions: 1, metrics: options.suiteMetrics, baseline: "control",
     });
@@ -124,6 +126,30 @@ test("an eval arm's route (#201) names a route a budget policy declares — `def
     'evals/pf.json: arm "tier" names route "verify", which no budget policy declares (default: default, ingest)',
   ]);
   assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, arms: [arm("tier", { route: "Haiku" })] }).then((p) => p.length), 1, "a route is a name, as an arm's is: the schema refuses anything else");
+});
+
+test("an eval arm's advice override (#200) names a declared profile and a non-empty file under the definition within `advice.maxChars`, and anything else is refused; a held-out slice names tasks the suite runs, once each, and leaves at least one out", async (t) => {
+  const policy = {
+    name: "default", version: 1, description: "d", budgets: { default: { tokens: 1000, wallClockMs: 1000, turns: 5, attempts: 1 } },
+    models: { default: { primary: "anthropic/claude-sonnet-4-5", fallback: [] } }, advice: { maxChars: 100 },
+  };
+  const arm = (name: string, advice: Record<string, string>) => ({ name, description: "d", extensions: [], checks: ["run_tests"], identity: true, advice });
+  const files = { "evals/advice/p/manager.md": "- run the tests first\n", "evals/advice/p/empty.md": "\n", "evals/advice/p/long.md": `- ${"x".repeat(120)}\n` };
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, files, arms: [arm("probe", { manager: "evals/advice/p/manager.md" })] }), [], "a probe file under evals/advice/ for a declared profile is accepted");
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], policy, files, arms: [arm("a", { deployer: "evals/advice/p/manager.md" }), arm("b", { manager: "evals/advice/p/missing.md" }), arm("c", { manager: "../outside.md" }), arm("d", { manager: "evals/advice/p/empty.md" }), arm("e", { manager: "evals/advice/p/long.md" })] }), [
+    'evals/pf.json: arm "a" overrides the advice of profile "deployer", which the definition does not declare (manager)',
+    'evals/pf.json: arm "b" overrides manager\'s advice with "evals/advice/p/missing.md", which does not exist',
+    'evals/pf.json: arm "c" overrides manager\'s advice with "../outside.md", which is not a file under the definition',
+    'evals/pf.json: arm "d" overrides manager\'s advice with "evals/advice/p/empty.md", which is empty',
+    'evals/pf.json: arm "e" overrides manager\'s advice with "evals/advice/p/long.md", which renders to 122 characters over the 100 a unit\'s prompt carries (`advice.maxChars`): a probe of advice a unit would not see whole measures the cut, not the edit',
+  ]);
+  const tasks = ["contracts/p1.json", "contracts/p2.json"];
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], tasks, heldOut: ["contracts/p2.json"] }), []);
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], tasks, heldOut: ["contracts/p3.json", "contracts/p2.json", "contracts/p2.json"] }), [
+    'evals/pf.json: holds out "contracts/p3.json", which is not one of its tasks',
+    "evals/pf.json: holds out a task twice",
+  ]);
+  assert.deepEqual(await metricsDefinition(t, { suiteMetrics: ["closed"], tasks, heldOut: tasks }), ["evals/pf.json: holds out every task: a held-out slice is the part a proposal was not derived from, so something must be left to derive it from"]);
 });
 
 test("declared metrics: a workload's declaration with a grader file under the definition, pre-registered by a suite with one optimisation target, passes the definition check", async (t) => {

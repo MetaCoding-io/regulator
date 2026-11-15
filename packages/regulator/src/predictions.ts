@@ -99,7 +99,10 @@ export function unitGrader(exec: Exec, options: UnitGraderOptions): (metric: str
       case "retries":
       case "escalations":
       case "invariantViolations":
-      case "refusals": {
+      case "refusals":
+      case "cacheWrite":
+      case "cost":
+      case "cacheShare": {
         const trajectory = await unitTrajectory(options.repo, options.unitId);
         const graded = trajectory.graders.find((g) => g.grader === metric);
         if (graded) return graded;

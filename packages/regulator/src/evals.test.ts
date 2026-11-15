@@ -259,7 +259,7 @@ test("d7-archive is shaped like the other six: the same fixed decisions, a deleg
   const { contractForArm } = await import("./evals.js");
   const suite = await suiteP;
   assert.deepEqual(suite.tasks.slice(-2), ["contracts/drift/d6-cleanup.json", "contracts/drift/d7-archive.json"], "d7 runs after d6, which is left as it was");
-  assert.equal(suite.version, 2, "the task list changed, so the suite's version did");
+  assert.equal(suite.version, 3, "the task list changed (#201 item 11, version 2) and then the pre-registered metrics (#200, version 3), so the suite's version did");
   const [d6, d7] = await Promise.all(suite.tasks.slice(-2).map((f) => loadContract(path.join(LAB_ROOT, f))));
   assert.deepEqual(d7!.fixed, d6!.fixed);
   assert.deepEqual(d7!.delegated.map((d) => d.id), ["d-fact", "d-tests"]);
@@ -336,13 +336,17 @@ test("the scripted reference on the poisoned-memory fixture: the seeded fact is 
 test("the committed reports validate, report on the committed suite, and carry a person's interpretation that names where the gated arm lost", async () => {
   const dir = path.join(EVALS_DIR, "reports");
   const files = (await readdir(dir)).filter((f) => f.endsWith(".json")).sort();
-  assert.deepEqual(files, ["drift-live-2026-11-08.json", "drift-poisoned-memory-scripted-reference.json", "drift-scripted-confident.json", "drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-self-certifier.json", "drift-scripted-sloppy.json"]);
+  assert.deepEqual(files, ["drift-live-2026-11-08.json", "drift-poisoned-memory-scripted-reference.json", "drift-probe-scripted-reference.json", "drift-scripted-confident.json", "drift-scripted-drifter.json", "drift-scripted-reference.json", "drift-scripted-self-certifier.json", "drift-scripted-sloppy.json"]);
   for (const file of files) {
     const report: unknown = JSON.parse(await readFile(path.join(dir, file), "utf8"));
     assert.ok(isEvalReport(report), `${file} validates`);
     // The file name says which suite and which unit: <suite>-scripted-<behaviour>, or <suite>-live-<date>.
     assert.equal(report.suite.name, file.startsWith("drift-poisoned-memory-") ? "drift-poisoned-memory" : "drift");
-    if (report.fingerprint.dispatcher.startsWith("scripted:")) assert.equal(file, `${report.suite.name}-scripted-${report.fingerprint.dispatcher.slice("scripted:".length)}.json`);
+    // A probe (#200) says so in its name: <suite>-probe-scripted-<behaviour>.
+    if (report.fingerprint.dispatcher.startsWith("scripted:")) assert.equal(file, `${report.suite.name}-${report.probe ? "probe-" : ""}scripted-${report.fingerprint.dispatcher.slice("scripted:".length)}.json`);
+    // Every report written since #200 names the suite file it ran under; the first live report predates the field.
+    if (report.fingerprint.dispatcher.startsWith("scripted:")) assert.match(report.fingerprint.suite?.file ?? "", /^evals\/drift(-poisoned-memory)?\.json$/, `${file}: the fingerprint names the suite file`);
+    else assert.equal(report.fingerprint.suite, undefined, `${file}: never regenerated, so it cannot be a probe's baseline`);
     assert.ok(report.arms.length >= 2, `${file}: both arms`);
     assert.ok(!isUninterpreted(report), `${file}: not the placeholder regulator eval writes without --interpretation`);
     assert.match(report.fingerprint.harnessRevision, /^[0-9a-f]{40}$/);
@@ -374,12 +378,14 @@ test("the built-ins are unchanged: every committed drift report re-summarizes by
     assert.deepEqual(registered, metricNames(suite.metrics).filter((m) => registered.includes(m)), `${file}: its metrics are the suite's, in the suite's order`);
     const arms = summarizeArms(report.runs, registered);
     assert.deepEqual(arms, report.arms, `${file}: the per-arm summaries regenerate from the committed runs`);
-    assert.deepEqual(lifts(arms, suite.baseline), report.lifts, `${file}: the lifts regenerate`);
-    const tasks = report.tasks ? { tasks: taskTable(report.runs, registered, suite.baseline) } : {};
-    const baseline = report.baseline ? { baseline: baselineCheck(report.runs, registered, suite.baseline)! } : {};
+    // A probe's baseline is the arm it reran beside the change (#200), not the suite's.
+    const against = report.probe?.baseline.arm ?? suite.baseline;
+    assert.deepEqual(lifts(arms, against), report.lifts, `${file}: the lifts regenerate`);
+    const tasks = report.tasks ? { tasks: taskTable(report.runs, registered, against) } : {};
+    const baseline = report.baseline ? { baseline: baselineCheck(report.runs, registered, against)! } : {};
     if (report.tasks) assert.deepEqual(tasks.tasks, report.tasks, `${file}: the per-task table regenerates`);
     if (report.baseline) assert.deepEqual(baseline.baseline, report.baseline, `${file}: the baseline check regenerates`);
-    assert.equal(`${JSON.stringify({ ...report, arms, lifts: lifts(arms, suite.baseline), ...tasks, ...baseline }, null, 2)}\n`, bytes, `${file}: byte-identical`);
+    assert.equal(`${JSON.stringify({ ...report, arms, lifts: lifts(arms, against), ...tasks, ...baseline }, null, 2)}\n`, bytes, `${file}: byte-identical`);
     if (report.fingerprint.dispatcher === "pi") {
       // The first live report predates the field and is never regenerated: computed from its runs, it is cost-only, as its interpretation says.
       assert.equal(report.baseline, undefined);
@@ -493,4 +499,92 @@ test("a model-tier arm (#201) is dispatched under the route it names and every o
   const sonnetOnly = [policy.models.default.primary];
   assert.deepEqual(unavailablePrimaries(contracts, policy, sonnetOnly), [], "without arms, the policy's own routing");
   assert.deepEqual(unavailablePrimaries(contracts, policy, sonnetOnly, [control, tier]), [{ unitType: "implement", primary: policy.models.byUnitType!.research!.primary, fallbacksAvailable: [], arms: ["tier"] }], "the tier arm's primary is the one the shell cannot run, and the refusal names the arm");
+});
+
+test("cost and cacheShare (#200) are graded from the attempts' ledgers: cost sums the provider's figure, cacheShare is cache read over the whole input over the ledgers that keep the uncached input, and a unit with no ledger (a scripted one) gets the observation cacheWrite gives; neither is an outcome metric", async (t) => {
+  const { BUILT_IN_METRIC_DIRECTIONS, OUTCOME_METRICS } = await import("@metacoding.io/regulator-protocol");
+  const { unitTrajectory } = await import("./graders.js");
+  const { loadContract } = await import("./contract-file.js");
+  assert.deepEqual([BUILT_IN_METRIC_DIRECTIONS.cost, BUILT_IN_METRIC_DIRECTIONS.cacheShare], ["lower", "higher"]);
+  assert.ok(!(OUTCOME_METRICS as readonly string[]).includes("cost") && !(OUTCOME_METRICS as readonly string[]).includes("cacheShare"), "both read the records of how a unit got there, not the environment it left");
+  const repo = await mkdtemp(path.join(tmpdir(), "regulator-cost-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const contract = await loadContract(path.join(LAB_ROOT, "contracts", "drift", "d1-fix.json"));
+  const store = new ExecutionStore(repo);
+  await store.createUnit(contract);
+  let r = await unitTrajectory(repo, contract.unitId);
+  for (const m of ["cost", "cacheShare", "cacheWrite"]) {
+    assert.equal(r.metrics[m], 0, `${m}: nothing metered`);
+    assert.equal(r.graders.find((g) => g.grader === m)!.observation, "no ledger: a scripted unit runs no session, so nothing was metered", `${m} says what cacheWrite says`);
+  }
+  const ledger = (attempt: number, consumed: Record<string, number>) => ({ unitId: contract.unitId, attempt, ceiling: { tokens: 400_000, wallClockMs: 1_200_000, turns: 60 }, consumed: { tokens: 1000, cost: 0.25, wallClockMs: 1000, turns: 2, ...consumed }, startedAt: "2026-11-15T06:00:00.000Z", updatedAt: "2026-11-15T06:01:00.000Z", models: ["m"], compactions: [] });
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: "2026-11-15T06:00:00.000Z", endedAt: "2026-11-15T06:01:00.000Z", outcome: "check-failure" });
+  // An attempt metered before the uncached input was kept: it costs, and it has no share.
+  await store.writeBudget(ledger(1, { cacheRead: 300, cacheWrite: 100 }));
+  r = await unitTrajectory(repo, contract.unitId);
+  assert.equal(r.metrics.cost, 0.25);
+  assert.equal(r.metrics.cacheShare, 0);
+  assert.equal(r.graders.find((g) => g.grader === "cacheShare")!.observation, "no cache share: none of 1 ledger(s) kept the uncached input");
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: "2026-11-15T06:01:00.000Z", endedAt: "2026-11-15T06:02:00.000Z", outcome: "reported" });
+  await store.writeBudget(ledger(2, { cacheRead: 600, cacheWrite: 100, input: 300, cost: 0.5 }));
+  r = await unitTrajectory(repo, contract.unitId);
+  assert.equal(r.metrics.cost, 0.75, "summed over the attempts");
+  assert.equal(r.metrics.cacheShare, 0.6, "600 read of 300 + 600 + 100 input, over the ledger that keeps the input");
+  assert.equal(r.graders.find((g) => g.grader === "cacheShare")!.observation, "600 of 1000 input token(s) read from the cache over 1 of 2 ledger(s); the rest were written before the ledger kept the uncached input");
+});
+
+test("a probe (#200) reruns one arm beside the same arm with one advice file replaced, under the suite file its baseline report names: a baseline written before the fingerprint carried the suite's hash is refused, so is a suite that hashes differently, an arm the baseline did not run and a metric the suite does not pre-register; the two arms' instances differ in the advice seeded and nothing else, and so do their runs", async (t) => {
+  const { runProbe } = await import("./evals.js");
+  const suite = await suiteP;
+  const file = path.join(EVALS_DIR, "reports", "drift-scripted-reference.json");
+  const bytes = await readFile(file);
+  const committed = JSON.parse(bytes.toString("utf8")) as EvalReport;
+  assert.deepEqual(committed.fingerprint.suite?.file, "evals/drift.json", "the regenerated reports name the suite file they ran under");
+  const advice = { implement: "evals/advice/inherited-suite/implement.md" };
+  const base = { suite, suiteFile: "evals/drift.json", baselineArm: "treatment", probeArm: "probe", advice, owner: "eval", now, dispatcher: "scripted:reference", model: "none", interpretation: "t", interpretedBy: "t", dispatcherFor: scriptedDispatchers(gitExec, "reference", now) };
+  const without = { ...committed, fingerprint: { ...committed.fingerprint } };
+  delete without.fingerprint.suite;
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/old.json", bytes: JSON.stringify(without) } }), /evals\/reports\/old\.json was written before a report's fingerprint carried its suite file's hash.*cannot be a probe's baseline/);
+  const other = { ...committed, fingerprint: { ...committed.fingerprint, suite: { file: "evals/drift.json", sha256: "0".repeat(64) } } };
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/x.json", bytes: JSON.stringify(other) } }), /the probe must run under the suite its baseline ran under: evals\/reports\/x\.json names evals\/drift\.json at 000000000000…, and evals\/drift\.json is now [0-9a-f]{12}…\. A harness-edit and a change to the suite it is probed under are not one change/);
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, baselineArm: "model-tier" }), /has no arm "model-tier"; the probe reruns an arm the baseline ran/);
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, metric: "workload:portfolio/turnover" }), /the prediction stakes "workload:portfolio\/turnover", which suite drift v3 does not pre-register/);
+
+  // One repetition of the first two tasks, kept, so the instances can be compared file for file.
+  const short = { ...suite, tasks: suite.tasks.slice(0, 2), repetitions: 1 };
+  const instances: Record<string, string> = {};
+  const report = await runProbe(gitExec, { ...base, suite: short, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, keepInstances: true, onRun: (run, instance) => { instances[run.arm] = instance; } });
+  t.after(() => Promise.all(Object.values(instances).map((i) => rm(path.dirname(i), { recursive: true, force: true }))));
+  assert.ok(isEvalReport(report));
+  assert.deepEqual(report.arms.map((a) => a.arm), ["treatment", "probe"]);
+  assert.deepEqual(report.probe?.baseline, { file: "evals/reports/drift-scripted-reference.json", sha256: (await import("node:crypto")).createHash("sha256").update(bytes).digest("hex"), arm: "treatment" });
+  assert.deepEqual(report.probe?.advice.map((a) => [a.profile, a.file]), [["implement", "evals/advice/inherited-suite/implement.md"]]);
+  assert.deepEqual(report.fingerprint.adviceByArm, { probe: report.probe!.advice }, "the arm's fingerprint carries the override's hash; the baseline arm overrides nothing");
+  assert.deepEqual(report.probe?.cost, { total: 0, byArm: { treatment: 0, probe: 0 }, runs: 4 }, "a scripted probe costs nothing: no ledger");
+  assert.equal(report.probe?.binding, undefined);
+  assert.equal(report.probe?.heldOut, undefined, "the drift suite declares no held-out slice");
+  const root = async (instance: string) => (await gitExec("git", ["rev-list", "--max-parents=0", "HEAD"], { cwd: instance })).stdout.trim();
+  const tree = async (instance: string) => (await gitExec("git", ["ls-tree", "-r", await root(instance)], { cwd: instance })).stdout.split("\n").filter(Boolean);
+  const [a, b] = [await tree(instances.treatment!), await tree(instances.probe!)];
+  const differing = [...new Set([...a.filter((l) => !b.includes(l)), ...b.filter((l) => !a.includes(l))].map((l) => l.split("\t")[1]))];
+  assert.deepEqual(differing, ["regulator/advice/implement.md"], "the fixture commits differ in the advice file the probe replaced, and in nothing else");
+  assert.equal(await readFile(path.join(instances.probe!, "regulator", "advice", "implement.md"), "utf8"), await readFile(path.join(LAB_ROOT, advice.implement), "utf8"));
+  const strip = (run: EvalRun) => ({ task: run.task, outcome: run.outcome, metrics: { ...run.metrics, wallClockMs: 0 }, graders: run.graders.filter((g) => g.grader !== "wallClockMs").map((g) => g.grader) });
+  assert.deepEqual(report.runs.filter((r) => r.arm === "probe").map(strip), report.runs.filter((r) => r.arm === "treatment").map(strip), "a scripted unit reads no advice: the runs are the same, wall-clock aside");
+});
+
+test("the committed scripted probe (#200) is the plumbing test: a probe over the drift suite held to the committed reference report by hash, the treatment arm beside itself with the implement advice replaced, every run of the probe arm equal to its twin under the treatment but for wall-clock, and an interpretation that says it is plumbing", async () => {
+  const bytes = await readFile(path.join(EVALS_DIR, "reports", "drift-probe-scripted-reference.json"), "utf8");
+  const report = JSON.parse(bytes) as EvalReport;
+  assert.ok(isEvalReport(report) && report.probe);
+  const baseline = await readFile(path.join(LAB_ROOT, report.probe.baseline.file));
+  assert.equal(report.probe.baseline.sha256, (await import("node:crypto")).createHash("sha256").update(baseline).digest("hex"), "held to the committed reference report as it is: regenerate the probe after the reference");
+  assert.deepEqual(report.fingerprint.suite, (JSON.parse(baseline.toString("utf8")) as EvalReport).fingerprint.suite, "under the suite file the baseline ran under");
+  const { fileSha256 } = await import("@metacoding.io/regulator-core");
+  assert.equal(report.fingerprint.suite?.sha256, await fileSha256(LAB_ROOT, "evals/drift.json"), "and that is the suite file as committed");
+  for (const a of report.probe.advice) assert.equal(a.sha256, await fileSha256(LAB_ROOT, a.file), `${a.file} is the file the probe ran`);
+  const twin = (arm: string) => report.runs.filter((r) => r.arm === arm).map((r) => ({ repetition: r.repetition, task: r.task, outcome: r.outcome, metrics: { ...r.metrics, wallClockMs: 0 } }));
+  assert.deepEqual(twin(report.probe.arm), twin(report.probe.baseline.arm));
+  assert.match(report.interpretation, /plumbing/);
+  assert.match(report.interpretation, /scripted/i);
 });

@@ -401,14 +401,15 @@ export function renderStatusText(view: StatusView): string {
     lines.push(`  memory: ${current.length} current of ${i.memory.length}`);
     for (const m of current) lines.push(`    ${m.id.slice(0, 8)}  ${m.subject}: ${m.note}  (by ${m.recordedBy}${m.unit ? ` in ${m.unit}` : ""}; review by ${m.reviewBy.slice(0, 10)})`);
     const openPredictions = i.predictions.filter((p) => p.status === "open");
-    const precision = precisionOf(i.predictions.flatMap((p) => p.horizons.flatMap((h) => h.resolutions)));
-    lines.push(`  predictions: ${openPredictions.length} open of ${i.predictions.length}${precision.resolved ? `; ${precision.confirmed} confirmed, ${precision.disconfirmed} disconfirmed, ${precision.inconclusive} inconclusive of ${precision.resolved} resolved (precision ${precision.precision!.toFixed(2)}; inconclusive counts against)` : ""}`);
+    const precision = precisionOf(i.predictions.flatMap((p) => p.horizons.flatMap((h) => h.resolutions)), i.predictions.flatMap((p) => p.refusals));
+    lines.push(`  predictions: ${openPredictions.length} open of ${i.predictions.length}${precision.resolved ? `; ${precision.confirmed} confirmed, ${precision.disconfirmed} disconfirmed, ${precision.inconclusive} inconclusive of ${precision.resolved} resolved (precision ${precision.precision!.toFixed(2)}; inconclusive counts against)` : ""}${precision.refusals ? `; ${precision.refusals} accept(s) refused by the probe rule` : ""}`);
     for (const p of i.predictions) {
       const horizons = p.horizons.map((h) => h.horizon.kind === "live"
         ? `live ${h.status}: ${h.resolutions.length}/${h.horizon.count} ${h.horizon.unitTypes.join("|")} unit(s)${h.resolutions.length ? ` (${h.resolutions.map((r) => `${"unit" in r.resolvedBy ? r.resolvedBy.unit : "report"} ${r.outcome}`).join(", ")})` : ""}`
         : `probe ${h.status}${h.resolutions.length ? ` (${h.resolutions[0]!.outcome})` : ""}`).join("; ");
       const decided = p.proposals.map((x) => `${x.messageId.slice(0, 8)} ${x.disposition ?? x.status ?? "unrouted"}`).join(", ");
-      lines.push(`    ${p.status.padEnd(17)} ${p.signal.id.slice(0, 8)}  ${p.prediction.metric} ${p.prediction.direction} by ${p.prediction.magnitude} (p=${p.prediction.probability})  ${horizons}${decided ? `  bet on by ${decided}` : ""}  ${p.signal.subject}`);
+      const refused = p.refusals.length ? `  refused ${p.refusals.map((r) => r.code).join(", ")}` : "";
+      lines.push(`    ${p.status.padEnd(17)} ${p.signal.id.slice(0, 8)}  ${p.prediction.metric} ${p.prediction.direction} by ${p.prediction.magnitude} (p=${p.prediction.probability})  ${horizons}${decided ? `  bet on by ${decided}` : ""}${refused}  ${p.signal.subject}`);
     }
     lines.push(`  unrouted signals: ${i.signals.length}`);
     for (const signal of i.signals) lines.push(`    ${signal.kind}  ${signal.source}→${signal.destination}  ${signal.subject}${"unit" in signal && signal.unit ? `  (unit ${signal.unit})` : ""}`);

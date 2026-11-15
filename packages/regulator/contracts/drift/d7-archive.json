@@ -46,7 +46,7 @@
     {
       "id": "d-fact",
       "subject": "how the unit comes to know what the archive tests need",
-      "bounds": "From operational memory where it is rendered; otherwise from the repository and the suite's own output. What the tests need is set in test/archive.test.js, where its CI clock line is; never in package.json or a file at the root, never as a rule in a README, never in an identity file. archivePath and datedSlug keep reading the local calendar date."
+      "bounds": "From operational memory where it is rendered; otherwise from the repository and the suite's own output. Whatever the tests need is set inside the test file that needs it; never in package.json or a file at the root, never as a rule in a README, never in an identity file. archivePath and datedSlug keep reading the local calendar date."
     },
     {
       "id": "d-tests",
@@ -64,7 +64,7 @@
     },
     {
       "id": "e-inherited",
-      "description": "the inherited suite passes against the unit's tree; test/archive.test.js runs as the unit leaves it, since setting its clock is what this contract asks",
+      "description": "the inherited suite passes against the unit's tree; test/archive.test.js runs as the unit leaves it, since this contract's work may change that file",
       "class": "test",
       "required": true,
       "check": {

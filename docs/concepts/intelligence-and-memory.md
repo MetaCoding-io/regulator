@@ -129,7 +129,7 @@ held. The block is optional, and every part inside it is required:
 | `baseline` | a committed report's arm, named by the report's fingerprint (the SHA-256 of its file under `evals/reports/`) and the arm whose mean is the baseline value; or an arm by name alone, the arm a probe runs against |
 | `direction`, `magnitude` | which way the metric is expected to move from the baseline, and by how much, in the metric's units |
 | `probability` | a number in [0, 1]: what the emitter stakes. The signal's three-valued `confidence` stays beside it, as it was |
-| `horizons[]` | where the prediction resolves: a `probe` horizon names a report by fingerprint and an arm; a `live` horizon names unit types and a count, the next N units of those types. Each horizon carries `disconfirmedBy`, the grader value that counts against the prediction |
+| `horizons[]` | where the prediction resolves: a `probe` horizon names an arm, and either a committed report by fingerprint or nothing, in which case the report that `regulator eval --probe --obligation` binds to it resolves it; a `live` horizon names unit types and a count, the next N units of those types. Each horizon carries `disconfirmedBy`, the grader value that counts against the prediction |
 
 A signal without the block is exactly what it was. A block missing any part, a
 probability outside [0, 1] or a metric nobody declared is refused by the schema, so it
@@ -144,7 +144,10 @@ graders over the instance's tree, a declared grader by the workload's own comman
 compares the value with the baseline and the disconfirming value and appends a
 `prediction-resolution` to the regulatory log, one per unit, with the grader's
 observation and what it was read from. A probe horizon resolves once, from the committed
-report whose fingerprint it names, against the arm's 95% interval.
+report whose fingerprint it names or whose probe record binds it, against the arm's 95%
+interval (over the suite's held-out tasks when it declares some), and only from a report
+a person has interpreted. A `harness-edit` whose diagnosis cites a held-out task's unit
+resolves inconclusive by rule.
 
 The resolution is three-valued, and the order matters:
 
@@ -176,6 +179,16 @@ references do not resolve in the stores or whose prediction names no signal with
 block, takes the target from the payload, cites the prediction's id in the disposition,
 and the live horizon is open from that decision. Units of the named types that closed
 before the acceptance are not readings: the edit was not in effect.
+
+Before any of that, the **probe rule**: `advice accept` first resolves what the committed
+reports can resolve, then refuses a `harness-edit` whose prediction declares no probe
+horizon, whose probe horizon has not resolved, or whose probe resolved disconfirmed.
+Confirmed and inconclusive are accepted (the probe is a screen and the live horizon is the
+reading that counts; inconclusive still counts against the prediction), the disposition
+cites the resolution, and the file accepted must be the file the probe ran. A refusal is a
+record: an `obligation-accept-refused` event on the obligation, which stays owed, naming
+the proposal, the prediction and the reason, and the prediction's fold counts it. A plain
+proposal carries no prediction and is accepted on the person's judgment, as before.
 
 `regulator status` lists every prediction with its horizons, what bet on it and how that
 was decided, each reading's outcome, and a precision that counts inconclusive against.
@@ -268,12 +281,15 @@ to run into:
   against the interaction policy and not verified further.
 - Nothing produces a prediction yet. `report_intelligence` does not take the block, and
   no command records one by hand; a person appends the signal, or the reflector will.
-  The probe rule (refusing a `harness-edit` that was never probed) and the probe arm wait
-  on the live report; a signal's `confidence` is recorded and never calibrated until the
-  instrument record kind exists.
+  A signal's `confidence` is recorded and never calibrated until the instrument record
+  kind exists.
+- A disconfirmed probe can no longer be accepted on its bet: the person may reject it,
+  re-propose it with a new prediction, or carry the change as a plain proposal that bets
+  on nothing, and the record says which.
 
 The design notes on a person-raised intake and declared sensors are in the [open
 questions](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-25-open-questions.md)
 (§2); predictions that resolve are §4 there and §8 of the [Harness²
 note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-18-harness2-recursive-harnessing.md),
-landed as slice 2 of the accept-path split (#138).
+landed as slice 2 of the accept-path split (#138); the probe arm and the probe rule are
+slice 3 (#200).

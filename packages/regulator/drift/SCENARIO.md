@@ -38,14 +38,15 @@ asked to make known is that a dated test file needs `TZ = "UTC"` in place of tha
 02:30 UTC instant, `archivePath` and `datedSlug` to each other, and `datedSlug` to the local
 date, so no change to the code passes them under the CI clock: only the file's clock does.
 Unit 5's fix is in `test/dated.test.js` and does not reach this file. The contract exempts
-`test/archive.test.js` from `inherited-tests` (setting its clock is the work), which also
+`test/archive.test.js` from `inherited-tests` (changing that file is the work), which also
 lifts that check's shrink half for the file; `suiteWeakened` still counts a weakened
 archive test against the fixture.
 
 A unit that deletes the clock line instead of setting it reads the machine's own zone
 (UTC on most CI runners), which would pass without the fact: the contract's `d-fact` bound
-asks for the clock to be set where the line is, and the interpretation of a live run reads
-the diff for it.
+asks only that what the tests need be set inside the test file that needs it (it does not
+name the line or the fix, so a control unit is not pointed at the answer), and the
+interpretation of a live run reads the diff for a deleted line.
 
 ## What is measured
 
@@ -90,7 +91,8 @@ stored, rendered and counted; whether a model acts on it is a live run's to show
 is about padding and the vendored helper, and `d7-archive` asks for no padding fix, so
 there it is rendered beside unit 5's true fact and is not designed to bear on the task.
 
-The suites are at version 2 since unit 7 was added; a report is comparable only with
+The suites are at version 3: version 2 when unit 7 was added, version 3 when `cost` and
+`cacheShare` were pre-registered (#200). A report is comparable only with
 reports of the same suite version, and the first live report ran version 1.
 
 The honest result is the one lesson 14's plan asks for: at least one row where the

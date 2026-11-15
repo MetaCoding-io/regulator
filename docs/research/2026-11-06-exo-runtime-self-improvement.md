@@ -171,7 +171,12 @@ Ordered by cost.
    it onto the spans under the GenAI cached-input attribute if the pinned semantic
    conventions have one, else under a `vsm.` attribute. Level 2, small, and it gives the
    reflector's prediction record a metric worth betting on: a `harness-edit` to advice
-   that promises a higher cache share is the shape of Exo's own best edit.
+   that promises a higher cache share is the shape of Exo's own best edit. **Landed
+   (2026-11-15)** with #200: `cacheShare` is a built-in metric (direction higher), `cacheRead`
+   over the whole input summed over the attempts' ledgers, with the budget ledger keeping the
+   uncached `input` it needs; `regulator status` (through `summarizeLedger`) shows the share
+   beside the cache counts. Neither the control room's own cell nor the span projection was
+   changed.
 
 2. **Cost as a metric, and two costs on the probe report.** `EVAL_METRICS` has `tokens`
    and no `cost`, though the ledger carries the provider's figure. Exo reports *held-out
@@ -181,7 +186,11 @@ Ordered by cost.
    the probe arm, and the held-out cost of the units after acceptance, with the crossover
    as a figure in the report. That is RQ4 of [Paper 1](2026-10-18-paper-regulating-the-regulator.md)
    and the Pareto row the Harness² note asked for; Exo shows the honest version of it,
-   quests included.
+   quests included. **Landed in part (2026-11-15)** with #200: `cost` is a built-in metric
+   (the ledger's provider figure, direction lower), and a probe report carries the cost of the
+   probe run (`probe.cost`, total and per arm). The held-out cost after acceptance is read from
+   the live horizon of a prediction on `cost`, one unit at a time; the `reflect` unit's cost
+   waits for the reflector, and no crossover figure is drawn.
 
 3. **The unit's own ledger as a read-only tool.** Exo's reporting tool is the mechanism
    behind its claim that "runtime legibility enables better decision making" (§7). The
@@ -206,6 +215,9 @@ Ordered by cost.
    unit type it routes), checked by `regulator check` and read by the primary check; each
    arm's summary and the fingerprint name the models observed per arm; `model-tier` in the
    drift suite is the treatment on the `research` route. #200's probe arm cites the field.
+   **Landed (2026-11-15)**, #200: a probe reruns its baseline arm as declared, so a probe built
+   on a model-tier arm runs on that arm's route, and the probe report names the models each arm
+   observed as every report does.
 
 5. **Agent-built tools: domain until reused, declared when promoted.** Exo's efficiency
    came from procedures the agent wrote and reused, not from prompt edits (§5.2.1, §5.4.2).
@@ -226,7 +238,12 @@ Ordered by cost.
    checks (`advice accept` refusing an unprobed edit, `check` refusing a declaration). A
    refused activation is evidence too, and the prediction record's "inconclusive counts
    against" rule wants it. A line in the regulatory log for a refused accept, with the
-   reason, is level 2 and belongs with slice 3.
+   reason, is level 2 and belongs with slice 3. **Landed (2026-11-15)** with #200: a refusal
+   by the probe rule appends `obligation-accept-refused` to the regulatory log (the obligation,
+   the proposal, the prediction, the rule, a code and the reason), as an acceptance appends a
+   disposition; the obligation stays owed, and the prediction's fold counts the refusals beside
+   its outcomes. `check` refusing a declaration is not recorded this way: a declaration lands
+   by a merged change, not by an accept command.
 
 7. **Exo's formalism, for #103.** The triple `(d, e, π)`, the protected operator `K`, the
    guardian `G`, and the induction over transitions (§3.2, §A) are a cleaner scaffold

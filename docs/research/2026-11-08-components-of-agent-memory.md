@@ -225,7 +225,7 @@ loads only the first 200 lines or 25 KB of `MEMORY.md` and treats it as an index
    verdict depends on the host. The measure is `d7`'s row in the per-task table (attempts,
    retries, refusals) and no metric was added; `memoryFacts` stays a count. Scripted, the
    reference takes one attempt where memory is rendered and two under control, which is the
-   plumbing and the grader; the live reading is #201's. Both drift suites are version 2.*
+   plumbing and the grader; the live reading is #201's. Both drift suites moved to version 2 with it (and to version 3 the same day, when #200 pre-registered `cost` and `cacheShare`).*
 5. **Fold by subject at render time.** Before any representation layer, the cheapest
    consolidation: when several current facts share a subject, render the newest with a
    count of the earlier ones, and let `regulator memory` show the history. Level 2, in

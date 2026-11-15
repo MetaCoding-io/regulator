@@ -196,10 +196,15 @@ export const INSTANCE_SEEDS: ReadonlyArray<{ seed: string; instance: string }> =
  * the harness watches for. A fixture that carries a memory seed (#130) has
  * it recorded into the instance's store after the commit and never committed.
  */
-export async function initFixture(exec: Exec, source: string, dest: string, now: () => number = Date.now): Promise<string> {
+export async function initFixture(exec: Exec, source: string, dest: string, now: () => number = Date.now, options: { advice?: Readonly<Record<string, string>> } = {}): Promise<string> {
   await cp(source, dest, { recursive: true, errorOnExist: true, force: false });
   const seed = await readMemorySeed(dest);
   for (const { seed, instance } of INSTANCE_SEEDS) await cp(seed, path.join(dest, instance), { recursive: true, force: false });
+  // A probe arm's advice override (#200): the named profile's seed replaced by the arm's file before the fixture commit, so the
+  // instance starts from it and nothing after the commit — no grader, no closeout — sees the difference as a unit's change.
+  for (const [profile, file] of Object.entries(options.advice ?? {}).sort(([a], [b]) => a.localeCompare(b))) {
+    await writeFile(path.join(dest, ADVICE_RELATIVE_DIR, `${profile}.md`), await readFile(file, "utf8"), "utf8");
+  }
   const canaries = await canariesFromEnv(path.join(dest, ".env"));
   if (canaries.length) {
     await mkdir(path.join(dest, REGULATOR_DIR), { recursive: true });

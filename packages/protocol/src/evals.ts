@@ -49,14 +49,22 @@ export const EvalArmSchema = Type.Object({
    * budget policy declares; a run refuses a name the policy it runs under does not.
    */
   route: Type.Optional(Type.String({ pattern: "^[a-z][a-z0-9-]*$" })),
+  /**
+   * The advice override (#200, the accept-path split's slice 3): a map from a declared profile to an advice file under the
+   * definition, seeded into each of the arm's instances in place of the definition's `advice/<profile>.md`. An arm with one
+   * differs from the arm it was built from in that file and nothing else, which is what a probe of a `harness-edit` is.
+   * Probe files live under `evals/advice/` (the declaration class: an input to an eval, never a seed). `regulator check`
+   * refuses an undeclared profile, a missing file and one over `advice.maxChars`; the fingerprint carries each file's hash.
+   */
+  advice: Type.Optional(Type.Record(Type.String({ pattern: "^[a-z][a-z0-9-]*$" }), NonEmpty)),
 }, { additionalProperties: false });
 export type EvalArm = Static<typeof EvalArmSchema>;
 
-/** The built-in set: the sixteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
+/** The built-in set: the eighteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
 export const EVAL_METRICS = [
   "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
   "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
-  "cacheWrite",
+  "cacheWrite", "cost", "cacheShare",
 ] as const;
 export const BuiltInMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
 export type BuiltInMetric = Static<typeof BuiltInMetricSchema>;
@@ -75,7 +83,7 @@ export const BUILT_IN_METRIC_DIRECTIONS: Readonly<Record<(typeof EVAL_METRICS)[n
   closed: "higher", attempts: "lower", tokens: "lower", turns: "lower", wallClockMs: "lower", retries: "lower",
   escalations: "none", invariantViolations: "lower", boundaryViolations: "lower", signatureDrift: "lower",
   vocabularyDrift: "lower", memoryRules: "lower", memoryFacts: "none", refusals: "none", suiteWeakened: "lower",
-  cacheWrite: "lower",
+  cacheWrite: "lower", cost: "lower", cacheShare: "higher",
 };
 
 /**
@@ -125,6 +133,12 @@ export const EvalSuiteSchema = Type.Object({
   metrics: Type.Array(MetricEntrySchema, { minItems: 1 }),
   /** Which arm each other arm is compared against. */
   baseline: NonEmpty,
+  /**
+   * The held-out slice (#200, the Harness² note §9 item 1): task files, each one of `tasks`, that a probe reports its
+   * metric over and that a `harness-edit` probed under this suite may not be derived from. The tasks still run in order
+   * with the rest, since drift accumulates; only the probe's reading is restricted to them. Absent, a probe reads every task.
+   */
+  heldOut: Type.Optional(Type.Array(NonEmpty, { minItems: 1 })),
 }, { additionalProperties: false });
 export type EvalSuite = Static<typeof EvalSuiteSchema>;
 
@@ -175,6 +189,21 @@ export const GraderFingerprintSchema = Type.Object({
 }, { additionalProperties: false });
 export type GraderFingerprint = Static<typeof GraderFingerprintSchema>;
 
+/** A file under the definition, relative to its root, and the SHA-256 of its bytes. */
+export const FileHashSchema = Type.Object({
+  file: NonEmpty,
+  sha256: Type.String({ pattern: "^[0-9a-f]{64}$" }),
+}, { additionalProperties: false });
+export type FileHash = Static<typeof FileHashSchema>;
+
+/** One advice override of an arm as it ran: the profile whose seed it replaced, and the file that replaced it. */
+export const AdviceOverrideFingerprintSchema = Type.Object({
+  profile: Type.String({ pattern: "^[a-z][a-z0-9-]*$" }),
+  file: NonEmpty,
+  sha256: Type.String({ pattern: "^[0-9a-f]{64}$" }),
+}, { additionalProperties: false });
+export type AdviceOverrideFingerprint = Static<typeof AdviceOverrideFingerprintSchema>;
+
 /** Where the numbers came from: without this a result is a rumour. */
 export const EnvironmentFingerprintSchema = Type.Object({
   node: NonEmpty,
@@ -197,6 +226,14 @@ export const EnvironmentFingerprintSchema = Type.Object({
   graders: Type.Optional(Type.Array(GraderFingerprintSchema)),
   /** The models each arm's ledgers name, by arm (#201): arms can differ by model once an arm names a route. Absent for a scripted run. */
   modelsByArm: Type.Optional(Type.Record(Type.String(), Type.Array(NonEmpty))),
+  /**
+   * The suite file the run read and its SHA-256 (#200): what a probe is held to, since a `harness-edit` probed under a
+   * suite its author also changed grades itself (Harness² note §7). Absent on a report written before the field, which
+   * therefore cannot be a probe's baseline.
+   */
+  suite: Type.Optional(FileHashSchema),
+  /** Each arm's advice override as it ran (#200): the profile, the file under the definition and its SHA-256. Absent when no arm overrides advice. */
+  adviceByArm: Type.Optional(Type.Record(Type.String(), Type.Array(AdviceOverrideFingerprintSchema, { minItems: 1 }))),
 }, { additionalProperties: false });
 export type EnvironmentFingerprint = Static<typeof EnvironmentFingerprintSchema>;
 
@@ -266,6 +303,35 @@ export const BaselineCheckSchema = Type.Object({
 }, { additionalProperties: false });
 export type BaselineCheck = Static<typeof BaselineCheckSchema>;
 
+/**
+ * What a probe run records (#200, the accept-path split's slice 3): the committed report it was run against and the arm
+ * there it reproduces, the suite it ran under (equal by hash to the baseline's), the arm under the change and the advice
+ * that arm was seeded with, the `harness-edit` it tests when it was bound to one, the held-out reading, and what the probe
+ * cost. A probe horizon with no `report` resolves against the report whose `binding` names its prediction and index.
+ */
+export const ProbeRecordSchema = Type.Object({
+  /** The committed report the probe is held to, by file and hash, and the arm of it the probe reruns beside the change. */
+  baseline: Type.Object({ file: NonEmpty, sha256: Type.String({ pattern: "^[0-9a-f]{64}$" }), arm: NonEmpty }, { additionalProperties: false }),
+  /** The arm under the change: the baseline arm with the advice override, nothing else. */
+  arm: NonEmpty,
+  advice: Type.Array(AdviceOverrideFingerprintSchema, { minItems: 1 }),
+  /** The `harness-edit` the probe tests, when it was run from one: the obligation, the proposal's message, the prediction and the index of its probe horizon. */
+  binding: Type.Optional(Type.Object({
+    obligation: NonEmpty,
+    proposal: NonEmpty,
+    prediction: NonEmpty,
+    horizon: Type.Integer({ minimum: 0 }),
+  }, { additionalProperties: false })),
+  /** The suite's held-out slice and both arms summarized over its runs alone: what the probe horizon reads when the suite declares one. */
+  heldOut: Type.Optional(Type.Object({
+    tasks: Type.Array(Type.Object({ task: NonEmpty, unitId: NonEmpty, contract: NonEmpty }, { additionalProperties: false }), { minItems: 1 }),
+    arms: Type.Array(ArmSummarySchema),
+  }, { additionalProperties: false })),
+  /** The provider's cost of the probe run, summed over its runs' ledgers; 0 with no ledger (a scripted run). The held-out cost after acceptance is the live horizon's. */
+  cost: Type.Object({ total: Type.Number({ minimum: 0 }), byArm: Type.Record(Type.String(), Type.Number({ minimum: 0 })), runs: Type.Integer({ minimum: 0 }) }, { additionalProperties: false }),
+}, { additionalProperties: false });
+export type ProbeRecord = Static<typeof ProbeRecordSchema>;
+
 export const EvalReportSchema = Type.Object({
   suite: Type.Object({
     name: NonEmpty,
@@ -282,6 +348,8 @@ export const EvalReportSchema = Type.Object({
   tasks: Type.Optional(Type.Array(TaskSummarySchema)),
   /** Whether the baseline failed at all on the pre-registered outcome metrics (#201). Absent on an older report, or when the suite pre-registers no outcome metric. */
   baseline: Type.Optional(BaselineCheckSchema),
+  /** What a probe run records (#200); absent on every report that is not a probe. */
+  probe: Type.Optional(ProbeRecordSchema),
   /** A person's reading of the numbers, including where the gated arm lost. Required: a report without one is a table. */
   interpretation: NonEmpty,
   interpretedBy: NonEmpty,

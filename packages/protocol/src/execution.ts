@@ -279,6 +279,12 @@ const BudgetConsumedSchema = Type.Object({
    */
   cacheRead: Type.Optional(Type.Integer({ minimum: 0 })),
   cacheWrite: Type.Optional(Type.Integer({ minimum: 0 })),
+  /**
+   * Input tokens the provider read uncached, summed over the attempt's messages (#200): with `cacheRead` and `cacheWrite`
+   * it is the attempt's whole input, the denominator of the cache share. Part of `tokens`. Absent on a ledger written
+   * before it was kept; such a ledger has no cache share, not a zero one.
+   */
+  input: Type.Optional(Type.Integer({ minimum: 0 })),
 }, { additionalProperties: false });
 export type BudgetConsumed = Static<typeof BudgetConsumedSchema>;
 

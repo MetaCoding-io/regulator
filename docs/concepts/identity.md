@@ -117,8 +117,11 @@ by path (`regulator/advice/<profile>.md`); `regulator advice accept` writes the
 instance's copy under S5 authority and refuses, in order, a proposal not owed to S5, a
 person who may not act as S5, a dirty checkout, a `--file` that is not a declared
 profile's advice file or not the one the proposal named, and content that is empty or
-over the policy's `advice.maxChars`; `advice reject` changes nothing; `advice promote`
-carries the file to the seed. The two paths are separate on purpose: `identity accept`
+over the policy's `advice.maxChars`. A typed `harness-edit` meets one rule more, the
+probe rule: it is refused, and the refusal recorded, until the probe its prediction names
+has resolved confirmed or inconclusive from a committed report, and the file accepted must
+be the file the probe ran ([the probe arm](/concepts/evidence-about-the-regulators#the-probe-arm)).
+`advice reject` changes nothing; `advice promote` carries the file to the seed. The two paths are separate on purpose: `identity accept`
 takes its file from a closed list of four, `advice accept` from the declared profiles,
 and neither can write the other's directory or a profile's grant. A grant, a unit type,
 a check or a policy changes only by a merged change to the definition's repository, and

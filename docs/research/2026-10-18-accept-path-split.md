@@ -4,8 +4,10 @@
   `roadmap:0.2`: advice as a seeded file set, `DEFINITION_WRITERS`, `advice accept | reject |
   promote`, the three cards, DEBT rows 43 to 46); slice 2 landed ([#138](https://github.com/MetaCoding-io/regulator/issues/138):
   the prediction record, its resolution from the stores, the typed `harness-edit` payload, the
-  `prediction-resolution` card). Slices 3 and 4 of §8 stay designed here until each becomes an
-  issue; slice 3 is next, after #46.
+  `prediction-resolution` card); slice 3 landed 2026-11-15 ([#200](https://github.com/MetaCoding-io/regulator/issues/200):
+  the probe arm, the probe's binding to its horizon, the suite-hash rule, the held-out slice, the
+  probe rule and the refusal record, `cost` and `cacheShare`). Slice 4 of §8 stays designed here
+  until it becomes an issue; the reflector package (#108 slice 4) is next on the thread.
 - **Source:** the [Harness² note](2026-10-18-harness2-recursive-harnessing.md), §4 item 5
   (the split), §7 (the reflector) and §8 (a proposal's three records), and the code the
   split has to sit on, cited by file below.
@@ -194,7 +196,12 @@ Two rules that are not in `identity accept`:
   `advice accept` reads a `harness-edit` against the stores, refuses one whose parts do not
   resolve, cites the prediction in the disposition, and the live horizon is open from the
   decision. The first half, refusing an unprobed `harness-edit`, waits for the probe arm
-  (slice 3), since nothing produces a probe report yet.*
+  (slice 3), since nothing produces a probe report yet.* *Slice 3 landed the first half
+  (#200, 2026-11-15): `advice accept` resolves what the committed reports can resolve, then
+  refuses a `harness-edit` whose prediction declares no probe horizon, has one unresolved, or
+  has one resolved disconfirmed, appending the refusal to the regulatory log; it accepts one
+  whose every probe horizon resolved confirmed or inconclusive, cites the resolution, and
+  requires the accepted file to be the file the probe ran. §8 item 3 records the decisions.*
 - **The file must be the one proposed against.** `identity accept` lets the person point
   at any of the four files (`s5-decision` card, limitation 2). `advice accept` requires
   `--file` to equal the profile the proposal's `subject` names, because a `harness-edit`
@@ -288,7 +295,37 @@ Limitations that become `DEBT.md` rows:
 3. **The probe arm and the probe rule.** `EvalArmSchema` gains an optional `advice`
    override (a map from profile to file); `advice accept` refuses an unprobed
    `harness-edit`. Waits on the live report (#46), since a probe with no live baseline
-   resolves as inconclusive by construction.
+   resolves as inconclusive by construction. **Landed** 2026-11-15 as
+   [#200](https://github.com/MetaCoding-io/regulator/issues/200). The arm: an `advice` map from a
+   declared profile to a file under the definition, seeded in place of the seed before the
+   fixture commit, checked by `regulator check` (declared profile, file present, non-empty,
+   within `advice.maxChars`) and hashed into the fingerprint (`adviceByArm`); probe files live
+   under `evals/advice/`, in the declaration class, and are never seeded. The binding: a probe
+   is not written into the suite (that would change the suite file it is held to) but built
+   by `regulator eval <suite> --probe <baseline report> --advice <profile>=<file>`, which reruns
+   one arm of the baseline report beside the same arm with the file replaced; with
+   `--obligation`, the `harness-edit`'s prediction names both arms and the report's probe record
+   carries a `binding` (obligation, proposal, prediction, horizon index), and a probe horizon
+   with no `report` hash resolves against the committed, interpreted report that binds it, in
+   `resolvePredictions` as before. Older predictions that name a report by hash resolve as they
+   did. *Not taken:* re-issuing the prediction after the probe with the report's hash, since a
+   prediction written after its result is not a prediction. The suite rule: the fingerprint
+   carries the suite file's hash (`fingerprint.suite`), and a probe whose suite file hashes
+   differently from its baseline's, or whose baseline predates the field, is refused before it
+   runs; so the first live report cannot be a probe's baseline, and the first live probe needs a
+   live baseline under the current suite version (3). The held-out slice: a suite may declare `heldOut` tasks;
+   a probe then reads its metric over them alone, and resolves inconclusive by rule when the
+   `harness-edit`'s diagnosis cites a unit that ran a held-out task's contract. No shipped suite
+   declares one: declaring it in the drift suite would change no committed report's reading but
+   would change the suite file every report is held to, so the drift suite's slice is declared
+   when the first live probe is planned, and the rule is tested on a fixture. The rule: refused
+   with no probe horizon, an unresolved one, or a disconfirmed one; accepted on confirmed or
+   inconclusive (`probeRule` in core, a function over the folded prediction an acceptance policy
+   could read, §9). A refusal is an `obligation-accept-refused` event on the obligation, which
+   stays owed, and the prediction's fold counts refusals beside its outcomes. Two built-in
+   metrics, `cost` and `cacheShare` (the budget ledger gains the uncached `input`), are
+   pre-registered in both drift suites (version 3; version 2 was #201's seventh task), and the committed scripted probe
+   (`evals/reports/drift-probe-scripted-reference.json`) is the plumbing test.
 4. **The definition's repository as an instance** (§6), with the second host and the
    third workload.
 
