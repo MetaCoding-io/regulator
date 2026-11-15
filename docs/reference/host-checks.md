@@ -13,9 +13,15 @@ the tests is recorded beside this evidence, and it never counts as the evidence.
 | `run_tests` | the project's test command, discovered from `package.json` scripts or a `test/` directory | the command exits 0 in the unit's worktree |
 | `run_checks` | the project's check commands (lint, typecheck, build), discovered the same way | every command exits 0 |
 | `inherited-tests` | the base's test files and `package.json`, staged over the unit's tree and run, then compared with the base's own run at the merge base | the suite the unit inherited still passes against its tree, and no inherited test file shrank. A contract may `exempt` files it changes on purpose |
-| `identity-untouched` | a diff of the protected prefixes (the harness-owned directories `regulator/identity/` and `regulator/advice/`, the manifest's `protectedPaths`, and discovered conventions such as `vendor/`) between the base ref the unit branched from and its revision | nothing under a protected prefix changed |
+| `identity-untouched` | a diff of the protected prefixes (the harness-owned directories `regulator/identity/` and `regulator/advice/`, the manifest's `protectedPaths`, and the discovered conventions: `vendor/`, and `flake.nix`, `flake.lock`, `devenv.nix`, `devenv.lock` and `devenv.yaml` when present) between the base ref the unit branched from and its revision | nothing under a protected prefix changed. A contract that means to change the environment names the files on an expectation carrying `{ "kind": "identity-untouched", "exempt": [...] }`; only those five names are admitted, and the record binds to that expectation |
 | `export-signature` | for each contract expectation with an `export-signature` check, reads the named module and export | the export exists with the declared arity. The check observes the module's content itself and does not rely on the report |
 | `glossary-lint` | the words under "Words this instance does not use" in the instance's `GLOSSARY.md`, checked over the comment lines the unit added under the writable prefixes and over its branch's commit messages | none of the refused words appear in the comments. A refused word in a commit message fails the check too, unless the workload's entry says `{ "name": "glossary-lint", "options": { "commitMessages": "advisory" } }`; in that case it is recorded as evidence and as an `audit-finding` at `advisory`, and it refuses nothing. The software workload declares this option; the finance and portfolio workloads do not. Code identifiers are the project's business and are not read |
+
+Every record names the environment it ran in: `node`, `platform`, `arch` and, when one
+is found in the worktree the check ran in, the `toolchain` by hash (`nix-store`, `lock` or
+`package-lock`, tried in that order; see the [instance reference](/reference/instance)).
+Two records under different toolchains can be told apart; nothing compares the hash with
+a target platform's.
 
 ## What a check is not
 

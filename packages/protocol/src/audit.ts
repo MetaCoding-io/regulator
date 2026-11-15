@@ -15,6 +15,7 @@
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
 import { EvidenceClassSchema } from "./evidence.js";
+import { ToolchainSchema } from "./toolchain.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
 const ContractRef = Type.Object({ id: NonEmpty, version: Type.Integer({ minimum: 1 }) }, { additionalProperties: false });
@@ -26,6 +27,8 @@ export const EvidenceEnvironmentSchema = Type.Object({
   node: NonEmpty,
   platform: NonEmpty,
   arch: NonEmpty,
+  /** What the check ran under (#178), read from the worktree it ran in; absent when no source was found ("not recorded"). */
+  toolchain: Type.Optional(ToolchainSchema),
 }, { additionalProperties: false });
 export type EvidenceEnvironment = Static<typeof EvidenceEnvironmentSchema>;
 

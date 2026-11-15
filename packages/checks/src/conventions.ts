@@ -5,6 +5,7 @@
  */
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
+import { ENVIRONMENT_FILES } from "@metacoding.io/regulator-protocol";
 
 export interface Check {
   name: string;
@@ -64,6 +65,9 @@ export async function discoverConventions(cwd: string): Promise<ProjectConventio
   }
 
   if (await exists(path.join(cwd, "vendor"))) conventions.protectedPaths.push("vendor/");
+  // The files that define the environment the checks run under (#178), when present: a unit that changes its own
+  // toolchain is the self-certifier with a new target. A contract exempts one by name (`identity-untouched`'s `exempt`).
+  for (const file of ENVIRONMENT_FILES) if (await exists(path.join(cwd, file))) conventions.protectedPaths.push(file);
 
   for (const dir of conventions.sourceDirs) {
     // Sorted: readdir's order is the filesystem's, and the checks (and the evidence a report keeps) must not depend on it.

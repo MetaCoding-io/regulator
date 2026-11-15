@@ -6,7 +6,8 @@
  * 1. The identity write gate. `write` and `edit` go through `prepareWritePath`
  *    (core): malformed input, home expansion, file URLs, traversal, the S5
  *    artifacts, the instance's harness-owned directories (`regulator/identity/`, `regulator/advice/`), the project's
- *    protected paths (from its conventions), their parents, and the aliases a
+ *    protected paths (from its conventions: `vendor/` and the environment files,
+ *    less any environment file the session's contract exempts, #178), their parents, and the aliases a
  *    lexical check cannot see — symlinks, hard links, non-directory parents —
  *    all refused; the tool executes exactly the normalized path that was
  *    checked. Fail closed.
@@ -47,12 +48,12 @@ import path from "node:path";
 import { Type } from "typebox";
 import { Value } from "typebox/value";
 import { isToolCallEventType, type ExtensionAPI, type ToolCallEventResult } from "@earendil-works/pi-coding-agent";
-import { SeveritySchema, type AuditFinding, type CapabilityProfile, type PolicyProposal, type ToolEffect } from "@metacoding.io/regulator-protocol";
+import { ENVIRONMENT_FILES, SeveritySchema, type AuditFinding, type CapabilityProfile, type PolicyProposal, type ToolEffect } from "@metacoding.io/regulator-protocol";
 import { discoverConventions } from "@metacoding.io/regulator-checks";
 import { PROTECTED_S5_PATHS, appendSignal, consentRequiredFor, prepareWritePath } from "@metacoding.io/regulator-core";
 import type { Exec } from "@metacoding.io/regulator";
 import { CANARIES_RELATIVE_PATH, HARNESS_OWNED_INSTANCE_DIRS, LAB_ROOT, PROFILES, consentGate, declaredEffects, isProfileName, leaseStoreFor, loadDeclaredToolsSync } from "@metacoding.io/regulator";
-import { baseRoot } from "@metacoding.io/regulator";
+import { baseRoot, loadContract } from "@metacoding.io/regulator";
 
 export interface AuthorityExtensionOptions {
   now?: () => number;
@@ -67,6 +68,22 @@ export interface AuthorityExtensionOptions {
 }
 
 export const REDACTION = "[REDACTED: canary]";
+
+/**
+ * The environment files (#178) the session's contract exempts on an `identity-untouched` expectation: the `contract`
+ * flag the dispatcher sets (or REGULATOR_CONTRACT), read as the contract extension reads it. No contract, or one that
+ * does not load, exempts nothing — the contract extension is the one that refuses it.
+ */
+export async function contractExemptions(flag: unknown): Promise<Set<string>> {
+  const file = (typeof flag === "string" && flag) || process.env.REGULATOR_CONTRACT || "";
+  if (!file) return new Set();
+  try {
+    const contract = await loadContract(file);
+    return new Set(contract.expectedEvidence.flatMap((e) => (e.check?.kind === "identity-untouched" ? e.check.exempt : [])).filter((f) => (ENVIRONMENT_FILES as readonly string[]).includes(f)));
+  } catch {
+    return new Set();
+  }
+}
 
 /** Every file under the protected paths, by project-relative path. `null` marks a path that did not exist. */
 export async function snapshotProtected(cwd: string, protectedPaths: readonly string[]): Promise<Map<string, Buffer>> {
@@ -157,7 +174,10 @@ export function createAuthorityExtension(options: AuthorityExtensionOptions = {}
       }
       const conventions = await discoverConventions(ctx.cwd);
       // The harness-owned directories come from DEFINITION_WRITERS (identity, advice), never restated here; the conventions add the project's.
-      protectedPaths = [...HARNESS_OWNED_INSTANCE_DIRS, ...conventions.protectedPaths.filter((p) => !HARNESS_OWNED_INSTANCE_DIRS.includes(p))];
+      // An environment file the unit's contract exempts (#178) is lifted for this session, as the closeout lifts it; the
+      // contract's schema admits only the closed list, so nothing harness-owned can leave by this route.
+      const exempt = await contractExemptions(pi.getFlag("contract"));
+      protectedPaths = [...HARNESS_OWNED_INSTANCE_DIRS, ...conventions.protectedPaths.filter((p) => !HARNESS_OWNED_INSTANCE_DIRS.includes(p) && !exempt.has(p))];
       unitId = "";
       amendments.clear();
       if (!options.profile) {

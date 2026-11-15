@@ -78,6 +78,50 @@ test("bash watch: a shell command that changes, deletes or plants a protected fi
   assert.equal((await readSignals(repo)).length, 1);
 });
 
+test("the environment files are protected (#178): flake.lock and devenv.yaml, when present, are refused at the write gate and restored by the bash watch; the session's contract exempting flake.lock lifts it, and only it", async (t) => {
+  const repo = await protectedRepo(t);
+  await writeFile(path.join(repo, "flake.lock"), "{\"nodes\":{}}\n");
+  await writeFile(path.join(repo, "devenv.yaml"), "inputs: {}\n");
+  const session = async (contract?: string) => {
+    const { pi, handlers, flags } = mockPi();
+    if (contract) flags.set("contract", contract);
+    createAuthorityExtension({ now: () => 1_700_000_000_000 })(pi);
+    const { ctx, statuses } = ctxFor(repo);
+    await handlers.get("session_start")!({ type: "session_start", reason: "startup" }, ctx);
+    const call = (toolName: string, toolCallId: string, input: Record<string, unknown>) => handlers.get("tool_call")!({ type: "tool_call", toolName, toolCallId, input }, ctx) as Promise<{ block: boolean; reason: string } | undefined>;
+    const result = (toolCallId: string, command: string) => handlers.get("tool_result")!({ type: "tool_result", toolName: "bash", toolCallId, input: { command }, content: [{ type: "text", text: "" }], details: {}, isError: false }, ctx) as Promise<{ content: Array<{ text: string }> } | undefined>;
+    return { call, result, statuses };
+  };
+
+  const plain = await session();
+  assert.match(plain.statuses.authority ?? "", /protecting regulator\/identity\/, regulator\/advice\/, vendor\/, flake\.lock, devenv\.yaml;/);
+  for (const p of ["flake.lock", "devenv.yaml"]) {
+    const refused = await plain.call("write", "w", { path: p, content: "{}" });
+    assert.equal(refused?.block, true, p);
+    assert.match(refused?.reason ?? "", new RegExp(`"${p.replace(".", "\\.")}" is under the protected path`));
+  }
+  await plain.call("bash", "b1", { command: "nix flake update" });
+  await writeFile(path.join(repo, "flake.lock"), "{\"nodes\":{\"git\":\"patched\"}}\n");
+  const reverted = await plain.result("b1", "nix flake update");
+  assert.match(reverted?.content[1]?.text ?? "", /changed protected flake\.lock \(modified\)/);
+  assert.equal(await readFile(path.join(repo, "flake.lock"), "utf8"), "{\"nodes\":{}}\n", "restored");
+
+  // The unit's contract exempts flake.lock: lifted in the session as at the closeout; devenv.yaml stays protected.
+  const contract = JSON.parse(await readFile(path.join(LAB_ROOT, "contracts", "fix-known-issue.json"), "utf8"));
+  contract.expectedEvidence.push({ id: "e-environment", description: "nothing protected changed but the lock", class: "command", required: true, check: { kind: "identity-untouched", exempt: ["flake.lock"] } });
+  const contractPath = path.join(repo, ".regulator", "contract.json");
+  await mkdir(path.dirname(contractPath), { recursive: true });
+  await writeFile(contractPath, JSON.stringify(contract));
+  const exempt = await session(contractPath);
+  assert.doesNotMatch(exempt.statuses.authority ?? "", /flake\.lock/);
+  assert.equal(await exempt.call("write", "w2", { path: "flake.lock", content: "{}" }), undefined, "the exempted lock is writable");
+  assert.equal((await exempt.call("write", "w3", { path: "devenv.yaml", content: "{}" }))?.block, true, "an environment file the contract does not name is not");
+  await exempt.call("bash", "b2", { command: "nix flake update" });
+  await writeFile(path.join(repo, "flake.lock"), "{\"nodes\":{\"git\":\"bumped\"}}\n");
+  assert.equal(await exempt.result("b2", "nix flake update"), undefined, "nothing protected changed: no restore, no finding");
+  assert.equal(await readFile(path.join(repo, "flake.lock"), "utf8"), "{\"nodes\":{\"git\":\"bumped\"}}\n");
+});
+
 test("canary watch, trust rule and proposal intake: a canary is redacted from tool results and recorded when the model says it; the project is never trusted; a proposal is recorded and changes nothing", async (t) => {
   const repo = await protectedRepo(t);
   await mkdir(path.join(repo, ".regulator"), { recursive: true });

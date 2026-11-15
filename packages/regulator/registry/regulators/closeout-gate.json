@@ -26,7 +26,7 @@
   "evidence": { "tests": ["../checks/src/verify.test.ts", "src/controller.test.ts"] },
   "limitations": [
     "Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.",
-    "The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.",
+    "The environment is named, not matched: every record carries the host's node, platform and arch and, since #178, the toolchain by hash (a Nix store path, an environment lock or the package lock, read from the worktree the check ran in), so two records under different toolchains are distinguishable. Nothing compares that hash with the target platform's; a check that passes here and fails there is not caught (docs/DEBT.md row 4, the half that stays the deployment's).",
     "Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.",
     "The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write."
   ],

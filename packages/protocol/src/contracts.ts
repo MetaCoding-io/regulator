@@ -11,6 +11,7 @@
  */
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import type { EnvironmentFile } from "./toolchain.js";
 import { EvidenceClassSchema, EvidenceRefSchema } from "./evidence.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
@@ -73,8 +74,21 @@ export const ExpectationCheckSchema = Type.Union([
     /** Inherited test files (relative to the worktree) this contract lets the unit change: their unit-side versions run instead of the base's, and their shrinkage is not a regression. */
     exempt: Type.Array(NonEmpty),
   }, { additionalProperties: false }),
+  Type.Object({
+    kind: Type.Literal("identity-untouched"),
+    /**
+     * Environment files (#178) this contract lets the unit change: lifted from the protected paths for this unit at the
+     * write gate, the bash watch and the closeout's diff. Only the closed list can be named; the identity, the advice and
+     * a manifest's protected prefixes are not exemptible by a contract.
+     */
+    exempt: Type.Array(Type.Union([Type.Literal("flake.nix"), Type.Literal("flake.lock"), Type.Literal("devenv.nix"), Type.Literal("devenv.lock"), Type.Literal("devenv.yaml")]), { minItems: 1 }),
+  }, { additionalProperties: false }),
 ]);
 export type ExpectationCheck = Static<typeof ExpectationCheckSchema>;
+// The exemptible files are spelled as literals above (typebox infers a union only from a tuple); this keeps them ENVIRONMENT_FILES.
+type Exemptible = Extract<ExpectationCheck, { kind: "identity-untouched" }>["exempt"][number];
+const _exemptible: [Exemptible] extends [EnvironmentFile] ? ([EnvironmentFile] extends [Exemptible] ? true : false) : false = true;
+void _exemptible;
 
 export const EvidenceExpectationSchema = Type.Object({
   id: DecisionId,

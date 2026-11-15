@@ -1,6 +1,6 @@
 # Nix read against the control plane: the environment as a named input to evidence
 
-- **Status:** open. §3.1 and §3.2 are filed as [#178](https://github.com/MetaCoding-io/regulator/issues/178) (roadmap 0.2); the rest of the next step is in §6.
+- **Status:** open. §3.1 and §3.2 landed as [#178](https://github.com/MetaCoding-io/regulator/issues/178) (PR [#PRNUM](https://github.com/MetaCoding-io/regulator/pull/PRNUM), 2026-11-15); the rest of the next step is in §6.
 - **Source:** Geoffrey Huntley, "the world hasn't figured out yet that you can literally
   just fix everything with a Nix overlay", <https://ghuntley.com/nix/> (7 Oct 2026), read
   2026-11-09. The post links a demo repository,
@@ -112,6 +112,17 @@ purpose. Mechanism level 2; a list in one function; the `identity-untouched` car
 sentence and no limitation. This is the one place the post's advice is inverted: the
 environment is S5 material, and a person changes it by a merged change.
 
+**Landed (2026-11-15, #178).** `discoverConventions` adds each of the five files present
+at the worktree's root to `protectedPaths` beside `vendor/`, so the write gate refuses
+them, the bash watch snapshots and restores them, `identity-untouched` diffs them at
+closeout and `run_checks:protected-untouched` reads them in the working tree. A contract
+exempts one on an expectation that carries `{ kind: "identity-untouched", exempt: [...] }`,
+whose schema admits these five names and nothing else (so the identity, the advice and a
+manifest's prefixes cannot be exempted by a contract); the exemption lifts the file for
+that unit at the closeout, where the record binds to that expectation, and in the session,
+where the authority extension reads the contract the dispatcher names. The
+`identity-untouched-check` card says so, with no new limitation.
+
 ### 3.2 A toolchain hash on evidence and on the fingerprint (level 2)
 
 `EvidenceEnvironment` (`packages/protocol/src/audit.ts`) and `EnvironmentFingerprint`
@@ -137,6 +148,23 @@ What this pays: part of DEBT row 4. An evidence record then says *what* it ran u
 not only *where*. What it does not pay: the row's second half. Naming the environment is
 not matching the target's; the matrix stays CI's. The card's limitation is rewritten, not
 struck.
+
+**Landed (2026-11-15, #178).** `toolchain: { source, hash }` is optional on
+`EvidenceEnvironment`, `EnvironmentFingerprint` and the instance manifest, and
+`discoverToolchain` in `packages/checks` tries the three sources in order. Decided in the
+change: `nix-store` hashes the store path's string (the `DEVENV_PROFILE` symlink resolved;
+with only `IN_NIX_SHELL`, the sorted `/nix/store/` entries on PATH), so the field is a
+SHA-256 for every source; evidence reads the worktree the check ran in, the fingerprint the
+git top level above the definition (where this repository's `pnpm-lock.yaml` is), the
+manifest and `doctor` the instance's repository. The harness reads the toolchain before
+every run and after the last and refuses the report if they differ; a probe is refused
+when its baseline names a toolchain and the current one differs, and runs with a line
+saying the comparison went unchecked when the baseline names none (every report committed
+before the field). `environment-drift` is information only; an applied `regulator upgrade`
+records the current toolchain. `closeout-gate` limitation 2 now says the environment is
+named by hash and not matched to a target; DEBT row 4 is part-paid. Not exercised end to
+end under a Nix shell, since none was available where it landed: the `nix-store` source is
+covered by unit tests over the variables.
 
 ### 3.3 One image for the Terminal-Bench trials (the eval thread)
 
@@ -216,12 +244,13 @@ workload can declare a VM test without the control plane growing anything.
 
 ## 6. Next step
 
-1. §3.1 and §3.2 are [#178](https://github.com/MetaCoding-io/regulator/issues/178), under 0.2 beside #46:
+1. ~~§3.1 and §3.2 are [#178](https://github.com/MetaCoding-io/regulator/issues/178), under 0.2 beside #46:
    the protected conventions, the `toolchain` field on the two schemas, the three sources
    in the check runner, `environment-drift` in `doctor`, the eval harness's refusal, and
    the rewritten limitation on `closeout-gate` with DEBT row 4 marked part-paid. Done
    when a scripted eval report under a flake shell carries the store hash, and
-   `identity-untouched` refuses a unit that edits `flake.lock` without an exemption.
+   `identity-untouched` refuses a unit that edits `flake.lock` without an exemption.~~
+   Landed 2026-11-15 (see §3.1 and §3.2).
 2. §3.3 joins the Terminal-Bench thread's adapter issue when that is filed.
 3. §3.4 is a paragraph on #58 (the image as a function of the definition; the
    effect-versus-name caveat in the host manifest), not an issue of its own.

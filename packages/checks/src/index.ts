@@ -4,3 +4,4 @@ export {
   ACCEPTANCE_CLASSES, bindEvidence, countTestLines, hostEnvironment, runHostChecks, summarizeVerdict, technicalVerdict,
   type BindOptions, type HostCheckResult, type RunHostChecksOptions, type VerdictInput,
 } from "./verify.js";
+export { discoverToolchain, evidenceEnvironment, nixStoreIdentity } from "./toolchain.js";

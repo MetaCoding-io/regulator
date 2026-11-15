@@ -256,3 +256,46 @@ test("the definition upgrade (#53): an instance initialized as 0.1.3 left it —
   assert.equal(await git("rev-parse", "HEAD"), result.committed);
   assert.deepEqual(await readManifest(repo), upgraded, "the manifest is byte-for-byte what the first run wrote");
 });
+
+test("the toolchain in the manifest (#178): init records the instance repository's, doctor reports environment-drift beside definition-drift as information and never as a problem — the same, changed, or not recorded on a manifest written before the field — and an applied upgrade records the current one", async (t) => {
+  if (process.env.DEVENV_PROFILE || process.env.IN_NIX_SHELL) return t.skip("inside a Nix shell the toolchain is the store path, not the lock this test changes");
+  const { createHash } = await import("node:crypto");
+  const sha = (s: string) => createHash("sha256").update(s).digest("hex");
+  const repo = await unfamiliarRepo(t);
+  const git = async (...args: string[]) => { const r = await gitExec("git", args, { cwd: repo }); if (r.code !== 0) throw new Error(`git ${args.join(" ")}: ${r.stderr}`); return r.stdout.trim(); };
+  await writeFile(path.join(repo, "package-lock.json"), "{\"lockfileVersion\":3}\n");
+  await git("add", "-A");
+  await git("commit", "-qm", "lock");
+  const { manifest } = await initInstance(gitExec, { repo, by: "alice", now: () => clock });
+  assert.deepEqual(manifest.toolchain, { source: "package-lock", hash: sha("{\"lockfileVersion\":3}\n") });
+  const drift = async () => {
+    const report = await doctor(gitExec, { repo, now: () => clock });
+    const names = report.checks.map((c) => c.name);
+    assert.equal(names.indexOf("environment-drift") + 1, names.indexOf("definition-drift"), "beside definition-drift");
+    return { report, check: report.checks.find((c) => c.name === "environment-drift")! };
+  };
+  let { check } = await drift();
+  assert.deepEqual([check.ok, check.warning], [true, undefined]);
+  assert.match(check.detail, /^the toolchain is the one the manifest recorded \(package-lock [0-9a-f]{12}…\)$/);
+
+  // The lock changes on the base: worth knowing, and not a problem.
+  await writeFile(path.join(repo, "package-lock.json"), "{\"lockfileVersion\":3,\"packages\":{}}\n");
+  await git("commit", "-qam", "bump");
+  const changed = await drift();
+  assert.equal(changed.check.ok, true);
+  assert.equal(changed.report.problems, changed.report.checks.filter((c) => !c.ok).length);
+  assert.ok(!changed.report.checks.some((c) => !c.ok && c.name === "environment-drift"));
+  assert.match(changed.check.warning ?? "", /^the toolchain differs from the one the manifest recorded at init \(package-lock [0-9a-f]{12}… → package-lock [0-9a-f]{12}…\): evidence recorded before and after the change names different environments\. Information, not a problem; `regulator upgrade` records the current one at the next upgrade$/);
+
+  // A manifest written before the field: doctor says so; an applied upgrade records the toolchain.
+  const { toolchain: _recorded, ...before } = (await readManifest(repo))!;
+  await writeFile(path.join(repo, INSTANCE_MANIFEST_RELATIVE_PATH), `${JSON.stringify({ ...before, definition: { ...before.definition, harnessRevision: REV_0_1_3, registry: 43 } }, null, 2)}\n`, "utf8");
+  ({ check } = await drift());
+  assert.deepEqual([check.ok, check.warning], [true, undefined]);
+  assert.match(check.detail, /^the manifest records no toolchain \(an instance initialized before the field, or where no source was found\); now package-lock [0-9a-f]{12}…\. `regulator upgrade` records it at the next upgrade$/);
+  const result = await upgradeInstance(gitExec, { repo, by: "alice", now: () => clock });
+  assert.equal(result.plan.outcome, "upgrade");
+  assert.deepEqual((await readManifest(repo))!.toolchain, { source: "package-lock", hash: sha("{\"lockfileVersion\":3,\"packages\":{}}\n") });
+  ({ check } = await drift());
+  assert.match(check.detail, /^the toolchain is the one the manifest recorded/);
+});

@@ -18,6 +18,7 @@
 import { Type, type Static } from "typebox";
 import { DeclaredMetricNameSchema, MetricDirectionSchema, isDeclaredMetricName, type MetricDirection } from "./metrics.js";
 import { CheckEntrySchema } from "./workload.js";
+import { ToolchainSchema } from "./toolchain.js";
 import { Value } from "typebox/value";
 
 const NonEmpty = Type.String({ minLength: 1 });
@@ -234,6 +235,12 @@ export const EnvironmentFingerprintSchema = Type.Object({
   suite: Type.Optional(FileHashSchema),
   /** Each arm's advice override as it ran (#200): the profile, the file under the definition and its SHA-256. Absent when no arm overrides advice. */
   adviceByArm: Type.Optional(Type.Record(Type.String(), Type.Array(AdviceOverrideFingerprintSchema, { minItems: 1 }))),
+  /**
+   * The toolchain every run of the report ran under (#178), read from the definition's repository: one, since a report
+   * over runs under different toolchains is refused. Absent on a report written before the field ("not recorded") or
+   * where no source was found.
+   */
+  toolchain: Type.Optional(ToolchainSchema),
 }, { additionalProperties: false });
 export type EnvironmentFingerprint = Static<typeof EnvironmentFingerprintSchema>;
 
