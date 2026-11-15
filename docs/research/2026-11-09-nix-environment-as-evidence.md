@@ -162,9 +162,11 @@ when its baseline names a toolchain and the current one differs, and runs with a
 saying the comparison went unchecked when the baseline names none (every report committed
 before the field). `environment-drift` is information only; an applied `regulator upgrade`
 records the current toolchain. `closeout-gate` limitation 2 now says the environment is
-named by hash and not matched to a target; DEBT row 4 is part-paid. Not exercised end to
-end under a Nix shell, since none was available where it landed: the `nix-store` source is
-covered by unit tests over the variables.
+named by hash and not matched to a target; DEBT row 4 is part-paid. Exercised end to end
+once under `nix-shell -p hello` (`IN_NIX_SHELL=impure`): a scripted run of the drift
+suite's control arm wrote a report whose fingerprint carried `nix-store`. That report is
+not committed, and the `DEVENV_PROFILE` path was not run under a real devenv; unit tests
+cover it over the variables.
 
 ### 3.3 One image for the Terminal-Bench trials (the eval thread)
 
