@@ -49,8 +49,10 @@ test("run_tests returns a bounded structured summary and honours a filter", asyn
   assert.ok(text.length < 700, `output stays small (${text.length} chars)`);
 
   const filtered = await run.execute("t2", { filter: "suffix" }, undefined, undefined, ctx as never);
-  const fd = filtered.details as { pass: number; fail: number };
-  assert.deepEqual([fd.pass, fd.fail], [1, 0]);
+  const fd = filtered.details as { pass: number; fail: number; failures: string[] };
+  // One matching test. Node's runner also reports each file with no matching test as one passing entry named after the
+  // file: test/archive.test.js and test/dated.test.js (#201 item 11) are two such files under this filter.
+  assert.deepEqual([fd.pass, fd.fail, fd.failures], [3, 0, []]);
 });
 
 test("run_tests throws when tests cannot run, returns when they ran and failed", async (t) => {

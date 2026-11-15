@@ -876,9 +876,10 @@ test("predictions resolve from the stores at close and abort (#138): a unit name
   const reference = (await committedReports(LAB_ROOT)).find((r) => r.file === "evals/reports/drift-scripted-reference.json");
   assert.ok(reference, "the committed reference report, by fingerprint");
   const bet = (id: string, prediction: object) => appendSignal(repo, { id, timestamp: "2026-10-26T00:00:00.000Z", source: "S4", kind: "intelligence-signal", channel: "intelligence", destination: "S3", severity: "advisory", subject: `advice/implement.md: ${id}`, observation: "o", claim: "c", confidence: "medium", evidence: [], prediction } as never);
-  // The reference report's control arm closed every unit in one attempt: closed 1, attempts 1.
+  // The reference report closes every unit under every arm (closed 1), and its treatment arm in one attempt each (attempts 1);
+  // the control arm's attempts are 8/7 since d7-archive (#201 item 11) refuses its first attempt where no fact is rendered.
   await bet("p-confirm", { metric: "closed", baseline: { report: reference.fingerprint, arm: "control" }, direction: "higher", magnitude: 0, probability: 0.8, horizons: [{ kind: "live", unitTypes: ["implement"], count: 2, disconfirmedBy: 0 }] });
-  await bet("p-disconfirm", { metric: "attempts", baseline: { report: reference.fingerprint, arm: "control" }, direction: "lower", magnitude: 1, probability: 0.6, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 1 }] });
+  await bet("p-disconfirm", { metric: "attempts", baseline: { report: reference.fingerprint, arm: "treatment" }, direction: "lower", magnitude: 1, probability: 0.6, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 1 }] });
   await bet("p-inconclusive", { metric: "workload:portfolio/turnover", baseline: { arm: "control" }, direction: "lower", magnitude: 1, probability: 0.5, horizons: [{ kind: "live", unitTypes: ["implement"], count: 1, disconfirmedBy: 5 }] });
 
   const closed = await runUnit(gitExec, { ...base, repo, contract, workload, owner: "alice", dispatcher: unitThat(async (request, store) => {
