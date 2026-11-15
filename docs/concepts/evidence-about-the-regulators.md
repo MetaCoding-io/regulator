@@ -44,7 +44,7 @@ change, and a report is comparable only with reports of the same suite version. 
 names the version it ran (`suite.version`), and a committed report from an earlier
 version stays committed and valid: it is evidence about the suite as it was. The views
 never read two versions as one series. `regulator status` and the Assurance view mark a
-report whose suite is declared at a newer version ("suite now v3: not comparable with v3
+report whose suite is declared at a newer version ("suite now v4: not comparable with v4
 reports"), and the Lifecycle view's labels carry the same note. `regulator eval` compares
 only the arms of the run it is making and reads no committed report. The drift suites
 went to version 2 when `d7-archive` was added (#201), to version 3 when `cost` and
