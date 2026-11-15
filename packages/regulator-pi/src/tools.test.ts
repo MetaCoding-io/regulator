@@ -16,7 +16,7 @@ test("discoverConventions reports facts, not README claims", async (t) => {
   assert.equal(c.testCommandSource, "node --test (test/ directory present)");
   assert.deepEqual(c.sourceDirs, ["src"]);
   assert.deepEqual(c.protectedPaths, ["vendor/"]);
-  assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/slugify.js", "protected-untouched"]);
+  assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/dated.js", "syntax:src/slugify.js", "protected-untouched"]);
 });
 
 test("registers three narrow tools with model-facing contracts", () => {
@@ -77,7 +77,7 @@ test("run_checks gives one verdict per check and notices a touched protected pat
 
   const clean = await checks.execute("c1", {}, undefined, undefined, ctx as never);
   const results = (clean.details as { results: CheckResult[] }).results;
-  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/slugify.js", true], ["protected-untouched", true]]);
+  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/dated.js", true], ["syntax:src/slugify.js", true], ["protected-untouched", true]]);
 
   await writeFile(path.join(cwd, "vendor/left-pad.js"), "// touched\n");
   const dirty = await checks.execute("c2", {}, undefined, undefined, ctx as never);
@@ -117,5 +117,5 @@ test("Pi 0.87.0 loads the built checkpoint and executes the typed tools in a rea
   assert.deepEqual((conventions.details as { testCommand: string[] }).testCommand, ["node", "--test"]);
   const checks = await tools.get("run_checks")!.execute("s2", {});
   const results = (checks.details as { results: CheckResult[] }).results;
-  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/slugify.js", true], ["protected-untouched", true]]);
+  assert.deepEqual(results.map((r) => [r.name, r.ok]), [["syntax:src/dated.js", true], ["syntax:src/slugify.js", true], ["protected-untouched", true]]);
 });

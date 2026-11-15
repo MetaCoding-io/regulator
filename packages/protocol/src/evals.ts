@@ -67,8 +67,9 @@ export function isBuiltInMetric(name: string): name is BuiltInMetric {
 /**
  * Which way is better on each built-in, as a declared metric states it (#201, the eval-driven note §4.1): what the
  * per-task table reads to say which arm leads. `none` is a quantity reported and not ranked: a refusal or an escalation
- * is a gate or a person doing their work as often as it is a cost, and a fact remembered is a count until a task needs it
- * (agent-memory note §6 item 4).
+ * is a gate or a person doing their work as often as it is a cost, and a fact remembered stays a count. Whether a fact
+ * helped is read off the task that needs it (`d7-archive` in the drift suite, #201 item 11, after agent-memory note §6
+ * item 4): its attempts and retries, which are ranked; more facts is neither better nor worse.
  */
 export const BUILT_IN_METRIC_DIRECTIONS: Readonly<Record<(typeof EVAL_METRICS)[number], MetricDirection>> = {
   closed: "higher", attempts: "lower", tokens: "lower", turns: "lower", wallClockMs: "lower", retries: "lower",

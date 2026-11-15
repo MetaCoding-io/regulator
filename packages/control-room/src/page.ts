@@ -454,8 +454,11 @@ const PAGE = String.raw`<!doctype html>
     for (const [ri, r] of (d.reports || []).entries()) {
       const fp = r.fingerprint;
       const costOnly = !!(d.reportsCostOnly || [])[ri];
+      // Comparable only within one suite version (#201 item 11): an older report is named as such, not read beside the newer ones.
+      const supersededBy = (d.reportsSupersededBy || [])[ri];
       const metrics = Object.keys((r.arms[0] || { metrics: {} }).metrics);
-      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators" + (costOnly ? " " + chip("cost only") : "") + "</p>";
+      html += "<p><b>" + esc(r.suite.name) + "</b> v" + r.suite.version + " · " + esc(r.generatedAt.slice(0, 19)) + " · " + esc(fp.dispatcher) + " on " + esc(fp.model) + " · harness " + esc(fp.harnessRevision.slice(0, 7)) + " · " + esc(fp.pi) + " · " + esc(fp.node) + " · " + fp.registry + " regulators" + (costOnly ? " " + chip("cost only") : "") + (supersededBy ? " " + chip("suite now v" + supersededBy) : "") + "</p>";
+      if (supersededBy) html += "<p class='banner'>ran suite v" + r.suite.version + "; the suite is declared at v" + supersededBy + " now, and a report is comparable only with reports of the same suite version</p>";
       // A baseline that discriminates (#201): a cost-only report's ablation arms had nothing to catch and are not retirement evidence.
       if (costOnly && !r.baseline) html += "<p class='banner'>nothing to catch: cost only — computed from the runs of a report written before the baseline check; its ablation arms do not count toward a retirement condition</p>";
       if (r.baseline) html += "<p class='banner'>" + (r.baseline.discriminates

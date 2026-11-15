@@ -181,12 +181,14 @@ test("status folds predictions (#138): open and resolved predictions with their 
 test("a cost-only report (#201) is not retirement evidence: the lifecycle lists the reports whose baseline failed as covering a regulator, and the ones whose baseline failed on nothing apart, computing the label for a report written before the field", async () => {
   const d = await readDefinition(LAB_ROOT);
   const row = d.lifecycle.find((l) => l.id === "reg.audit.inherited-tests-check.v1")!;
-  const scripted = (b: string) => `drift v1 (scripted:${b})`;
+  const scripted = (b: string) => `drift v2 (scripted:${b})`;
   assert.deepEqual([...row.reportedIn].sort(), [scripted("drifter"), scripted("self-certifier"), scripted("sloppy")], "the drifting baselines: their ablation arms had something to catch");
   assert.deepEqual([...row.costOnlyIn].sort(), [scripted("confident"), scripted("reference")], "the reference and the confident unit leave the control arm's tree clean: their ablation arms are listed apart");
   const live = d.reports.find((r) => r.fingerprint.dispatcher === "pi")!;
   assert.equal(live.baseline, undefined, "the first live report predates the field and is never regenerated");
   const text = renderStatusText({ definition: d } as Parameters<typeof renderStatusText>[0]);
-  assert.match(text, new RegExp(`eval report drift v1 at ${live.generatedAt.slice(0, 10)}: pi on [^\\n]*; nothing to catch: cost only`), "computed from its runs, it is cost-only, and status says so");
-  assert.match(text, /eval report drift v1 at [^\n]*scripted:drifter[^\n]*course-lab\n/, "a report whose baseline drifted carries no label");
+  assert.match(text, new RegExp(`eval report drift v1 at ${live.generatedAt.slice(0, 10)}: pi on [^\\n]*; nothing to catch: cost only; suite now v2: not comparable with v2 reports\n`), "computed from its runs, it is cost-only, and status says so; it ran the suite before d7 was added, and status says that too");
+  assert.match(text, /eval report drift v2 at [^\n]*scripted:drifter[^\n]*course-lab\n/, "a report whose baseline drifted, on the declared version, carries no label");
+  // Comparable only within one suite version (#201 item 11): the first live report ran v1, every regenerated report v2.
+  assert.deepEqual(d.reports.map((r, i) => [r.fingerprint.dispatcher, r.suite.version, d.reportsSupersededBy[i]]).filter(([dispatcher]) => dispatcher === "pi" || dispatcher === "scripted:reference"), [["pi", 1, 2], ["scripted:reference", 2, null], ["scripted:reference", 2, null]]);
 });

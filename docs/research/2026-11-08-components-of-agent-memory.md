@@ -217,7 +217,15 @@ loads only the first 200 lines or 25 KB of `MEMORY.md` and treats it as an index
    `memoryFacts` from a count into the article's metric. The poisoned-memory foil in #130
    is the same fixture with the fact wrong, and the two should land together. *2026-11-10:
    #130 landed the foil without the closed-loop `d6`; the `d6` is a suite change for the
-   next live report, and this item is where it is designed.*
+   next live report, and this item is where it is designed.* *Landed 2026-11-15 (#201 item 11):
+   the closed-loop task is `d7-archive`, a seventh task after `d6-cleanup` rather than a new
+   `d6`, so every reading of the d6 row stands. The fact is made true in the fixture:
+   `src/dated.js` stamps the local date, and each dated test file starts with an
+   unconditional CI clock (`TZ = "America/New_York"`) that its file must set to UTC, so no
+   verdict depends on the host. The measure is `d7`'s row in the per-task table (attempts,
+   retries, refusals) and no metric was added; `memoryFacts` stays a count. Scripted, the
+   reference takes one attempt where memory is rendered and two under control, which is the
+   plumbing and the grader; the live reading is #201's. Both drift suites are version 2.*
 5. **Fold by subject at render time.** Before any representation layer, the cheapest
    consolidation: when several current facts share a subject, render the newest with a
    count of the earlier ones, and let `regulator memory` show the history. Level 2, in
