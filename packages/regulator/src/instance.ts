@@ -265,7 +265,7 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
     const branch = await currentBranch(exec, repo).catch(() => "?");
     check("base", clean, clean ? `clean, on ${branch}` : `the base checkout has uncommitted changes (on ${branch}); nothing dispatches until it is clean`);
     // The unit records, as the store reads them (#161): a record written before the status-keyed shape carries a reason beside a
-    // status that has none (0.1.4 wrote one at an abort). It is read without it, so this is said and not thrown; a file that is
+    // status that has none (0.1.3 wrote one at an abort). It is read without it, so this is said and not thrown; a file that is
     // a record in neither shape is a problem, by unit, with what the schema says.
     const records = await new ExecutionStore(repo, now).legacyUnits();
     check("units", records.unreadable.length === 0,

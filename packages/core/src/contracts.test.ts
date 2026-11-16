@@ -248,7 +248,7 @@ test("a unit record written before #161 is read, named and rewritten: a reason b
   for (const unitId of ["u1", "u2", "u3"]) await store.createUnit(sampleContract({ unitId }));
   const file = (unitId: string) => path.join(root, ".regulator", "units", unitId, "unit.json");
   const current = JSON.parse(await readFile(file("u1"), "utf8"));
-  // What 0.1.4 wrote at an abort: the status, and the reason beside it.
+  // What 0.1.3 wrote at an abort: the status, and the reason beside it.
   const legacy = { ...current, status: "aborted", attempts: 2, reason: "aborted under recovery v3: check-failure" };
   await writeFile(file("u1"), `${JSON.stringify(legacy, null, 2)}\n`);
   assert.equal(isUnitRecord(legacy), false, "the older shape is not the current record");

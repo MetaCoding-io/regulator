@@ -353,7 +353,7 @@ Enforced at `loop:finishUnit` (verifyBase ran after finishUnit: host checks on t
 
 Not covered:
 
-- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (0.1.4) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
+- It ran after the merge, not before: the base was red for the time it took S3 to decide. The pre-merge trial (after 0.1.3) refuses instead, at the cost of a second worktree per close — which is why this record is retired.
 - Only `run_tests` and `run_checks` are run on the base; the branch-relative checks (identity-untouched, export-signature, glossary-lint) have no meaning there.
 - The finding is owed to S3 under the routing policy; a routing policy that routes audit findings elsewhere routes this one elsewhere too.
 
