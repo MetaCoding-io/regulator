@@ -1,7 +1,7 @@
 # `@metacoding.io/regulator-pi` — the Pi host
 
-The Pi host for [`regulator`](../regulator/): the eleven session extensions that enforce
-the control plane inside a Pi session (`tools`, `profiles`, `coordination`, `contract`,
+The Pi host for [`regulator`](../regulator/): the twelve session extensions that enforce
+the control plane inside a Pi session (`tools`, `declared-tools`, `profiles`, `coordination`, `contract`,
 `budget`, `recovery`, `evidence`, `authority`, `intelligence`, `identity`, `algedonic`,
 loaded by `pi install ./packages/regulator-pi`), the dispatcher the control plane
 resolves by name to run a unit's session, and the generic write gate and typed reporting

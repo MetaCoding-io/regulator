@@ -12,7 +12,9 @@ Three rules make them useful:
   resolves an obligation. A named function (S3, S5) or a named person does, with a
   disposition and a rationale, and the record says who.
 - An open obligation can veto. At or above the routing policy's line, an obligation
-  that names a unit refuses that unit's dispatch and its close until it is dispositioned.
+  that names a unit refuses that unit's dispatch, and its re-audit by `regulator unit close`,
+  until it is dispositioned. An obligation a unit's own report opens does not hold that
+  unit's close: the report's signals are routed as the unit closes.
   The veto itself is deterministic, because it is a check over open records. The
   disposition that ends it is a judgment.
 - Records never reopen. Resolve, escalate and supersede are terminal. Later evidence
@@ -85,11 +87,15 @@ the emitter said.
 
 ### The veto
 
-`progressionVeto` is the check the loop runs before a dispatch and before a close. It
+`progressionVeto` is the check the loop runs before a dispatch, and before the re-audit
+of a blocked unit that `regulator unit close` asks for. It is not run when a verified
+attempt closes, so what a unit's own report raises is owed after the unit has landed. It
 collects every open obligation with `blocks: true` that names this unit, every one that
 names this unit's *type* and no unit, plus every one that names neither. The last case
-is deliberate: an audit finding about the instance itself, such as the base failing its
-checks after a merge, holds every unit until S3 dispositions it. The type case is a
+is deliberate: an audit finding about the instance itself holds every unit until S3
+dispositions it. Nothing in the loop raises one since the post-merge check was retired
+for the pre-merge trial; the router and the veto still honour one that something else
+raises. The type case is a
 sensor's: a drift signal raised before `plan-rebalance` was dispatched holds it when it
 is. `regulator obligations` marks the ones that currently veto.
 

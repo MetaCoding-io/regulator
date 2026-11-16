@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { ENFORCEMENT_POINTS } from "@metacoding.io/regulator-protocol";
 import { LAB_ROOT, loadDeclaredToolsSync } from "@metacoding.io/regulator";
@@ -21,4 +22,9 @@ test("the host's enforcement points are what the host exposes (#76): every event
   assert.ok(declared.size > 0 && [...declared].every((t) => tools.has(t)), "the declared-tools extension registers every tool the definition declares");
   assert.deepEqual([...ENFORCEMENT_POINTS.tool].filter((p) => p !== "declared").sort(), [...tools].filter((t) => !declared.has(t)).sort(), "the tool list is what the extensions register, the declared ones under `declared`");
   assert.ok((ENFORCEMENT_POINTS.tool as readonly string[]).includes("declared"));
+});
+
+test("the package manifest loads what the dispatcher loads: `pi.extensions` is `EXTENSIONS`, in order, so a session started by `pi install` has the same extensions as a unit the loop dispatches", async () => {
+  const manifest = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")) as { pi: { extensions: string[] } };
+  assert.deepEqual(manifest.pi.extensions, EXTENSIONS.map((name) => `./dist/${name}.js`));
 });
