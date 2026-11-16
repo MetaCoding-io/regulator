@@ -384,7 +384,7 @@ does not do. `since` is the package version that first shipped the record.
 
 **Limitations.**
 - Evidence binds to criteria by class, not by content: a passing suite that does not exercise the changed behaviour satisfies a test-class criterion. Criterion-specific checks are a workload's to declare; the software workload declares only run_tests and run_checks.
-- The environment recorded is the orchestrator's host; a check that passes here and fails on the target platform is not caught.
+- The environment is named, not matched: every record carries the host's node, platform and arch and, since #178, the toolchain by hash (a Nix store path, an environment lock or the package lock, read from the worktree the check ran in), so two records under different toolchains are distinguishable. Nothing compares that hash with the target platform's; a check that passes here and fails there is not caught (docs/DEBT.md row 4, the half that stays the deployment's).
 - Runtime-class criteria are treated like semantic ones (human acceptance) because no host mechanism observes runtime behaviour yet.
 - The audit log is one NDJSON file per instance beside the regulatory log (messages and their obligations); neither is merged with the SQLite regulatory event store the reporting tools write.
 
@@ -1003,13 +1003,13 @@ does not do. `since` is the package version that first shipped the record.
 
 `reg.audit.identity-untouched-check.v1` · S3* · deterministic-gate · active · since 0.1.0
 
-**Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the instance's harness-owned directories (regulator/identity/ and regulator/advice/, derived from DEFINITION_WRITERS' instance paths, so the set is the gate's), the manifest's protected prefixes and whatever the project's conventions protect — with the orchestrator's own runner. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
+**Purpose.** INV-001 as a deterministic host check at closeout: diff the unit's branch against its base under every protected prefix — the instance's harness-owned directories (regulator/identity/ and regulator/advice/, derived from DEFINITION_WRITERS' instance paths, so the set is the gate's), the manifest's protected prefixes and whatever the project's conventions protect (vendor/, and since #178 the files that define the environment the checks run under — flake.nix, flake.lock, devenv.nix, devenv.lock and devenv.yaml — when present) — with the orchestrator's own runner. A contract that means to change the environment names the files on an `identity-untouched` expectation's `exempt` list, which admits those five and nothing else; they are lifted for that unit here, at the write gate and in the bash watch, and the record binds to that expectation. Any change, committed or not, by any route the write gate and the bash watch did not see, is failing command-class evidence bound to the revision, and the unit does not close. The invariant is enforced in prose and in code, and the check is named by the workload's unit types.
 
 **Absorbs.** `committed-around-the-gate` — A unit edits a protected file and commits in one shell command: the working tree is restored by the bash watch, the commit survives, git status is clean, and reintegration carries the change into the base.
 
 **Mechanism.** `../checks/src/verify.ts` at `loop:runHostChecks` (identity-untouched), `loop:auditUnit` (before reintegration)
 
-**Channels.** consumes `worktree branch vs base`, `protected prefixes (DEFINITION_WRITERS' instance paths + manifest + conventions)` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
+**Channels.** consumes `worktree branch vs base`, `protected prefixes (DEFINITION_WRITERS' instance paths + manifest + conventions, including the environment files)`, `the contract's environment-file exemptions` · emits `evidence record (audit log)`, `audit-finding → S3 on fail (via the closeout gate)`
 
 **Scope.** subjects unit, revision · resources regulator/identity/, regulator/advice/, vendor/, worktree
 
@@ -1022,6 +1022,7 @@ does not do. `since` is the package version that first shipped the record.
 - revert the change (a person or a repair attempt does)
 - decide what the unit does next (the recovery router does)
 - check a prefix DEFINITION_WRITERS, the manifest or the conventions do not declare
+- lift any path but an environment file the contract names
 
 **Evidence.** `../checks/src/verify.test.ts`, `src/controller.test.ts`
 
@@ -1029,7 +1030,7 @@ does not do. `since` is the package version that first shipped the record.
 - Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
-- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2); a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
+- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2), unless one expectation carries its exemption, which binds it to that criterion; a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 
@@ -1071,7 +1072,7 @@ does not do. `since` is the package version that first shipped the record.
 - A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.
 - The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.
 - The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.
-- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected.
+- Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/, and the environment files flake.nix, flake.lock, devenv.nix, devenv.lock, devenv.yaml when present, less any the session's contract exempts, #178); a path the project protects by convention nobody declared is not protected.
 
 **Ownership.** regulator-maintainers · introduced 2026-09-22 · review by 2026-12-01
 

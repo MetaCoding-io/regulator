@@ -83,6 +83,16 @@ carry one, and the host then runs it against that criterion specifically. Two ex
 `export-signature`, which confirms that a module's export keeps its declared arity, and
 `inherited-tests`, which runs the suite the unit inherited against the unit's tree.
 
+A third kind lifts a protection rather than adding one. The files that define the
+environment the checks run under (`flake.nix`, `flake.lock`, `devenv.nix`, `devenv.lock`,
+`devenv.yaml`) are protected like `vendor/` when a repository has them, because a unit that
+changes its own toolchain could make its own checks pass. A contract that is about the
+environment names the files it may change on an expectation carrying
+`{ "kind": "identity-untouched", "exempt": ["flake.lock"] }`: they are lifted for that unit
+at the write gate, in the bash watch and in the closeout's diff, and the
+`identity-untouched` record binds to that expectation. The schema admits those five names
+and nothing else, so no contract can exempt the identity or the advice.
+
 ## The technical verdict
 
 When the session ends, the host runs the checks the workload names for the unit type, at

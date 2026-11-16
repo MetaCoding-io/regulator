@@ -211,7 +211,11 @@ repetitions and intervals. The probe arm is built at run time and never written 
 suite, because a probe and a change to the suite it is probed under cannot be one change:
 the proposer would be graded on a test it also wrote. So the suite file must hash to what
 the baseline report's fingerprint names (`fingerprint.suite`), and a baseline written
-before the fingerprint carried that hash is refused as a probe's baseline. The advice file
+before the fingerprint carried that hash is refused as a probe's baseline. The toolchain
+is held the same way: a probe whose toolchain differs from the one its baseline names is
+refused before anything runs, and a baseline that names none (every report committed
+before the field) is not refused for it; the CLI says the comparison went unchecked and
+the probe's report records its own. The advice file
 lives under `evals/advice/`, in the declaration class: it is an input to an eval, never a
 seed, and no instance is initialized with it.
 
@@ -266,6 +270,20 @@ number of registry records, each policy's version and, for each declared metric,
 grader's command and the hash of the file it ran from. A number without that stamp
 cannot be reproduced or compared, and a declared number without its grader's hash could
 not say what measured it.
+
+Since #178 the fingerprint also names the **toolchain** the runs ran under
+(`fingerprint.toolchain`, `{ source, hash }`), read from the definition's repository: a
+Nix or devenv store path when the eval runs inside such a shell (`nix-store`), else the
+SHA-256 of `flake.lock` or `devenv.lock` (`lock`), else of the package lock,
+`pnpm-lock.yaml` first (`package-lock`). The harness reads it before every run and once
+after the last, and stops at the first reading that differs, before the next unit is
+dispatched, writing no report, in the shape of
+the refusal of an unavailable route primary: the message names each toolchain and where it
+was first seen, and nothing is summarized. A report committed before the field has none,
+and its absence reads as *not recorded*, not as a different environment. The same field
+is on every evidence record a unit's closeout writes, read from the worktree the check ran
+in. It names the environment; it does not say the environment matches the one a project
+deploys to.
 
 It carries a **per-task table** (`tasks`), computed from the runs: for each task, arm
 and metric, the mean over the repetitions, and for each non-baseline arm its difference

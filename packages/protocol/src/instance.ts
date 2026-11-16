@@ -9,6 +9,7 @@
  */
 import { Type, type Static } from "typebox";
 import { Value } from "typebox/value";
+import { ToolchainSchema } from "./toolchain.js";
 
 const NonEmpty = Type.String({ minLength: 1 });
 const Prefix = Type.String({ pattern: "^[^/\\\\][^\\\\]*/$" });
@@ -60,6 +61,12 @@ export const InstanceManifestSchema = Type.Object({
   writablePaths: Type.Optional(Type.Array(Prefix)),
   /** Prefixes protected in this project beyond the identity and what the conventions discover. */
   protectedPaths: Type.Optional(Type.Array(Prefix)),
+  /**
+   * The toolchain of the instance's repository at init, or at the last upgrade (#178): what `doctor`'s environment-drift
+   * compares with now, as information. Not a declaration of the environment, which is the repository's own files. Absent
+   * on a manifest written before the field, or where no source was found; `regulator upgrade` records it.
+   */
+  toolchain: Type.Optional(ToolchainSchema),
   initializedAt: NonEmpty,
   initializedBy: NonEmpty,
   /** Every upgrade the instance has been through, oldest first. Absent until the first. */

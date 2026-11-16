@@ -68,7 +68,7 @@
     "A tool-call hook protects calls routed through the hook. It does not sandbox the process: a shell command that commits a protected change, pushes it, or edits a copy of the repository elsewhere is outside it. The bash watch restores the working tree only; a commit made by the same command keeps the change in history, and reintegration would carry it.",
     "The snapshot-and-restore is not atomic: a command that reads a protected file it has just modified sees the modification before the restore.",
     "The alias walk is a preflight against a stable filesystem; a link created between the check and the write (TOCTOU) is not seen. Real isolation is the operating system's or a container's.",
-    "Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/); a path the project protects by convention nobody declared is not protected."
+    "Protected paths are the harness-owned directories DEFINITION_WRITERS names (identity, advice), the S5 artifacts and what the project's conventions declare (vendor/, and the environment files flake.nix, flake.lock, devenv.nix, devenv.lock, devenv.yaml when present, less any the session's contract exempts, #178); a path the project protects by convention nobody declared is not protected."
   ],
   "ownership": {
     "owner": "regulator-maintainers",

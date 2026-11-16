@@ -41,7 +41,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { bindEvidence, runHostChecks, summarizeVerdict, technicalVerdict } from "@metacoding.io/regulator-checks";
-import { discoverConventions } from "@metacoding.io/regulator-checks";
+import { discoverConventions, evidenceEnvironment } from "@metacoding.io/regulator-checks";
 import {
   ATTEMPT_ACTIONS, AuditLog, ExecutionStore, LeaseHeldError, ObligationLedger, UNITS_RELATIVE_DIR, WORKTREES_RELATIVE_DIR, appendSignal, carriedLedger, carriesLedger, ceilingFor, checkAuthorityRefs, checkContract, checkResultReport,
   dispositionByDecision, progressionVeto, readIdentity, readSignals, resolvePredictions as resolveFromStores, routeBlockedUnit, routeFor, routeMessages,
@@ -422,7 +422,7 @@ async function trialMerge(exec: Exec, options: { cwd: string; sha: string; repo:
   if (!checks.length) return { verdict: "pass", sha: options.sha, reasons: [] };
   const conventions = await discoverConventions(options.cwd);
   const results = (await runHostChecks(exec, { cwd: options.cwd, checks, conventions })).map((r) => ({ ...r, check: `pre-merge:${r.check}` }));
-  const records = bindEvidence(results, { unitId: options.contract.unitId, attempt: options.attempt, contract: { id: options.contract.id, version: options.contract.version }, expectations: [], revision: options.sha, now: options.now });
+  const records = bindEvidence(results, { unitId: options.contract.unitId, attempt: options.attempt, contract: { id: options.contract.id, version: options.contract.version }, expectations: [], revision: options.sha, environment: await evidenceEnvironment(options.cwd), now: options.now });
   const log = new AuditLog(options.repo);
   for (const record of records) await log.appendEvidence(record);
   const failing = results.filter((r) => r.verdict === "fail");
@@ -474,7 +474,7 @@ export async function auditUnit(exec: Exec, options: { repo: string; contract: W
       base: await currentBranch(exec, options.repo), protectedPaths, conventions, expectations: contract.expectedEvidence,
       forbidden: identity.forbidden, writablePaths: manifest?.writablePaths ?? [...conventions.sourceDirs.map((d) => `${d}/`), "test/"],
     });
-    records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, now });
+    records = bindEvidence(results, { unitId, attempt: options.attempt, contract: { id: contract.id, version: contract.version }, expectations: contract.expectedEvidence, revision, environment: await evidenceEnvironment(worktree), now });
     for (const record of records) await log.appendEvidence(record);
     // A check that passed at its declared severity and still saw something (#47): a finding at advisory, beside the evidence,
     // so the drift is on the record and routed as trace; nothing is refused for it, because the workload said so.
