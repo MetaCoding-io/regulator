@@ -61,11 +61,18 @@ export const EvalArmSchema = Type.Object({
 }, { additionalProperties: false });
 export type EvalArm = Static<typeof EvalArmSchema>;
 
-/** The built-in set: the eighteen outcome and trajectory counts whose graders ship in the harness (`graders.ts`). */
+/**
+ * The built-in set: the twenty-eight outcome and trajectory counts whose graders ship in the harness (`graders.ts`). The
+ * last ten (#49) are the planner-quality counts over the result reports and the recovery decisions, the handoff benchmark
+ * of the team-of-experts note §3.2: three over the report fields, replans by who asked, and the misses they add up to,
+ * per handoff and by the seam each was handed across.
+ */
 export const EVAL_METRICS = [
   "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
   "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
   "cacheWrite", "cost", "cacheShare",
+  "fixedDeviations", "delegatedUnanswered", "emergentUncertainty", "replansDecided", "replansRequested",
+  "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer",
 ] as const;
 export const BuiltInMetricSchema = Type.Union(EVAL_METRICS.map((m) => Type.Literal(m)));
 export type BuiltInMetric = Static<typeof BuiltInMetricSchema>;
@@ -78,13 +85,20 @@ export function isBuiltInMetric(name: string): name is BuiltInMetric {
  * per-task table reads to say which arm leads. `none` is a quantity reported and not ranked: a refusal or an escalation
  * is a gate or a person doing their work as often as it is a cost, and a fact remembered stays a count. Whether a fact
  * helped is read off the task that needs it (`d7-archive` in the drift suite, #201 item 11, after agent-memory note §6
- * item 4): its attempts and retries, which are ranked; more facts is neither better nor worse.
+ * item 4): its attempts and retries, which are ranked; more facts is neither better nor worse. Of the planner-quality counts
+ * (#49), the two the host observes itself are ranked lower: a delegated decision a report leaves unanswered, and a replan
+ * S3 decided. The rest count what a unit says about its own work (a deviation, an emergent decision, a residual
+ * uncertainty, a clarification it surfaced), or are sums that include those, and are not ranked: ranking them would have
+ * the arm whose units report most candidly lose to the arm whose units say nothing, since a unit that reports nothing
+ * scores clean on all of them. Silence is what the outcome graders and the checks are for.
  */
 export const BUILT_IN_METRIC_DIRECTIONS: Readonly<Record<(typeof EVAL_METRICS)[number], MetricDirection>> = {
   closed: "higher", attempts: "lower", tokens: "lower", turns: "lower", wallClockMs: "lower", retries: "lower",
   escalations: "none", invariantViolations: "lower", boundaryViolations: "lower", signatureDrift: "lower",
   vocabularyDrift: "lower", memoryRules: "lower", memoryFacts: "none", refusals: "none", suiteWeakened: "lower",
   cacheWrite: "lower", cost: "lower", cacheShare: "higher",
+  fixedDeviations: "none", delegatedUnanswered: "lower", emergentUncertainty: "none", replansDecided: "lower", replansRequested: "none",
+  missesPerHandoff: "none", missesAtContract: "none", missesAtAttempt: "none", missesAtBase: "none", missesAtAnswer: "none",
 };
 
 /**

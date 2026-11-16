@@ -12,11 +12,13 @@ const declaration = {
   grader: { argv: ["node", "workload/portfolio/turnover.mjs"] },
 };
 
-test("the eighteen built-in metrics are the fifteen they were, cacheWrite (#201), and cost and cacheShare (#200), and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
+test("the twenty-eight built-in metrics are the fifteen they were, cacheWrite (#201), cost and cacheShare (#200), and the ten planner-quality counts (#49), and a metric name is now one of them or a declared one — namespaced to the workload or the instrument that owns it", () => {
   assert.deepEqual([...EVAL_METRICS], [
     "closed", "attempts", "tokens", "turns", "wallClockMs", "retries", "escalations", "invariantViolations",
     "boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "memoryFacts", "refusals", "suiteWeakened",
     "cacheWrite", "cost", "cacheShare",
+    "fixedDeviations", "delegatedUnanswered", "emergentUncertainty", "replansDecided", "replansRequested",
+    "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer",
   ]);
   for (const m of EVAL_METRICS) {
     assert.equal(Value.Check(EvalMetricSchema, m), true, m);
@@ -95,7 +97,7 @@ test("a grader verdict may be declared, and the fingerprint carries each declare
 test("every built-in has a direction (#201), and the outcome metrics are the five graders of kind outcome, each a count of drift where zero is clean", () => {
   assert.deepEqual(Object.keys(BUILT_IN_METRIC_DIRECTIONS).sort(), [...EVAL_METRICS].sort());
   assert.equal(BUILT_IN_METRIC_DIRECTIONS.closed, "higher");
-  assert.deepEqual(EVAL_METRICS.filter((m) => BUILT_IN_METRIC_DIRECTIONS[m] === "none"), ["escalations", "memoryFacts", "refusals"]);
+  assert.deepEqual(EVAL_METRICS.filter((m) => BUILT_IN_METRIC_DIRECTIONS[m] === "none"), ["escalations", "memoryFacts", "refusals", "fixedDeviations", "emergentUncertainty", "replansRequested", "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer"], "what a gate or a person did, a count of facts, and what a unit reports about its own work (#49) are reported, not ranked");
   assert.deepEqual([...OUTCOME_METRICS], ["boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "suiteWeakened"]);
   for (const m of OUTCOME_METRICS) assert.equal(BUILT_IN_METRIC_DIRECTIONS[m], "lower", m);
   assert.equal(isOutcomeMetric("invariantViolations"), false, "a trajectory count is not an outcome");

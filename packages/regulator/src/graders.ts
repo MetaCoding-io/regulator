@@ -7,14 +7,17 @@
  * have refused, and a clean trajectory can leave drift no gate measures.
  *
  * Every grader returns a number and the observation behind it. None of them
- * is a judge model. These are the built-in set, the eighteen metrics of
+ * is a judge model. These are the built-in set, the twenty-eight metrics of
  * `EVAL_METRICS`; a *declared* grader (#129, at the end of this file) is a
  * workload's or an instrument's own command, run the same way after a unit.
+ * Ten of the trajectory graders (#49, `handoffMisses`) read the result
+ * reports' typed fields against the contract they answer: what planning
+ * allocated and what the unit sent back, never the report's prose.
  */
 import path from "node:path";
 import { countTestLines, runHostChecks } from "@metacoding.io/regulator-checks";
 import { AuditLog, ExecutionStore, MemoryStore, ObligationLedger, ownConsumption, readSignals } from "@metacoding.io/regulator-core";
-import { GraderOutputSchema, type AuditFinding, type EvidenceExpectation, type GraderVerdict, type MetricDeclaration } from "@metacoding.io/regulator-protocol";
+import { GraderOutputSchema, type AttemptRecord, type AuditFinding, type EvidenceExpectation, type GraderVerdict, type MetricDeclaration, type ObligationState, type RecoveryDecision, type ResultReport, type WorkContract } from "@metacoding.io/regulator-protocol";
 import { Value } from "typebox/value";
 import type { Exec } from "./exec.js";
 
@@ -139,6 +142,7 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
   const failingChecks = audit.evidence.filter((r) => r.verdict === "fail" && (r.check === "identity-untouched" || r.check.startsWith("export-signature")));
   const invariantViolations = gateFindings.length + failingChecks.length;
   const cacheShare = shareInput > 0 ? shareRead / shareInput : 0;
+  const handoff = await handoffMisses(store, { unitId, attempts, decisions, obligations, currentVersion: unit?.contract.version ?? 0 });
   const graders: GraderVerdict[] = [
     { grader: "invariantViolations", kind: "trajectory", value: invariantViolations, observation: invariantViolations ? [...gateFindings.map((f) => `${f.invariant}: ${f.subject}`), ...failingChecks.map((r) => `${r.check}: ${r.observation.split("\n")[0]}`)].join("; ") : "no invariant touched" },
     { grader: "refusals", kind: "trajectory", value: refusals, observation: refusals ? attempts.filter((a) => a.outcome === "check-failure" || a.outcome === "invalid-report").map((a) => `attempt ${a.attempt}: ${a.outcome}${a.detail ? ` — ${a.detail.split("\n")[0]}` : ""}`).join("; ") : "no attempt refused" },
@@ -150,12 +154,129 @@ export async function unitTrajectory(repo: string, unitId: string): Promise<{ me
     { grader: "cost", kind: "trajectory", value: cost, observation: !ledgers ? "no ledger: a scripted unit runs no session, so nothing was metered" : `${Number(cost.toFixed(6))} over ${ledgers} ledger(s), as the provider reported it` },
     // The cache share (#200, the Exo note §4 item 1): cache-read input tokens over all input tokens, summed over the attempts.
     { grader: "cacheShare", kind: "trajectory", value: cacheShare, observation: !ledgers ? "no ledger: a scripted unit runs no session, so nothing was metered" : !inputKept ? `no cache share: none of ${ledgers} ledger(s) kept the uncached input` : `${shareRead} of ${shareInput} input token(s) read from the cache over ${inputKept} of ${ledgers} ledger(s)${inputKept < ledgers ? "; the rest were written before the ledger kept the uncached input" : ""}` },
+    ...handoff.graders,
   ];
   return {
-    metrics: { closed: unit?.status === "closed" ? 1 : 0, attempts: unit?.attempts ?? 0, tokens, turns, wallClockMs, refusals, retries, escalations, invariantViolations, cacheWrite, cost, cacheShare },
+    metrics: { closed: unit?.status === "closed" ? 1 : 0, attempts: unit?.attempts ?? 0, tokens, turns, wallClockMs, refusals, retries, escalations, invariantViolations, cacheWrite, cost, cacheShare, ...handoff.metrics },
     graders,
     models,
   };
+}
+
+/**
+ * The seams a handoff crosses (#49, the team-of-experts note §3.2): what an attempt was handed, and so where a miss on it
+ * is counted. `contract` is a unit's first attempt, handed the contract; `attempt` is a further attempt, handed the
+ * previous one's worktree and the router's hint; `answer` is a further attempt dispatched after a person answered what the
+ * unit waited on, which the controller carries as the hint instead; `base` is what earlier units left on the base, and the
+ * only typed record of a failure crossing it is a recovery decision on a reintegration `conflict`.
+ */
+export const HANDOFF_SEAMS = ["contract", "attempt", "base", "answer"] as const;
+export type HandoffSeam = (typeof HANDOFF_SEAMS)[number];
+const SEAM_METRIC = { contract: "missesAtContract", attempt: "missesAtAttempt", base: "missesAtBase", answer: "missesAtAnswer" } as const satisfies Record<HandoffSeam, string>;
+const SEAM_NAME: Record<HandoffSeam, string> = { contract: "contract to unit", attempt: "attempt to attempt", base: "unit to unit through the base", answer: "person to unit through an answer" };
+
+/** Which seam an attempt was handed its work across, by the same rule the controller uses to choose the hint it carries. */
+function seamOf(attempt: AttemptRecord, previous: AttemptRecord | undefined, decisions: readonly RecoveryDecision[], obligations: readonly ObligationState[]): HandoffSeam {
+  if (!previous) return "contract";
+  // driveUnit carries the router's hint for a retry or a repair; only without one does the controller carry an answer.
+  if (decisions.some((d) => d.attempt === previous.attempt && (d.action === "retry" || d.action === "repair") && d.hint)) return "attempt";
+  const after = Date.parse(previous.endedAt), before = Date.parse(attempt.startedAt);
+  const answered = obligations.some((o) => (o.concern === "interaction" || o.concern === "recovery-decision") && o.status === "resolved" && !!o.rationale && !!o.closedAt && Date.parse(o.closedAt) > after && Date.parse(o.closedAt) <= before);
+  return answered ? "answer" : "attempt";
+}
+
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+/**
+ * The planner-quality counts (#49, DEBT row 40): what each attempt's result report sent back against what the contract it
+ * answers allocated, and the replans S3 decided, read from the typed fields and the recovery decisions and never from a
+ * report's prose. A report is read against the contract version it names. What the result-report gate already makes
+ * zero is not counted as if it could move: a session's `report_result` refuses a report that leaves a required delegated
+ * choice unreported or an unresolved decision out, so only a report written outside a session (and refused later as
+ * `invalid-report`) or a delegated decision declared `requiredReport: false` can leave `delegatedUnanswered` above zero,
+ * and the planned side of the uncertainty count is the contract's own and is reported in the observation, not as a metric.
+ *
+ *   fixedDeviations      deviations of kind `fixed-decision`, summed over the reports
+ *   delegatedUnanswered  the contract's delegated decisions a report gives no choice for, summed over the reports
+ *   emergentUncertainty  emergent decisions and residual uncertainties, summed over the reports: what appeared unplanned
+ *   replansDecided       recovery decisions whose action is `replan`: S3's, after a failure
+ *   replansRequested     emergent decisions, and unresolved decisions handled `policy-clarification` a report surfaced: the unit's
+ *   missesPerHandoff     every miss above counted once, over the unit's attempts
+ *   missesAt<Seam>       the same misses, by the seam the attempt they fell on was handed its work across
+ */
+export async function handoffMisses(store: ExecutionStore, options: { unitId: string; attempts: readonly AttemptRecord[]; decisions: readonly RecoveryDecision[]; obligations: readonly ObligationState[]; currentVersion: number }): Promise<{ metrics: Record<string, number>; graders: GraderVerdict[] }> {
+  const { unitId, attempts, decisions, obligations } = options;
+  const contracts = new Map<number, WorkContract | undefined>();
+  const contractFor = async (version: number) => {
+    if (!contracts.has(version)) contracts.set(version, await store.getContract(unitId, version));
+    return contracts.get(version);
+  };
+  const seams = new Map<number, HandoffSeam>();
+  const misses: Record<HandoffSeam, string[]> = { contract: [], attempt: [], base: [], answer: [] };
+  const counts: Record<HandoffSeam, number> = { contract: 0, attempt: 0, base: 0, answer: 0 };
+  const fixed: string[] = [], unanswered: string[] = [], requested: string[] = [];
+  let fixedN = 0, unansweredN = 0, emergentN = 0, decisionsN = 0, residualN = 0, requestedN = 0, reports = 0;
+  let planned = 0, preserved = 0, surfaced = 0;
+  for (const [i, attempt] of attempts.entries()) {
+    const seam = seamOf(attempt, attempts[i - 1], decisions, obligations);
+    seams.set(attempt.attempt, seam);
+    const report: ResultReport | undefined = await store.getReport(unitId, attempt.contractVersion, attempt.attempt);
+    const contract = await contractFor(attempt.contractVersion);
+    if (!report || !contract) continue;
+    reports++;
+    const deviations = report.deviations.filter((d) => d.kind === "fixed-decision");
+    const missing = contract.delegated.filter((d) => !report.delegatedResults.some((r) => r.decisionId === d.id));
+    const clarifications = report.unresolvedOutcomes.filter((o) => o.outcome === "surfaced" && contract.unresolved.find((d) => d.id === o.decisionId)?.handling === "policy-clarification");
+    planned += contract.unresolved.length;
+    preserved += report.unresolvedOutcomes.filter((o) => o.outcome === "preserved").length;
+    surfaced += report.unresolvedOutcomes.filter((o) => o.outcome === "surfaced").length;
+    fixedN += deviations.length;
+    unansweredN += missing.length;
+    decisionsN += report.emergentDecisions.length;
+    residualN += report.residualUncertainty.length;
+    emergentN += report.emergentDecisions.length + report.residualUncertainty.length;
+    requestedN += report.emergentDecisions.length + clarifications.length;
+    if (deviations.length) fixed.push(`attempt ${attempt.attempt}: ${deviations.map((d) => d.ref ?? "(no ref)").join(", ")}`);
+    if (missing.length) unanswered.push(`attempt ${attempt.attempt}: ${missing.map((d) => d.id).join(", ")}`);
+    if (report.emergentDecisions.length || clarifications.length) requested.push(`attempt ${attempt.attempt}: ${plural(report.emergentDecisions.length, "emergent decision")}, ${plural(clarifications.length, "policy clarification")} surfaced${clarifications.length ? ` (${clarifications.map((o) => o.decisionId).join(", ")})` : ""}`);
+    // Each miss once: an emergent decision is both emergent uncertainty and a request for a replan, and is counted as one miss.
+    const n = deviations.length + missing.length + report.emergentDecisions.length + report.residualUncertainty.length + clarifications.length;
+    if (n) {
+      counts[seam] += n;
+      const parts = [
+        deviations.length ? plural(deviations.length, "fixed-decision deviation") : "", missing.length ? plural(missing.length, "delegated decision") + " unanswered" : "",
+        report.emergentDecisions.length ? plural(report.emergentDecisions.length, "emergent decision") : "", report.residualUncertainty.length ? plural(report.residualUncertainty.length, "residual uncertainty", "residual uncertainties") : "",
+        clarifications.length ? plural(clarifications.length, "policy clarification") + " surfaced" : "",
+      ].filter(Boolean);
+      misses[seam].push(`attempt ${attempt.attempt}: ${parts.join(", ")}`);
+    }
+  }
+  const replans = decisions.filter((d) => d.action === "replan");
+  for (const d of replans) {
+    // A replan after a reintegration conflict is a miss on what the base handed the unit; any other, on what its failing attempt was handed.
+    const seam: HandoffSeam = d.cause === "conflict" ? "base" : seams.get(d.attempt) ?? (d.attempt === 1 ? "contract" : "attempt");
+    counts[seam]++;
+    misses[seam].push(`attempt ${d.attempt}: replan decided on ${d.cause}`);
+  }
+  // A replan the loop records waits for S3 outside it; the contract's provenance says which ones were carried out as a new version.
+  const revisions: string[] = [];
+  for (let v = 2; v <= options.currentVersion; v++) {
+    const predecessor = (await contractFor(v))?.provenance.predecessor;
+    if (predecessor) revisions.push(`v${v} from v${predecessor.version}`);
+  }
+  const total = HANDOFF_SEAMS.reduce((sum, s) => sum + counts[s], 0);
+  const perHandoff = attempts.length ? total / attempts.length : 0;
+  const read = reports ? `over ${plural(reports, "report")}` : "no report to read";
+  const graders: GraderVerdict[] = [
+    { grader: "fixedDeviations", kind: "trajectory", value: fixedN, observation: fixed.length ? `fixed-decision deviations reported: ${fixed.join("; ")}` : reports ? `no fixed-decision deviation ${read}` : read },
+    { grader: "delegatedUnanswered", kind: "trajectory", value: unansweredN, observation: unanswered.length ? `delegated decisions with no reported choice: ${unanswered.join("; ")}` : reports ? `every delegated decision answered ${read}` : read },
+    { grader: "emergentUncertainty", kind: "trajectory", value: emergentN, observation: reports ? `planned: ${plural(planned, "unresolved decision")} (${preserved} preserved, ${surfaced} surfaced); emergent: ${plural(decisionsN, "emergent decision")} and ${plural(residualN, "residual uncertainty", "residual uncertainties")}, ${read}` : read },
+    { grader: "replansDecided", kind: "trajectory", value: replans.length, observation: `${replans.length ? `S3 decided a replan after ${replans.map((d) => `attempt ${d.attempt} (${d.cause}, occurrence ${d.occurrence}, ${d.policy.name} v${d.policy.version})`).join("; ")}` : "no replan decided"}; ${revisions.length ? `new contract versions: ${revisions.join(", ")}` : "no contract version has a predecessor"}` },
+    { grader: "replansRequested", kind: "trajectory", value: requestedN, observation: requested.length ? requested.join("; ") : reports ? `no report asked for a replan ${read}` : read },
+    { grader: "missesPerHandoff", kind: "trajectory", value: perHandoff, observation: `${plural(total, "miss", "misses")} over ${plural(attempts.length, "handoff")}: ${HANDOFF_SEAMS.map((s) => `${s} ${counts[s]}`).join(", ")}` },
+    ...HANDOFF_SEAMS.map((s): GraderVerdict => ({ grader: SEAM_METRIC[s], kind: "trajectory", value: counts[s], observation: misses[s].length ? `${SEAM_NAME[s]}: ${misses[s].join("; ")}` : `no miss ${SEAM_NAME[s]}` })),
+  ];
+  return { metrics: Object.fromEntries(graders.map((g) => [g.grader, g.value])), graders };
 }
 
 /** The vocabulary the lab's glossary reserves: a unit is a unit. */

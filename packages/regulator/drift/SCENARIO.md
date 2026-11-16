@@ -91,8 +91,9 @@ stored, rendered and counted; whether a model acts on it is a live run's to show
 is about padding and the vendored helper, and `d7-archive` asks for no padding fix, so
 there it is rendered beside unit 5's true fact and is not designed to bear on the task.
 
-The suites are at version 3: version 2 when unit 7 was added, version 3 when `cost` and
-`cacheShare` were pre-registered (#200). A report is comparable only with
+The suites are at version 4: version 2 when unit 7 was added, version 3 when `cost` and
+`cacheShare` were pre-registered (#200), version 4 when the ten planner-quality counts
+were (#49). A report is comparable only with
 reports of the same suite version, and the first live report ran version 1.
 
 The honest result is the one lesson 14's plan asks for: at least one row where the

@@ -202,6 +202,21 @@ test("the harness validates its graders against five scripted learner-style unit
   const noted = (await ledger.entries()).flatMap((e) => ("type" in e && e.type === "message-noted" && e.message === raised[1]!.id ? [e.reason] : []));
   assert.deepEqual(noted, ["info is below advisory, the routing v1 line for intelligence-signal"]);
   assert.equal((await readSignals(confidentInstances.control!)).filter((m) => m.kind === "intelligence-signal").length, 0, "the control arm loads no intelligence checkpoint, so nothing is raised there");
+
+  // The planner-quality counts (#49). Every scripted report answers every delegated decision, preserves every unresolved one
+  // and records no deviation, so the report-field counts move on the confident unit's one residual uncertainty alone; what
+  // separates the drifter and the sloppy unit from the reference is the replan S3 decides on a unit's third refusal, a miss on
+  // the attempt the second repair hint was handed to. The drifter's silent change to the fixed signature is not a reported
+  // deviation, and fixedDeviations does not see it: signatureDrift and the export-signature check do.
+  const planner = (behaviour: string, arm: string) => Object.values(byTask(reports.get(behaviour)!.runs, arm)).map((r) => [r.metrics.fixedDeviations, r.metrics.delegatedUnanswered, r.metrics.emergentUncertainty, r.metrics.replansDecided, r.metrics.replansRequested, r.metrics.missesAtContract, r.metrics.missesAtAttempt, r.metrics.missesAtBase, r.metrics.missesAtAnswer]);
+  const clean = [0, 0, 0, 0, 0, 0, 0, 0, 0], replanned = [0, 0, 0, 1, 0, 0, 1, 0, 0];
+  for (const arm of ["control", "treatment"]) assert.deepEqual(planner("reference", arm), Array(7).fill(clean), `reference under ${arm}: no miss at any handoff, d7's repair included`);
+  assert.deepEqual(planner("drifter", "treatment"), Array(7).fill(replanned), "the drifter: a replan after every unit's third refusal");
+  assert.deepEqual(planner("drifter", "control"), [...Array(6).fill(clean), replanned]);
+  assert.deepEqual(planner("sloppy", "treatment"), [clean, clean, clean, clean, replanned, replanned, clean], "the sloppy unit: the two units glossary-lint refuses three times");
+  assert.deepEqual(planner("confident", "treatment"), Array(7).fill([0, 0, 3, 1, 0, 1, 3, 0, 0]), "the confident unit: its one doubt on each of three reports, the first at the contract and two after a hint, and the replan");
+  assert.equal(byTask(reports.get("drifter")!.runs, "treatment")["d1-fix"]!.metrics.missesPerHandoff, 1 / 3, "one miss over three handoffs");
+  assert.match(byTask(reports.get("drifter")!.runs, "treatment")["d1-fix"]!.graders.find((g) => g.grader === "replansDecided")!.observation, /^S3 decided a replan after attempt 3 \(check-failure, occurrence 3, recovery v1\); no contract version has a predecessor$/);
 });
 
 test("the poisoned-memory fixture is slugkit plus one memory seed, and its suite is the drift suite's tasks, two arms and metrics over it (#130)", async () => {
@@ -259,7 +274,7 @@ test("d7-archive is shaped like the other six: the same fixed decisions, a deleg
   const { contractForArm } = await import("./evals.js");
   const suite = await suiteP;
   assert.deepEqual(suite.tasks.slice(-2), ["contracts/drift/d6-cleanup.json", "contracts/drift/d7-archive.json"], "d7 runs after d6, which is left as it was");
-  assert.equal(suite.version, 3, "the task list changed (#201 item 11, version 2) and then the pre-registered metrics (#200, version 3), so the suite's version did");
+  assert.equal(suite.version, 4, "the task list changed (#201 item 11, version 2) and then the pre-registered metrics (#200, version 3; #49, version 4), so the suite's version did");
   const [d6, d7] = await Promise.all(suite.tasks.slice(-2).map((f) => loadContract(path.join(LAB_ROOT, f))));
   assert.deepEqual(d7!.fixed, d6!.fixed);
   assert.deepEqual(d7!.delegated.map((d) => d.id), ["d-fact", "d-tests"]);
@@ -548,7 +563,7 @@ test("a probe (#200) reruns one arm beside the same arm with one advice file rep
   const other = { ...committed, fingerprint: { ...committed.fingerprint, suite: { file: "evals/drift.json", sha256: "0".repeat(64) } } };
   await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/x.json", bytes: JSON.stringify(other) } }), /the probe must run under the suite its baseline ran under: evals\/reports\/x\.json names evals\/drift\.json at 000000000000…, and evals\/drift\.json is now [0-9a-f]{12}…\. A harness-edit and a change to the suite it is probed under are not one change/);
   await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, baselineArm: "model-tier" }), /has no arm "model-tier"; the probe reruns an arm the baseline ran/);
-  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, metric: "workload:portfolio/turnover" }), /the prediction stakes "workload:portfolio\/turnover", which suite drift v3 does not pre-register/);
+  await assert.rejects(runProbe(gitExec, { ...base, baseline: { file: "evals/reports/drift-scripted-reference.json", bytes }, metric: "workload:portfolio/turnover" }), /the prediction stakes "workload:portfolio\/turnover", which suite drift v4 does not pre-register/);
 
   // One repetition of the first two tasks, kept, so the instances can be compared file for file.
   const short = { ...suite, tasks: suite.tasks.slice(0, 2), repetitions: 1 };
@@ -587,6 +602,82 @@ test("the committed scripted probe (#200) is the plumbing test: a probe over the
   assert.deepEqual(twin(report.probe.arm), twin(report.probe.baseline.arm));
   assert.match(report.interpretation, /plumbing/);
   assert.match(report.interpretation, /scripted/i);
+});
+
+test("the planner-quality counts (#49) read each attempt's report against the contract version it answers, and the recovery decisions: fixed-decision deviations, delegated decisions with no choice, emergent against planned uncertainty, replans by who asked, and every miss once, per handoff and by the seam the attempt was handed its work across", async (t) => {
+  const { BUILT_IN_METRIC_DIRECTIONS, OUTCOME_METRICS } = await import("@metacoding.io/regulator-protocol");
+  const { HANDOFF_SEAMS, handoffMisses, unitTrajectory } = await import("./graders.js");
+  const { loadContract } = await import("./contract-file.js");
+  const names = ["fixedDeviations", "delegatedUnanswered", "emergentUncertainty", "replansDecided", "replansRequested", "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer"] as const;
+  assert.deepEqual(names.map((m) => BUILT_IN_METRIC_DIRECTIONS[m]), ["none", "lower", "none", "lower", "none", "none", "none", "none", "none", "none"], "only what the host observes itself is ranked (an unanswered delegated decision, a replan S3 decided); what a unit reports about its own work, and the sums that include it, are not, or candour would lose to silence");
+  assert.ok(names.every((m) => !(OUTCOME_METRICS as readonly string[]).includes(m)), "they read the records, not the tree: the baseline check does not grow");
+  assert.deepEqual([...HANDOFF_SEAMS], ["contract", "attempt", "base", "answer"]);
+
+  const repo = await mkdtemp(path.join(tmpdir(), "regulator-handoff-"));
+  t.after(() => rm(repo, { recursive: true, force: true }));
+  const drift = await loadContract(path.join(LAB_ROOT, "contracts", "drift", "d1-fix.json"));
+  // One optional delegated decision (the only kind a session's report_result lets go unanswered) and one unresolved decision for a policy clarification.
+  const contract = {
+    ...drift,
+    delegated: [...drift.delegated, { id: "d-optional", subject: "a choice the contract does not need reported", bounds: "anything under src/", requiredReport: false }],
+    unresolved: [...drift.unresolved, { id: "u-policy", subject: "whether the separator is configurable", reason: "the README does not say", handling: "policy-clarification" as const }],
+  };
+  const store = new ExecutionStore(repo);
+  await store.createUnit(contract);
+  const empty = await unitTrajectory(repo, contract.unitId);
+  assert.deepEqual(names.map((m) => empty.metrics[m]), Array(10).fill(0), "no attempt, nothing to count");
+  assert.equal(empty.graders.find((g) => g.grader === "fixedDeviations")!.observation, "no report to read");
+
+  const at = (minute: number) => new Date(Date.parse("2026-11-15T06:00:00.000Z") + minute * 60_000).toISOString();
+  const base = { contractId: contract.id, contractVersion: 1, unitId: contract.unitId, summary: "s", evidence: [] };
+  const all = { delegatedResults: contract.delegated.filter((d) => d.requiredReport !== false).map((d) => ({ decisionId: d.id, choice: "c" })), unresolvedOutcomes: contract.unresolved.map((d) => ({ decisionId: d.id, outcome: "preserved" as const, note: "n" })), emergentDecisions: [], deviations: [], residualUncertainty: [] };
+  // Attempt 1, handed the contract: one fixed-decision deviation, one emergent decision, one residual uncertainty, the policy clarification surfaced, the optional choice unreported.
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: at(0), endedAt: at(1), outcome: "check-failure" });
+  await store.writeReport({
+    ...base, ...all, attempt: 1, reportedAt: at(1),
+    unresolvedOutcomes: [{ decisionId: "u-unicode", outcome: "preserved", note: "n" }, { decisionId: "u-policy", outcome: "surfaced", note: "the separator should be configurable" }],
+    deviations: [{ kind: "fixed-decision", ref: "f-signature", description: "added a second parameter" }, { kind: "scope", description: "touched the README" }],
+    emergentDecisions: [{ subject: "unicode folding", choiceOrQuestion: "folded to ASCII", consequenceIfWrong: "medium" }],
+    residualUncertainty: [{ subject: "CI clock", reason: "untested under TZ", consequenceIfWrong: "low" }],
+  });
+  const decision = (attempt: number, action: "repair" | "replan", cause: "check-failure" | "conflict", occurrence: number) => store.recordDecision({ id: `dec-${attempt}`, unitId: contract.unitId, attempt, cause, occurrence, evidence: ["e"], action, policy: { name: "recovery", version: 1 }, rationale: "r", ...(action === "repair" ? { hint: "fix it" } : {}), decidedAt: at(attempt * 10 + 2), decidedBy: "S3" });
+  await decision(1, "repair", "check-failure", 1);
+  // Attempt 2, handed the router's hint: a clean report, and S3 replans after it fails.
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: at(12), endedAt: at(13), outcome: "check-failure" });
+  await store.writeReport({ ...base, ...all, delegatedResults: [...all.delegatedResults, { decisionId: "d-optional", choice: "c" }], attempt: 2, reportedAt: at(13) });
+  await decision(2, "replan", "check-failure", 2);
+  // Attempt 3, after a person answered what the unit waited on (no router hint): one more emergent decision, and a reintegration conflict S3 replans on.
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: at(30), endedAt: at(31), outcome: "reported" });
+  await store.writeReport({ ...base, ...all, delegatedResults: [...all.delegatedResults, { decisionId: "d-optional", choice: "c" }], attempt: 3, reportedAt: at(31), emergentDecisions: [{ subject: "archive layout", choiceOrQuestion: "which layout?", consequenceIfWrong: "high" }] });
+  await decision(3, "replan", "conflict", 1);
+  // Attempt 4 wrote no report: a handoff with nothing sent back, counted as a handoff and as no miss.
+  await store.recordAttempt({ unitId: contract.unitId, contractVersion: 1, startedAt: at(40), endedAt: at(41), outcome: "no-report" });
+  const obligations = [{ id: "ob-1", unit: contract.unitId, concern: "interaction", status: "resolved", rationale: "use the plain layout", closedAt: at(20), closedBy: "alice", disposition: "accepted" }] as unknown as Parameters<typeof handoffMisses>[1]["obligations"];
+  const r = await handoffMisses(store, { unitId: contract.unitId, attempts: await store.listAttempts(contract.unitId), decisions: await store.listDecisions(contract.unitId), obligations, currentVersion: 1 });
+  assert.deepEqual(names.map((m) => [m, r.metrics[m]]), [
+    ["fixedDeviations", 1], ["delegatedUnanswered", 1], ["emergentUncertainty", 3], ["replansDecided", 2], ["replansRequested", 3],
+    // Each miss once: attempt 1's five (deviation, unanswered, emergent, residual, clarification), attempt 3's emergent decision, and two replans, over four handoffs.
+    ["missesPerHandoff", 2], ["missesAtContract", 5], ["missesAtAttempt", 1], ["missesAtBase", 1], ["missesAtAnswer", 1],
+  ]);
+  const said = (g: string) => r.graders.find((v) => v.grader === g)!.observation;
+  assert.equal(said("fixedDeviations"), "fixed-decision deviations reported: attempt 1: f-signature", "a scope deviation is not a fixed-decision one");
+  assert.equal(said("delegatedUnanswered"), "delegated decisions with no reported choice: attempt 1: d-optional");
+  assert.equal(said("emergentUncertainty"), "planned: 6 unresolved decisions (5 preserved, 1 surfaced); emergent: 2 emergent decisions and 1 residual uncertainty, over 3 reports");
+  assert.equal(said("replansDecided"), "S3 decided a replan after attempt 2 (check-failure, occurrence 2, recovery v1); attempt 3 (conflict, occurrence 1, recovery v1); no contract version has a predecessor");
+  assert.equal(said("replansRequested"), "attempt 1: 1 emergent decision, 1 policy clarification surfaced (u-policy); attempt 3: 1 emergent decision, 0 policy clarifications surfaced");
+  assert.equal(said("missesPerHandoff"), "8 misses over 4 handoffs: contract 5, attempt 1, base 1, answer 1");
+  assert.equal(said("missesAtContract"), "contract to unit: attempt 1: 1 fixed-decision deviation, 1 delegated decision unanswered, 1 emergent decision, 1 residual uncertainty, 1 policy clarification surfaced");
+  assert.equal(said("missesAtAttempt"), "attempt to attempt: attempt 2: replan decided on check-failure", "attempt 2 was handed the router's hint");
+  assert.equal(said("missesAtAnswer"), "person to unit through an answer: attempt 3: 1 emergent decision", "attempt 3 followed the person's answer and no hint");
+  assert.equal(said("missesAtBase"), "unit to unit through the base: attempt 3: replan decided on conflict", "a replan after a reintegration conflict is the base's miss, whatever the attempt was handed");
+  // The same counts reach the run through unitTrajectory, which reads the unit's own obligations (here none, so attempt 3 is an attempt-to-attempt handoff).
+  const via = await unitTrajectory(repo, contract.unitId);
+  assert.deepEqual([via.metrics.missesAtAnswer, via.metrics.missesAtAttempt, via.metrics.missesPerHandoff], [0, 2, 2]);
+  // A replan carried out as a new contract version is named from its provenance.
+  const v2 = { ...contract, version: 2, provenance: { ...contract.provenance, predecessor: { version: 1, reason: "replanned after the conflict" } } };
+  await writeFile(path.join(repo, ".regulator", "units", contract.unitId, "contract.v2.json"), JSON.stringify(v2), "utf8");
+  const revised = await handoffMisses(store, { unitId: contract.unitId, attempts: await store.listAttempts(contract.unitId), decisions: await store.listDecisions(contract.unitId), obligations, currentVersion: 2 });
+  assert.match(revised.graders.find((g) => g.grader === "replansDecided")!.observation, /; new contract versions: v2 from v1$/);
 });
 
 test("the fingerprint names the toolchain (#178): read from the definition's repository before every run and once after the last, one per report; runs under different toolchains are refused before a report is written, and a probe is held to the toolchain its baseline names, while a baseline that names none is not refused for it", async () => {

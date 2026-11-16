@@ -102,7 +102,18 @@ export function unitGrader(exec: Exec, options: UnitGraderOptions): (metric: str
       case "refusals":
       case "cacheWrite":
       case "cost":
-      case "cacheShare": {
+      case "cacheShare":
+      // The planner-quality counts (#49): read from the unit's reports against its contract, and its recovery decisions.
+      case "fixedDeviations":
+      case "delegatedUnanswered":
+      case "emergentUncertainty":
+      case "replansDecided":
+      case "replansRequested":
+      case "missesPerHandoff":
+      case "missesAtContract":
+      case "missesAtAttempt":
+      case "missesAtBase":
+      case "missesAtAnswer": {
         const trajectory = await unitTrajectory(options.repo, options.unitId);
         const graded = trajectory.graders.find((g) => g.grader === metric);
         if (graded) return graded;

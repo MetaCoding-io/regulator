@@ -133,6 +133,48 @@ caught against the miss the report gate caught, per contract. If the first is no
 smaller than the second the recap is costing a turn for nothing, and that is the
 ablation arm the read-back's card would name.
 
+**Decided (2026-11-15, #49's first part).** The counts are ten built-in trajectory
+metrics in `graders.ts` (`handoffMisses`), each read from an attempt's report against
+the contract version it names, or from the recovery decisions, and none from a report's
+prose. The definitions, with the alternative not taken:
+
+- `fixedDeviations`: deviations of kind `fixed-decision`, summed over every report. Not
+  every deviation kind: a scope or interface deviation answers no fixed decision. A
+  deviation the unit does not report is not counted here (no typed link joins a fixed
+  decision to the host check that would catch it); `signatureDrift` sees that.
+- `delegatedUnanswered`: delegated decisions a report gives no choice for, summed over
+  every report — a count missing, direction lower, not a share or a count answered, so
+  it adds into the misses. In a session the gate (`report_result`) refuses a report
+  missing a required choice, so this moves only on `requiredReport: false` decisions or
+  on a report written outside a session; the drift contracts declare none.
+- `emergentUncertainty`: emergent decisions plus residual uncertainties. The planned
+  side is the contract's own `unresolved` list, which the gate makes every accepted
+  report answer, so it is the observation (planned, preserved, surfaced) and not a
+  second metric; a ratio of the two was not taken because it does not add.
+- `replansDecided` (recovery decisions to `replan`) and `replansRequested` (emergent
+  decisions and surfaced `policy-clarification` outcomes). A contract version's
+  `provenance.predecessor` is named in the observation and not counted: the loop never
+  writes one, and counting it beside the decision would count one replan twice.
+- `missesPerHandoff`: every miss above once (an emergent decision is one miss, though it
+  is in two counts), divided by the unit's attempts — a rate, not the total, which the
+  four seam columns already sum to.
+- Misses by boundary are four metrics (`missesAtContract`, `missesAtAttempt`,
+  `missesAtBase`, `missesAtAnswer`), not a table beside `tasks`: as metrics they get the
+  arm summary, the intervals, the per-task table and a prediction horizon for nothing,
+  and the arm summary is the table. A miss is keyed by what its attempt was handed:
+  the contract on a first attempt; the worktree and the router's hint on a further one;
+  a person's answer when the controller carried that instead of a hint. The base seam
+  has one typed record, a replan decided on a reintegration `conflict`; under the
+  shipped recovery policy a conflict is repaired and then escalated, never replanned,
+  so that column is zero until a policy says otherwise. Counting every conflict
+  decision there was not taken, because the column would then hold a miss no other
+  column's sum includes.
+- Directions (decided at review, 2026-11-16): `delegatedUnanswered` and `replansDecided`
+  are ranked, lower being better, since the host observes both itself. The other eight
+  are not ranked: they count what a unit reports about its own work, or sum it, so a
+  silent unit scores clean on them and ranking would have candour lose to silence in the
+  per-task table. Ranking all ten lower was the first draft and was not taken.
+
 ### 3.3 The sender marks the miss
 
 In the post the sender grades the read-back. In the build nobody grades what a unit
@@ -199,7 +241,7 @@ the second live report.
 | Slice | Level | Seam | Where it lands |
 | --- | --- | --- | --- |
 | The dispatch recap: typed body, refused-until-offered on the first effectful call, a scripted behaviour that skips it | 3, 2 | `ask_human` and the lease interception in `regulator-pi` | an issue under `roadmap:0.2`, after #46; one registry record with its ablation switch |
-| Misses per handoff and by boundary, over the report fields row 40 names | 2 | `regulator/src/graders.ts`; `metrics[]` | an addition to #49's done-when list, not a new issue |
+| Misses per handoff and by boundary, over the report fields row 40 names | 2 | `regulator/src/graders.ts`; `metrics[]` | an addition to #49's done-when list, not a new issue — landed 2026-11-15 as `missesPerHandoff` and four `missesAt…` metrics (contract, attempt, base, answer), pre-registered in both drift suites at version 4 |
 | The *model-only* arm | — | `evals/drift.json` | one arm in the suite, under #46's live run |
 | `regulator misses`: the debrief's read over the stores | 2 | the read model | the reflector thread, as its first input |
 
