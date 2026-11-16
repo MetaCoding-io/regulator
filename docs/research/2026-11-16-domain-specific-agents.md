@@ -240,8 +240,14 @@ are worth borrowing as framing, with the attribution:
   line the talk stops at, the tool list, is where the course's lesson on evidence
   starts.
 
-How far the website and the course should move toward this vocabulary is a decision,
-not taken here.
+**Decided (2026-11-16, James):** the course page keeps its vocabulary, since the
+cybernetics is what it teaches. The product gains a second page for a second audience,
+the person with one process to hand to an agent and the person who must approve it:
+`site/one-process.html` in the website repository, on the portfolio close, with no VSM
+terms, the process-as-a-line framing credited to the talk, and neither the HVAC shop nor
+"Doug" by name. It is written from the product's intended shape, so it describes a
+workload as a package (§4.1) without saying that is not shipped; the website's
+`site/README.md` records that.
 
 ## 6. Reading
 
