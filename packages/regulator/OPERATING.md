@@ -168,6 +168,10 @@ arm before paying for the rest.
    the run, or write it into the report before committing. A cost-only report is still
    committed; its ablation arms do not count toward any retirement condition.
 
+Leave the checkout alone while a live suite runs: the harness reads the toolchain (here
+the hash of `pnpm-lock.yaml`) before every unit, and a `git pull` or an install that
+rewrites the lock stops the suite at the next unit with no report written.
+
 `regulator status` prints each attempt's cache reads and writes beside its tokens and
 cost, and `cacheWrite` is a pre-registered metric of the drift suites, so the cost row
 can say how much of the gated arm's extra tokens was a prefix re-sent uncached, and

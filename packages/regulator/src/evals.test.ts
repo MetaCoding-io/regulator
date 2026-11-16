@@ -608,9 +608,13 @@ test("the fingerprint names the toolchain (#178): read from the definition's rep
   // The toolchain changes between the first run and the second: no report, and the message names both and where each was seen.
   const lock = { source: "lock" as const, hash: "1".repeat(64) };
   const store = { source: "nix-store" as const, hash: "2".repeat(64) };
+  // The suite stops at the reading that differs, before that reading's unit is dispatched: one run was made, not two.
   let reads = 0;
-  await assert.rejects(runSuite(gitExec, { suite: small, ...common, toolchain: async () => (reads++ === 0 ? lock : store) }),
-    /^Error: the runs ran under different toolchains — lock 111111111111…: 1 reading\(s\), first at control rep 1 d1-fix; nix-store 222222222222…: 2 reading\(s\), first at treatment rep 1 d1-fix\. The environment changed while the suite ran .* so none was written\. Hold the toolchain still and rerun the suite$/);
+  const made: string[] = [];
+  await assert.rejects(runSuite(gitExec, { suite: small, ...common, toolchain: async () => (reads++ === 0 ? lock : store), onRun: (run) => { made.push(`${run.arm} ${run.task}`); } }),
+    /^Error: the runs ran under different toolchains — lock 111111111111…: 1 reading\(s\), first at control rep 1 d1-fix; nix-store 222222222222…: 1 reading\(s\), first at treatment rep 1 d1-fix\. The environment changed while the suite ran .* so none was written; the suite stopped at the first reading that differed, after 1 run\(s\)\. Hold the toolchain still and rerun the suite$/);
+  assert.deepEqual(made, ["control d1-fix"], "the treatment's unit was never dispatched: a changed toolchain is refused before the next run, not after the last");
+  assert.equal(reads, 2, "and nothing was read after the refusal");
   assert.deepEqual(mixedToolchains([{ at: "a", toolchain: lock }, { at: "b", toolchain: { ...lock } }, { at: "c", toolchain: undefined }]), [{ toolchain: lock, at: ["a", "b"] }, { toolchain: undefined, at: ["c"] }], "a reading that found none is a toolchain of its own");
   assert.deepEqual(mixedToolchains([{ at: "a", toolchain: lock }, { at: "b", toolchain: lock }]), [], "one environment: nothing to refuse");
   const steady = await runSuite(gitExec, { suite: small, ...common, toolchain: async () => store });

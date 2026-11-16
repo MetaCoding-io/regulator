@@ -181,6 +181,18 @@ export async function adviceOverrides(root: string, arms: readonly EvalArm[]): P
   return out;
 }
 
+/**
+ * Refuse a suite whose readings name more than one toolchain (#178). Called at every reading, so the suite stops at the
+ * first reading that differs, before the unit that reading precedes is dispatched: the runs already made are lost, the
+ * ones not yet made are not paid for. `made` is how many runs had finished when the difference was seen.
+ */
+export function refuseMixedToolchains(readings: readonly ToolchainReading[], made: number): void {
+  const mixed = mixedToolchains(readings);
+  if (!mixed.length) return;
+  const where = mixed.map((g) => `${describeToolchain(g.toolchain)}: ${g.at.length} reading(s), first at ${g.at[0]}`).join("; ");
+  throw new Error(`the runs ran under different toolchains — ${where}. The environment changed while the suite ran (a lock rewritten, a Nix or devenv shell entered or left), and a report summarizes runs under one toolchain, so none was written; the suite stopped at the first reading that differed, after ${made} run(s). Hold the toolchain still and rerun the suite`);
+}
+
 export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>>; suiteFile?: string; adviceByArm?: Readonly<Record<string, readonly AdviceOverrideFingerprint[]>>; toolchain?: Toolchain | null }): Promise<EnvironmentFingerprint> {
   // The caller's reading when it has one (runSuite reads it around every run); `null` is a reading that found none.
   const toolchain = options.toolchain === undefined ? await definitionToolchain(exec, root) : options.toolchain ?? undefined;
@@ -274,6 +286,9 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();
         for (const task of tasks) {
           readings.push({ at: `${arm.name} rep ${repetition} ${task.contract.unitId}`, toolchain: await readToolchain() });
+          // Checked at every reading, not only at the end: a live suite runs for hours, and a toolchain that changed after
+          // the first unit must stop it before the next unit is paid for, not after the last.
+          refuseMixedToolchains(readings, runs.length);
           const startedAt = stamp();
           const { final } = await driveUnit(exec, {
             repo: instance, contract: contractForArm(task.contract, arm), workload: workloadForArm(workloads.get(task.contract.workload.name)!, arm), policy: policies.get(arm.name)!, policyPath, recovery, routing, interaction, regulators,
@@ -309,11 +324,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
     }
   }
   readings.push({ at: "after the last run", toolchain: await readToolchain() });
-  const mixed = mixedToolchains(readings);
-  if (mixed.length) {
-    const where = mixed.map((g) => `${describeToolchain(g.toolchain)}: ${g.at.length} reading(s), first at ${g.at[0]}`).join("; ");
-    throw new Error(`the runs ran under different toolchains — ${where}. The environment changed while the suite ran (a lock rewritten, a Nix or devenv shell entered or left), and a report summarizes runs under one toolchain, so none was written. Hold the toolchain still and rerun the suite`);
-  }
+  refuseMixedToolchains(readings, runs.length);
   const toolchain = readings[0]?.toolchain;
   const metrics = metricNames(suite.metrics);
   // The arm summary names the route an arm was declared on and the models its ledgers name (#201): arms can differ by model.

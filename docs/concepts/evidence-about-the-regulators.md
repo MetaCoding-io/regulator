@@ -276,7 +276,8 @@ Since #178 the fingerprint also names the **toolchain** the runs ran under
 Nix or devenv store path when the eval runs inside such a shell (`nix-store`), else the
 SHA-256 of `flake.lock` or `devenv.lock` (`lock`), else of the package lock,
 `pnpm-lock.yaml` first (`package-lock`). The harness reads it before every run and once
-after the last, and refuses to write a report when the readings differ, in the shape of
+after the last, and stops at the first reading that differs, before the next unit is
+dispatched, writing no report, in the shape of
 the refusal of an unavailable route primary: the message names each toolchain and where it
 was first seen, and nothing is summarized. A report committed before the field has none,
 and its absence reads as *not recorded*, not as a different environment. The same field

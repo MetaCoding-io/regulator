@@ -157,7 +157,8 @@ with only `IN_NIX_SHELL`, the sorted `/nix/store/` entries on PATH), so the fiel
 SHA-256 for every source; evidence reads the worktree the check ran in, the fingerprint the
 git top level above the definition (where this repository's `pnpm-lock.yaml` is), the
 manifest and `doctor` the instance's repository. The harness reads the toolchain before
-every run and after the last and refuses the report if they differ; a probe is refused
+every run and after the last and stops at the first reading that differs, before the next
+unit is dispatched, with no report written; a probe is refused
 when its baseline names a toolchain and the current one differs, and runs with a line
 saying the comparison went unchecked when the baseline names none (every report committed
 before the field). `environment-drift` is information only; an applied `regulator upgrade`
