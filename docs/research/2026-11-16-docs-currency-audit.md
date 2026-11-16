@@ -171,6 +171,15 @@ fact several things that have since changed. All *verified*.
 
 `one-process.html`, added today, was written against the current code.
 
+**Corrected (2026-11-16)** on the website's working branch: the counts, the version, the
+debt-row count, the extension count, the status block (which now says what the first
+live report found and what the next owes), the retired post-merge check, the open
+metrics, the `manager` profile, and the overview screenshot retaken at 53 regulators.
+Left: the two figures in the product page's "What's coming" section, which still draw
+landed pieces as proposed, and go with the rewrite of `whats-coming.md` (§7 item 4);
+and the how-it-works eyebrow "drawn from the reference build at 0.1.1", which is true
+of when the page was drawn and says nothing false about now.
+
 ## 6. Why it drifts, and what would hold it
 
 Every stale finding is one of five kinds, and each kind has a cause.
