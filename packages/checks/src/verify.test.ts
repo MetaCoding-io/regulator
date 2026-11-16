@@ -164,6 +164,39 @@ test("identity-untouched (lesson 12): INV-001 in code — a change under a prote
   assert.equal((await runHostChecks(realExec, { cwd, checks: ["identity-untouched"], base: "main", protectedPaths: [] }))[0]?.observation, "no protected prefixes declared");
 });
 
+test("identity-untouched exempts an environment file the contract names (#178), and nothing else: the record binds to the expectation that carries the exemption, a changed flake.lock passes with it and fails without, and an identity path stays protected whatever the contract says", async (t) => {
+  const { cwd } = await project(t);
+  await writeFile(path.join(cwd, "flake.lock"), "{\"nodes\":{}}\n");
+  await mkdir(path.join(cwd, "regulator", "identity"), { recursive: true });
+  await writeFile(path.join(cwd, "regulator", "identity", "INVARIANTS.md"), "## INV-001 — x\n\ns\n");
+  await git(cwd, "add", "-A");
+  await git(cwd, "commit", "--quiet", "-m", "environment and identity");
+  await git(cwd, "checkout", "--quiet", "-b", "unit/u1");
+  await writeFile(path.join(cwd, "flake.lock"), "{\"nodes\":{\"git\":\"patched\"}}\n");
+  await git(cwd, "commit", "--quiet", "-am", "bump the toolchain");
+  const protectedPaths = ["regulator/identity/", "vendor/", "flake.lock"];
+  const exempting = [{ id: "e-env", description: "nothing protected changed but the lock this contract updates", class: "command" as const, required: true, check: { kind: "identity-untouched" as const, exempt: ["flake.lock" as const] } }];
+  const run = async (expectations?: WorkContract["expectedEvidence"]) => (await runHostChecks(realExec, { cwd, checks: ["identity-untouched"], base: "main", protectedPaths, ...(expectations ? { expectations } : {}) }))[0]!;
+  const refused = await run();
+  assert.equal(refused.verdict, "fail");
+  assert.match(refused.observation, /^protected paths changed on the branch \(INV-001\): flake\.lock$/);
+  assert.equal(refused.criterion, undefined, "no expectation carries the check: the record binds by class");
+  const lifted = await run(exempting);
+  assert.equal(lifted.verdict, "pass");
+  assert.equal(lifted.criterion, "e-env");
+  assert.deepEqual(lifted.command, ["git", "diff", "--name-only", "main...HEAD", "--", "regulator/identity/", "vendor/"]);
+  assert.match(lifted.observation, /exempt by the contract: flake\.lock$/);
+
+  // A contract cannot exempt the identity: the schema admits only the environment files, and the check filters again.
+  await writeFile(path.join(cwd, "regulator", "identity", "INVARIANTS.md"), "## INV-001 — relaxed\n\ns\n");
+  await git(cwd, "commit", "--quiet", "-am", "relax");
+  const smuggled = [{ ...exempting[0]!, check: { kind: "identity-untouched", exempt: ["flake.lock", "regulator/identity/"] } }] as unknown as WorkContract["expectedEvidence"];
+  const still = await run(smuggled);
+  assert.equal(still.verdict, "fail");
+  assert.match(still.observation, /regulator\/identity\/INVARIANTS\.md/);
+  assert.doesNotMatch(still.observation, /: flake\.lock,|, flake\.lock$/);
+});
+
 test("export-signature (lesson 14): a criterion observed by content — the host imports the module at HEAD and reads the export's arity; the record binds to that criterion alone, and a runtime criterion with host evidence no longer waits for a person", async (t) => {
   const { cwd, revision } = await project(t);
   const expectations = [

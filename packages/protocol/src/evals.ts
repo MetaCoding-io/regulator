@@ -18,6 +18,7 @@
 import { Type, type Static } from "typebox";
 import { DeclaredMetricNameSchema, MetricDirectionSchema, isDeclaredMetricName, type MetricDirection } from "./metrics.js";
 import { CheckEntrySchema } from "./workload.js";
+import { ToolchainSchema } from "./toolchain.js";
 import { Value } from "typebox/value";
 
 const NonEmpty = Type.String({ minLength: 1 });
@@ -84,18 +85,20 @@ export function isBuiltInMetric(name: string): name is BuiltInMetric {
  * per-task table reads to say which arm leads. `none` is a quantity reported and not ranked: a refusal or an escalation
  * is a gate or a person doing their work as often as it is a cost, and a fact remembered stays a count. Whether a fact
  * helped is read off the task that needs it (`d7-archive` in the drift suite, #201 item 11, after agent-memory note §6
- * item 4): its attempts and retries, which are ranked; more facts is neither better nor worse. The planner-quality counts
- * (#49) are each a miss at a handoff, so lower is better on every one: a deviation or an emergent decision a unit reports
- * honestly is still something the contract did not allocate. What they cannot rank is silence: a unit that reports
- * nothing scores clean on all ten, which is what the outcome graders and the checks are for.
+ * item 4): its attempts and retries, which are ranked; more facts is neither better nor worse. Of the planner-quality counts
+ * (#49), the two the host observes itself are ranked lower: a delegated decision a report leaves unanswered, and a replan
+ * S3 decided. The rest count what a unit says about its own work (a deviation, an emergent decision, a residual
+ * uncertainty, a clarification it surfaced), or are sums that include those, and are not ranked: ranking them would have
+ * the arm whose units report most candidly lose to the arm whose units say nothing, since a unit that reports nothing
+ * scores clean on all of them. Silence is what the outcome graders and the checks are for.
  */
 export const BUILT_IN_METRIC_DIRECTIONS: Readonly<Record<(typeof EVAL_METRICS)[number], MetricDirection>> = {
   closed: "higher", attempts: "lower", tokens: "lower", turns: "lower", wallClockMs: "lower", retries: "lower",
   escalations: "none", invariantViolations: "lower", boundaryViolations: "lower", signatureDrift: "lower",
   vocabularyDrift: "lower", memoryRules: "lower", memoryFacts: "none", refusals: "none", suiteWeakened: "lower",
   cacheWrite: "lower", cost: "lower", cacheShare: "higher",
-  fixedDeviations: "lower", delegatedUnanswered: "lower", emergentUncertainty: "lower", replansDecided: "lower", replansRequested: "lower",
-  missesPerHandoff: "lower", missesAtContract: "lower", missesAtAttempt: "lower", missesAtBase: "lower", missesAtAnswer: "lower",
+  fixedDeviations: "none", delegatedUnanswered: "lower", emergentUncertainty: "none", replansDecided: "lower", replansRequested: "none",
+  missesPerHandoff: "none", missesAtContract: "none", missesAtAttempt: "none", missesAtBase: "none", missesAtAnswer: "none",
 };
 
 /**
@@ -246,6 +249,12 @@ export const EnvironmentFingerprintSchema = Type.Object({
   suite: Type.Optional(FileHashSchema),
   /** Each arm's advice override as it ran (#200): the profile, the file under the definition and its SHA-256. Absent when no arm overrides advice. */
   adviceByArm: Type.Optional(Type.Record(Type.String(), Type.Array(AdviceOverrideFingerprintSchema, { minItems: 1 }))),
+  /**
+   * The toolchain every run of the report ran under (#178), read from the definition's repository: one, since a report
+   * over runs under different toolchains is refused. Absent on a report written before the field ("not recorded") or
+   * where no source was found.
+   */
+  toolchain: Type.Optional(ToolchainSchema),
 }, { additionalProperties: false });
 export type EnvironmentFingerprint = Static<typeof EnvironmentFingerprintSchema>;
 

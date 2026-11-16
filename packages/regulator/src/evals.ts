@@ -18,7 +18,8 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { baselineCheck, fileSha256, graderFile, lifts, loadRegistry, namedRoute, routeFor, routeNames, summarizeArms, taskTable } from "@metacoding.io/regulator-core";
-import { EvalSuiteSchema, assertValid, type AdviceOverrideFingerprint, type FileHash, type ProbeRecord, type MetricDirection, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, metricNames } from "@metacoding.io/regulator-protocol";
+import { EvalSuiteSchema, assertValid, type AdviceOverrideFingerprint, type FileHash, type ProbeRecord, type MetricDirection, declaredMetrics, optimisedMetrics, parseDeclaredMetric, type EnvironmentFingerprint, type EvalArm, type EvalReport, type EvalRun, type EvalSuite, type GraderFingerprint, type PolicyDefinition, type WorkContract, type WorkloadDefinition, checkNames, describeToolchain, metricNames, sameToolchain, type Toolchain } from "@metacoding.io/regulator-protocol";
+import { discoverToolchain } from "@metacoding.io/regulator-checks";
 import { blockedDetail, driveUnit, type Dispatcher } from "./controller.js";
 import { loadContract } from "./contract-file.js";
 import { hostPin } from "./host.js";
@@ -72,6 +73,40 @@ export interface RunSuiteOptions {
   /** Keep every instance directory instead of removing it (drills). */
   keepInstances?: boolean;
   onRun?: (run: EvalRun, instance: string) => void;
+  /**
+   * Where the toolchain is read (#178), before every run and once after the last: the definition's repository by default
+   * (`definitionToolchain`). A test passes its own to show the refusal of a mixed environment.
+   */
+  toolchain?: () => Promise<Toolchain | undefined>;
+}
+
+/**
+ * The toolchain an eval names (#178): read from the definition's repository — the git top level above the root, where
+ * the package lock is, or the root itself outside a repository — since the definition is what the report measures.
+ */
+export async function definitionToolchain(exec: Exec, root: string): Promise<Toolchain | undefined> {
+  const top = await exec("git", ["rev-parse", "--show-toplevel"], { cwd: root });
+  return discoverToolchain(top.code === 0 && top.stdout.trim() ? top.stdout.trim() : root);
+}
+
+/** One reading of the toolchain during a suite: before a run (`arm rep n task`), or `after the last run`. */
+export interface ToolchainReading {
+  at: string;
+  toolchain: Toolchain | undefined;
+}
+
+/**
+ * The toolchains a suite's readings name, each with the readings that saw it, in order of first sight. More than one is a
+ * mixed environment, which a report does not summarize (#178): the shape of `unavailablePrimaries`, read by the refusal.
+ */
+export function mixedToolchains(readings: readonly ToolchainReading[]): Array<{ toolchain: Toolchain | undefined; at: string[] }> {
+  const groups: Array<{ toolchain: Toolchain | undefined; at: string[] }> = [];
+  for (const r of readings) {
+    const seen = groups.find((g) => sameToolchain(g.toolchain, r.toolchain));
+    if (seen) seen.at.push(r.at);
+    else groups.push({ toolchain: r.toolchain, at: [r.at] });
+  }
+  return groups.length > 1 ? groups : [];
 }
 
 /** The workload with the arm's check list on every unit type that changes the repository. */
@@ -146,7 +181,21 @@ export async function adviceOverrides(root: string, arms: readonly EvalArm[]): P
   return out;
 }
 
-export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>>; suiteFile?: string; adviceByArm?: Readonly<Record<string, readonly AdviceOverrideFingerprint[]>> }): Promise<EnvironmentFingerprint> {
+/**
+ * Refuse a suite whose readings name more than one toolchain (#178). Called at every reading, so the suite stops at the
+ * first reading that differs, before the unit that reading precedes is dispatched: the runs already made are lost, the
+ * ones not yet made are not paid for. `made` is how many runs had finished when the difference was seen.
+ */
+export function refuseMixedToolchains(readings: readonly ToolchainReading[], made: number): void {
+  const mixed = mixedToolchains(readings);
+  if (!mixed.length) return;
+  const where = mixed.map((g) => `${describeToolchain(g.toolchain)}: ${g.at.length} reading(s), first at ${g.at[0]}`).join("; ");
+  throw new Error(`the runs ran under different toolchains — ${where}. The environment changed while the suite ran (a lock rewritten, a Nix or devenv shell entered or left), and a report summarizes runs under one toolchain, so none was written; the suite stopped at the first reading that differed, after ${made} run(s). Hold the toolchain still and rerun the suite`);
+}
+
+export async function fingerprintFor(exec: Exec, root: string, options: { dispatcher: string; model: string; policyPath?: string; graders?: readonly DeclaredGrader[]; modelsObserved?: readonly string[]; modelsByArm?: Readonly<Record<string, readonly string[]>>; suiteFile?: string; adviceByArm?: Readonly<Record<string, readonly AdviceOverrideFingerprint[]>>; toolchain?: Toolchain | null }): Promise<EnvironmentFingerprint> {
+  // The caller's reading when it has one (runSuite reads it around every run); `null` is a reading that found none.
+  const toolchain = options.toolchain === undefined ? await definitionToolchain(exec, root) : options.toolchain ?? undefined;
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: root });
   const [policy, recovery, routing, interaction] = await Promise.all([loadPolicy(options.policyPath), loadRecoveryPolicy(), loadRoutingPolicy(), loadInteractionPolicy()]);
   const graders: GraderFingerprint[] = [];
@@ -163,6 +212,7 @@ export async function fingerprintFor(exec: Exec, root: string, options: { dispat
     ...(options.modelsByArm && Object.values(options.modelsByArm).some((m) => m.length) ? { modelsByArm: Object.fromEntries(Object.entries(options.modelsByArm).filter(([, m]) => m.length).map(([arm, m]) => [arm, [...m]])) } : {}),
     ...(options.suiteFile ? { suite: { file: options.suiteFile, sha256: await fileSha256(root, options.suiteFile) } } : {}),
     ...(options.adviceByArm && Object.keys(options.adviceByArm).length ? { adviceByArm: Object.fromEntries(Object.entries(options.adviceByArm).map(([arm, a]) => [arm, a.map((o) => ({ ...o }))])) } : {}),
+    ...(toolchain ? { toolchain: { ...toolchain } } : {}),
   };
 }
 
@@ -221,6 +271,9 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   // What the ledgers say the run was on, in order of first use: the fingerprint's `modelsObserved`, beside the declared model.
   const observed: string[] = [];
   const observedByArm: Record<string, string[]> = {};
+  // The toolchain, read before every run and once after the last (#178): a report names one environment or is not written.
+  const readToolchain = options.toolchain ?? (() => definitionToolchain(exec, root));
+  const readings: ToolchainReading[] = [];
 
   for (const arm of arms) {
     for (let repetition = 1; repetition <= repetitions; repetition++) {
@@ -232,6 +285,10 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
         const manifest = await readManifest(instance);
         const baseRevision = (await exec("git", ["rev-parse", "HEAD"], { cwd: instance })).stdout.trim();
         for (const task of tasks) {
+          readings.push({ at: `${arm.name} rep ${repetition} ${task.contract.unitId}`, toolchain: await readToolchain() });
+          // Checked at every reading, not only at the end: a live suite runs for hours, and a toolchain that changed after
+          // the first unit must stop it before the next unit is paid for, not after the last.
+          refuseMixedToolchains(readings, runs.length);
           const startedAt = stamp();
           const { final } = await driveUnit(exec, {
             repo: instance, contract: contractForArm(task.contract, arm), workload: workloadForArm(workloads.get(task.contract.workload.name)!, arm), policy: policies.get(arm.name)!, policyPath, recovery, routing, interaction, regulators,
@@ -266,6 +323,9 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
       }
     }
   }
+  readings.push({ at: "after the last run", toolchain: await readToolchain() });
+  refuseMixedToolchains(readings, runs.length);
+  const toolchain = readings[0]?.toolchain;
   const metrics = metricNames(suite.metrics);
   // The arm summary names the route an arm was declared on and the models its ledgers name (#201): arms can differ by model.
   const summaries = summarizeArms(runs, metrics).map((s) => {
@@ -277,7 +337,7 @@ export async function runSuite(exec: Exec, options: RunSuiteOptions): Promise<Ev
   const baseline = baselineCheck(runs, metrics, suite.baseline);
   return {
     suite: { name: suite.name, version: suite.version, ...(optimise ? { optimise } : {}) }, generatedAt: stamp(),
-    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed, modelsByArm: observedByArm, ...(options.suiteFile ? { suiteFile: options.suiteFile } : {}), adviceByArm }),
+    fingerprint: await fingerprintFor(exec, root, { dispatcher: options.dispatcher, model: options.model, policyPath, graders: declared, modelsObserved: observed, modelsByArm: observedByArm, ...(options.suiteFile ? { suiteFile: options.suiteFile } : {}), adviceByArm, toolchain: toolchain ?? null }),
     arms: summaries, lifts: lifts(summaries, suite.baseline), runs,
     tasks: taskTable(runs, metrics, suite.baseline, directions),
     ...(baseline ? { baseline } : {}),
@@ -321,6 +381,14 @@ export async function runProbe(exec: Exec, options: RunProbeOptions): Promise<Ev
   const held = baseline.fingerprint.suite;
   if (!held) throw new Error(`${options.baseline.file} was written before a report's fingerprint carried its suite file's hash, so nothing says which suite it ran under; it cannot be a probe's baseline. Regenerate the baseline under the current suite first`);
   if (held.file !== suiteHash.file || held.sha256 !== suiteHash.sha256) throw new Error(`the probe must run under the suite its baseline ran under: ${options.baseline.file} names ${held.file} at ${held.sha256.slice(0, 12)}…, and ${suiteHash.file} is now ${suiteHash.sha256.slice(0, 12)}…. A harness-edit and a change to the suite it is probed under are not one change; regenerate the baseline under the suite as it is, then probe`);
+  // The toolchain rule (#178), on the suite-hash rule's precedent: a probe whose environment differs from the one its
+  // baseline names is refused before anything runs. A baseline written before the field names none, and is not refused
+  // for it: "not recorded" is not "different", and the caller says the comparison went unchecked.
+  const heldToolchain = baseline.fingerprint.toolchain;
+  if (heldToolchain) {
+    const now = await (options.toolchain ?? (() => definitionToolchain(exec, root)))();
+    if (!sameToolchain(heldToolchain, now)) throw new Error(`the probe must run under the toolchain its baseline ran under: ${options.baseline.file} names ${describeToolchain(heldToolchain)}, and the definition's repository is now ${describeToolchain(now)}. A probe compares an advice edit, not an environment; restore the toolchain the baseline ran under, or regenerate the baseline under this one, then probe`);
+  }
   const base = suite.arms.find((a) => a.name === options.baselineArm);
   if (!base) throw new Error(`suite ${suite.name} has no arm "${options.baselineArm}" (it has ${suite.arms.map((a) => a.name).join(", ")})`);
   if (!baseline.arms.some((a) => a.arm === base.name)) throw new Error(`${options.baseline.file} has no arm "${base.name}"; the probe reruns an arm the baseline ran`);

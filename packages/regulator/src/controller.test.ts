@@ -864,6 +864,44 @@ test("advice is harness-owned at closeout too (#110): a unit that commits a chan
   assert.match(await readFile(path.join(repo, "regulator", "advice", "implement.md"), "utf8"), /^- You are in the implement profile/, "the base's advice is as it was");
 });
 
+test("the environment is a protected convention (#178): a unit that commits a change to flake.lock fails identity-untouched at closeout and nothing reintegrates; the same unit under a contract that exempts flake.lock closes, and every record names the toolchain it ran under — the lock at the unit's revision", async (t) => {
+  const { AuditLog } = await import("@metacoding.io/regulator-core");
+  const { createHash } = await import("node:crypto");
+  const { DEFAULT_REPO_FILES } = await import("./git-support.js");
+  const base = await loadContract(contractFile);
+  const workload = await loadWorkload();
+  const bumped = "{\"nodes\":{\"git\":{\"locked\":\"patched\"}}}\n";
+  const bump = (contract: WorkContract) => unitThat(async (request, store) => {
+    await writeFile(path.join(request.worktree, "flake.lock"), bumped);
+    await writeFile(path.join(request.worktree, "src.txt"), "fixed\n");
+    await gitExec("git", ["commit", "-qam", "fix, and bump the toolchain the checks run under"], { cwd: request.worktree });
+    await store.writeReport(reportFor(contract));
+  }, repo);
+  let repo = await initRepo(t, { ...DEFAULT_REPO_FILES, "flake.lock": "{\"nodes\":{}}\n" });
+
+  const refused = await runUnit(gitExec, { ...(await withPolicy()), repo, workload, owner: "alice", contract: base, dispatcher: bump(base) });
+  assert.equal(refused.status === "blocked" && refused.reason, "check-failure");
+  const verdict = refused.status === "blocked" && refused.reason === "check-failure" ? refused.verdict : undefined;
+  assert.deepEqual(verdict?.failed, ["e-checks"]);
+  assert.match(verdict?.reasons.join("\n") ?? "", /identity-untouched — protected paths changed on the branch \(INV-001\): flake\.lock/);
+  assert.equal(await readFile(path.join(repo, "flake.lock"), "utf8"), "{\"nodes\":{}}\n", "nothing reintegrated");
+
+  repo = await initRepo(t, { ...DEFAULT_REPO_FILES, "flake.lock": "{\"nodes\":{}}\n" });
+  const exempting: WorkContract = { ...base, expectedEvidence: [...base.expectedEvidence, { id: "e-environment", description: "nothing protected changed but the lock this contract updates", class: "command", required: true, check: { kind: "identity-untouched", exempt: ["flake.lock"] } }] };
+  const closed = await runUnit(gitExec, { ...(await withPolicy()), repo, workload, owner: "alice", contract: exempting, dispatcher: bump(exempting) });
+  assert.equal(closed.status, "closed");
+  assert.equal(await readFile(path.join(repo, "flake.lock"), "utf8"), bumped, "the exempted change landed");
+  const records = (await new AuditLog(repo).forUnit("u1")).evidence;
+  const identity = records.find((r) => r.check === "identity-untouched");
+  assert.equal(identity?.verdict, "pass");
+  assert.deepEqual(identity?.criteria, ["e-environment"], "the record binds to the expectation that carries the exemption");
+  assert.match(identity?.observation ?? "", /exempt by the contract: flake\.lock/);
+  // The toolchain on the evidence is read from the worktree the checks ran in, at the revision they ran against.
+  if (!process.env.DEVENV_PROFILE && !process.env.IN_NIX_SHELL) {
+    assert.ok(records.length > 0 && records.every((r) => r.environment.toolchain?.source === "lock" && r.environment.toolchain.hash === createHash("sha256").update(bumped).digest("hex")), "lock, the unit's flake.lock");
+  }
+});
+
 test("predictions resolve from the stores at close and abort (#138): a unit named by a live horizon closes under the scripted dispatcher and each open prediction gets one three-valued reading from the harness's graders — confirmed, disconfirmed, inconclusive — never from its report; a disconfirmed live horizon is an obligation owed to S5 under the shipped routing policy with the prediction's id in its subject; an aborted unit is a reading too, and the count is met by the fold", async (t) => {
   const { ObligationLedger, appendSignal, readPredictions } = await import("@metacoding.io/regulator-core");
   const { committedReports } = await import("./predictions.js");

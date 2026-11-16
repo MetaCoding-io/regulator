@@ -609,7 +609,7 @@ test("the planner-quality counts (#49) read each attempt's report against the co
   const { HANDOFF_SEAMS, handoffMisses, unitTrajectory } = await import("./graders.js");
   const { loadContract } = await import("./contract-file.js");
   const names = ["fixedDeviations", "delegatedUnanswered", "emergentUncertainty", "replansDecided", "replansRequested", "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer"] as const;
-  assert.deepEqual(names.map((m) => BUILT_IN_METRIC_DIRECTIONS[m]), Array(10).fill("lower"), "each is a miss at a handoff");
+  assert.deepEqual(names.map((m) => BUILT_IN_METRIC_DIRECTIONS[m]), ["none", "lower", "none", "lower", "none", "none", "none", "none", "none", "none"], "only what the host observes itself is ranked (an unanswered delegated decision, a replan S3 decided); what a unit reports about its own work, and the sums that include it, are not, or candour would lose to silence");
   assert.ok(names.every((m) => !(OUTCOME_METRICS as readonly string[]).includes(m)), "they read the records, not the tree: the baseline check does not grow");
   assert.deepEqual([...HANDOFF_SEAMS], ["contract", "attempt", "base", "answer"]);
 
@@ -678,4 +678,44 @@ test("the planner-quality counts (#49) read each attempt's report against the co
   await writeFile(path.join(repo, ".regulator", "units", contract.unitId, "contract.v2.json"), JSON.stringify(v2), "utf8");
   const revised = await handoffMisses(store, { unitId: contract.unitId, attempts: await store.listAttempts(contract.unitId), decisions: await store.listDecisions(contract.unitId), obligations, currentVersion: 2 });
   assert.match(revised.graders.find((g) => g.grader === "replansDecided")!.observation, /; new contract versions: v2 from v1$/);
+});
+
+test("the fingerprint names the toolchain (#178): read from the definition's repository before every run and once after the last, one per report; runs under different toolchains are refused before a report is written, and a probe is held to the toolchain its baseline names, while a baseline that names none is not refused for it", async () => {
+  const { createHash } = await import("node:crypto");
+  const { definitionToolchain, mixedToolchains, runProbe } = await import("./evals.js");
+  const suite = await suiteP;
+  const pair = suite.arms.filter((a) => a.name === "control" || a.name === "treatment");
+  const small = { ...suite, tasks: [suite.tasks[0]!], arms: pair, baseline: "control", repetitions: 1 };
+  const common = { owner: "eval", now, dispatcher: "scripted:reference", model: "none", interpretation: "t", interpretedBy: "t", dispatcherFor: scriptedDispatchers(gitExec, "reference", now) };
+
+  // This repository has no flake and no devenv: outside a Nix shell the toolchain is its pnpm-lock.yaml, at the top level above the definition.
+  const top = (await gitExec("git", ["rev-parse", "--show-toplevel"], { cwd: LAB_ROOT })).stdout.trim();
+  const expected = await definitionToolchain(gitExec, LAB_ROOT);
+  if (!process.env.DEVENV_PROFILE && !process.env.IN_NIX_SHELL) assert.deepEqual(expected, { source: "package-lock", hash: createHash("sha256").update(await readFile(path.join(top, "pnpm-lock.yaml"))).digest("hex") });
+  const report = await runSuite(gitExec, { suite: small, suiteFile: "evals/drift.json", ...common });
+  assert.ok(isEvalReport(report), "the report with the field validates");
+  assert.deepEqual(report.fingerprint.toolchain, expected);
+
+  // The toolchain changes between the first run and the second: no report, and the message names both and where each was seen.
+  const lock = { source: "lock" as const, hash: "1".repeat(64) };
+  const store = { source: "nix-store" as const, hash: "2".repeat(64) };
+  // The suite stops at the reading that differs, before that reading's unit is dispatched: one run was made, not two.
+  let reads = 0;
+  const made: string[] = [];
+  await assert.rejects(runSuite(gitExec, { suite: small, ...common, toolchain: async () => (reads++ === 0 ? lock : store), onRun: (run) => { made.push(`${run.arm} ${run.task}`); } }),
+    /^Error: the runs ran under different toolchains — lock 111111111111…: 1 reading\(s\), first at control rep 1 d1-fix; nix-store 222222222222…: 1 reading\(s\), first at treatment rep 1 d1-fix\. The environment changed while the suite ran .* so none was written; the suite stopped at the first reading that differed, after 1 run\(s\)\. Hold the toolchain still and rerun the suite$/);
+  assert.deepEqual(made, ["control d1-fix"], "the treatment's unit was never dispatched: a changed toolchain is refused before the next run, not after the last");
+  assert.equal(reads, 2, "and nothing was read after the refusal");
+  assert.deepEqual(mixedToolchains([{ at: "a", toolchain: lock }, { at: "b", toolchain: { ...lock } }, { at: "c", toolchain: undefined }]), [{ toolchain: lock, at: ["a", "b"] }, { toolchain: undefined, at: ["c"] }], "a reading that found none is a toolchain of its own");
+  assert.deepEqual(mixedToolchains([{ at: "a", toolchain: lock }, { at: "b", toolchain: lock }]), [], "one environment: nothing to refuse");
+  const steady = await runSuite(gitExec, { suite: small, ...common, toolchain: async () => store });
+  assert.deepEqual(steady.fingerprint.toolchain, store, "the reading the runs shared is the one the fingerprint carries");
+
+  // The probe rule: the generated report is the baseline; a toolchain other than the one it names is refused before anything runs.
+  const probe = { ...common, suite, suiteFile: "evals/drift.json", baselineArm: "treatment", probeArm: "probe", advice: { implement: "evals/advice/inherited-suite/implement.md" } };
+  const bytes = JSON.stringify(report);
+  await assert.rejects(runProbe(gitExec, { ...probe, baseline: { file: "evals/reports/generated.json", bytes }, toolchain: async () => lock }),
+    new RegExp(`the probe must run under the toolchain its baseline ran under: evals/reports/generated\\.json names ${expected ? `${expected.source} ${expected.hash.slice(0, 12)}…` : "not recorded"}, and the definition's repository is now lock 111111111111…\\. A probe compares an advice edit, not an environment`));
+  await assert.rejects(runProbe(gitExec, { ...probe, baseline: { file: "evals/reports/generated.json", bytes: JSON.stringify({ ...report, fingerprint: { ...report.fingerprint, toolchain: store } }) }, toolchain: async () => undefined }),
+    /names nix-store 222222222222…, and the definition's repository is now not recorded/, "a toolchain that vanished is a difference too");
 });

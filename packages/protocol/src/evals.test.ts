@@ -97,7 +97,7 @@ test("a grader verdict may be declared, and the fingerprint carries each declare
 test("every built-in has a direction (#201), and the outcome metrics are the five graders of kind outcome, each a count of drift where zero is clean", () => {
   assert.deepEqual(Object.keys(BUILT_IN_METRIC_DIRECTIONS).sort(), [...EVAL_METRICS].sort());
   assert.equal(BUILT_IN_METRIC_DIRECTIONS.closed, "higher");
-  assert.deepEqual(EVAL_METRICS.filter((m) => BUILT_IN_METRIC_DIRECTIONS[m] === "none"), ["escalations", "memoryFacts", "refusals"]);
+  assert.deepEqual(EVAL_METRICS.filter((m) => BUILT_IN_METRIC_DIRECTIONS[m] === "none"), ["escalations", "memoryFacts", "refusals", "fixedDeviations", "emergentUncertainty", "replansRequested", "missesPerHandoff", "missesAtContract", "missesAtAttempt", "missesAtBase", "missesAtAnswer"], "what a gate or a person did, a count of facts, and what a unit reports about its own work (#49) are reported, not ranked");
   assert.deepEqual([...OUTCOME_METRICS], ["boundaryViolations", "signatureDrift", "vocabularyDrift", "memoryRules", "suiteWeakened"]);
   for (const m of OUTCOME_METRICS) assert.equal(BUILT_IN_METRIC_DIRECTIONS[m], "lower", m);
   assert.equal(isOutcomeMetric("invariantViolations"), false, "a trajectory count is not an outcome");

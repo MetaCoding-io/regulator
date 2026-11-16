@@ -88,7 +88,7 @@ import { randomUUID } from "node:crypto";
 import { summarizeVerdict, discoverConventions, runHostChecks } from "@metacoding.io/regulator-checks";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { AuditLog, EffectJournal, ExecutionStore, IDENTITY_FILES, MemoryStore, ObligationLedger, probeRule, resolvePredictions as resolveProbes, adviceContextBudget, adviceFileName, adviceMaxChars, adviceProfileNamed, authorizeWrite, checkDispositionAuthority, checkHarnessEdit, dispositionForAnswer, formatSummary, loadRegistry, profileOfAdviceFile, readAdviceSet, readIdentity, readPredictions, readSignals, routeMessages, summarizeLedger } from "@metacoding.io/regulator-core";
-import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, isEvalReport, isUninterpreted, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
+import { ConsumerSchema, DispositionSchema, UNINTERPRETED_BY, UNINTERPRETED_MARKER, assertValid, describeToolchain, isEvalReport, isUninterpreted, isBuiltInMetric, isCommandRunner, isHarnessEdit, metricNames, runnerOf, type Disposition, type HarnessEdit, type ObligationState, type Severity, type WorkContract, type WorkloadDefinition } from "@metacoding.io/regulator-protocol";
 import { deliverPending, remindDue, watchOutbox } from "./deliver.js";
 import { doctor, initInstance, readManifest, upgradeInstance } from "./instance.js";
 import { readStatus, renderStatusText, unitWhy } from "./status.js";
@@ -171,6 +171,7 @@ try {
     const m = result.manifest;
     console.log(`instance ready at ${dir}: definition ${m.definition.name} at ${m.definition.harnessRevision.slice(0, 7)} (${m.definition.registry} regulators, pi ${m.definition.pi}), initialized by ${m.initializedBy}`);
     console.log(`  writes ${m.writablePaths ? `under ${m.writablePaths.join(", ")} (declared)` : "under the profile's own prefixes"}; protected ${[...HARNESS_OWNED_INSTANCE_DIRS, ...(m.protectedPaths ?? [])].join(", ")} and whatever the conventions discover; ${result.canaries} canar${result.canaries === 1 ? "y" : "ies"}`);
+    console.log(`  toolchain: ${describeToolchain(m.toolchain)}${m.toolchain ? " (recorded in the manifest; `regulator doctor` reports environment-drift against it)" : " (no Nix or devenv shell, environment lock or package lock found)"}`);
     console.log(result.committed ? `  committed ${result.committed.slice(0, 7)} on the base branch (identity and advice seeded, .regulator/ ignored)` : "  nothing to commit: identity, advice and ignore line were already there");
     console.log("  next: `regulator doctor`, then `regulator unit drive <contract.json>`");
   } else if (command === "status") {
@@ -762,6 +763,8 @@ ${rationale}`]]) {
       const parsed: unknown = JSON.parse(bytes.toString("utf8"));
       if (!isEvalReport(parsed)) throw new Error(`${baselineFile} is not an eval report`);
       if (isUninterpreted(parsed)) throw new Error(`${baselineFile} carries the placeholder interpretation; a probe is held to a report a person has read`);
+      // The toolchain rule (#178): a baseline that names one is held to it in runProbe; one written before the field names none.
+      if (!parsed.fingerprint.toolchain) console.log(`toolchain: ${baselineFile} records none (written before the field), so the probe's environment is not compared with the baseline's; the probe report records its own`);
       const advice: Record<string, string> = {};
       for (const value of rest.flatMap((a, i) => (a === "--advice" && rest[i + 1] ? [rest[i + 1]!] : []))) {
         const at = value.indexOf("=");
@@ -805,6 +808,7 @@ ${rationale}`]]) {
     const report = probeSetup
       ? await runProbe(realExec, { suite, suiteFile: suiteFile!, ...probeSetup, ...common })
       : await runSuite(realExec, { suite, ...(arms.length ? { arms } : {}), ...(suiteFile ? { suiteFile } : {}), ...common });
+    console.log(`toolchain: ${describeToolchain(report.fingerprint.toolchain)}${report.fingerprint.toolchain ? ", read from the definition's repository before every run and once after the last" : " (no Nix or devenv shell, environment lock or package lock found)"}`);
     if (report.probe) {
       const p = report.probe;
       console.log(`probe: ${p.arm} (${p.advice.map((a) => `${a.profile} ← ${a.file} ${a.sha256.slice(0, 12)}…`).join(", ")}) beside ${p.baseline.arm}, held to ${p.baseline.file} under ${report.fingerprint.suite?.file} ${report.fingerprint.suite?.sha256.slice(0, 12)}…; cost ${p.cost.total} over ${p.cost.runs} run(s)${p.binding ? `; resolves prediction ${p.binding.prediction} horizon [${p.binding.horizon}] once interpreted and committed` : "; bound to no prediction"}${p.heldOut ? `; read over the held-out task(s) ${p.heldOut.tasks.map((t) => t.unitId).join(", ")}` : ""}`);

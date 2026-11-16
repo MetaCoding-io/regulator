@@ -31,7 +31,8 @@
 import { appendFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { ExecutionStore, INSTANCE_MANIFEST_RELATIVE_PATH, ObligationLedger, adviceContextBudget, adviceMaxChars, checkDefinition, checkRegistry, compareVersions, declaredToolsOf, guardedOutputsOf, identityContextBudget, identityMaxChars, loadRegistry, parseChangelog, planUpgrade, readAdviceSet, readIdentity, renderMigrationNotes, reviewDue, undelivered, type InstanceSnapshot, type UpgradePlan, type UpgradeStep } from "@metacoding.io/regulator-core";
-import { DEFINITION_WRITERS, InstanceManifestSchema, assertValid, type DefinitionPoint, type DefinitionWriterClass, type InstanceManifest, type UpgradeEntry } from "@metacoding.io/regulator-protocol";
+import { discoverToolchain } from "@metacoding.io/regulator-checks";
+import { DEFINITION_WRITERS, InstanceManifestSchema, assertValid, describeToolchain, sameToolchain, type DefinitionPoint, type DefinitionWriterClass, type InstanceManifest, type UpgradeEntry } from "@metacoding.io/regulator-protocol";
 import type { Exec } from "./exec.js";
 import { ADVICE_RELATIVE_DIR, CANARIES_RELATIVE_PATH, IDENTITY_RELATIVE_DIR, INSTANCE_SEEDS, canariesFromEnv } from "./unit.js";
 import { LAB_ROOT } from "./workload.js";
@@ -125,11 +126,14 @@ export async function initInstance(exec: Exec, options: InitInstanceOptions): Pr
 
   const rev = await exec("git", ["rev-parse", "HEAD"], { cwd: definitionRoot });
   const packageVersion = await definitionVersion(definitionRoot);
+  const toolchain = await discoverToolchain(repo);
   const manifest: InstanceManifest = {
     version: 1,
     definition: { root: definitionRoot, name: DEFINITION_NAME, registry: registry.records.length, harnessRevision: rev.code === 0 ? rev.stdout.trim() : "unknown", pi: await definitionPin(definitionRoot), ...(packageVersion ? { packageVersion } : {}) },
     ...(options.writablePaths?.length ? { writablePaths: [...options.writablePaths] } : {}),
     ...(options.protectedPaths?.length ? { protectedPaths: [...options.protectedPaths] } : {}),
+    // The toolchain the instance's repository names now (#178): what doctor's environment-drift reads against, as information.
+    ...(toolchain ? { toolchain } : {}),
     initializedAt: new Date(now()).toISOString(), initializedBy: options.by,
   };
   assertValid(InstanceManifestSchema, manifest, "instance manifest");
@@ -218,6 +222,16 @@ export async function doctor(exec: Exec, options: DoctorOptions = {}): Promise<D
       // A newer installed package, or a manifest with no version recorded, is what `regulator upgrade` carries an instance through (#53); doctor says so and upgrades nothing.
       const installedVersion = await definitionVersion(definitionRoot);
       const newer = installedVersion !== undefined && (manifest.definition.packageVersion === undefined || compareVersions(manifest.definition.packageVersion, installedVersion) < 0);
+      // The toolchain (#178): information, never a failing check — the manifest is not where a person declares the
+      // environment; the repository's own files are, and they are protected conventions.
+      const toolchainNow = await discoverToolchain(repo);
+      if (!manifest.toolchain) {
+        check("environment-drift", true, `the manifest records no toolchain (an instance initialized before the field, or where no source was found); now ${describeToolchain(toolchainNow)}${toolchainNow ? ". `regulator upgrade` records it at the next upgrade" : ""}`);
+      } else if (sameToolchain(manifest.toolchain, toolchainNow)) {
+        check("environment-drift", true, `the toolchain is the one the manifest recorded (${describeToolchain(toolchainNow)})`);
+      } else {
+        check("environment-drift", true, `recorded ${describeToolchain(manifest.toolchain)}; now ${describeToolchain(toolchainNow)}`, `the toolchain differs from the one the manifest recorded at ${manifest.upgrades?.length ? "the last upgrade" : "init"} (${describeToolchain(manifest.toolchain)} → ${describeToolchain(toolchainNow)}): evidence recorded before and after the change names different environments. Information, not a problem; \`regulator upgrade\` records the current one at the next upgrade`);
+      }
       check("definition-drift", same, same ? "the instance was initialized under this definition revision" : `initialized under ${manifest.definition.harnessRevision.slice(0, 7)} (${manifest.definition.registry} regulators, pi ${manifest.definition.pi}); the definition is now ${current.slice(0, 7)} (${registry.records.length}, pi ${pin})${newer ? ` — the installed package ${installedVersion} is newer than the manifest's ${manifest.definition.packageVersion ?? "(none recorded)"}: run \`regulator upgrade\`` : " — run `regulator upgrade --check` to see whether a migration note applies, and read OPERATING.md § Upgrading before the next unit"}`);
       // The manifest's writable prefixes replace a writing profile's in the session (#121): one that reaches the output of a
       // declared tool whose consent is derived lets a plain write land there with no yes asked. The manifest is a person's
@@ -387,9 +401,14 @@ export async function upgradeInstance(exec: Exec, options: UpgradeInstanceOption
   }
 
   const entry: UpgradeEntry = { from: plan.from, to: plan.to, report: evidence.report, ...(evidence.file ? { reportFile: evidence.file } : {}), by: options.by, at: new Date(now()).toISOString() };
+  // The toolchain is re-read at every applied upgrade (#178), as the revision is: the manifest's is the one at the last
+  // init or upgrade, and a manifest written before the field gets it here. None found, none recorded.
+  const { toolchain: _previous, ...rest } = manifest;
+  const toolchain = await discoverToolchain(repo);
   const upgraded: InstanceManifest = {
-    ...manifest,
+    ...rest,
     definition: { ...manifest.definition, root: definitionRoot, registry: registry.records.length, harnessRevision: installed.harnessRevision, pi: await definitionPin(definitionRoot), packageVersion: installed.packageVersion },
+    ...(toolchain ? { toolchain } : {}),
     upgrades: [...(manifest.upgrades ?? []), entry],
   };
   assertValid(InstanceManifestSchema, upgraded, "instance manifest");

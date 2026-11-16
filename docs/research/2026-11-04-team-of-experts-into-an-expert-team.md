@@ -169,6 +169,11 @@ prose. The definitions, with the alternative not taken:
   so that column is zero until a policy says otherwise. Counting every conflict
   decision there was not taken, because the column would then hold a miss no other
   column's sum includes.
+- Directions (decided at review, 2026-11-16): `delegatedUnanswered` and `replansDecided`
+  are ranked, lower being better, since the host observes both itself. The other eight
+  are not ranked: they count what a unit reports about its own work, or sum it, so a
+  silent unit scores clean on them and ranking would have candour lose to silence in the
+  per-task table. Ranking all ten lower was the first draft and was not taken.
 
 ### 3.3 The sender marks the miss
 

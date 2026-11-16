@@ -20,6 +20,11 @@ test("discoverConventions reports facts, not README claims", async (t) => {
   assert.deepEqual(c.sourceDirs, ["src"]);
   assert.deepEqual(c.protectedPaths, ["vendor/"]);
   assert.deepEqual(c.checks.map((check) => check.name), ["syntax:src/a.js", "protected-untouched"]);
+  // The files that define an environment (#178) are protected beside vendor/ when present, exact files in the list's order.
+  for (const f of ["devenv.yaml", "flake.lock", "flake.nix"]) await writeFile(path.join(cwd, f), "x\n");
+  const withEnv = await discoverConventions(cwd);
+  assert.deepEqual(withEnv.protectedPaths, ["vendor/", "flake.nix", "flake.lock", "devenv.yaml"]);
+  assert.deepEqual(withEnv.checks.at(-1)?.argv, ["git", "status", "--porcelain", "--", "vendor/", "flake.nix", "flake.lock", "devenv.yaml"]);
   const bare = await mkdtemp(path.join(tmpdir(), "regulator-bare-"));
   t.after(() => rm(bare, { recursive: true, force: true }));
   assert.deepEqual((await discoverConventions(bare)).testCommand, []);

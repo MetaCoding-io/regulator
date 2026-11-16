@@ -24,6 +24,7 @@ import path from "node:path";
 import type {
   CheckOptions, EvidenceClass, EvidenceEnvironment, EvidenceExpectation, EvidenceRecord, ExpectationCheck, HumanAcceptance, ResultReport, TechnicalVerdict, Verdict, WorkContract,
 } from "@metacoding.io/regulator-protocol";
+import { ENVIRONMENT_FILES } from "@metacoding.io/regulator-protocol";
 import { boundedTail, discoverConventions, parseNodeTestSummary, type ProjectConventions } from "./conventions.js";
 import type { Exec } from "./exec.js";
 
@@ -132,23 +133,29 @@ export async function runHostChecks(exec: Exec, options: RunHostChecksOptions): 
     } else if (name === "identity-untouched") {
       // INV-001 in code: nothing under a protected prefix differs between the base and the unit's HEAD — committed or not,
       // by any route. The bash watch (lesson 10) restores the working tree; this reads the branch.
-      const prefixes = options.protectedPaths ?? conventions.protectedPaths;
+      // An environment file the contract exempts (#178) is lifted for this unit; the schema admits nothing else, and the
+      // filter below says so again, so an identity or advice path never leaves the list by a contract's word.
+      const carrying = (options.expectations ?? []).filter((e) => e.check?.kind === "identity-untouched");
+      const exempt = new Set<string>(carrying.flatMap((e) => (e.check?.kind === "identity-untouched" ? e.check.exempt : [])).filter((f) => (ENVIRONMENT_FILES as readonly string[]).includes(f)));
+      const criterion = carrying.length === 1 ? { criterion: carrying[0]!.id } : {};
+      const prefixes = (options.protectedPaths ?? conventions.protectedPaths).filter((p) => !exempt.has(p));
+      const lifted = exempt.size ? `; exempt by the contract: ${[...exempt].join(", ")}` : "";
       if (!options.base) {
-        results.push({ check: name, class: "command", verdict: "inconclusive", observation: "no base ref given: the branch cannot be compared" });
+        results.push({ check: name, class: "command", verdict: "inconclusive", observation: "no base ref given: the branch cannot be compared", ...criterion });
         continue;
       }
       if (!prefixes.length) {
-        results.push({ check: name, class: "command", verdict: "pass", observation: "no protected prefixes declared" });
+        results.push({ check: name, class: "command", verdict: "pass", observation: `no protected prefixes declared${lifted}`, ...criterion });
         continue;
       }
       const argv = ["git", "diff", "--name-only", `${options.base}...HEAD`, "--", ...prefixes];
       const result = await exec(argv[0]!, argv.slice(1), { cwd: options.cwd, timeout });
       if (result.code !== 0) {
-        results.push({ check: name, class: "command", verdict: "inconclusive", command: argv, observation: `git diff failed (exit ${result.code}): ${boundedTail(result.stderr.trim(), max).text}` });
+        results.push({ check: name, class: "command", verdict: "inconclusive", command: argv, observation: `git diff failed (exit ${result.code}): ${boundedTail(result.stderr.trim(), max).text}`, ...criterion });
         continue;
       }
       const changed = result.stdout.split("\n").map((l) => l.trim()).filter(Boolean);
-      results.push({ check: name, class: "command", verdict: changed.length ? "fail" : "pass", command: argv, observation: changed.length ? `protected paths changed on the branch (INV-001): ${changed.join(", ")}` : `no change under ${prefixes.join(", ")} since ${options.base}` });
+      results.push({ check: name, class: "command", verdict: changed.length ? "fail" : "pass", command: argv, observation: changed.length ? `protected paths changed on the branch (INV-001): ${changed.join(", ")}${lifted}` : `no change under ${prefixes.join(", ")} since ${options.base}${lifted}`, ...criterion });
     } else if (name === "export-signature") {
       // Behaviour by content (lesson 14): an expectation names the module, the export and the arity it must keep; the host
       // imports the module in its own process at HEAD and reads the function. A passing suite that never calls it is not evidence.
