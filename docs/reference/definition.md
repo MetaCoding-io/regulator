@@ -182,6 +182,12 @@ The one exception is `context-degradation`: with no rule for it, the attempt is 
 `no-report`, and the shipped policy declares none
 ([Recovery](/concepts/recovery#from-cause-to-action)).
 
+| Field | Meaning |
+| --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for. A recovery decision cites the version it was taken under |
+| `rules[]` | one rule per `cause`, with its `actions[]` in the order they are taken |
+| `fallback` | the actions for a cause no rule names |
+
 | Causes | Actions |
 | --- | --- |
 | `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `context-degradation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
@@ -200,11 +206,12 @@ who a unit waits on.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for |
 | `rules[]` | one rule per message `kind`: the `minSeverity` at which a message of that kind opens an obligation, and the `consumer` it is opened for (`S3`, `S5` or `human`). A message below that line is noted and stays in the trace |
-| `impactSeverity` | maps the impact an uncertainty signal *reports* (`low` to `critical`) to the severity the router uses. The mapping exists because a reported impact is a claim, and a claim is not a severity |
-| `recovery` | the consumer for each waiting recovery action |
+| `impactSeverity` | maps the impact an uncertainty signal *reports* (`low`, `medium`, `high` or `critical`) to the severity the router uses. The mapping exists because a reported impact is a claim, and a claim is not a severity |
+| `recovery` | the consumer for each waiting recovery action: `remediate`, `replan`, `clarify`, `pause` and `escalate` |
 | `blocksAtOrAbove` | the severity at or above which an open obligation that names a unit vetoes that unit's dispatch and close |
-| `floors[]` | each floor is a regular expression over the message's subject and observation, the severity a matching message is raised to at least, and the reason. The shipped floor raises anything naming an invariant or the identity to `blocking` |
+| `floors[]` | each floor is a `pattern`, a regular expression over the message's subject and observation; the `severity` a matching message is raised to at least; and the `reason`. The shipped floor raises anything naming an invariant or the identity to `blocking` |
 
 The severities, from lowest to highest, are `info`, `advisory`, `blocking` and
 `critical`.
@@ -216,6 +223,7 @@ answer.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for |
 | `timeoutsMs` | a timeout per interaction kind (`recap`, `choice`, `clarification`, `consent`, `uat`). When one expires, the timeout is recorded and the unit pauses |
 | `attention.blockingPerAttempt` | how many blocking interrupts an attempt may spend before `ask_human` refuses the next one. Attention is the scarcest budget |
 | `reminderAfterMs` | an obligation owed to a person that is still open this long after its last delivery is delivered again; the minimum is one minute |
@@ -300,10 +308,11 @@ The unit answers its contract with a result report, sent through `report_result`
 
 | Field | Meaning |
 | --- | --- |
+| `contractId`, `contractVersion`, `attempt`, `reportedAt` | which contract, at which version, on which attempt, and when. The host stamps them; the unit supplies the rest |
 | `summary` | what was done |
-| `evidence[]` | evidence references, each with a required `ref`, a `class` (`file`, `command`, `test`, `runtime`, `semantic` or `model`), an optional observation and an optional revision |
+| `evidence[]` | evidence references, each with a required `ref`, a `class` (`file`, `command`, `test`, `runtime`, `semantic` or `model`), an optional `observation` and an optional revision |
 | `delegatedResults[]` | one per delegated decision: the `decisionId`, the `choice` and an optional `rationale`. An entry is required unless the delegation said `requiredReport: false` |
-| `unresolvedOutcomes[]` | one per unresolved decision, by its `decisionId`, with a `note`, either `preserved` (left as found) or `surfaced` (raised for someone else). There is no *settled* outcome, because settling an unresolved decision is not the unit's to do |
+| `unresolvedOutcomes[]` | one per unresolved decision, by its `decisionId`, with a `note` and an `outcome`, either `preserved` (left as found) or `surfaced` (raised for someone else). There is no *settled* outcome, because settling an unresolved decision is not the unit's to do |
 | `emergentDecisions[]` | decisions the contract did not allocate, each with a `subject`, a `choiceOrQuestion` and a `consequenceIfWrong` (`low`, `medium` or `high`) |
 | `deviations[]` | departures from a `fixed-decision`, a `constraint`, the `scope` or an `interface`, each with a required `description` and an optional `ref` |
 | `residualUncertainty[]` | each with a `subject`, a `reason` and a `consequenceIfWrong` |
@@ -344,6 +353,7 @@ interpretation:
 
 | In the report | What it says |
 | --- | --- |
+| `generatedAt` | when the report was written |
 | `fingerprint` | Node, platform and architecture; the Pi pin; the harness revision; the `dispatcher` (`scripted:<behaviour>` for a headless run, `pi` for a live one through the Pi host); the `model` the policy routed to and, for a live run, `modelsObserved` and `modelsByArm`, the models the units' ledgers name; the registry's size and the policy versions; the `suite` file and its hash; each declared metric's grader command with the hash of the file it ran from; `adviceByArm`, each advice override with its hash; and the `toolchain` every run ran under. A report over runs under different toolchains is refused |
 | `arms[]`, `lifts[]`, `runs[]` | each arm's summary per metric with a 95% interval, each non-baseline arm's difference from the baseline with whether the intervals separate, and every run |
 | `tasks[]` | the per-task table: per task, arm and metric, the mean over repetitions and the difference from the baseline. No interval: it is for reading where in the sequence a difference appears |
@@ -374,7 +384,7 @@ it too.
 | `mechanism.implementation`, `mechanism.enforcementPoints[]` | the implementing file, and the places where the gate bites. Each enforcement point is `{ where, point, note? }`. `where` is one of `host` (a session event the Pi host subscribes to, or `dispatcher`), `tool` (a registered tool's execute), `loop` (a step of the S3 loop or the unit lifecycle), `cli` (a `regulator` subcommand) or `check` (`checkRegistry` or `checkDefinition`), and `point` comes from that place's closed list in `packages/protocol/src/registry.ts` (`ENFORCEMENT_POINTS`). A point that is not on its list fails the check |
 | `authority.may[]`, `authority.mayNot[]` | |
 | `evidence.tests[]`, `evidence.lastVerifiedRevision` | test files that must exist, and optionally the revision they were last verified at |
-| `channels`, `scope`, `cost` | what the regulator consumes and emits, what it applies to, and what it costs |
+| `channels`, `scope`, `cost` | `channels.consumes[]` and `channels.emits[]`, what the regulator reads and writes; `scope.subjects[]` and `scope.resources[]`, what it applies to and what it claims; `cost.description`, with an optional `cost.measured`, what it costs to run |
 | `limitations[]` | at least one is required, and a limitation that names later work has a row in [build debt](/DEBT) |
 | `ownership.owner`, `ownership.introduced`, `ownership.reviewBy` | |
 | `introducedIn` | the package version that first shipped the record, or `unreleased` for one added since the last release; the release commit rewrites `unreleased`, and the release workflow refuses to publish while a record still says it |
