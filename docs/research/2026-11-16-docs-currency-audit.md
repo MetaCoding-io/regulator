@@ -242,5 +242,24 @@ says to keep the tracking current, and it is advice.
 9. **The schema test for the reference pages**, the "not yet" convention and the
    website check, as the mechanisms that keep 2 to 8 from recurring.
 
+**Progress (2026-11-17).** Item 1 is done (§2). Item 2 and the rest of §3 are done:
+every statement listed under "Wrong" is corrected, each re-checked against the code
+first. Item 3 is done (§5). Item 4 is done: `whats-coming.md` says which rows landed, and
+the figure script now draws the landed pieces in both figures, so the accent is the
+reflector alone; the research files and the website's copies are regenerated from it.
+Item 5 is done as a check and not as interpolation: `docs-facts.test.ts` reads the
+counts of regulators, registry records, session extensions, built-in metrics and
+committed reports in the hand-written pages and refuses a wrong one, which works for
+`README.md` and `AGENTS.md` where nothing interpolates. Item 6 is done. Of item 7, the
+reference pages are done (`definition.md`, `host-checks.md`, `instance.md`, `tools.md`)
+and the changelog has its entry for #60, without a migration bullet.
+
+Left: the concept pages and guides of §4 (`control-plane.md`, `definition-and-instance.md`,
+the three descriptions of `doctor`, `OPERATING.md`'s `watch`, the control-room guide's
+map, `ARCHITECTURE.md`); item 8, the glossary rows and the twelve pathology rows; and of
+item 9, the schema test for the reference tables, the "not yet" convention and the
+website's check. The website has no check on a pull request at all, so its counts are
+held only by whoever edits it.
+
 The reviewers' full findings, with a file and line for each, are the source for every
 row above; a finding not *verified* here is re-checked before its page is changed.
