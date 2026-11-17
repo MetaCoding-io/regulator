@@ -1,6 +1,6 @@
 # The wheel as a workload: an options cycle against a broker that answers
 
-- **Status:** proposed; two decisions taken (§2); nothing built and no issue filed.
+- **Status:** proposed; three decisions taken (§2); nothing built and no issue filed.
 - **Source:** a conversation on 2026-11-17 that started from Hilpisch's *Python for
   Algorithmic Trading* (O'Reilly) and James's books and course material on the wheel
   from Freeman Publishing. **None of those has been read for this note.** The rules in
@@ -51,6 +51,11 @@ placed by a tool, not written as a file for a person to execute. The design is m
 against a mock of the tastytrade API first. This reverses, for this workload only, the
 portfolio note's choice that nothing moves money; `place_trade` and the portfolio
 workload are unchanged.
+
+**Decided (2026-11-17, James).** The account is a cash account, for now. The
+cash-secured check of §3 reads the cash balance and holds either way; what the decision
+fixes is the fixture's and the mock's account type, so a dry run's buying-power effect
+is a cash account's and no scenario depends on margin.
 
 What the second decision does not decide: whether any order is ever placed without a
 person's yes for that order. Every phase in §7 keeps per-order consent. A standing
@@ -223,9 +228,9 @@ arrive slowly behind it.
   trading is unknown; the OpenAPI and AsyncAPI files; the transactions reference, so
   how an assignment, an exercise and an expiry appear is unknown, and the mock's
   assignment scenario waits on it; the backtesting and market-metrics references.
-- Not known: which balance field a cash-secured put consumes at tastytrade, and
-  whether the account is a cash or a margin account. The check in §3 is written so the
-  answer does not matter to it.
+- Not known: which balance field a cash-secured put consumes at tastytrade in a cash
+  account (§2). The check in §3 is written so the answer does not matter to it; the
+  mock's dry run needs the answer.
 - Open: whether tastytrade's specification files may be committed for the mock's
   contract test, or must be fetched and pinned by hash.
 - Tax treatment of premium, assignment and wash sales across an option and its stock
