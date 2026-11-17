@@ -48,7 +48,7 @@ const PAGE = String.raw`<!doctype html>
   header .meta { color: var(--muted); font-size: 12px; }
   .badge { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--chip); color: var(--muted); font-size: 11px; letter-spacing: .02em; text-transform: uppercase; }
   main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(280px, 420px); gap: 16px; padding: 16px; max-width: 1600px; margin: 0 auto; }
-  @media (max-width: 900px) { main { grid-template-columns: 1fr; } aside { position: static; } }
+  @media (max-width: 900px) { main { grid-template-columns: minmax(0, 1fr); } aside { position: static; } }
   section { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; }
   section h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 10px; }
   section h2 .banner, section h2 .mono { text-transform: none; letter-spacing: 0; font-weight: 400; }

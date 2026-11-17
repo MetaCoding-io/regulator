@@ -101,6 +101,9 @@ eval, not a test.
   verification commands with their result.
 - CI runs `pnpm check` on both Node versions and builds the docs site; all three must be
   green.
+- A change to what the control room renders retakes the screenshots:
+  `pnpm build && node scripts/screenshots.mjs` (add `--website <checkout>` for the
+  website's copies). It needs Playwright with a Chromium; no image is taken by hand.
 
 ## Releasing
 

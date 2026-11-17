@@ -427,6 +427,8 @@ are what the next live report owes.
 - Each regulator's card in the [regulators reference](/reference/regulators) shows its
   ablation switch and retirement condition.
 
+![The Assurance section on the live report: drift v1 under a model, three arms with their metrics and intervals, the suite-version label and the per-task table](./img/assurance-live-report.webp)
+
 ## What is not there yet
 
 The [eval harness's registry record](/reference/regulators) states its limitations. In

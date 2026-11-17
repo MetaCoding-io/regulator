@@ -721,8 +721,19 @@ they read as they do for the ledger: three workloads in the definition view now,
 profiles, the portfolio budget policy beside the other two; the instance's manifest
 line with its writable and protected prefixes; the units with their status, attempts,
 verdict and what is owed; the consent obligation with the veto marked while it is
-open, and the interaction row followed by its answer. The ledger page's screenshots are
-of the ledger instance; this one reads the same way.
+open, and the interaction row followed by its answer.
+
+![The September close in the instances view: eight units closed, each on a passing verdict at its revision, the two confirm units on their second attempt](img/portfolio-units.webp)
+
+Each confirm unit paused on its question and closed on a second attempt once a person
+answered. The interactions table keeps both questions with their answers:
+
+![The interactions table: two consent questions, the rebalance and the harvest, each with its trade list in the question, answered yes by alice on the cli](img/portfolio-consent.webp)
+
+The same close run carelessly shows the refusal in the routed column: the harvest plan
+that bought back what it sold was refused by the host's checks and repaired:
+
+![The careless close in the instances view: six units closed, with plan-harvest on two attempts and a check failure routed to repair before its passing verdict](img/portfolio-units-careless.webp)
 
 ---
 
