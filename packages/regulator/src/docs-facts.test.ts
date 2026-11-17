@@ -6,6 +6,10 @@
  * gave five different regulator counts. This test reads every count of those kinds in the pages a person keeps
  * and refuses one that is not what the registry, the Pi host's manifest, `EVAL_METRICS` and `evals/reports/` say.
  *
+ * A second test does the same for a "not yet": a sentence that cites a debt row as owed is refused once the ledger has
+ * struck the row, unless the sentence says it was paid. A registry card's limitation and a pathology row's residual are
+ * read too, since they cite the ledger the same way.
+ *
  * The pages read are the ones that describe the present. The roadmap, the changelog, the debt ledger and the
  * research and archive directories are records of a time and are not read; the generated pages cannot disagree.
  */
@@ -101,4 +105,44 @@ test("a count a page states is the count the repository has: regulators, registr
 test("a number word reads as its number", () => {
   assert.deepEqual(["53", "twelve", "forty-two", "fifty", "twenty-eight", "ninety-nine"].map(countOf), [53, 12, 42, 50, 28, 99]);
   assert.deepEqual(["active", "the", "twenty-zero", "one-two"].map(countOf), [undefined, undefined, undefined, undefined]);
+});
+
+test("a debt row a page cites as open is open: a citation of a struck row says it was paid", async () => {
+  const debt = await readFile(path.join(repoRoot, "docs", "DEBT.md"), "utf8");
+  const struck = new Set([...debt.matchAll(/^\| ~~(\d+)~~ \|/gm)].map((m) => m[1]!));
+  const open = new Set([...debt.matchAll(/^\| (\d+) \|/gm)].map((m) => m[1]!));
+  assert.ok(struck.size > 0 && open.size > 0, "the ledger has rows of both kinds");
+
+  // The pages a person keeps, and the registry: a card's limitation and a pathology row's residual cite debt rows too.
+  const registryDir = path.join(labRoot, "registry");
+  const cards = (await readdir(path.join(registryDir, "regulators"))).filter((f) => f.endsWith(".json")).map((f) => path.join(registryDir, "regulators", f));
+  const files = [...(await pagesAPersonKeeps()), ...cards, path.join(registryDir, "pathologies.json")];
+
+  // "DEBT row 36", "docs/DEBT.md row 20", "debt row 48", "rows 27 and 28": the numbers after the word.
+  const citation = /(?:DEBT(?:\.md)?|[Dd]ebt)\]?(?:\([^)]*\))? rows? (\d+(?:(?:, | and )\d+)*)/g;
+  // What a sentence says when it knows the row is closed.
+  const closed = /\b(paid|pays|was|were|struck|closed|retired|landed)\b/i;
+  const wrong: string[] = [];
+  const unknown: string[] = [];
+  let read = 0;
+  for (const file of files) {
+    const lines = (await readFile(file, "utf8")).split("\n");
+    for (const [i, line] of lines.entries()) {
+      for (const match of line.matchAll(citation)) {
+        // The sentence the citation sits in: back to the previous full stop, forward to the next.
+        const before = line.slice(0, match.index).split(/\. /).pop() ?? "";
+        const after = line.slice(match.index).split(/\. /)[0] ?? "";
+        const sentence = before + after;
+        for (const row of match[1]!.match(/\d+/g) ?? []) {
+          read += 1;
+          const where = `${path.relative(repoRoot, file)}:${i + 1}`;
+          if (!struck.has(row) && !open.has(row)) unknown.push(`${where} cites debt row ${row}, which the ledger does not have`);
+          else if (struck.has(row) && !closed.test(sentence)) wrong.push(`${where} cites debt row ${row} as open; the ledger struck it`);
+        }
+      }
+    }
+  }
+  assert.deepEqual(unknown, [], "a cited row exists in docs/DEBT.md");
+  assert.deepEqual(wrong, [], "say what the mechanism does now, and that the row was paid, or cite the open row that still owes it");
+  assert.ok(read >= 20, `the citations are still read (read ${read})`);
 });
