@@ -3,7 +3,7 @@
 - **Status:** open; filed as [#150](https://github.com/MetaCoding-io/regulator/issues/150) under
   [#61](https://github.com/MetaCoding-io/regulator/issues/61). Written as a table-of-contents
   assessment in the shape the [open questions backlog](2026-09-25-open-questions.md#6-backlog--smaller-things-to-think-about)
-  used for the Manning books (the 2026-10-24 row); nine of the course's sixteen lessons are still
+  used for the Manning books (the 2026-10-24 row); eight of the course's sixteen lessons are still
   to come (§8 and the dated sections before it), and each release is read and appended here.
 - **Sources:** the course, <https://wordalisation.com/courses/agentic-ai-for-statistics-and-data-science/overview/>
   (David Sumpter, Uppsala University, CC BY 4.0, free); its companion
@@ -287,6 +287,52 @@ own prose, and the check reported them.
 
 Net effect: §3's audit row gains the re-raised-finding case as a backlog candidate; nothing in
 §4 or §5 changes; the verdict in §1 stands.
+
+## 2026-11-17 — Lesson 1.8
+
+Read on the third scheduled check. Part 1 is now complete. Of Part 2, 2.1 and 2.3 to 2.5 are
+placeholders dated 23 November, 2.2 still carries a 16 November date that has passed, and 2.6
+and 2.7 stay at 30 November. The template repository is unchanged since the assessment.
+
+**1.8 Best practices for working with agentic AI** is a general checklist in four phases
+(before, when starting, during, after a session) with no studies, numbers or figures, so it
+confirms rather than changes. Five of its practices are the mechanisms in §3, stated from the
+user's seat, and one is the prime directive in the author's words. Under security the page says
+that telling the agent what is not allowed "is in no way a secure guardrail", and that a real
+boundary is a container. That is "prompts advise, gates enforce" with the course's answer
+being the deployment's isolation (`ROADMAP.md` not-planned row 8) where regulator's is the
+profile grant at the tool boundary; the two are not rivals, and the article in §6 on the
+mechanism hierarchy can open on this sentence. The other confirmations: the person's to-do
+list is kept outside the project folder "so the agent does not follow it", which is the
+`AGENTS.md` boundary that nothing reads its own progress off the domain, arrived at by
+hand; an agent asked to confirm every step "can lose instructions as context grows", which is
+the failure `contract-preserving-compaction` absorbs, named; agents are "self-reinforcing" and
+"agreeable", so ask for criticism and consult a model from another provider under neutral
+framing, which is the judge-not-on-the-unit's-model finding ([books note](2026-10-25-agent-engineering-books.md)
+§4 item 1, [#49](https://github.com/MetaCoding-io/regulator/issues/49)); agents "can claim
+success, invent references" or report tests passed when they did not, so verification is "a
+human checkpoint" the agent is not relied on for, which is the self-report row in
+`docs/PATHOLOGIES.md` and the host-run verdict; and disjoint tasks in separate sessions, a
+smaller model for simpler work, and instruction files as templates are the unit per step, the
+model route per unit type, and the advice files.
+
+One article candidate for §6. The page's "after a session" phase ends with reflection: ask
+what was wasteful and what the work cost, then "update your workflow and instruction file".
+That is the reflector of the [Harness² note](2026-10-18-harness2-recursive-harnessing.md) §7
+run by hand, once per session, with the instruction file as the advice it edits and no
+measurement behind the edit. The course's `FRAMEWORK` prefix (§2) is the same loop one step
+more mechanical. An article on the three rungs, a person editing the file, a person accepting
+a proposed edit (`advice accept`), and a proposed edit probed as an eval arm before the
+decision, would place the course's practice on regulator's ladder without claiming the top
+rung exists yet.
+
+Two things the page does not do, for the record: deskilling is not discussed by name (the
+§3 item 1 argument rests on lesson 1.1), and nothing is said about what must never be
+automated beyond "you are responsible for the output", which the disclaimer gate already
+carries.
+
+Net effect: confirmations in §3, one article in §6; nothing in §4 or §5 changes, and the
+verdict in §1 stands.
 
 ## 8. Next step
 
