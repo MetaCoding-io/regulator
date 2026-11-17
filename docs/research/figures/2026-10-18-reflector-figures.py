@@ -1,5 +1,8 @@
 # Draws figures 1 and 2 of docs/research/2026-10-18-harness2-recursive-harnessing.md from one
 # skeleton: the "after" figure is the "before" with the additions overlaid in the accent colour.
+# What the design proposed and has since landed (the advice files and their accept path, predictions, the
+# probe arm, the harness-edit kind) is drawn in both figures in the ordinary colour; the accent is the
+# reflector alone, which is what is still proposed.
 # Usage: python3 2026-10-18-reflector-figures.py <out-dir>  (writes before.svg and after.svg with CSS vars;
 # the research files, the docs page and the website carry colour-mapped variants of the same output).
 """Generate the before/after reflector figures from one skeleton.
@@ -41,16 +44,16 @@ CARDS = {
         "A named, bounded grant of tools and writable paths a unit runs under. Specialisation by grant, never by persona.",
         "reference/definition"),
     "policies": ("Policies",
-        "Routing, budgets, recovery and interaction: the declared rules the loop and the router apply, each versioned so a decision can cite the version it used.",
+        "Budgets and routes, recovery, routing, interaction and intelligence: the declared rules the loop, the router and the watcher apply, each versioned so a decision can cite the version it used.",
         "reference/definition"),
     "workloads": ("Workloads",
         "A declared set of unit types for one kind of job, each a profile, a grant, a budget and a route. The loop stays the same; only the workload changes.",
         "guide/authoring-a-workload"),
     "evals": ("Evals",
-        "The suites, arms and graders the eval harness runs, and the fifteen pre-registered metric names a report may use.",
+        "The suites, arms and graders the eval harness runs, and the metric names a report may use: twenty-eight built in, and the ones a workload declares with its own grader.",
         "concepts/evidence-about-the-regulators"),
     "advice-seed": ("Advice seed",
-        "`advice/<profile>.md` in the definition: the text a profile's units are advised with, under `advice.maxChars`. Advice is proposable and lands only through `advice accept`; it is the one kind of file a reflector's edit targets.",
+        "`advice/<profile>.md` in the definition: the text a profile's units are advised with, under `advice.maxChars`. Advice is proposable and lands only through `advice accept`; it is the one kind of file a `harness-edit` targets.",
         "project/whats-coming#the-reflector-the-definitions-s4"),
     "slot-today": ("The definition's S4 today",
         "Watching how the system behaves and what it should do differently is a checklist a person runs: the Pi upgrade, the review dates, the open questions. Nothing models what the instances did.",
@@ -98,7 +101,7 @@ CARDS = {
         "The work that touches the repository: one contract, one session, one verdict. It runs in its own worktree under the `implement` profile, and what it reports about itself is never evidence.",
         "concepts/contracts"),
     "s4-unit": ("S4: a research unit",
-        "Intelligence at the instance level: a read-only profile, one question, a budget. It reports with `report_intelligence` and cannot change anything itself.",
+        "Intelligence at the instance level: a read-only profile, one question, a budget. It reports with `report_intelligence` and cannot change anything itself. A sensor the definition declares raises the same signal on the watcher's tick.",
         "concepts/intelligence-and-memory#intelligence"),
     "s2": ("S2: coordination",
         "Damping between units, as mechanism: leases, worktree isolation, reintegration checked on the merged tree, and a thrash detector that names an oscillation for S3 to decide.",
@@ -116,7 +119,7 @@ CARDS = {
         "The tool a unit proposes a change to identity with. It opens an obligation owed to S5 and changes nothing by itself (INV-002).",
         "concepts/identity#the-only-way-to-change-identity"),
     "harness-edit": ("harness-edit",
-        "The new proposal kind, routed like every proposal: a diagnosis (what was observed, by reference), a change (a diff against one advice file) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it).",
+        "A proposal kind, routed like every proposal: a diagnosis (what was observed, by reference), a change (a diff against one advice file) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it).",
         "project/whats-coming#what-changes-at-what-level"),
     "remember": ("remember",
         "The tool a unit records a fact with: provenance, scope and an expiry of at most ninety days. A fact is never identity, however often it is repeated.",
@@ -212,11 +215,10 @@ def instance_interior(after, mono, muted, soft, acc, AR) -> str:
     add = o.append
     hot = hotspot_writer(add)
     # S5
-    hot("s5-after" if after else "s5",
+    hot("s5-after",
         f'    <rect x="46" y="212" width="330" height="40" rx="3" fill="{soft}" stroke-width="1.2"/>',
         f'    <text x="56" y="229" stroke="none" font-weight="600">S5</text>',
-        (f'    <text x="80" y="229" stroke="none">identity files <tspan fill="{acc}">+ advice files</tspan>, write-protected</text>' if after else
-         f'    <text x="80" y="229" stroke="none">identity files, write-protected</text>'),
+        f'    <text x="80" y="229" stroke="none">identity and advice files, write-protected</text>',
         f'    <text x="80" y="244" stroke="none" font-size="11" fill="{muted}">write gate · bash watch · identity-untouched at closeout</text>')
     # person
     hot("person",
@@ -226,9 +228,8 @@ def instance_interior(after, mono, muted, soft, acc, AR) -> str:
         f'    <line x1="430" y1="232" x2="378" y2="232" stroke-width="1.5" marker-end="{AR}"/>',
         f'    <text x="404" y="226" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">accept</text>',
         f'    <text x="404" y="262" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">the only writer</text>']
-    if after:
-        accept_lines.append(f'    <text x="404" y="276" stroke="none" font-size="10" text-anchor="middle" fill="{acc}">+ {mono("advice accept")}</text>')
-    hot("accept-after" if after else "accept", *accept_lines, hit="M 430 232 L 378 232")
+    accept_lines.append(f'    <text x="404" y="276" stroke="none" font-size="10" text-anchor="middle" fill="{muted}">{mono("identity accept")} · {mono("advice accept")}</text>')
+    hot("accept-after", *accept_lines, hit="M 430 232 L 378 232")
     # S3 loop
     hot("s3",
         f'    <rect x="46" y="290" width="574" height="40" rx="3" fill="none" pointer-events="all" stroke-width="1.5"/>',
@@ -266,9 +267,8 @@ def instance_interior(after, mono, muted, soft, acc, AR) -> str:
         f'    <path d="M 608 372 L 608 330" stroke-width="1.5" marker-end="{AR}"/>',
         f'    <text x="616" y="352" stroke="none" font-size="10" fill="{muted}">obligation holds the unit</text>',
         hit="M 608 372 L 608 330")
-    if after:
-        hot("harness-edit",
-            f'    <text x="508" y="432" stroke="none" font-size="10" fill="{acc}">+ a {mono("harness-edit")}: an obligation owed to S5</text>')
+    hot("harness-edit",
+        f'    <text x="508" y="432" stroke="none" font-size="10" fill="{muted}">a {mono("harness-edit")}: an obligation owed to S5</text>')
     # proposal path and remember path
     hot("propose",
         f'    <path d="M 255 416 L 255 470 L 732 470 L 732 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="{AR}"/>',
@@ -324,9 +324,9 @@ def figure(after: bool, embed: dict | None = None) -> str:
     acc = "var(--accent)"; alarm = "var(--alarm)"; muted = "var(--muted)"; soft = "var(--soft)"
     o = []
     add = o.append
-    label = ("A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; a person accepts advice as they accept identity; the eval harness probes a proposed edit; crossed marks show what the reflector can never write or schedule."
+    label = ("A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; crossed marks show what the reflector can never write or schedule."
              if after else
-             "One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.")
+             "One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, who accept advice as they accept identity, a proposed edit is probed as an eval arm and its prediction resolved, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.")
 
     hot = hotspot_writer(add)
 
@@ -346,15 +346,14 @@ def figure(after: bool, embed: dict | None = None) -> str:
     hot("definition",
         f'    <text x="46" y="42" font-weight="600" stroke="none">DEFINITION</text>',
         f'    <text x="140" y="42" stroke="none" fill="{muted}">versioned, checked by {mono("regulator check")}, changed by people</text>')
-    chips = [("registry", "registry (43)"), ("identity-seed", "identity seed"), ("profiles", "profiles"), ("policies", "policies"), ("workloads", "workloads"), ("evals", "evals")]
+    chips = [("registry", "registry (53)"), ("identity-seed", "identity seed"), ("profiles", "profiles"), ("policies", "policies"), ("workloads", "workloads"), ("evals", "evals")]
     for i, (cid, c) in enumerate(chips):
         x = 46 + i * 116
         hot(cid,
             f'    <rect x="{x}" y="58" width="108" height="34" rx="3" fill="{soft}" stroke-width="1.2"/>',
             f'    <text x="{x+54}" y="79" stroke="none" text-anchor="middle" font-size="11.5">{c}</text>')
-    if after:
-        hot("advice-seed",
-            f'    <text x="278" y="109" stroke="none" font-size="10" fill="{acc}">+ {mono("advice/&lt;profile&gt;.md")}, the seed of the instance\'s advice files</text>')
+    hot("advice-seed",
+        f'    <text x="278" y="109" stroke="none" font-size="10" fill="{muted}">{mono("advice/&lt;profile&gt;.md")}, the seed of the instance\'s advice files</text>')
 
     # ---- definition <-> instance edges ----
     hot("init",
@@ -365,11 +364,10 @@ def figure(after: bool, embed: dict | None = None) -> str:
         f'    <line x1="236" y1="212" x2="236" y2="94" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AR}"/>',
         f'    <text x="242" y="150" stroke="none" font-size="10" fill="{muted}">{mono("identity promote")}</text>',
         hit="M 236 212 L 236 94")
-    if after:
-        hot("advice-promote",
-            f'    <line x1="356" y1="212" x2="356" y2="118" stroke="{acc}" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AA}"/>',
-            f'    <text x="362" y="150" stroke="none" font-size="10" fill="{acc}">{mono("advice promote")}</text>',
-            hit="M 356 212 L 356 118")
+    hot("advice-promote",
+        f'    <line x1="356" y1="212" x2="356" y2="118" stroke-width="1.5" stroke-dasharray="5 4" marker-end="{AR}"/>',
+        f'    <text x="362" y="150" stroke="none" font-size="10" fill="{muted}">{mono("advice promote")}</text>',
+        hit="M 356 212 L 356 118")
 
     # ---- INSTANCE ----
     add(f'    <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>')
@@ -424,8 +422,7 @@ def figure(after: bool, embed: dict | None = None) -> str:
               ("memory-outbox", "memory · outbox"), ("effect-journal", "effect journal"), ("spans", "spans (OpenTelemetry)"), ("eval-reports", "eval reports + interpretation")]
     for i, (cid, l) in enumerate(stores):
         hot(cid, f'    <text x="796" y="{246 + 22*i}" stroke="none">{l}</text>')
-    if after:
-        hot("predictions", f'    <text x="796" y="{246 + 22*7 - 4}" stroke="none" font-size="10" fill="{acc}">+ predictions, resolved at their horizons</text>')
+    hot("predictions", f'    <text x="796" y="{246 + 22*7 - 4}" stroke="none" font-size="10" fill="{muted}">predictions, resolved at their horizons</text>')
     read_lines = [
         f'    <text x="796" y="430" stroke="none" font-size="11" fill="{muted}">read by {mono("status")}, the control room,</text>',
         f'    <text x="796" y="445" stroke="none" font-size="11" fill="{muted}">the eval harness, a person.</text>']
@@ -455,8 +452,7 @@ def figure(after: bool, embed: dict | None = None) -> str:
         f'    <text x="888" y="520" stroke="none" font-size="10.5" fill="{muted}">S3* one level up</text>',
         f'    <text x="792" y="544" stroke="none" font-size="10.5" fill="{muted}">arms · ablation · graders · intervals</text>',
         f'    <text x="792" y="562" stroke="none" font-size="10.5" fill="{muted}">a report needs a person\'s interpretation</text>')
-    if after:
-        hot("probe", f'    <text x="792" y="582" stroke="none" font-size="10.5" fill="{acc}">+ the probe: an arm per advice edit</text>')
+    hot("probe", f'    <text x="792" y="582" stroke="none" font-size="10.5" fill="{muted}">the probe: an arm per advice edit</text>')
     hot("reports",
         f'    <line x1="900" y1="496" x2="900" y2="468" stroke-width="1.2" marker-end="{AR}"/>',
         f'    <text x="906" y="486" stroke="none" font-size="10" fill="{muted}">reports</text>',

@@ -4,9 +4,12 @@ This page is a picture of one thing the project has designed and not yet built, 
 reader can see what would change before it changes. The order of work is the
 [roadmap](/project/roadmap); the design, with its sources and its hazards, is the
 research note [*Harness² read through the control
-plane*](../research/2026-10-18-harness2-recursive-harnessing.md). Of what is drawn
-below, only the first row of the last table has shipped (the accept-path split, slice 1,
-#110); nothing else here is shipped, and nothing here is a promise of a date.
+plane*](../research/2026-10-18-harness2-recursive-harnessing.md). What the
+reflector needs underneath it has shipped, in three slices of the accept-path split:
+advice as files with their own accept path (#110), the prediction record and its
+resolution (#138), and the probe arm with the rule that holds an edit until it is probed
+(#200). What is drawn in the accent colour below is what has not: the reflector itself,
+and the instrument record kind its card needs. Nothing here is a promise of a date.
 
 ## The reflector: the definition's S4
 
@@ -17,16 +20,15 @@ run by people: `regulator doctor` under CI, `review --due`, releases, and a pers
 accepts or rejects every proposal. For S4 at that level, the function that watches how
 the system behaves and what it should do differently, there is a checklist a person runs.
 
-The reflector is that S4, proposed as a package beside `checks` or as a `reflect` unit
-with a contract, a budget and a lease. It reads the records every instance already
+The reflector is that S4, proposed as a package, `packages/reflector`. It reads the records every instance already
 writes (the execution store, the regulatory and audit logs, memory, the eval reports,
 the spans) and emits three record kinds that already exist: a memory fact for later
 units, an intelligence signal the router turns into an obligation, and a proposal owed
-to S5. The new proposal kind, `harness-edit`, carries a diff against one of the
-definition's *advice* files and the trajectory moment it traces to. A proposed edit is
-probed as an eval arm against the workload's fixture before anyone decides, and a
-person accepts it with an `advice accept` command that is the only writer of an
-advice file. The reflector never writes a definition file, never dispatches a unit and
+to S5. The proposal kind it would use exists already: a `harness-edit` carries a diff
+against one of the definition's *advice* files and the trajectory moment it traces to. A
+proposed edit is probed as an eval arm against the workload's fixture before anyone
+decides, and a person accepts it with `advice accept`, the only writer of an advice
+file, which refuses an edit whose probe has not resolved or was disconfirmed. The reflector never writes a definition file, never dispatches a unit and
 never dispositions an obligation, because it has no tool that does.
 
 Every file in the definition is proposable, because a proposal changes nothing by
@@ -40,14 +42,15 @@ reflector may propose a new kind of unit and how it joins the workload. It may n
 author the code or the grant that the proposal becomes.
 
 A proposal also states its bet before anyone decides: the metric it expects to move,
-from one of the eval harness's fifteen pre-registered names, the baseline it is measured
+from the eval harness's built-in names or a workload's declared ones, the baseline it is measured
 against, the horizon over which it resolves, and the value that would count against it.
 The probe resolves the first horizon. The next units after acceptance resolve the
 second, and a bet that fails there opens an obligation to revert or re-decide. The
 reflector's instrument card is graded on exactly those resolutions.
 
-It is registered as an **instrument**, not a regulator: a record kind for things that
-inform rather than refuse, graded on calibration. Its question is whether the proposals
+It would be registered as an **instrument**, not a regulator: a record kind for things
+that inform rather than refuse, graded on calibration. That record kind does not exist
+yet ([debt row 48](/DEBT)). Its question is whether the proposals
 a person accepted moved the metric they named. `regulator check` refuses an instrument
 without a calibration report the way it refuses a regulator without a limitation.
 
@@ -59,7 +62,7 @@ the difference the figures below draw.
 ## Before
 
 <figure style="overflow-x:auto">
-<svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 640" role="img" aria-label="One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.">
+<svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 640" role="img" aria-label="One recursion level is regulated: inside the instance every channel is typed and every writer is named, the definition above is changed only by people, who accept advice as they accept identity, a proposed edit is probed as an eval arm and its prediction resolved, the records flow out to a column nothing reads back up, and the slot for the definition's own S4 holds a checklist a person runs.">
   <defs>
     <marker id="b-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
   </defs>
@@ -82,7 +85,7 @@ the difference the figures below draw.
       <rect x="278" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="332" y="79" stroke="none" text-anchor="middle" font-size="11.5">profiles</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-policies" aria-label="Policies" data-label="Policies" data-def="Routing, budgets, recovery and interaction: the declared rules the loop and the router apply, each versioned so a decision can cite the version it used." data-href="/reference/definition">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-policies" aria-label="Policies" data-label="Policies" data-def="Budgets and routes, recovery, routing, interaction and intelligence: the declared rules the loop, the router and the watcher apply, each versioned so a decision can cite the version it used." data-href="/reference/definition">
       <rect x="394" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="448" y="79" stroke="none" text-anchor="middle" font-size="11.5">policies</text>
     </g>
@@ -90,9 +93,12 @@ the difference the figures below draw.
       <rect x="510" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="564" y="79" stroke="none" text-anchor="middle" font-size="11.5">workloads</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-evals" aria-label="Evals" data-label="Evals" data-def="The suites, arms and graders the eval harness runs, and the fifteen pre-registered metric names a report may use." data-href="/concepts/evidence-about-the-regulators">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-evals" aria-label="Evals" data-label="Evals" data-def="The suites, arms and graders the eval harness runs, and the metric names a report may use: twenty-eight built in, and the ones a workload declares with its own grader." data-href="/concepts/evidence-about-the-regulators">
       <rect x="626" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="680" y="79" stroke="none" text-anchor="middle" font-size="11.5">evals</text>
+    </g>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-advice-seed" aria-label="Advice seed" data-label="Advice seed" data-def="&lt;code&gt;advice/&lt;profile&gt;.md&lt;/code&gt; in the definition: the text a profile's units are advised with, under &lt;code&gt;advice.maxChars&lt;/code&gt;. Advice is proposable and lands only through &lt;code&gt;advice accept&lt;/code&gt;; it is the one kind of file a &lt;code&gt;harness-edit&lt;/code&gt; targets." data-href="/project/whats-coming#the-reflector-the-definitions-s4">
+      <text x="278" y="109" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">advice/&lt;profile&gt;.md</tspan>, the seed of the instance's advice files</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-init" aria-label="regulator init seeds" data-label="&lt;code&gt;regulator init&lt;/code&gt; seeds" data-def="The one write from the definition into an instance: the identity files, the manifest and the stores are created from the package. From then on the instance's records are its own." data-href="/guide/getting-started">
       <line x1="80" y1="116" x2="80" y2="176" stroke-width="1.5" marker-end="url(#b-arrow)"/>
@@ -104,25 +110,31 @@ the difference the figures below draw.
       <text x="242" y="150" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">identity promote</tspan></text>
       <path d="M 236 212 L 236 94" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-advice-promote" aria-label="advice promote" data-label="&lt;code&gt;advice promote&lt;/code&gt;" data-def="The same path for an accepted advice file: a person carries it from the instance's &lt;code&gt;regulator/advice/&lt;/code&gt; into the definition's advice seed." data-href="/project/whats-coming#what-a-person-sees">
+      <line x1="356" y1="212" x2="356" y2="118" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#b-arrow)"/>
+      <text x="362" y="150" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">advice promote</tspan></text>
+      <path d="M 356 212 L 356 118" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
+    </g>
     <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-instance" aria-label="An instance" data-label="An instance" data-def="One repository under the control plane: a &lt;code&gt;.regulator/&lt;/code&gt; directory of append-only records, an identity set, a manifest naming the definition version it was seeded from, and the loop running units against it." data-href="/reference/instance">
       <text x="46" y="198" font-weight="600" stroke="none">INSTANCE</text>
       <text x="126" y="198" stroke="none" fill="var(--vp-c-text-2)">one repository under the control plane</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s5" aria-label="S5: identity files" data-label="S5: identity files" data-def="What the instance is: &lt;code&gt;IDENTITY&lt;/code&gt;, &lt;code&gt;INVARIANTS&lt;/code&gt;, &lt;code&gt;GLOSSARY&lt;/code&gt; and &lt;code&gt;BOUNDARIES&lt;/code&gt; under &lt;code&gt;regulator/identity/&lt;/code&gt;, rendered into every session and protected by three layers: the write gate, the bash watch and the identity-untouched check at closeout." data-href="/concepts/identity">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s5-after" aria-label="S5: identity and advice files" data-label="S5: identity and advice files" data-def="The identity files, protected by the write gate, the bash watch and the identity-untouched check, with the advice files beside them under the same protection. Both are proposable; each lands through its own accept command." data-href="/concepts/identity">
       <rect x="46" y="212" width="330" height="40" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="56" y="229" stroke="none" font-weight="600">S5</text>
-      <text x="80" y="229" stroke="none">identity files, write-protected</text>
+      <text x="80" y="229" stroke="none">identity and advice files, write-protected</text>
       <text x="80" y="244" stroke="none" font-size="11" fill="var(--vp-c-text-2)">write gate · bash watch · identity-untouched at closeout</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-person" aria-label="A person acting as S5" data-label="A person acting as S5" data-def="The interaction policy names who may act as S5. That person is the only writer of an identity file, through &lt;code&gt;identity accept&lt;/code&gt;. &lt;code&gt;reject&lt;/code&gt; changes nothing, and silence is never consent." data-href="/concepts/asking-a-person">
       <rect x="430" y="212" width="190" height="40" rx="20" fill="none" pointer-events="all" stroke-width="1.5"/>
       <text x="525" y="236" stroke="none" text-anchor="middle">a person (<tspan font-family="var(--vp-font-family-mono)">actAsS5</tspan>)</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-accept" aria-label="accept" data-label="accept" data-def="&lt;code&gt;regulator identity accept &lt;obligation&gt; --by …&lt;/code&gt;: the authority check, then the write. The only path by which a proposal becomes identity." data-href="/concepts/identity#the-only-way-to-change-identity">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-accept-after" aria-label="accept · advice accept" data-label="accept · advice accept" data-def="&lt;code&gt;identity accept&lt;/code&gt; for an identity file and &lt;code&gt;advice accept&lt;/code&gt; for an advice file after its probe: the authority check, then the write. Each is the only writer of its kind of file." data-href="/project/whats-coming#what-a-person-sees">
       <line x1="430" y1="232" x2="378" y2="232" stroke-width="1.5" marker-end="url(#b-arrow)"/>
       <text x="404" y="226" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">accept</text>
       <text x="404" y="262" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">the only writer</text>
+      <text x="404" y="276" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">identity accept</tspan> · <tspan font-family="var(--vp-font-family-mono)">advice accept</tspan></text>
       <path d="M 430 232 L 378 232" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s3" aria-label="S3: the loop" data-label="S3: the loop" data-def="Contract, dispatch, verify, route, close. The orchestrator never edits code itself: it dispatches a session under a contract and a budget, verifies the work with host-run checks, routes by the versioned recovery policy and closes on the ledger." data-href="/concepts/control-plane#the-loop">
@@ -140,7 +152,7 @@ the difference the figures below draw.
       <text x="200" y="389" stroke="none" font-weight="600">S1</text><text x="222" y="389" stroke="none">unit u2</text>
       <text x="200" y="405" stroke="none" font-size="11" fill="var(--vp-c-text-2)">implement · worktree</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s4-unit" aria-label="S4: a research unit" data-label="S4: a research unit" data-def="Intelligence at the instance level: a read-only profile, one question, a budget. It reports with &lt;code&gt;report_intelligence&lt;/code&gt; and cannot change anything itself." data-href="/concepts/intelligence-and-memory#intelligence">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s4-unit" aria-label="S4: a research unit" data-label="S4: a research unit" data-def="Intelligence at the instance level: a read-only profile, one question, a budget. It reports with &lt;code&gt;report_intelligence&lt;/code&gt; and cannot change anything itself. A sensor the definition declares raises the same signal on the watcher's tick." data-href="/concepts/intelligence-and-memory#intelligence">
       <rect x="334" y="372" width="160" height="44" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2" stroke-dasharray="4 3"/>
       <text x="344" y="389" stroke="none" font-weight="600">S4</text><text x="366" y="389" stroke="none">research unit</text>
       <text x="344" y="405" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read-only · one question</text>
@@ -169,6 +181,9 @@ the difference the figures below draw.
       <path d="M 608 372 L 608 330" stroke-width="1.5" marker-end="url(#b-arrow)"/>
       <text x="616" y="352" stroke="none" font-size="10" fill="var(--vp-c-text-2)">obligation holds the unit</text>
       <path d="M 608 372 L 608 330" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
+    </g>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-harness-edit" aria-label="harness-edit" data-label="harness-edit" data-def="A proposal kind, routed like every proposal: a diagnosis (what was observed, by reference), a change (a diff against one advice file) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it)." data-href="/project/whats-coming#what-changes-at-what-level">
+      <text x="508" y="432" stroke="none" font-size="10" fill="var(--vp-c-text-2)">a <tspan font-family="var(--vp-font-family-mono)">harness-edit</tspan>: an obligation owed to S5</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-propose" aria-label="propose_policy_change" data-label="propose_policy_change" data-def="The tool a unit proposes a change to identity with. It opens an obligation owed to S5 and changes nothing by itself (INV-002)." data-href="/concepts/identity#the-only-way-to-change-identity">
       <path d="M 255 416 L 255 470 L 732 470 L 732 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#b-arrow)"/>
@@ -239,6 +254,9 @@ the difference the figures below draw.
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-eval-reports" aria-label="Eval reports and interpretation" data-label="Eval reports and interpretation" data-def="A report from the eval harness and the interpretation a person wrote for it. A report without an interpretation adopts nothing." data-href="/concepts/evidence-about-the-regulators#reports">
       <text x="796" y="378" stroke="none">eval reports + interpretation</text>
     </g>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-predictions" aria-label="Predictions" data-label="Predictions" data-def="A harness-edit's bet, kept as its own record: the probe resolves the first horizon, the next units after acceptance resolve the second, and a bet that fails there opens an obligation to revert or re-decide." data-href="/project/whats-coming#what-changes-at-what-level">
+      <text x="796" y="396" stroke="none" font-size="10" fill="var(--vp-c-text-2)">predictions, resolved at their horizons</text>
+    </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-read-by" aria-label="Who reads the records" data-label="Who reads the records" data-def="&lt;code&gt;status&lt;/code&gt;, the control room, the eval harness and a person. No mechanism carries what the records say back into the definition." data-href="/guide/control-room">
       <text x="796" y="430" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read by <tspan font-family="var(--vp-font-family-mono)">status</tspan>, the control room,</text>
       <text x="796" y="445" stroke="none" font-size="11" fill="var(--vp-c-text-2)">the eval harness, a person.</text>
@@ -256,6 +274,9 @@ the difference the figures below draw.
       <text x="792" y="544" stroke="none" font-size="10.5" fill="var(--vp-c-text-2)">arms · ablation · graders · intervals</text>
       <text x="792" y="562" stroke="none" font-size="10.5" fill="var(--vp-c-text-2)">a report needs a person's interpretation</text>
     </g>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-probe" aria-label="The probe" data-label="The probe" data-def="An eval arm per proposed advice edit, run against the workload's fixture before anyone decides. It resolves the proposal's first horizon." data-href="/concepts/evidence-about-the-regulators#arms">
+      <text x="792" y="582" stroke="none" font-size="10.5" fill="var(--vp-c-text-2)">the probe: an arm per advice edit</text>
+    </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-reports" aria-label="reports" data-label="reports" data-def="An eval report is appended to the records like any other, with its interpretation beside it." data-href="/concepts/evidence-about-the-regulators#reports">
       <line x1="900" y1="496" x2="900" y2="468" stroke-width="1.2" marker-end="url(#b-arrow)"/>
       <text x="906" y="486" stroke="none" font-size="10" fill="var(--vp-c-text-2)">reports</text>
@@ -264,13 +285,13 @@ the difference the figures below draw.
     </g>
   </g>
 </svg>
-<figcaption><b>Today.</b> One recursion level is regulated. Inside the instance every edge is typed, stamped by the host and recorded on a card. The level above has people for S3, S3* and S5, and the slot for its S4 holds a checklist a person runs. The records flow out and are read for status, evals and audit; nothing carries what they say back up.</figcaption>
+<figcaption><b>Today.</b> One recursion level is regulated. Inside the instance every edge is typed, stamped by the host and recorded on a card. Advice files sit beside identity, each with its own accept command and its promote edge back into the definition; a proposal can be a <code>harness-edit</code>, its prediction resolves in the records, and the eval harness can probe it as an arm. The level above has people for S3, S3* and S5, and the slot for its S4 holds a checklist a person runs. The records flow out and are read for status, evals and audit; nothing carries what they say back up.</figcaption>
 </figure>
 
 ## After
 
 <figure style="overflow-x:auto">
-<svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 640" role="img" aria-label="A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; a person accepts advice as they accept identity; the eval harness probes a proposed edit; crossed marks show what the reflector can never write or schedule.">
+<svg style="max-width:100%;height:auto;font-family:inherit;min-width:860px" viewBox="0 0 1040 640" role="img" aria-label="A second level drawn onto the same picture: the definition's S4 slot holds a reflector that reads the instance's records and appends proposals, intelligence and memory facts, none of which change a file; crossed marks show what the reflector can never write or schedule.">
   <defs>
     <marker id="a-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="currentColor"/></marker>
     <marker id="a-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="var(--vp-c-brand-1)"/></marker>
@@ -295,7 +316,7 @@ the difference the figures below draw.
       <rect x="278" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="332" y="79" stroke="none" text-anchor="middle" font-size="11.5">profiles</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-policies" aria-label="Policies" data-label="Policies" data-def="Routing, budgets, recovery and interaction: the declared rules the loop and the router apply, each versioned so a decision can cite the version it used." data-href="/reference/definition">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-policies" aria-label="Policies" data-label="Policies" data-def="Budgets and routes, recovery, routing, interaction and intelligence: the declared rules the loop, the router and the watcher apply, each versioned so a decision can cite the version it used." data-href="/reference/definition">
       <rect x="394" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="448" y="79" stroke="none" text-anchor="middle" font-size="11.5">policies</text>
     </g>
@@ -303,12 +324,12 @@ the difference the figures below draw.
       <rect x="510" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="564" y="79" stroke="none" text-anchor="middle" font-size="11.5">workloads</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-evals" aria-label="Evals" data-label="Evals" data-def="The suites, arms and graders the eval harness runs, and the fifteen pre-registered metric names a report may use." data-href="/concepts/evidence-about-the-regulators">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-evals" aria-label="Evals" data-label="Evals" data-def="The suites, arms and graders the eval harness runs, and the metric names a report may use: twenty-eight built in, and the ones a workload declares with its own grader." data-href="/concepts/evidence-about-the-regulators">
       <rect x="626" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="680" y="79" stroke="none" text-anchor="middle" font-size="11.5">evals</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-advice-seed" aria-label="Advice seed" data-label="Advice seed" data-def="&lt;code&gt;advice/&lt;profile&gt;.md&lt;/code&gt; in the definition: the text a profile's units are advised with, under &lt;code&gt;advice.maxChars&lt;/code&gt;. Advice is proposable and lands only through &lt;code&gt;advice accept&lt;/code&gt;; it is the one kind of file a reflector's edit targets." data-href="/project/whats-coming#the-reflector-the-definitions-s4">
-      <text x="278" y="109" stroke="none" font-size="10" fill="var(--vp-c-brand-1)">+ <tspan font-family="var(--vp-font-family-mono)">advice/&lt;profile&gt;.md</tspan>, the seed of the instance's advice files</text>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-advice-seed" aria-label="Advice seed" data-label="Advice seed" data-def="&lt;code&gt;advice/&lt;profile&gt;.md&lt;/code&gt; in the definition: the text a profile's units are advised with, under &lt;code&gt;advice.maxChars&lt;/code&gt;. Advice is proposable and lands only through &lt;code&gt;advice accept&lt;/code&gt;; it is the one kind of file a &lt;code&gt;harness-edit&lt;/code&gt; targets." data-href="/project/whats-coming#the-reflector-the-definitions-s4">
+      <text x="278" y="109" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">advice/&lt;profile&gt;.md</tspan>, the seed of the instance's advice files</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-init" aria-label="regulator init seeds" data-label="&lt;code&gt;regulator init&lt;/code&gt; seeds" data-def="The one write from the definition into an instance: the identity files, the manifest and the stores are created from the package. From then on the instance's records are its own." data-href="/guide/getting-started">
       <line x1="80" y1="116" x2="80" y2="176" stroke-width="1.5" marker-end="url(#a-arrow)"/>
@@ -321,8 +342,8 @@ the difference the figures below draw.
       <path d="M 236 212 L 236 94" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-advice-promote" aria-label="advice promote" data-label="&lt;code&gt;advice promote&lt;/code&gt;" data-def="The same path for an accepted advice file: a person carries it from the instance's &lt;code&gt;regulator/advice/&lt;/code&gt; into the definition's advice seed." data-href="/project/whats-coming#what-a-person-sees">
-      <line x1="356" y1="212" x2="356" y2="118" stroke="var(--vp-c-brand-1)" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-arrow-accent)"/>
-      <text x="362" y="150" stroke="none" font-size="10" fill="var(--vp-c-brand-1)"><tspan font-family="var(--vp-font-family-mono)">advice promote</tspan></text>
+      <line x1="356" y1="212" x2="356" y2="118" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#a-arrow)"/>
+      <text x="362" y="150" stroke="none" font-size="10" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">advice promote</tspan></text>
       <path d="M 356 212 L 356 118" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <rect x="30" y="176" width="722" height="424" rx="6" fill="none" stroke-width="1.5"/>
@@ -333,7 +354,7 @@ the difference the figures below draw.
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s5-after" aria-label="S5: identity and advice files" data-label="S5: identity and advice files" data-def="The identity files, protected by the write gate, the bash watch and the identity-untouched check, with the advice files beside them under the same protection. Both are proposable; each lands through its own accept command." data-href="/concepts/identity">
       <rect x="46" y="212" width="330" height="40" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
       <text x="56" y="229" stroke="none" font-weight="600">S5</text>
-      <text x="80" y="229" stroke="none">identity files <tspan fill="var(--vp-c-brand-1)">+ advice files</tspan>, write-protected</text>
+      <text x="80" y="229" stroke="none">identity and advice files, write-protected</text>
       <text x="80" y="244" stroke="none" font-size="11" fill="var(--vp-c-text-2)">write gate · bash watch · identity-untouched at closeout</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-person" aria-label="A person acting as S5" data-label="A person acting as S5" data-def="The interaction policy names who may act as S5. That person is the only writer of an identity file, through &lt;code&gt;identity accept&lt;/code&gt;. &lt;code&gt;reject&lt;/code&gt; changes nothing, and silence is never consent." data-href="/concepts/asking-a-person">
@@ -344,7 +365,7 @@ the difference the figures below draw.
       <line x1="430" y1="232" x2="378" y2="232" stroke-width="1.5" marker-end="url(#a-arrow)"/>
       <text x="404" y="226" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">accept</text>
       <text x="404" y="262" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)">the only writer</text>
-      <text x="404" y="276" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-brand-1)">+ <tspan font-family="var(--vp-font-family-mono)">advice accept</tspan></text>
+      <text x="404" y="276" stroke="none" font-size="10" text-anchor="middle" fill="var(--vp-c-text-2)"><tspan font-family="var(--vp-font-family-mono)">identity accept</tspan> · <tspan font-family="var(--vp-font-family-mono)">advice accept</tspan></text>
       <path d="M 430 232 L 378 232" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s3" aria-label="S3: the loop" data-label="S3: the loop" data-def="Contract, dispatch, verify, route, close. The orchestrator never edits code itself: it dispatches a session under a contract and a budget, verifies the work with host-run checks, routes by the versioned recovery policy and closes on the ledger." data-href="/concepts/control-plane#the-loop">
@@ -362,7 +383,7 @@ the difference the figures below draw.
       <text x="200" y="389" stroke="none" font-weight="600">S1</text><text x="222" y="389" stroke="none">unit u2</text>
       <text x="200" y="405" stroke="none" font-size="11" fill="var(--vp-c-text-2)">implement · worktree</text>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s4-unit" aria-label="S4: a research unit" data-label="S4: a research unit" data-def="Intelligence at the instance level: a read-only profile, one question, a budget. It reports with &lt;code&gt;report_intelligence&lt;/code&gt; and cannot change anything itself." data-href="/concepts/intelligence-and-memory#intelligence">
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-s4-unit" aria-label="S4: a research unit" data-label="S4: a research unit" data-def="Intelligence at the instance level: a read-only profile, one question, a budget. It reports with &lt;code&gt;report_intelligence&lt;/code&gt; and cannot change anything itself. A sensor the definition declares raises the same signal on the watcher's tick." data-href="/concepts/intelligence-and-memory#intelligence">
       <rect x="334" y="372" width="160" height="44" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2" stroke-dasharray="4 3"/>
       <text x="344" y="389" stroke="none" font-weight="600">S4</text><text x="366" y="389" stroke="none">research unit</text>
       <text x="344" y="405" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read-only · one question</text>
@@ -392,8 +413,8 @@ the difference the figures below draw.
       <text x="616" y="352" stroke="none" font-size="10" fill="var(--vp-c-text-2)">obligation holds the unit</text>
       <path d="M 608 372 L 608 330" stroke="transparent" stroke-width="14" fill="none" pointer-events="stroke"/>
     </g>
-    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-harness-edit" aria-label="harness-edit" data-label="harness-edit" data-def="The new proposal kind, routed like every proposal: a diagnosis (what was observed, by reference), a change (a diff against one advice file) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it)." data-href="/project/whats-coming#what-changes-at-what-level">
-      <text x="508" y="432" stroke="none" font-size="10" fill="var(--vp-c-brand-1)">+ a <tspan font-family="var(--vp-font-family-mono)">harness-edit</tspan>: an obligation owed to S5</text>
+    <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-harness-edit" aria-label="harness-edit" data-label="harness-edit" data-def="A proposal kind, routed like every proposal: a diagnosis (what was observed, by reference), a change (a diff against one advice file) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it)." data-href="/project/whats-coming#what-changes-at-what-level">
+      <text x="508" y="432" stroke="none" font-size="10" fill="var(--vp-c-text-2)">a <tspan font-family="var(--vp-font-family-mono)">harness-edit</tspan>: an obligation owed to S5</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-propose" aria-label="propose_policy_change" data-label="propose_policy_change" data-def="The tool a unit proposes a change to identity with. It opens an obligation owed to S5 and changes nothing by itself (INV-002)." data-href="/concepts/identity#the-only-way-to-change-identity">
       <path d="M 255 416 L 255 470 L 732 470 L 732 232 L 622 232" stroke-width="1.2" stroke-dasharray="5 4" fill="none" marker-end="url(#a-arrow)"/>
@@ -472,7 +493,7 @@ the difference the figures below draw.
       <text x="796" y="378" stroke="none">eval reports + interpretation</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-predictions" aria-label="Predictions" data-label="Predictions" data-def="A harness-edit's bet, kept as its own record: the probe resolves the first horizon, the next units after acceptance resolve the second, and a bet that fails there opens an obligation to revert or re-decide." data-href="/project/whats-coming#what-changes-at-what-level">
-      <text x="796" y="396" stroke="none" font-size="10" fill="var(--vp-c-brand-1)">+ predictions, resolved at their horizons</text>
+      <text x="796" y="396" stroke="none" font-size="10" fill="var(--vp-c-text-2)">predictions, resolved at their horizons</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-read-by-after" aria-label="Who reads the records" data-label="Who reads the records" data-def="&lt;code&gt;status&lt;/code&gt;, the control room, the eval harness, a person, and now the reflector, read-only." data-href="/guide/control-room">
       <text x="796" y="430" stroke="none" font-size="11" fill="var(--vp-c-text-2)">read by <tspan font-family="var(--vp-font-family-mono)">status</tspan>, the control room,</text>
@@ -496,7 +517,7 @@ the difference the figures below draw.
       <text x="792" y="562" stroke="none" font-size="10.5" fill="var(--vp-c-text-2)">a report needs a person's interpretation</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-probe" aria-label="The probe" data-label="The probe" data-def="An eval arm per proposed advice edit, run against the workload's fixture before anyone decides. It resolves the proposal's first horizon." data-href="/concepts/evidence-about-the-regulators#arms">
-      <text x="792" y="582" stroke="none" font-size="10.5" fill="var(--vp-c-brand-1)">+ the probe: an arm per advice edit</text>
+      <text x="792" y="582" stroke="none" font-size="10.5" fill="var(--vp-c-text-2)">the probe: an arm per advice edit</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-reports" aria-label="reports" data-label="reports" data-def="An eval report is appended to the records like any other, with its interpretation beside it." data-href="/concepts/evidence-about-the-regulators#reports">
       <line x1="900" y1="496" x2="900" y2="468" stroke-width="1.2" marker-end="url(#a-arrow)"/>
@@ -506,12 +527,12 @@ the difference the figures below draw.
     </g>
   </g>
 </svg>
-<figcaption><b>Proposed.</b> The same picture. Every box and edge from the first figure is still there, in the same place; what the design adds is drawn in the accent colour and marked with a plus. The S4 slot gains the reflector, which reads the records and appends to them. The definition gains an advice seed; the instance gains advice files beside identity, an <code>advice accept</code> command beside <code>identity accept</code>, and an <code>advice promote</code> edge beside <code>identity promote</code>. The records gain predictions that resolve at their horizons, the eval harness gains a probe arm, and the obligation a proposal becomes gains the <code>harness-edit</code> kind. The two crossed marks are what the reflector can never do: write a definition file, dispatch a unit.</figcaption>
+<figcaption><b>Proposed.</b> The same picture. Every box and edge from the first figure is still there, in the same place; what the design adds is drawn in the accent colour. The S4 slot gains the reflector, which reads the records and appends to them in record kinds that exist: a proposal, an intelligence signal, a memory fact. The crossed mark is what the reflector can never do: write a definition file, dispatch a unit.</figcaption>
 </figure>
 
 ## What a person sees
 
-The additions are small on the surface, which is the point: the new work lands in commands and records that already exist.
+The additions are small on the surface, which is the point: the reflector's work lands in commands and records that already exist. The first two below work today for a proposal a person or a unit raises; the third waits for the instrument record kind.
 
 - `regulator obligations` lists a `harness-edit` proposal like any other obligation, with the trajectory moment it cites, the arm it was probed in and the report's interpretation.
 - `regulator advice accept <obligation> --file … --by …` is the only writer of an advice file. `reject` changes nothing. `promote` carries an accepted instance file back into the definition's seed, the way `identity promote` does.
@@ -526,16 +547,17 @@ Harness²'s composer adopts: the edge that a person holds in the second figure i
 | Change | Mechanism level | Seam | Refuses |
 | --- | --- | --- | --- |
 | **Landed (#110, slice 1).** The accept-path split on `BOUNDARY.md`: every file proposable; identity lands through `identity accept`, advice through `advice accept` (advice is a file set seeded like identity, and `DEFINITION_WRITERS` declares the three classes), code and grants (unit types, profile grants, checks, extensions) through a merged change that a person makes, with the unit-under-a-contract form of that path still to come | 2, the definition check | `regulator check` over the definition's directories; the gates derive their protected set from the list | a definition directory in no class; a `--file` that is not the one a proposal named |
-| The `harness-edit` proposal kind: a diagnosis (what was observed, by reference), a change (the diff) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it), kept as three records because a trace that supports a diagnosis is not evidence that the remedy works | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation does not resolve, or whose prediction is missing a part |
-| A proposed edit probed as an eval arm | 2, deterministic graders | an eval suite's arms gain an `advice` field | adoption from a report without an interpretation |
-| `regulator advice accept` | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file |
+| **Landed (#138, slice 2).** The `harness-edit` proposal kind: a diagnosis (what was observed, by reference), a change (the diff) and a prediction (which metric, against which baseline, over which horizon, and which value would count against it), kept as three records because a trace that supports a diagnosis is not evidence that the remedy works | 3, typed tool and schema | `protocol`; routed like every proposal | a proposal whose observation does not resolve, or whose prediction is missing a part |
+| **Landed (#200, slice 3).** A proposed edit probed as an eval arm, with an optional held-out slice of tasks | 2, deterministic graders | an eval suite's arms carry an `advice` field; `regulator eval --probe` runs the arm beside the one the prediction names | adoption from a report without an interpretation |
+| **Landed (#110, #200).** `regulator advice accept`, with the probe rule | 2, the authority check, then the write | beside `identity accept`; disposition authority per person | any file but an advice file; a `harness-edit` with no probe horizon, an unresolved one or a disconfirmed one, each refusal a line of the regulatory log |
 | The instrument record kind | 2, the registry check | the registry, a second record kind beside regulators | an instrument without a calibration report |
 | The reflector package | 4, model judgment | reads `.regulator/` and the reports; depends on `protocol` and `core`; nothing depends on it | dispatching, dispositioning, writing under `regulator/` |
 
 The boundary split came first, because every other row names it; it landed as slice 1
 of the [accept-path note](../research/2026-10-18-accept-path-split.md). The prediction
-record is next. The probe arm and the instrument card wait on the first live eval
-report, since a calibration report needs live numbers to calibrate against. The thread's current step is on the
+record and the probe arm followed as slices 2 and 3, and the first live eval report is
+committed. What is left is the last two rows: the instrument record kind, then the
+reflector package, which is slice 4. The thread's current step is on the
 [roadmap](/project/roadmap#threads--designed-not-yet-scheduled).
 
 ## About these figures
@@ -548,7 +570,9 @@ thread](../research/2026-09-25-open-questions.md#1-the-control-room-should-show-
 decided that a generator over the definition is the only author of a figure of what
 exists. These figures are the other two cases the thread names: the "after" is a design,
 which no generator can draw until it lands, and the "before" spans more than the
-definition describes. The generator now draws the instance box's literal counterpart,
+definition describes. As a piece of the design lands, the script moves it from the
+accent overlay into both figures; the advice files, the predictions, the probe arm and
+the `harness-edit` kind were moved on 2026-11-17, and the accent is now the reflector alone. The generator now draws the instance box's literal counterpart,
 the [one-level map](/concepts/control-plane#the-five-functions) on the control-plane
 page and in the control room, from the workload, the profiles, the enforcement points,
 the records and the stores. The pair here stays drawn by decision: composed into the
