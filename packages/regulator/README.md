@@ -4,8 +4,8 @@ The control plane: the `regulator` CLI (`src/cli.ts`), the S3 loop (`src/control
 the stores and the host seam (`src/host.ts`), headless tests beside them, and the
 definition beside the code: `registry/`,
 `identity/`, `advice/`, `profiles/`, `policies/`, `workload/`, `evals/`, `contracts/`,
-`settings.json`. `BOUNDARY.md` and `registry/REGULATORS.md` are generated from the
-registry records.
+`settings.json`. `BOUNDARY.md`, `VIABILITY.md`, `registry/REGULATORS.md` and the figures
+under `figures/` are generated from the registry records and the definition.
 
 - **Read it:** the documentation site, <https://docs.regulator.metacoding.io/> — getting started, the CLI and definition-file reference, the regulators and the enforcement boundary rendered from this package's registry.
 - **Run it:** [`OPERATING.md`](OPERATING.md) — install (this package for the CLI, `pi install ./packages/regulator-pi` for the Pi host),

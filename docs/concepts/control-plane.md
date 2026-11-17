@@ -28,11 +28,11 @@ a rule is enforced at is a recorded fact about the system.
 
 | Function | In `regulator` | Held by |
 | --- | --- | --- |
-| **S1 Operations** | A unit, which is one session running under a capability profile, in its own worktree, under a work contract. | The profile is a grant over declared tool effects. The host enforces the writable paths, the tool set and the budget, so none of them depends on the profile's advice being followed. A [host](/concepts/hosts) runs the session. |
+| **S1 Operations** | A unit: one session running under a capability profile, in its own worktree, under a work contract. A unit type whose work is wholly determined by its inputs declares a program instead, which the control plane runs itself with no model and checks the same way. | The profile is a grant over declared tool effects. The host enforces the writable paths, the tool set and the budget, so none of them depends on the profile's advice being followed. A [host](/concepts/hosts) runs the session. |
 | **S2 Coordination** | Leases with a TTL, worktree isolation, reintegration, the thrash detector, and the effect journal reconciled on restart. | A set of mechanisms. There is no coordinator persona: each mechanism detects and records, and S3 decides what to do about it. See [coordination](/concepts/coordination). |
 | **S3 Control** | The loop: contract → dispatch → verify → route → close, with budgets, model routes and a recovery policy. | The orchestrator, which is the only execution authority. Regulators never schedule a unit. See [work contracts](/concepts/contracts) and [recovery](/concepts/recovery). |
 | **S3\* Audit** | Host-run checks at a revision, the technical verdict, the credential canary watch, the behavioral canary, and the closeout gate over protected paths. | The host, which owns the evidence independently of the session that did the work. A model's review is an additional layer on top of that evidence. |
-| **S4 Intelligence** | The research unit type under a read-only profile, `report_intelligence`, routed into obligations. | Intelligence raises an obligation for S3 to consider. It never replans the work itself. See [intelligence and memory](/concepts/intelligence-and-memory). |
+| **S4 Intelligence** | The research unit type under a read-only profile with `report_intelligence`, and the sensors the definition declares, run by `regulator watch`. Both raise the same signal, routed into obligations. | Intelligence raises an obligation for S3 to consider. It never replans the work itself. See [intelligence and memory](/concepts/intelligence-and-memory). |
 | **S5 Identity** | `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and `BOUNDARIES.md` under `regulator/identity/`, seeded by the definition and protected by the write gate and the `identity-untouched` check. | Committed files. A unit may propose a change. Only a person with `actAsS5` in the interaction policy may accept one, and the S5 decision path is the only thing that writes an identity file. See [protecting identity](/concepts/identity). |
 
 The same level, drawn from the definition rather than described: every box is a kind the
@@ -121,12 +121,12 @@ which semantics apply:
 
 | Kind | From | Means | Emitted by | Routed to |
 | --- | --- | --- | --- | --- |
-| `operational-signal` | S1 | something about the work, such as a blocker or a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; also the identity extension, once per session, when the rendered identity is truncated | S3 |
+| `operational-signal` | S1 | something about the work, such as a blocker or a deviation | the loop, from a result report's `emergentDecisions` and `deviations`; the identity extension, once per session, when the rendered identity is truncated; the consent gate, when a call that needs a person's yes is refused; and the watcher, when a sensor's program fails | S3 |
 | `uncertainty-signal` | S1 | residual uncertainty with a reported impact; the routing policy maps the claimed impact to a severity | the loop, from a result report's `residualUncertainty` | S3 |
 | `coordination-signal` | S2 | a lease expired, a conflict happened, or a unit is oscillating | the thrash detector in the session, or reintegration on a conflict, whether textual or found by the pre-merge trial | S3 |
-| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch when it restores a protected path, or the closeout | S3 |
-| `intelligence-signal` | S4 | the environment changed, or is about to | `report_intelligence` in a research unit | S3 |
-| `policy-proposal` | any | a request to change identity or policy, which is never itself a mutation | `propose_policy_change` | S5 |
+| `audit-finding` | S3\* | evidence contradicts a claim or an invariant | the bash watch when it restores a protected path, the closeout, or the behavioral canary at `advisory` when a run of replies drops the marker | S3 |
+| `intelligence-signal` | S4 | the environment changed, or is about to | `report_intelligence` in a research unit, or a declared sensor that fires, under `sensor:<name>` | S3 |
+| `policy-proposal` | any | a request to change identity or policy, which is never itself a mutation | `propose_policy_change`; also the loop, when a prediction is disconfirmed at its live horizon, asking S5 to revert or re-decide the advice it was accepted on | S5 |
 | `algedonic-signal` | any | an exceptional escalation that bypasses the hierarchy | the loop, when the recovery policy answers `escalate`; see [asking a person](/concepts/asking-a-person) | a person |
 | `constraint` | S5, S3 | a boundary a unit runs under, stated ahead of the work | declared in the protocol and the routing policy, though nothing emits one yet. A unit's constraints reach it as the contract's `constraintRefs` and as the rendered identity | the unit |
 

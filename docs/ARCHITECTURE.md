@@ -61,7 +61,7 @@ Prompt engineering is used for interpretation and judgment. Mechanical facts and
 
 ### S1 — Operations
 
-S1 profiles perform the work. A profile is a capability boundary: it states what a unit may use and where it may write, and it says nothing about a personality. The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper` and `auditor`, and a workload declares its own.
+S1 profiles perform the work. A profile is a capability boundary: it states what a unit may use and where it may write, and it says nothing about a personality. The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`, `auditor` and `manager`, and a workload declares its own. A unit is usually a model's session under a profile; a unit type whose work is wholly determined by its inputs may declare a program instead, which the control plane runs and checks the same way.
 
 S1 may:
 
@@ -131,6 +131,8 @@ Because the layers ask different questions, a unit's work can be technically cor
 
 S4 observes the future and the environment: dependencies, platform changes, runtime behavior, security advisories, external APIs, user feedback, architecture options, and other signals that should affect future plans.
 
+Two things raise intelligence today: a research unit, through `report_intelligence`, and a sensor the definition declares, which the watcher runs on a schedule or on a new file. A signal may carry a prediction that the loop later resolves from the records.
+
 S4 outputs intelligence, and intelligence does not become policy on its own. When a finding calls for a policy change, S4 sends a proposal to S5, and S5 decides.
 
 S4 may also aggregate uncertainty patterns across many S1 operations. Recurrent uncertainty in the same subsystem or concept can indicate a missing model, an unstable external assumption, or an architectural seam that deserves investigation and possibly an S5 proposal.
@@ -198,7 +200,7 @@ human-reviewed              machine-written
 S5 identity                 findings/traces/cache
 ```
 
-Runtime records live under an instance's `.regulator/`, and committed identity lives in version control. The two remain conceptually separate: the identity says what the system is, the evidence says what happened in one run, and neither is read as the other.
+In this repository the committed identity is `vsm/`. In an instance it is `regulator/identity/`, seeded from the definition at `init`, with the profiles' advice beside it under `regulator/advice/`. Runtime records live under an instance's `.regulator/`, and committed identity lives in version control. The two remain conceptually separate: the identity says what the system is, the evidence says what happened in one run, and neither is read as the other.
 
 ## Mechanism hierarchy
 
