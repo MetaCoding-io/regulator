@@ -25,8 +25,9 @@ list from there.
 | `units/<unit>/status.ndjson` | execution | the unit's status history, append-only: one line per transition the store wrote, with `from`, `to`, the trigger `on`, the time `at`, and the `reason` where the unit blocked. Every line is a row of `UNIT_TRANSITIONS`. `regulator status` and the control room read a unit's path from it. A unit whose moves were written by 0.1.3 or earlier has no such file, or one that begins partway; its path is reconstructed from its other records, and the trajectory says so |
 | `leases/` | execution | one lease per running unit, with its TTL and liveness |
 | `worktrees/<unit>/` | execution | the unit's git worktree on its own branch, removed on reintegration |
+| `trials/` | execution | the pre-merge trial's checkout of the merged tree, where the checks run before a reintegration lands |
 | `trace.ndjson` | regulatory | every schema-validated trace event, append-only |
-| `signals.ndjson` | regulatory | the regulatory log, append-only. It holds every typed message a session or the loop recorded, the obligation events the router and the consumers appended (opened, acknowledged, resolved, escalated, delivered, noted), and the interaction requests and answers. [Obligations](/concepts/obligations) are the fold of it |
+| `signals.ndjson` | regulatory | the regulatory log, append-only. It holds every typed message a session or the loop recorded, the obligation events the router and the consumers appended (opened, acknowledged, resolved, escalated, superseded, delivered, noted, and an `advice accept` the probe rule refused), the prediction resolutions the loop appends, and the interaction requests and answers. [Obligations](/concepts/obligations) are the fold of it |
 | `events.db` | regulatory | the SQLite event store the generic `vsm_*` reporting tools write. A unit's session does not load those tools, so an instance driven by the loop keeps it empty |
 | `audit.ndjson` | regulatory | evidence records, technical verdicts and human acceptances, append-only |
 | `effects.ndjson` | regulatory | the effect journal: every side-effecting tool call, its outcome, and its reconciliation on restart |
@@ -84,7 +85,15 @@ the toolchain included).
 | `REGULATOR_OUTBOX` | where `notify_owner` and delivery write. The default is `<repo>/.regulator/outbox` |
 | `REGULATOR_INTERACTION_POLICY` | a different interaction policy, for a session run by hand |
 | `REGULATOR_HOST` | the host package `unit dispatch` and `unit drive` load. The default is `@metacoding.io/regulator-pi`, and `--host` overrides it for one run |
+| `REGULATOR_POLICY` | a different budget policy file, for a session run by hand. The dispatcher sets it for a unit it runs |
+| `REGULATOR_UNIT`, `REGULATOR_CONTRACT` | the unit a session is running and the contract file it runs under. The dispatcher sets both; a hand-run session is started with `--unit` |
+| `REGULATOR_DEBUG` | when set, the budget guard prints the error to stderr if it fails to start |
 | `PI_*`, provider keys | Pi's own environment. The harness reads none of them |
+
+A program the control plane runs is told what it is running for. A command runner gets
+`REGULATOR_UNIT`, `REGULATOR_ATTEMPT`, `REGULATOR_PROFILE` and `REGULATOR_CONTRACT`; a
+declared tool's program gets the first three and `REGULATOR_TOOL`; a sensor's program
+gets `REGULATOR_SENSOR`.
 
 Nothing else in the instance is configuration. The Pi settings a unit's session runs
 under come from the definition's `settings.json`, which the dispatcher holds in memory.
