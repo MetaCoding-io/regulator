@@ -23,11 +23,11 @@ dated it.
 | | Intelligence signal | Memory entry | Identity (for contrast) |
 | --- | --- | --- | --- |
 | **Function** | S4 → S3 | S3 | S5 |
-| **Written by** | a `research` unit, through `report_intelligence` | a unit whose profile grants `remember` (`implement`, `bookkeeper`) | only the S5 decision path, when a named person accepts a proposal |
+| **Written by** | a `research` unit, through `report_intelligence`, or a sensor the definition declares, run by `regulator watch` | a unit whose profile grants `remember` (`implement`, `bookkeeper`, `manager`) | only the S5 decision path, when a named person accepts a proposal |
 | **Holds** | subject, claim, observation, evidence, confidence, severity, when it was observed, when it expires, affected units; optionally a prediction (a metric, a baseline, a direction and size, a probability, the horizons it resolves at) | subject, note, evidence, scope (unit types), review-by date | invariants, glossary, boundaries |
 | **Provenance** | unit, revision and time, stamped by the host | unit, revision and time, stamped by the host; `recordedBy: "S1"` | the proposal, the person who accepted it, the rationale |
 | **Lives in** | `.regulator/signals.ndjson`, with the obligations it opened | `.regulator/memory.ndjson` | `regulator/identity/`, committed, write-protected |
-| **Does** | opens an obligation per affected unit; vetoes their dispatch and close at blocking severity | is rendered into later units' context as facts that expire | is rendered into every unit's context; gates and host checks enforce it |
+| **Does** | opens an obligation per affected unit, or one that holds a unit *type* when a sensor raised it; vetoes their dispatch at blocking severity | is rendered into later units' context as facts that expire | is rendered into every unit's context; gates and host checks enforce it |
 | **Expires** | when `expiresAt` passes: routed after that, it is noted and raises nothing | on `reviewBy`, which is required, in the future and at most 90 days out | never; it changes by decision |
 | **Ends** | when a consumer dispositions the obligation | on expiry, or when a named person retracts it | by an accepted proposal |
 
@@ -200,7 +200,7 @@ says why this is the eval harness's pre-registration rule applied to one proposa
 ### Who writes it
 
 A unit whose profile grants `remember` writes it. The shipped profiles that do are
-`implement` and `bookkeeper`. The model supplies a `subject`, a `note` (the fact,
+`implement`, `bookkeeper` and `manager`. The model supplies a `subject`, a `note` (the fact,
 written so a later unit can act on it), `evidence[]`, a `reviewBy` date and, optionally,
 a `scope` of unit types. The host stamps the unit, the revision and the time, and
 records `recordedBy: "S1"`.
@@ -264,9 +264,11 @@ The registry records for [intelligence intake and the memory
 store](/reference/regulators) state their limitations. The ones a reader is most likely
 to run into:
 
-- Only a research unit can report intelligence. A person who knows the statement
-  format changes next month has no command to record it, and neither does a watcher on
-  an advisory feed. `report_intelligence` is the only intake.
+- A person cannot report intelligence. Someone who knows the statement format changes
+  next month has no command to record it. The two intakes are a research unit's
+  `report_intelligence` and a [sensor](/reference/definition#intelligence-policy) the
+  definition declares: a program or a glob that `regulator watch` runs on its tick, and
+  that raises the same signal with `sensor:<name>` as its provenance.
 - Nothing re-raises intelligence when it goes stale. An expired finding is noted when
   it is routed. An obligation that is already open stays open after the finding behind
   it expires, and nothing reopens the research question.
@@ -287,7 +289,7 @@ to run into:
   re-propose it with a new prediction, or carry the change as a plain proposal that bets
   on nothing, and the record says which.
 
-The design notes on a person-raised intake and declared sensors are in the [open
+The design note on a person-raised intake is in the [open
 questions](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-09-25-open-questions.md)
 (§2); predictions that resolve are §4 there and §8 of the [Harness²
 note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-18-harness2-recursive-harnessing.md),

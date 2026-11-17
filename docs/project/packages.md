@@ -6,20 +6,26 @@ never imports a host. In the diagram, each arrow points from a package to the pa
 it imports.
 
 ```
-regulator-protocol  ◄──  regulator-core  ◄──  regulator-checks
-                                                   ▲
-                    regulator (control plane) ─────┘
-                       ▲                ▲
-              regulator-pi (Pi host)    control-room
+                regulator-protocol
+                 ▲      ▲      ▲
+   regulator-core       │      regulator-checks
+                 ▲      │      ▲
+               regulator (control plane)
+                 ▲                ▲
+   regulator-pi (Pi host)         control-room
 ```
+
+`core` and `checks` each depend on `protocol` alone. The control plane imports all
+three; the Pi host and the control room import the control plane, and reach `core`,
+`protocol` and (the host) `checks` directly as well.
 
 ## `@metacoding.io/regulator`
 
 This package is the product. It holds the `regulator` CLI (its `bin`), the S3 loop, the
 stores and the host seam, and it ships the definition beside the code: the registry, the
-identity seed, the profiles, the policies, the workloads, the evals, the contracts and
-the fixtures. The one command that copies any of this out is `regulator init`, which
-places the identity seed into a repository. Every other command runs against the
+identity seed, the advice files, the profiles, the policies, the workloads, the evals,
+the contracts and the fixtures. The one command that copies any of this out is
+`regulator init`, which seeds the identity and the advice into a repository. Every other command runs against the
 definition as shipped.
 
 The host seam is a package name. `unit dispatch` and `unit drive` resolve
@@ -46,8 +52,9 @@ and the typed reporting tools. Pi itself is a peer dependency at a pinned versio
 This package is the typed protocol. It holds every schema that the definition and the
 instance are validated against, written as TypeBox schemas with runtime validation:
 messages and the trace, effects, profiles, registry records, work contracts and result
-reports, workloads, execution records, policies, obligations, interaction, memory,
-evals, spans and the instance manifest. Every other package depends on it.
+reports, workloads with their declared tools and metrics, execution records, the five
+policy kinds, obligations, interaction, memory, predictions, evals, spans, the
+toolchain, the definition writers and the instance manifest. Every other package depends on it.
 
 ## `@metacoding.io/regulator-core`
 
@@ -55,19 +62,23 @@ This package holds the mechanisms that do not depend on Pi: the event store, the
 store, the thrash detector, the contract and report checks, the execution store, the
 budget meter and policy resolution, the recovery router, the effect journal, the
 obligation ledger and the router with the progression veto, identity parsing and
-rendering, authority-reference resolution, the memory store, the definition check and
-the registry renderer. Nothing in it imports a host.
+rendering, authority-reference resolution, the write preflight, the audit log, the
+memory store, consent, sensors and predictions, the advice files, the behavioral
+canary, the upgrade plan, the unit trajectory and spans, the definition check and the
+registry, viability and pathology renderers. Nothing in it imports a host.
 
 ## `@metacoding.io/regulator-checks`
 
 This package holds the deterministic S3\* checks. It has the
-[host checks](/reference/host-checks), the technical verdict, the audit log, the write
-preflight that the Pi extension and the CLI share, and the conventions that discover a
-project's test and check commands.
+[host checks](/reference/host-checks), the technical verdict, the conventions that
+discover a project's test command and its protected paths, and the toolchain discovery
+that names the environment on every evidence record. The audit log and the write
+preflight that the Pi extension and the CLI share are in `core`.
 
 ## `@metacoding.io/regulator-control-room`
 
-The control room is a read-only page over the `status` read model. It shows instances,
+The control room is a read-only page over the `status` read model, started by its
+`regulator-control-room` bin. It shows instances,
 units, obligations, budgets and review dates, and it has a replay view that walks
 through a unit's records. It only renders. It has no command that changes anything, and
 that is deliberate.
@@ -83,7 +94,8 @@ export const host: Host = {
   runtime: { name: "<the agent runtime package>", pin: "<its version>" },
   extensions: ["tools", "profiles", …],       // the session-side gates, in load order
   extensionPath: (name) => "<absolute path of the built extension>",
-  dispatcher: (options) => async (request) => { /* run one attempt; return { sessionId } */ },
+  dispatcher: (options) => async (request) => { /* run one attempt; return { sessionId? } */ },
+  availableModels: async () => [/* optional: the models this host can reach, so a live eval can refuse a route whose primary it cannot */],
 };
 ```
 

@@ -1,13 +1,15 @@
 # @metacoding.io/regulator-control-room
 
 The maintainer's control room: one read-only page over the `regulator status` read model
-(`packages/regulator`). It answers four questions and owns no state:
+(`packages/regulator`). It answers five questions and owns no state:
 
 - **Definition** — the registry as a topology (S5 → S1 columns, one card per regulator,
   the channels each record declares it consumes and emits) and the workloads.
 - **Lifecycle** — the unit state machine drawn from `UNIT_TRANSITIONS`, with the
   instance's units placed on it; select a unit and step through its trajectory, each
   step lighting its transition and saying why from the records.
+- **Map** — one regulated level drawn from the definition (the carried files, the loop's
+  steps, the unit types under their profiles, the stores), with the instance's units on it.
 - **Instances** — every instance's units, leases and unrouted signals.
 - **Inspector** — the whole record for a regulator or a unit (contract, result report,
   attempts): the record, not a summary of it.

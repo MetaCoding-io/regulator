@@ -380,6 +380,12 @@ the `harness-edit` kind on the obligation a proposal becomes. The crossed marks 
 what the reflector can never do. Everything it emits lands in a record kind that
 exists, and every write to the definition still goes through a person.*
 
+*Redrawn 2026-11-17. The advice files with their accept and promote paths, the
+predictions, the probe arm and the `harness-edit` kind have landed (#110, #138, #200),
+so the script now draws them in both figures in the ordinary colour, and the accent in
+figure 2 is the reflector alone. The two captions above describe the figures as first
+drawn.*
+
 What changes, at its mechanism level and seam:
 
 | Change | Level | Seam | Refuses |

@@ -27,7 +27,7 @@ Prompt engineering remains useful where judgment is required, but regulator pref
 
 | VSM function | Initial regulator interpretation |
 | --- | --- |
-| **S1 — Operations** | Coding, data, UI, infrastructure, migration, and integration capability profiles |
+| **S1 — Operations** | Capability profiles a workload declares: `implement`, `research` and `intelligence` for software, `bookkeeper` and `auditor` for the ledger, `manager` for the portfolio |
 | **S2 — Coordination** | Tool contracts, worktree isolation, leases with liveness, reintegration, and anti-oscillation mechanisms |
 | **S3 — Control** | The orchestrator: work contracts, dispatch, budgets, the recovery lattice, and execution-state authority |
 | **S3\* — Audit** | Harness-run verification plus architectural/domain checks and independent audit findings |
@@ -52,9 +52,9 @@ The user documentation is a VitePress site built from `docs/`: <https://docs.reg
 
 Shipped in `packages/`: the typed VSM protocol and runtime schemas (`protocol`); the mechanisms — leases, the thrash detector, contract and report checks, the execution store, budgets and policy resolution, the recovery router, the effect journal, the obligation ledger and router with the progression veto, identity and authority resolution, operational memory, the definition check (`core`); the host-run checks with the technical verdict and the audit log (`checks`); the Pi host with the session extensions, the dispatcher, the protected-path gate and the typed reporting tools (`regulator-pi`); the `regulator status` read model (`regulator`) and the read-only control room over it (`control-room`).
 
-Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over three workloads (software development, personal finance, a managed portfolio), the regulator registry of forty-nine records with `REGULATORS.md` and `BOUNDARY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
+Built in `packages/regulator` and its Pi host `packages/regulator-pi`, one lesson per module: the `regulator` CLI, the S3 loop over three workloads (software development, personal finance, a managed portfolio), the regulator registry of fifty-three records with `REGULATORS.md`, `BOUNDARY.md` and `VIABILITY.md` generated from them, the drift eval suite with its committed reports, and `OPERATING.md`.
 
-The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the first live-model report is committed (`packages/regulator/evals/reports/drift-live-2026-11-08.json`, with its interpretation beside it), and the ablation arms under a model are what the next one owes.
+The one experiment the whole project answers to — does regulation slow architectural drift? — runs as the orchestrator with regulators ablated versus enabled; the first live-model report is committed (`packages/regulator/evals/reports/drift-live-2026-11-08.json`, with its interpretation under `evals/interpretations/`), and the ablation arms under a model are what the next one owes.
 
 No RDF/SHACL, recursive VSM, or elaborate S4 network yet. Those come after the control-plane pattern proves useful.
 
@@ -69,11 +69,10 @@ packages/
   regulator/      the control plane: the `regulator` CLI, the S3 loop, the stores, the definition (registry, identity, profiles, policies, workloads, evals) — @metacoding.io/regulator
   control-room/   Read-only page over the read model: topology, instances, unit inspector
 
-agents/           Judgment-oriented S1/S4/S3* prompt profiles
-docs/             ARCHITECTURE.md, GLOSSARY.md, PATHOLOGIES.md, examples/, DEBT.md (what the build owes, and where it is paid), decisions/ (ADRs), research/ (notes on what comes next), archive/
-experiments/      Longitudinal drift scenarios and run artifacts
-fixtures/         Tiny projects used by checks and experiments
-vsm/example/      Example committed S5 artifacts
+docs/             the documentation site: guide/, concepts/, reference/, examples/, project/, with ARCHITECTURE.md, GLOSSARY.md, PATHOLOGIES.md and DEBT.md (what the build owes, and where it is paid); decisions/ (ADRs), research/ (notes on what comes next) and archive/ are not built into the site
+fixtures/         Example payloads for the reporting tools; the fixture projects are under packages/regulator/fixture*
+scripts/          The reporting smoke test and the release-notes scripts
+vsm/              This repository's own committed S5 artifacts
 ```
 
 ## Course: Viable Agents
@@ -92,7 +91,7 @@ the [authoring guide](docs/guide/authoring-a-workload.md) written from them.
 
 Built end to end through lesson 15 and operable: the loop, a versioned recovery policy,
 host-run evidence at closeout, the algedonic path to a person, the eval harness with
-four committed drift reports, and `regulator init`/`doctor` into an existing repository.
+eight committed reports (seven over scripted units, one under a live model), and `regulator init`/`doctor` into an existing repository.
 What the build still owes is one row each in [docs/DEBT.md](docs/DEBT.md), mapped to
 milestones and issues in [ROADMAP.md](ROADMAP.md); [CONTRIBUTING.md](CONTRIBUTING.md)
 is how to pick one up. The decision

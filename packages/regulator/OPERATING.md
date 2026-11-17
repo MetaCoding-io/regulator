@@ -118,16 +118,22 @@ of exactly this kind.
 
 - `regulator doctor --json` — runtime, git, the Pi pin against what is installed, the
   registry and definition checks, review dates (overdue is a problem; due within 30
-  days is listed), the instance manifest, whether the instance was initialized under
-  this definition revision, the base's cleanliness, what is owed and undelivered.
+  days is listed), the instance manifest, whether the toolchain the repository names has
+  changed since `init` (`environment-drift`, information only) and whether the instance
+  was initialized under this definition revision (`definition-drift`), the manifest's
+  writable prefixes, the identity and advice files, the base's cleanliness, the unit
+  records, what is owed and undelivered.
   Exit 1 on any problem. Run it in CI and before the first unit of the day.
 - `regulator check` (`node dist/registry-cli.js check`) — the definition's own check,
   under `pnpm check`; an overdue review date fails it.
 - `regulator eval <suite> --behaviour reference --reps 1 --out <file>` — the harness's
   own smoke test, headless.
-- `regulator watch --once --exec <cmd>` — one delivery tick; without `--once` it is the
+- `regulator watch --once --exec <cmd>` — one tick; without `--once` it is the
   daemon a quiet instance needs: deliver, remind, forward each new outbox line to the
-  channel command, with a cursor so a restart forwards nothing twice.
+  channel command, with a cursor so a restart forwards nothing twice. The same tick runs
+  the sensors the intelligence policy declares for the instance's workloads and routes
+  what fires; before the first unit has run, `--workload <name>` says which workload's
+  sensors apply, and `--intelligence <file>` reads a policy from elsewhere.
 - `pi --mode json` / RPC for a non-Node host: a unit's session is an ordinary Pi
   session; the dispatcher (`dispatcher.ts`) is the SDK embedding to copy.
 
@@ -249,7 +255,7 @@ and a definition whose own `regulator check` fails; `--by` is checked against th
 interaction policy as S5, the way `identity accept` and `advice accept` are, because the
 seeds land under the directories only S5 writes. It commits what it changed on the base
 branch in one commit citing from and to, and rewrites `.regulator/instance.json` with
-the version, the revision, the registry count, the pin and one entry in `upgrades[]`:
+the version, the revision, the registry count, the pin, the toolchain as it is now and one entry in `upgrades[]`:
 from, to, who, when, and the fingerprint of the committed report under `evals/reports/`
 whose `harnessRevision` is the target's — the evidence the instance's definition now
 rests on — or `none`, with a printed warning, when no report ran at that revision. The
@@ -308,7 +314,7 @@ Apply the model to the harness itself:
 
 - **Identity (S5):** this repository's `vsm/` for regulator; the lab's `identity/` for the
   definition. Changed by proposal and a person's decision, never by a unit.
-- **Policy:** the four policy files; a change is a pull request with `pnpm check`
+- **Policy:** the policy files, of five kinds (budgets and routes, recovery, routing, interaction, intelligence); a change is a pull request with `pnpm check`
   green on both Node versions.
 - **Audit (S3\*):** `pnpm check`, `regulator check`, the drift suite's committed
   reports, and the review dates every registry record carries.

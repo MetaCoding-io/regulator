@@ -20,7 +20,7 @@ hero:
 
 features:
   - title: Gates, not personas
-    details: Forty-two active regulators. Each one is a registry record that names the failure it absorbs, where it is enforced, its tests and its stated limitations. A gate without a limitation does not pass the check.
+    details: Fifty-one active regulators. Each one is a registry record that names the failure it absorbs, where it is enforced, its tests and its stated limitations. A gate without a limitation does not pass the check.
   - title: A small loop that owns execution
     details: The loop runs contract, dispatch, verify, route and close, with leases, budgets and worktree isolation around it. The recovery policy is declared as data and read by the loop. Nothing reads its own progress off the repository.
   - title: Evidence a host runs

@@ -13,11 +13,11 @@ not name is never offered to the model at all, so there is nothing for a gate to
 | Tool | Effect | Granted by (shipped profiles) | Records |
 | --- | --- | --- | --- |
 | [`read_conventions`](#read_conventions) | read-only | every profile | nothing |
-| [`run_tests`](#run_tests-and-run_checks) | runs project code | `implement`, `bookkeeper` | a provenance entry in the session |
+| [`run_tests`](#run_tests-and-run_checks) | runs project code | `implement`, `bookkeeper`, `manager` | a provenance entry in the session |
 | [`run_checks`](#run_tests-and-run_checks) | read-only | every profile | a provenance entry in the session |
 | [`report_result`](#report_result) | writes the execution store | every contracted session (see the note) | the result report |
-| [`ask_human`](#ask_human) | irreversible: it spends a person's attention | `implement`, `intelligence`, `bookkeeper` | an `interaction` obligation |
-| [`notify_owner`](#notify_owner) | irreversible: it sends a message | `implement`, `bookkeeper` | the effect journal, the outbox |
+| [`ask_human`](#ask_human) | irreversible: it spends a person's attention | `implement`, `intelligence`, `bookkeeper`, `manager` | an `interaction` obligation |
+| [`notify_owner`](#notify_owner) | irreversible: it sends a message | `implement`, `bookkeeper`, `manager` | the effect journal, the outbox |
 | [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper`, `manager` | a memory entry |
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
 | [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | every shipped profile | a `policy-proposal` |
@@ -36,7 +36,7 @@ never sees it.
 Returns what can be determined mechanically about the project, as opposed to what its
 README claims: the real test command and where it was found (`package.json`
 `scripts.test`, or `node --test` when a `test/` directory exists), the source
-directories among `src/` and `lib/`, the protected paths (`vendor/` when it exists), and
+directories among `src/` and `lib/`, the protected paths (`vendor/`, and `flake.nix`, `flake.lock`, `devenv.nix`, `devenv.lock` and `devenv.yaml`, each when it exists), and
 the checks the project defines. It takes no input. The discovery is the same one the
 host checks use at closeout, so a unit that reads it runs what the host will run.
 
@@ -160,7 +160,7 @@ affected unit. Nothing else changes. See
 ## `propose_policy_change`
 
 `propose_policy_change` asks for a change to identity or policy. Its input is a
-`subject` (a path, an invariant or a policy field), a `rationale` and a
+`subject` (a path, an invariant or a policy field), a `severity`, a `rationale` and a
 `requestedChange`. The call writes a `policy-proposal` to the regulatory log, and under
 the shipped routing policy that proposal is owed to S5 at any severity. The call itself
 changes nothing, because a proposal is not policy (INV-002). A person with `actAsS5`

@@ -57,15 +57,17 @@ regulator init --writable src/,test/ --protected vendor/ --by alice
    canary*, and every tool result is then watched for that value.
 4. It writes the instance manifest, `.regulator/instance.json`. The manifest records
    which definition the instance runs, at which revision, under which Pi, when it was
-   initialized and by whom (`--by`, or else your user and host), and the layout you
-   declared.
+   initialized and by whom (`--by`, or else your user and host), the layout you
+   declared, and the toolchain the repository names (a Nix store path, an environment
+   lock or the package lock, by hash).
 5. It refuses to run twice. There is no re-init; an existing instance moves to a new
    definition through `regulator upgrade`, which a person runs.
 
 `--writable` names the paths where the implement profile may write directly; the
 profile's own default is `src/` and `test/`. `--protected` adds to the set of paths under
 which the closeout refuses to accept a change. `regulator/identity/` and
-`regulator/advice/` are always protected, and so is `vendor/` whenever it exists.
+`regulator/advice/` are always protected, and so are `vendor/` and the environment files
+(`flake.nix`, `flake.lock`, `devenv.nix`, `devenv.lock`, `devenv.yaml`) whenever they exist.
 
 ## Declare who may answer
 
@@ -73,8 +75,8 @@ Every command that dispositions something takes `--by <who>` and checks that nam
 against the `people` list in the
 [interaction policy](/reference/definition#interaction-policy) before it writes
 anything. The commands are `answer`, `obligation resolve`, `obligation
-ack`, `obligation escalate`, `identity accept`, `identity reject`, `identity promote` and
-`memory retract`. A name the policy does not list may disposition nothing. The shipped
+ack`, `obligation escalate`, `identity accept`, `identity reject`, `identity promote`,
+`advice accept`, `advice reject`, `advice promote`, `upgrade` and `memory retract`. A name the policy does not list may disposition nothing. The shipped
 policy names three people, `course-lab`, `alice` and `bob`, which is why the examples on
 this site say `--by alice`.
 
@@ -106,9 +108,12 @@ without checking it; there the name is kept as provenance and grants no authorit
 regulator doctor
 ```
 
-`doctor` is the operating check, and it is also the entry point for CI. It checks the
-runtime, git, the Pi pin against what is installed, the definition, the review dates,
-the manifest, whether the base is clean, and what is owed and undelivered. It exits 1 on
+`doctor` is the operating check, and it is also the entry point for CI. It runs fifteen
+checks: the runtime, git, the Pi pin against what is installed, the registry and the
+definition, the review dates, the manifest, whether the toolchain or the definition has
+moved since the instance was initialized (`environment-drift`, `definition-drift`), that
+the manifest's writable prefixes exist, the identity and the advice files, whether the
+base is clean, the unit records, and what is owed and undelivered. It exits 1 on
 any problem and prints what to do about it. `regulator doctor --json` gives the same
 result in a form a script can read.
 

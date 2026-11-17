@@ -90,13 +90,13 @@ with the package, and every part of it is a declared file:
 
 | Part | Where | What it declares |
 | --- | --- | --- |
-| Registry | `registry/regulators/*.json` | one record per regulator |
+| Registry | `registry/regulators/*.json`, `registry/pathologies.json` | one record per regulator, and the catalog of failures with the regulators that absorb each |
 | Identity seed | `identity/*.md` | the four S5 files every instance starts from |
 | Advice seed | `advice/<profile>.md` | what every unit of a profile is told beyond its grant, one file per profile |
 | Profiles | `profiles/*.json` | what a unit type may use and where it may write |
-| Policies | `policies/*.json` | budgets and model routes, recovery, routing, and interaction |
-| Workloads | `workload/*.json` | the unit types, with their profiles, their checks and, for a type that runs a program instead of a session, the program and the prefixes it may write under |
-| Evals | `evals/*.json` | suites with declared arms and ablations |
+| Policies | `policies/*.json` | five kinds: budgets and model routes, recovery, routing, interaction, and intelligence (the sensors) |
+| Workloads | `workload/*.json` | the unit types, with their profiles, their checks and, for a type that runs a program instead of a session, the program and the prefixes it may write under; and the workload's own tools, each with an effect contract, and its own metrics, each with a grader |
+| Evals | `evals/*.json`, with `evals/reports/`, `evals/interpretations/` and `evals/advice/` | suites with declared arms and ablations; the committed reports and the interpretation a person wrote for each; the advice files a probe arm overrides with |
 | Contracts and fixtures | `contracts/`, `fixture*/` | the examples the package runs against itself |
 | Settings | `settings.json` | the Pi settings a unit's session runs under |
 
@@ -132,7 +132,9 @@ regulators write it, and the loop reads it to decide what a unit may do next.
 Nothing in `.regulator/` is configuration, and a person edits none of it by hand. What a
 person *declares* about an instance (the writable and protected prefixes, and who
 initialized it) lives in the manifest, which `init` writes and which the profile grant
-and the closeout read. The manifest also pins the definition's package version and revision. An instance
+and the closeout read. The manifest also pins the definition's package version and revision,
+and names the toolchain the repository declared when it was initialized; `doctor` reports a
+different one now as `environment-drift`, as information and never as a failure. An instance
 initialized under an older one shows `definition-drift` in `doctor` until a person runs
 `regulator upgrade`, which seeds what the instance lacks, prints the release's migration
 note for the rest, and rewrites the manifest citing who ran it and against which report.
@@ -162,7 +164,8 @@ changes an identity file.
   what their manifests declare.
 - The eval harness can run the same suite against a fixture under different arms,
   because an arm is a definition-level choice (which extensions load, which checks run,
-  whether identity is seeded) and never a property of an instance.
+  whether identity is seeded, which model route and which advice file) and never a
+  property of an instance.
 - Promotion has a direction, from instance to definition. A person does it, with a
   rationale, and commits it in the definition's repository. Nothing flows the other way
   by itself.

@@ -29,6 +29,7 @@ behaviour lives.
 | `unitTypes[].runner.outputs[]` | project-relative prefixes | the whole of what the program may write: a write anywhere else, found by diffing the worktree against itself before the run, is undone and refused as a dispatch error. Each prefix must fall inside the profile's writable paths and under none of its consent grants (a program cannot ask, so it may not write where a yes is required); the definition check refuses either. Empty means the program writes nothing |
 | `metrics[]` | optional | the metrics this workload declares for the eval harness, each with its grader: a declaration, never an inference. A suite pre-registers a declared name as it does a built-in one |
 | `metrics[].name` | `workload:<this workload>/<metric>` | namespaced to the workload that owns it; a declaration in another workload's name, or in an instrument's, fails the definition check |
+| `metrics[].description` | string, required | what the number is, in a sentence; the status view and the report show it |
 | `metrics[].kind`, `metrics[].direction` | `count` \| `rate` \| `score`; `lower` \| `higher` \| `none` | what the number is, and which way is better |
 | `metrics[].instrument` | optional string | the instrument record whose judgment the metric is. Refused until that record exists with its held-out score; the record kind does not exist yet |
 | `metrics[].grader.argv` | string[] | the command the host runs in the instance after each unit, with the first argument that is a file under the definition made absolute (the file's hash goes into the report's fingerprint; a command naming no such file fails the check). It reads the tree and writes one JSON line per metric, `{ "metric", "value", "observation"? }`; it never reads a unit's report, and it is never a model. `grader.timeoutMs` is optional |
@@ -70,7 +71,7 @@ A unit type and the profile it runs under are named separately on purpose, and t
 names do not line up one to one. In the shipped workload, `implement` and `integrate`
 both run under the `implement` profile. `plan`, `verify` and `close` run under
 `research`, which is read-only. The `research` unit type runs under `intelligence`,
-which is `research` plus `report_intelligence`. The two names describe different
+which is `research` plus `report_intelligence` and `ask_human`. The two names describe different
 things: the profile is the grant, while the unit type is the kind of work and the
 checks that judge it, so several kinds of work can share one grant.
 
@@ -112,8 +113,8 @@ no entry here (`tools[]`, above).
 
 The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
 `manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
-its `bash` is not gated by path. `research` and `auditor` are read-only, and
-`intelligence` is read-only plus `report_intelligence`; all three may propose, since a
+its `bash` is not gated by path. `research` and `auditor` are read-only. `intelligence` adds `report_intelligence`, a
+record, and `ask_human`, whose effect is irreversible, so it is not read-only by effect; all three may propose, since a
 `propose_policy_change` record is admitted as read-only by effect. `bookkeeper` and `auditor` are the profiles for
 the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
 `manager` is the portfolio's, with no grant of its own: `trades/pending/` is outside its
@@ -151,7 +152,7 @@ before the move; the rendered section is byte-identical.
 
 ## Budget and model policy
 
-`policies/default.json`, and `finance.json` beside it, set the ceilings per attempt, the
+`policies/default.json`, with `finance.json` and `portfolio.json` beside it, set the ceilings per attempt, the
 attempts per unit, and the models each unit type may use.
 
 | Field | Type | Meaning |
@@ -181,6 +182,12 @@ The one exception is `context-degradation`: with no rule for it, the attempt is 
 `no-report`, and the shipped policy declares none
 ([Recovery](/concepts/recovery#from-cause-to-action)).
 
+| Field | Meaning |
+| --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for. A recovery decision cites the version it was taken under |
+| `rules[]` | one rule per `cause`, with its `actions[]` in the order they are taken |
+| `fallback` | the actions for a cause no rule names |
+
 | Causes | Actions |
 | --- | --- |
 | `no-report`, `invalid-report`, `budget-exhausted`, `check-failure`, `tool-error`, `timeout`, `environment`, `conflict`, `oscillation`, `context-degradation`, `ambiguity`, `dispatch-error`, `unknown` | `retry`, `repair`, `remediate`, `replan`, `clarify`, `pause`, `escalate`, `abort` |
@@ -199,11 +206,12 @@ who a unit waits on.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for |
 | `rules[]` | one rule per message `kind`: the `minSeverity` at which a message of that kind opens an obligation, and the `consumer` it is opened for (`S3`, `S5` or `human`). A message below that line is noted and stays in the trace |
-| `impactSeverity` | maps the impact an uncertainty signal *reports* (`low` to `critical`) to the severity the router uses. The mapping exists because a reported impact is a claim, and a claim is not a severity |
-| `recovery` | the consumer for each waiting recovery action |
+| `impactSeverity` | maps the impact an uncertainty signal *reports* (`low`, `medium`, `high` or `critical`) to the severity the router uses. The mapping exists because a reported impact is a claim, and a claim is not a severity |
+| `recovery` | the consumer for each waiting recovery action: `remediate`, `replan`, `clarify`, `pause` and `escalate` |
 | `blocksAtOrAbove` | the severity at or above which an open obligation that names a unit vetoes that unit's dispatch and close |
-| `floors[]` | each floor is a regular expression over the message's subject and observation, the severity a matching message is raised to at least, and the reason. The shipped floor raises anything naming an invariant or the identity to `blocking` |
+| `floors[]` | each floor is a `pattern`, a regular expression over the message's subject and observation; the `severity` a matching message is raised to at least; and the `reason`. The shipped floor raises anything naming an invariant or the identity to `blocking` |
 
 The severities, from lowest to highest, are `info`, `advisory`, `blocking` and
 `critical`.
@@ -215,6 +223,7 @@ answer.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for |
 | `timeoutsMs` | a timeout per interaction kind (`recap`, `choice`, `clarification`, `consent`, `uat`). When one expires, the timeout is recorded and the unit pauses |
 | `attention.blockingPerAttempt` | how many blocking interrupts an attempt may spend before `ask_human` refuses the next one. Attention is the scarcest budget |
 | `reminderAfterMs` | an obligation owed to a person that is still open this long after its last delivery is delivered again; the minimum is one minute |
@@ -244,8 +253,10 @@ instance; `--intelligence <file>` reads a policy from elsewhere.
 
 | Field | Meaning |
 | --- | --- |
+| `name`, `version`, `description` | the policy's name, its version and what it is for; all three are required |
 | `programTimeoutMs` | the ceiling every sensor program runs under; the lesser of it and a program's own `timeoutMs` applies |
 | `sensors[].name` | `^[a-z][a-z0-9-]*$`, once per policy |
+| `sensors[].description` | required: what the sensor watches for, in a sentence |
 | `sensors[].provenance` | what the signal is raised under: `sensor:<name>`, the sensor's own name. The definition check refuses any other |
 | `sensors[].affects[]` | the unit *types* the signal bears on, each one some workload declares. The signal names them as `type:<unitType>`, the router opens one obligation per entry holding the type, and the progression veto matches it when a unit of the type is dispatched later, which is when the unit a sensor's signal concerns usually exists |
 | `sensors[].severity` | the severity the signal is raised at: the declaration's claim about what the firing is worth; the router derives what it acts on. At or above the routing policy's `blocksAtOrAbove`, the obligation holds the type until a person dispositions it |
@@ -297,12 +308,13 @@ The unit answers its contract with a result report, sent through `report_result`
 
 | Field | Meaning |
 | --- | --- |
+| `contractId`, `contractVersion`, `attempt`, `reportedAt` | which contract, at which version, on which attempt, and when. The host stamps them; the unit supplies the rest |
 | `summary` | what was done |
-| `evidence[]` | evidence references, each with a `class` (`file`, `command`, `test`, `runtime`, `semantic` or `model`), an optional observation and an optional revision |
+| `evidence[]` | evidence references, each with a required `ref`, a `class` (`file`, `command`, `test`, `runtime`, `semantic` or `model`), an optional `observation` and an optional revision |
 | `delegatedResults[]` | one per delegated decision: the `decisionId`, the `choice` and an optional `rationale`. An entry is required unless the delegation said `requiredReport: false` |
-| `unresolvedOutcomes[]` | one per unresolved decision, either `preserved` (left as found) or `surfaced` (raised for someone else). There is no *settled* outcome, because settling an unresolved decision is not the unit's to do |
+| `unresolvedOutcomes[]` | one per unresolved decision, by its `decisionId`, with a `note` and an `outcome`, either `preserved` (left as found) or `surfaced` (raised for someone else). There is no *settled* outcome, because settling an unresolved decision is not the unit's to do |
 | `emergentDecisions[]` | decisions the contract did not allocate, each with a `subject`, a `choiceOrQuestion` and a `consequenceIfWrong` (`low`, `medium` or `high`) |
-| `deviations[]` | departures from a `fixed-decision`, a `constraint`, the `scope` or an `interface`, each with an optional `ref` |
+| `deviations[]` | departures from a `fixed-decision`, a `constraint`, the `scope` or an `interface`, each with a required `description` and an optional `ref` |
 | `residualUncertainty[]` | each with a `subject`, a `reason` and a `consequenceIfWrong` |
 
 A report is bound to one contract version and one attempt, and it is never revised. The
@@ -323,14 +335,33 @@ against scripted behaviours, or live, through the host.
 | `name`, `version`, `description` | the suite's name, its version and what it runs. The version bumps whenever `tasks[]`, `arms[]` or `metrics[]` change, and a report is comparable only with reports of the same suite version: a report records the version it ran, and the status and Assurance views mark one whose suite is now declared at a newer version |
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
-| `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target |
-| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the fifteen built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
+| `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target. Two optional fields make an arm differ from another in one thing alone. `route` names a model route of the budget policy (`default`, or a unit type the policy routes) that the arm's units are dispatched under in place of their own, so a model-tier arm tells the model's contribution from a gate's; the check refuses a name no budget policy declares. `advice` maps a declared profile to an advice file under `evals/advice/`, seeded into the arm's instances in place of the definition's `advice/<profile>.md`, which is what a probe of a `harness-edit` is; the check refuses an undeclared profile, a missing file and one over `advice.maxChars` |
+| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the twenty-eight built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
+| `heldOut[]` | optional: task files, each one of `tasks[]`, that a probe reports its metric over and that a `harness-edit` probed under this suite may not be derived from. The tasks still run in order with the rest; only the probe's reading is restricted to them. It may not repeat a task or name every task. No shipped suite declares one |
 
 The harness can throw a `check` or `extension` switch without a code change. A `loop`,
 `policy` or `tool` switch on a record means the opposite: an ablation of that regulator
-needs a code change. An eval report carries a fingerprint of the definition, the host pin
-and the suite — and, for each declared metric, the grader's command and the hash of the
-file it ran from — together with a person's interpretation. `regulator eval` writes a
+needs a code change.
+
+Three directories sit beside the suites. `evals/reports/` holds the committed reports,
+`evals/interpretations/` the interpretation a person wrote for each, and `evals/advice/`
+the advice files a probe arm overrides with: inputs to an eval, never seeded into an
+instance.
+
+An eval report carries a fingerprint of what it ran on, together with a person's
+interpretation:
+
+| In the report | What it says |
+| --- | --- |
+| `generatedAt` | when the report was written |
+| `fingerprint` | Node, platform and architecture; the Pi pin; the harness revision; the `dispatcher` (`scripted:<behaviour>` for a headless run, `pi` for a live one through the Pi host); the `model` the policy routed to and, for a live run, `modelsObserved` and `modelsByArm`, the models the units' ledgers name; the registry's size and the policy versions; the `suite` file and its hash; each declared metric's grader command with the hash of the file it ran from; `adviceByArm`, each advice override with its hash; and the `toolchain` every run ran under. A report over runs under different toolchains is refused |
+| `arms[]`, `lifts[]`, `runs[]` | each arm's summary per metric with a 95% interval, each non-baseline arm's difference from the baseline with whether the intervals separate, and every run |
+| `tasks[]` | the per-task table: per task, arm and metric, the mean over repetitions and the difference from the baseline. No interval: it is for reading where in the sequence a difference appears |
+| `baseline` | whether the baseline arm failed at all on the pre-registered outcome metrics. When it did not, `discriminates` is false, the report is labelled cost-only, and its ablation arms are not evidence toward a retirement condition |
+| `probe` | on a probe's report only: the committed report and arm it was run against, the arm under the change and its advice with hashes, the `harness-edit` it tests, and the held-out reading |
+| `interpretation`, `interpretedBy` | required: a report without one is a table |
+
+`regulator eval` writes a
 placeholder in place of the interpretation when it is run without `--interpretation`,
 and `regulator check` refuses a report under `evals/reports/` that still carries that
 placeholder. [Evidence about the
@@ -352,10 +383,11 @@ it too.
 | `mechanism.level` | one of `type`, `deterministic-gate`, `typed-tool`, `model-judgment` or `prompt` |
 | `mechanism.implementation`, `mechanism.enforcementPoints[]` | the implementing file, and the places where the gate bites. Each enforcement point is `{ where, point, note? }`. `where` is one of `host` (a session event the Pi host subscribes to, or `dispatcher`), `tool` (a registered tool's execute), `loop` (a step of the S3 loop or the unit lifecycle), `cli` (a `regulator` subcommand) or `check` (`checkRegistry` or `checkDefinition`), and `point` comes from that place's closed list in `packages/protocol/src/registry.ts` (`ENFORCEMENT_POINTS`). A point that is not on its list fails the check |
 | `authority.may[]`, `authority.mayNot[]` | |
-| `evidence.tests[]` | test files that must exist |
-| `channels`, `scope`, `cost` | what the regulator consumes and emits, what it applies to, and what it costs |
+| `evidence.tests[]`, `evidence.lastVerifiedRevision` | test files that must exist, and optionally the revision they were last verified at |
+| `channels`, `scope`, `cost` | `channels.consumes[]` and `channels.emits[]`, what the regulator reads and writes; `scope.subjects[]` and `scope.resources[]`, what it applies to and what it claims; `cost.description`, with an optional `cost.measured`, what it costs to run |
 | `limitations[]` | at least one is required, and a limitation that names later work has a row in [build debt](/DEBT) |
 | `ownership.owner`, `ownership.introduced`, `ownership.reviewBy` | |
+| `introducedIn` | the package version that first shipped the record, or `unreleased` for one added since the last release; the release commit rewrites `unreleased`, and the release workflow refuses to publish while a record still says it |
 | `ablation.switch`, `ablation.note` | the eval arm that runs with this regulator off |
 | `retirement.condition` | when the regulator may be retired, typically once ablation shows no significant regression across model versions and suites |
 

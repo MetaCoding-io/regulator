@@ -76,7 +76,7 @@ is only an input to that assignment.
 | `info` | worth recording | below every rule's line except `policy-proposal`; noted as trace |
 | `advisory` | owed, but holds nothing | opens an obligation for coordination and intelligence signals; a recap question |
 | `blocking` | holds the unit it names until dispositioned | the veto line (`blocksAtOrAbove`); every waiting question; a waiting recovery action |
-| `critical` | blocking, and only a person with `resolveUpTo: critical` may close it | anything the floors raise, and an uncertainty whose reported impact is `critical` |
+| `critical` | blocking, and only a person with `resolveUpTo: critical` may close it | an uncertainty whose reported impact is `critical`, or an emitter's own claim; the shipped floor raises to `blocking`, not to here |
 
 Two adjustments happen before the rule is applied. An uncertainty signal's *reported
 impact* is mapped through `impactSeverity`, because a claim of impact is not yet a
@@ -113,11 +113,11 @@ open ──► acknowledged ──► resolved     (a disposition, with a ration
 | resolve | `obligation resolve <id> --by <who> --disposition <d> --rationale <text>` | closed with a disposition |
 | escalate | `obligation escalate <id> --by <who> --to <consumer> --rationale <text>` | this consumer cannot legitimately resolve it. A successor is opened for another consumer (or an existing open one is linked) and this one closes as escalated. It is never valid without a successor |
 | answer | `answer <id> --by <who> --answer <text>` | for an `interaction`: the answer is recorded and the obligation resolves with the disposition the answer means |
-| decide | `identity accept` / `identity reject` | for a `policy-proposal`: the S5 decision, by a person with `actAsS5` |
+| decide | `identity accept` / `identity reject`, `advice accept` / `advice reject` | for a `policy-proposal`: the S5 decision, by a person with `actAsS5`. An `advice accept` the probe rule refuses is recorded as `obligation-accept-refused` and leaves the obligation open |
 | deliver | the loop, `remind`, `watch` | put in front of its consumer, and recorded per delivery with the channel. Delivery is not a disposition |
 
-Supersede has no command of its own. The loop uses it when a later record replaces an
-earlier one.
+Supersede has no command of its own, and nothing in the loop calls it yet: the ledger
+has the transition for a later record that replaces an earlier one.
 
 ### Dispositions
 

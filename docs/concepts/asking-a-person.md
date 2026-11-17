@@ -71,7 +71,9 @@ and it belongs to the gate described below.
 
 A paused unit cannot keep working around the question. The **pause gate** refuses every
 tool with any effect for the rest of the session. That is stricter than read-only: even
-a record in the control plane's own stores is refused, and only pure reads remain. The
+a record in the control plane's own stores is refused, so `remember`,
+`propose_policy_change` and `report_intelligence` are too. Pure reads remain, and one
+record: `report_result`, so the unit can say what it has and stop. The
 pause is recorded where the session ends, so it does not depend on the model calling
 anything.
 

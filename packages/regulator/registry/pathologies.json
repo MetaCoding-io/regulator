@@ -16,6 +16,10 @@
           },
           {
             "id": "reg.control.result-report-gate.v1"
+          },
+          {
+            "id": "reg.control.command-runner.v1",
+            "note": "a program's output is checked at its revision like a model's; its exit code satisfies nothing"
           }
         ],
         "invariants": [
@@ -69,6 +73,14 @@
           },
           {
             "id": "reg.authority.proposal-intake.v1"
+          },
+          {
+            "id": "reg.authority.advice-decision.v1",
+            "note": "advice has its own decision path: `advice accept` is the only writer of an advice file, and never of a grant"
+          },
+          {
+            "id": "reg.control.memory-store.v1",
+            "note": "what a unit learned is a memory entry with provenance and an expiry, never identity by repetition"
           }
         ],
         "invariants": [
@@ -131,6 +143,14 @@
           },
           {
             "id": "reg.identity.instance-manifest.v1"
+          },
+          {
+            "id": "reg.identity.definition-check.v1",
+            "note": "the definition is checked as a whole: a part that lives only in code, or that names something no file declares, is refused"
+          },
+          {
+            "id": "reg.authority.identity-promotion.v1",
+            "note": "a decision taken in one instance reaches the definition's seed by a person's promotion, so the next instance starts from it"
           }
         ],
         "invariants": [],
@@ -199,7 +219,7 @@
         "notes": []
       },
       "reproducedBy": "`contracts/underscore-unresolved.json`, an unresolved decision the unit must surface rather than settle",
-      "notAbsorbed": "the metrics that would show it (undelegated decisions discovered, replans attributable to the contract) are DEBT row 40"
+      "notAbsorbed": "the counts that show it are built-in metrics since #49 (emergent decisions, replans by who asked, misses per handoff); whether a discovered decision was consequential, and whether a replan is attributable to the contract, are judgments nothing measures (DEBT row 40)"
     },
     {
       "id": "s3-s4-disconnection",
@@ -228,7 +248,7 @@
         "notes": []
       },
       "reproducedBy": "`research-vendored-helper` followed by a unit it names",
-      "notAbsorbed": "an advisory nobody ever dispositions holds its units forever (a wait ceiling is DEBT row 30's sibling)"
+      "notAbsorbed": "an advisory nobody ever dispositions holds its units forever (a paused unit has a wait ceiling since #52; an open advisory obligation has none)"
     },
     {
       "id": "s4-acting-as-s3",
@@ -275,6 +295,10 @@
           },
           {
             "id": "reg.authority.disposition-authority.v1"
+          },
+          {
+            "id": "reg.algedonic.outbox-watcher.v1",
+            "note": "what is owed to a person is delivered and reminded on the watcher's tick, when nothing else in the instance is running"
           }
         ],
         "invariants": [],
@@ -286,7 +310,7 @@
         ]
       },
       "reproducedBy": "the headless consent case in `algedonic.test.ts`, the consent gate in `authority.test.ts`, and the finance example's `f5-prepare-payment`",
-      "notAbsorbed": "a consent grant is enforced on the named tool's calls only, and declared, not derived from effects (#121)"
+      "notAbsorbed": "a consent grant on a built-in tool is declared per path and enforced on the named tool's calls only; consent is derived from an effect only for a tool a workload declares (#121)"
     },
     {
       "id": "oscillation",
@@ -403,6 +427,34 @@
       },
       "reproducedBy": "the portfolio's careless close (`portfolio.test.ts`): `place_trade` called without asking is refused by the derived consent, the tree unchanged",
       "notAbsorbed": "the derivation reads one value of one axis, and an irreversibility outside the tree (a network call the program makes) is declared, not observed (`declared-tool` limitations 2 and 4)"
+    },
+    {
+      "id": "remedy-adopted-on-its-diagnosis",
+      "section": "functional",
+      "name": "Remedy adopted on its diagnosis",
+      "summary": "a change to the harness is adopted on the evidence that prompted it, and nothing afterwards says whether it worked",
+      "looksLike": "An advice file is edited because a trace showed a unit struggling; the edit stays, and no record says which metric it was meant to move or whether it moved",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.assurance.prediction-resolution.v1",
+            "note": "a proposal states its bet first, and the loop resolves it from the records at each horizon"
+          },
+          {
+            "id": "reg.authority.advice-decision.v1",
+            "note": "the probe rule: a `harness-edit` is refused until its probe resolved confirmed or inconclusive"
+          },
+          {
+            "id": "reg.assurance.eval-harness.v1",
+            "note": "the probe arm"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the committed probe report, `drift-probe-scripted-reference.json`, and `predictions.test.ts`",
+      "notAbsorbed": "nothing produces a prediction yet, since the reflector is not built, and a judged metric waits on the instrument record kind (DEBT row 48)"
     },
     {
       "id": "channel-without-transduction",
@@ -559,7 +611,7 @@
         "notes": []
       },
       "reproducedBy": "the sloppy behaviour",
-      "notAbsorbed": "the attenuation of the commit-message half (DEBT row 36)"
+      "notAbsorbed": "a refused word in a commit message lands on the base as an advisory finding where the workload declares that half advisory (the attenuation was DEBT row 36, paid by #47)"
     },
     {
       "id": "feedback-delay",
@@ -635,6 +687,10 @@
           {
             "id": "reg.identity.definition-writers.v1",
             "note": "`regulator docs --write` renders the figures and documents from the definition and `docs --check` holds them current under `pnpm check`, so a figure of what exists is generated, never drawn"
+          },
+          {
+            "id": "reg.control.unit-lifecycle.v1",
+            "note": "the lifecycle is one typed table the store writes through, and its figure is generated from it"
           }
         ],
         "invariants": [
@@ -645,6 +701,59 @@
       },
       "reproducedBy": "none; a fixture would be a contract citing an authority reference that a later identity revision renames, and a verdict re-read after a new commit",
       "notAbsorbed": "the longitudinal form, drift of the *description* of the system rather than of the system, outside the definition and the generated figures: a research note, a README, the website's drawings, the research index's status column ([Wintercorn note](https://github.com/MetaCoding-io/regulator/blob/main/docs/research/2026-10-22-wintercorn-semantic-sos/README.md) §8.3)"
+    },
+    {
+      "id": "constraint-arrives-as-refusal",
+      "section": "channel",
+      "name": "The constraint arrives as a refusal",
+      "summary": "a unit learns its boundaries by hitting them",
+      "looksLike": "A unit that never saw its contract's allocation writes a report the gate refuses, and spends an attempt learning the contract from the refusal",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.control.contract-advice.v1",
+            "note": "the contract's fixed, delegated and unresolved decisions rendered into the session before the first turn"
+          },
+          {
+            "id": "reg.identity.advice-context.v1",
+            "note": "what a profile's units are told is a file of its own, rendered under a budget"
+          },
+          {
+            "id": "reg.identity.identity-context.v1",
+            "note": "the identity set rendered from the files"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": [
+          "advice is the bottom of the mechanism hierarchy: it shortens the path to a passing report and enforces nothing"
+        ]
+      },
+      "reproducedBy": "`contract.test.ts`",
+      "notAbsorbed": "refused tool calls are not counted per gate, so how often a unit still meets a boundary as a refusal is unmeasured (the state-defined interface note §4.1)"
+    },
+    {
+      "id": "records-nobody-can-join",
+      "section": "channel",
+      "name": "Records nobody can join",
+      "summary": "each store is honest on its own, and the question spans them",
+      "looksLike": "\"Which regulator fired on which attempt of which unit?\" is answered by reading six logs by hand, or by a view that leaks a credential from a tool result",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.assurance.span-projection.v1",
+            "note": "every instance store read as OpenTelemetry GenAI spans, with credential canaries redacted"
+          },
+          {
+            "id": "reg.control.unit-lifecycle.v1",
+            "note": "a unit's path read from its status history, with the records that explain each step"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "`spans.test.ts`, `trajectory.test.ts`"
     },
     {
       "id": "mast-disobey-task-specification",
@@ -709,6 +818,28 @@
         "notes": []
       },
       "reproducedBy": "`budget.test.ts`"
+    },
+    {
+      "id": "mast-step-repetition",
+      "section": "agent",
+      "name": "Step repetition",
+      "summary": "an irreversible step taken twice",
+      "absorbedBy": {
+        "regulators": [
+          {
+            "id": "reg.coordination.effect-journal.v1",
+            "note": "an effect is intended before, committed after and reconciled on restart, so a crash between neither repeats it nor loses it"
+          },
+          {
+            "id": "reg.coordination.thrash-detector.v1",
+            "note": "the reversible form: the same file edited again and again"
+          }
+        ],
+        "invariants": [],
+        "modules": [],
+        "notes": []
+      },
+      "reproducedBy": "the restart cases in `recovery.test.ts`"
     },
     {
       "id": "mast-unaware-of-termination-conditions",

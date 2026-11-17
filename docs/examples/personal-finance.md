@@ -112,16 +112,16 @@ suite found, and the suite ran outside the unit. Three more checks are independe
 the unit in the same way. The `identity-untouched` check diffs the protected prefixes
 (`statements/`, `payments/executed/`, and the identity) against the base at closeout, so
 an edit committed around a tool gate still fails a check. `glossary-lint` reads the
-branch's comments and commit messages for the identity's refused words. And after every
-merge the base is checked again, so a close that passed on its own branch and fails on
-the merged base opens an obligation that holds the whole instance.
+branch's comments and commit messages for the identity's refused words. And before every
+merge the merged tree is tried: the same checks run on a trial merge, and a close that
+passed on its own branch and fails on the merged tree is refused before anything lands.
 
 ### S4 — What changes in the environment matter?
 
 The environment changes when a new statement arrives, when a bill comes due, when the
 tax calendar turns or when an interest rate moves. In this example none of that is
 automated: the person drops the statement in `statements/` and dispatches the close.
-When it is automated, the mechanism is a `research` unit or the outbox watcher raising
+When it is automated, the mechanism is a `research` unit or a declared sensor raising
 an *obligation*. Intelligence starts a loop; it is never itself a decision.
 
 ### S5 — What must the system never be able to do?
@@ -161,7 +161,7 @@ tone of a prompt.
 | The ledger balances to the statement | 2, a deterministic check | — |
 | The statement is never edited | 2, a gate (the profile grant), plus 2, a check (`identity-untouched`) | — |
 | The report's totals are the ledger's | 2, a deterministic check | — |
-| Consent before a payment | 2, a gate (the profile's consent grant, refusing the write under `payments/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived: nothing reads a tool's effects for it ([#121](https://github.com/MetaCoding-io/regulator/issues/121)) |
+| Consent before a payment | 2, a gate (the profile's consent grant, refusing the write under `payments/pending/` without a recorded yes), plus 3, a typed tool (`ask_human`, `kind=consent`), plus 2, a gate (pause) | the grant is enforced on `write` and `edit` only, and declared rather than derived. A workload-declared tool with an irreversible effect has its consent derived by the gate ([#121](https://github.com/MetaCoding-io/regulator/issues/121)); the ledger declares none, so its consent is the profile's path grant |
 | Which category a merchant gets | 4, judgment, with the choice reported | it is judgment. The contract bounds it and the report records it. |
 | Don't guess the unknown merchant | 4, judgment, bounded by an *unresolved* decision the report must account for | the check that the report carries every holding-category row is level 2 |
 | Tone, thoroughness, "run the tests first" | 5, advice in the profile | it is advice, which is the bottom of the hierarchy by definition |
@@ -219,19 +219,26 @@ declared or whose check the host does not run.
 ```json
 {
   "name": "bookkeeper",
-  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human", "notify_owner", "propose_policy_change"],
+  "tools": ["read", "write", "edit", "grep", "find", "ls", "read_conventions", "run_tests", "run_checks", "remember", "ask_human", "notify_owner", "propose_policy_change", "report_result"],
   "writablePaths": ["ledger/", "reports/", "payments/pending/"],
-  "thinkingLevel": "medium",
-  "advice": [
-    "…the statement under statements/ is the bank's and is never edited; if the ledger does not balance to it, the ledger is wrong.",
-    "A category comes from categories.json. A merchant you cannot explain stays in the holding category and is surfaced…; do not guess.",
-    "Writing a file under payments/pending/ is a commitment…: ask_human with kind=consent naming the payee, the amount and the due date, and write nothing without a yes. Silence is not consent."
-  ]
+  "consent": [
+    { "tool": "write", "paths": ["payments/pending/"] },
+    { "tool": "edit", "paths": ["payments/pending/"] }
+  ],
+  "thinkingLevel": "medium"
 }
 ```
 
-The `auditor` grants `read`, `grep`, `find`, `ls`, `read_conventions`, `run_checks` and
-nothing else. The definition check verifies that a profile which calls itself read-only
+The `consent` block is the gate: a `write` or `edit` under `payments/pending/` is refused
+until a person's yes for it is on the record. The profile's advice is a file of its own,
+[`advice/bookkeeper.md`](../../packages/regulator/advice/bookkeeper.md): the statement is
+the bank's and is never edited, a merchant nobody can explain stays in the holding
+category, and nothing is written under `payments/pending/` without a yes. The advice
+describes the grant and enforces nothing.
+
+The `auditor` grants `read`, `grep`, `find`, `ls`, `read_conventions` and `run_checks`,
+with `report_result` and `propose_policy_change`, which record and change nothing in the
+domain. The definition check verifies that a profile which calls itself read-only
 grants only tools whose declared effect is read-only, so the profile's claim is checked
 against the tools' effect declarations.
 
@@ -368,15 +375,15 @@ repair. What the test asserts is what you would look for in the control room:
 `regulator status` and the control room read the same records. For this instance they
 show the following.
 
-- The definition view has two workloads now, `software-development` and
-  `personal-finance`, with each unit type's profile and checks; five profiles; and the
-  finance budget policy beside the default one.
+- The definition view has the workloads, `software-development`, `personal-finance` and
+  `portfolio`, with each unit type's profile and checks; six profiles; and the finance
+  and portfolio budget policies beside the default one.
 - The lifecycle view places the units on the state machine by status and, with
   `f1-ingest` selected, steps through its nine-step trajectory: contracted → attempt 1
   → closeout refused by the ledger's checks and by `identity-untouched` → the finding
   owed to S3 → the router's repair → attempt 2 → verified → reintegrated, each step with
   its why from the records and the regulator that produced them.
-- The instances view has the ledger's manifest line (`definition regulator at <rev> · 49
+- The instances view has the ledger's manifest line (`definition regulator at <rev> · 53
   regulators · pi 0.87.0 · initialized by alice · writable ledger/, reports/,
   payments/pending/ · protected statements/, payments/executed/`), then six units with
   their status, attempts, budget, verdict and what is owed, the consent obligation with
@@ -394,7 +401,7 @@ first attempt and the repair, and `f5-prepare-payment` was left waiting on conse
 
 ![The unit inspector for f5-prepare-payment: the contract, the paused attempt, the consent obligation owed to a person, and the replay in time order](img/inspector-unit-f5.webp)
 
-![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, attempt 2 closed on four passing checks and the post-merge check on the base](img/inspector-unit-f1.webp)
+![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, attempt 2 closed on four passing checks and the pre-merge trial on the merged tree](img/inspector-unit-f1.webp)
 
 ![The lifecycle view held at step 3 of f1-ingest: the attempt-failed transition lit on the figure, and the why panel with the verdict's failed criteria and the identity-untouched finding on the edited statement](img/lifecycle-f1.webp)
 
@@ -423,7 +430,7 @@ Every registry record states its limitations, and this example does the same:
   [#123](https://github.com/MetaCoding-io/regulator/issues/123) — a sensor declared in
   `policies/intelligence.json` with a glob, run by `regulator watch` — and the
   [portfolio](portfolio.md) declares three; the ledger declares none, and a glob over
-  `statements/` affecting `ingest-statement` would be the one declaration.
+  `statements/` affecting `ingest` would be the one declaration.
 - The unknown merchant is carried as an open item and never resolved. Resolving it would
   take a `clarification` question to a person, which this close does not ask; the open
   item is owed instead.

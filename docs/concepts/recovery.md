@@ -144,8 +144,11 @@ into that one, so the wait has a single owner. When someone dispositions it, the
 can run again. The loop never performs a remediation or writes a new contract by
 itself.
 
-A unit paused on an unanswered question is not routed at all. It is waiting for a
-person, and the recovery policy has nothing to say until the person answers.
+A unit paused on an unanswered question is not routed. It is waiting for a person, and
+the recovery policy has nothing to say until the person answers. The one exception is a
+wait ceiling: when the interaction policy declares `waitCeilingMs` and a unit has been
+paused past it, the loop routes the unit under `timeout` and releases its lease. The
+shipped policy declares none.
 
 ## Budgets
 

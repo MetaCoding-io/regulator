@@ -10,6 +10,10 @@
  *   changelog.md   `packages/regulator/CHANGELOG.md`
  *   roadmap.md     `ROADMAP.md`
  *   contributing.md `CONTRIBUTING.md`
+ *   ../public/facts.json  the counts a page elsewhere states about the product (served as `/facts.json`): the
+ *                  package version, the registry's records, the session extensions, the built-in metrics, the
+ *                  committed reports, the workloads, the profiles and the debt ledger's rows. The website's
+ *                  check reads it, so a number on a page in another repository is held against this one.
  *   figures/*.svg  `packages/regulator/figures/` (rendered from the definition by `regulator docs`), the
  *                  hotspots' absolute docs links made site-relative
  *
@@ -150,4 +154,27 @@ for (const f of figures) {
   const svg = await readFile(path.join(figuresDir, f), "utf8");
   await writeFile(path.join(OUT, "figures", f), svg.replaceAll(`data-href="${DOCS_ORIGIN}/`, 'data-href="/'));
 }
+// The facts: read from the files that state them, with no build of the packages (the docs build runs none).
+const json = async (file) => JSON.parse(await readFile(file, "utf8"));
+const jsonFiles = async (dir) => (await readdir(dir)).filter((f) => f.endsWith(".json"));
+const registryDir = path.join(PRODUCT, "registry", "regulators");
+const records = await Promise.all((await jsonFiles(registryDir)).map((f) => json(path.join(registryDir, f))));
+const metricsSource = await readFile(path.join(ROOT, "packages", "protocol", "src", "evals.ts"), "utf8");
+const metricsList = /export const EVAL_METRICS = \[([^\]]*)\]/.exec(metricsSource);
+if (!metricsList) throw new Error("EVAL_METRICS was not found in packages/protocol/src/evals.ts; the facts cannot be written");
+const debt = await readFile(path.join(DOCS, "DEBT.md"), "utf8");
+const debtPaid = (debt.match(/^\| ~~\d+~~ \|/gm) ?? []).length;
+const debtOpen = (debt.match(/^\| \d+ \|/gm) ?? []).length;
+const facts = {
+  version: (await json(path.join(PRODUCT, "package.json"))).version,
+  regulators: { total: records.length, active: records.filter((r) => r.status === "active").length, retired: records.filter((r) => r.status === "retired").length },
+  sessionExtensions: (await json(path.join(ROOT, "packages", "regulator-pi", "package.json"))).pi.extensions.length,
+  builtInMetrics: (metricsList[1].match(/"[A-Za-z]+"/g) ?? []).length,
+  committedReports: (await jsonFiles(path.join(PRODUCT, "evals", "reports"))).length,
+  workloads: (await jsonFiles(path.join(PRODUCT, "workload"))).length,
+  profiles: (await jsonFiles(path.join(PRODUCT, "profiles"))).length,
+  debt: { rows: debtPaid + debtOpen, paid: debtPaid, open: debtOpen },
+};
+await mkdir(path.join(DOCS, "public"), { recursive: true });
+await writeFile(path.join(DOCS, "public", "facts.json"), `${JSON.stringify(facts, null, 2)}\n`);
 console.log(`generated ${Object.keys(PLACEMENT).length} pages and ${figures.length} figure(s) into ${path.relative(ROOT, OUT)}/`);

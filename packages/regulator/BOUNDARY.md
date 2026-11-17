@@ -239,7 +239,7 @@ Not covered:
 - Its name says identity; it protects every harness-owned directory of the instance (identity and advice), and the check name a workload declares stays `identity-untouched` so no definition has to change for the advice set to be covered.
 - It reads the branch at closeout: a protected change is caught after the attempt, not before the commit. Prevention is the write gate's; this is the evidence that the gate was bypassed.
 - The base is the branch the unit was created from; a unit whose base moved under it is compared against the base's current tip, so a protected change made on the base by a person is not the unit's finding.
-- It binds to the command-class criterion by class, like every host check (docs/DEBT.md row 2), unless one expectation carries its exemption, which binds it to that criterion; a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
+- It binds to the command-class criterion by class, the default for a host check whose expectation carries no check of its own (binding by content was docs/DEBT.md row 2, paid in lesson 14, and more kinds of check are row 35), unless one expectation carries its exemption, which binds it to that criterion; a contract with no command-class expectation records the failure as evidence and the verdict still fails on contradiction only if the report cited a command run.
 
 ## Identity write gate (`reg.authority.identity-write-gate.v1`)
 
@@ -441,7 +441,7 @@ Enforced at `check:checkRegistry` (an active record without ablation or retireme
 Not covered:
 
 - A retirement condition is prose; nothing checks that a committed report satisfies it. The lifecycle view shows coverage (an ablation arm exists for the record), not satisfaction; a person reads the report against the condition.
-- Review dates are checked on demand, not scheduled: `regulator review --due` runs when someone runs it, and nothing under CI fails on an overdue record (docs/DEBT.md row 32).
+- An overdue review date fails `regulator check` and `regulator doctor`, so it fails under CI (this was docs/DEBT.md row 32, paid in lesson 15). Before that date nothing prompts anyone: `regulator review --due` lists what is coming due when someone runs it.
 - Most switches the registry names are `loop:`, `policy:` or `none`: named honestly, not runnable by the harness. Two of thirty-six records have a runnable ablation arm in the committed suite.
 - Implementation and cited-test paths are verified only in a source checkout (a `src/` beside the registry). An installed package ships `dist/` and no sibling packages' sources, so there `checkRegistry` carries the paths as provenance and `doctor` says it did not verify them; the release's `pnpm check` is where they were verified.
 
@@ -548,7 +548,7 @@ Enforced at `loop:runUnit` (before createUnit), `host:session_start` (contract),
 Not covered:
 
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
-- Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name is trusted as given, and whether that person held the authority is not checked (docs/DEBT.md row 20).
+- Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name (`human:<name>`) is accepted by its form: it is not held against the interaction policy's people, as a `--by` on the CLI is, and whether that person held the authority is not checked (docs/DEBT.md row 52).
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 ## Advice and judgment
