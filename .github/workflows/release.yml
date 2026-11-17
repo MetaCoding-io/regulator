@@ -8,6 +8,9 @@ name: Release
 # fails the publish step with EOTP, and nothing is published. Publishing is not atomic
 # across packages: a failure part-way leaves the earlier packages published, so a
 # re-run of the failed job at the same tag is the recovery, never a new version.
+# Once every package is published, a second job creates the GitHub release for the tag, with the changelog's
+# section for the version as its body (scripts/github-release.sh). It holds the only write permission in this
+# workflow, and a failure there leaves npm as it is: re-run the job, or run the GitHub releases workflow by hand.
 on:
   push:
     tags: ["v*"]
@@ -42,3 +45,18 @@ jobs:
       - run: pnpm -r publish --access public --no-git-checks --provenance
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  github-release:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.19.0
+      - name: The GitHub release is the changelog's section for the version
+        run: scripts/github-release.sh "${GITHUB_REF_NAME}"
+        env:
+          GH_TOKEN: ${{ github.token }}

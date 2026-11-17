@@ -162,7 +162,7 @@ function unitRecordIn<S extends UnitStatus>(status: S) {
  * a reason and a blocked unit without one are not records. `TypeScript` narrows on `status` and the schema is the
  * same statement for a record read from disk.
  *
- * A record written before this (0.1.4 and earlier) could carry `reason` beside any status, and an aborted unit
+ * A record written before this (0.1.3 and earlier) could carry `reason` beside any status, and an aborted unit
  * did: `readUnitRecord` reads that one older shape, and nothing writes it.
  */
 export const UnitRecordSchema = Type.Union([
@@ -195,7 +195,7 @@ export interface ReadUnitRecord {
   record: UnitRecord;
   /**
    * Set when the file is in the older shape: a reason beside a status that cannot carry one (an aborted unit, as
-   * 0.1.4 wrote it). The record is read without it; `regulator doctor` names the unit and `regulator upgrade`
+   * 0.1.3 wrote it). The record is read without it; `regulator doctor` names the unit and `regulator upgrade`
    * rewrites the file.
    */
   legacyReason?: string;

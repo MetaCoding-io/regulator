@@ -117,6 +117,12 @@ publishes every package when the tag is pushed. The commit:
 The workflow re-checks 1 and 3 and refuses the publish otherwise, so the recovery from a
 partial publish is a re-run at the same tag, never a new version.
 
+Once the packages are published, the same workflow creates the GitHub release for the
+tag. Its body is the changelog's section for the version
+(`node scripts/release-notes.mjs <version>` prints it), so the changelog stays the one
+place a release is described. To create or correct a release for a tag that already
+exists, run the **GitHub releases** workflow from the Actions tab on `main`, naming the tags.
+
 ## Reporting
 
 - **A bug** — the bug template: what you ran, what the instance recorded

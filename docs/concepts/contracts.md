@@ -151,8 +151,12 @@ into a message and routes it under the
 | residual uncertainty | an `uncertainty-signal` | its consequence mapped through the policy's impact table |
 
 Under the shipped policy a blocking message opens an [obligation](/concepts/obligations)
-that holds the unit. A unit that deviates from a fixed decision therefore cannot close
-until someone has dispositioned that deviation.
+owed to S3. It does not hold the close of the unit that reported it. A deviation is
+reported, not hidden: the unit closes on its evidence and lands, and the obligation
+stays open against it until someone has dispositioned the deviation. What keeps a
+deviation off the base is a check that covers the fixed decision, since a failing check
+refuses the closeout whatever the report says. The obligation is for the deviation no
+check covers: it is on the base, and it is on the record until a person or S3 has read it.
 
 ## Versions, attempts and replanning
 

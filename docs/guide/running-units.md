@@ -65,17 +65,25 @@ The loop is the normal path. When you want to sit in the session yourself, the s
 steps are available as separate commands:
 
 ```sh
-regulator unit start u2 --type implement    # lease, worktree, branch
+regulator unit start u2                     # lease, worktree, branch; prints the session command
 cd .regulator/worktrees/u2
-pi                                          # with the host's extensions installed: pi install <path to @metacoding.io/regulator-pi>
+pi -e <tools.js> -e <coordination.js> --unit u2   # as `unit start` printed it, with the host's paths
 cd -
 regulator signals route                     # route what the session recorded
-regulator unit finish u2                    # reintegrate, or surface the conflict
+regulator unit finish u2                    # try the merge, run the project's tests and checks, land only if they pass
 ```
 
+A unit started by hand runs without a contract. A unit type that requires one is
+refused here and told to go through `regulator unit dispatch`: in the software workload
+that is every type but `plan`, so `--type` is for a type that needs no contract and is
+otherwise left out.
+
 A hand-run session records the same trace, signals and effects as a dispatched one.
-Nothing verifies it unless you ask, though: `unit close u2` runs the closeout over the
-unit's revision.
+What it does not have is a record in the execution store, since the loop never
+contracted it: `unit show`, `unit evidence` and `unit close` answer `no unit` for it.
+What verifies it is `unit finish`. The merge is tried first, `run_tests` and
+`run_checks` run on the merged tree as the project's conventions discover them, and
+nothing lands unless they pass.
 
 ## Obligations
 

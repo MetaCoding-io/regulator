@@ -229,7 +229,7 @@ profile's advice file added since; `regulator/identity/` if it were ever absent)
 never overwrites a file that exists, since a decided identity or advice file is the
 instance's own; it adds the `.regulator/` line to `.gitignore`; and it rewrites a unit
 record written before the record was keyed on its status. Such a record carries a reason
-beside a status that has none (an aborted unit's, as 0.1.4 wrote it). The store reads it
+beside a status that has none (an aborted unit's, as 0.1.3 wrote it). The store reads it
 without the reason, `doctor` names the unit under `units`, and `upgrade` writes the file
 as it is read; nothing else in the record changes, and the reason is still on the
 unit's last decision in `decisions.ndjson`. `init` renders no other file into an

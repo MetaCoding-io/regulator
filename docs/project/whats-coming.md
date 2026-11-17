@@ -72,7 +72,7 @@ the difference the figures below draw.
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-registry" aria-label="Registry" data-label="Registry" data-def="One record per regulator: what it absorbs, its mechanism level, its evidence, its limitation, its ablation switch and its retirement condition. &lt;code&gt;REGULATORS.md&lt;/code&gt; and &lt;code&gt;BOUNDARY.md&lt;/code&gt; are rendered from the records." data-href="/concepts/control-plane#the-regulators">
       <rect x="46" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
-      <text x="100" y="79" stroke="none" text-anchor="middle" font-size="11.5">registry (43)</text>
+      <text x="100" y="79" stroke="none" text-anchor="middle" font-size="11.5">registry (53)</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-identity-seed" aria-label="Identity seed" data-label="Identity seed" data-def="The &lt;code&gt;IDENTITY&lt;/code&gt;, &lt;code&gt;INVARIANTS&lt;/code&gt;, &lt;code&gt;GLOSSARY&lt;/code&gt; and &lt;code&gt;BOUNDARIES&lt;/code&gt; files an instance starts from. Copied into &lt;code&gt;regulator/identity/&lt;/code&gt; at init and write-protected from then on." data-href="/concepts/identity">
       <rect x="162" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
@@ -285,7 +285,7 @@ the difference the figures below draw.
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-registry" aria-label="Registry" data-label="Registry" data-def="One record per regulator: what it absorbs, its mechanism level, its evidence, its limitation, its ablation switch and its retirement condition. &lt;code&gt;REGULATORS.md&lt;/code&gt; and &lt;code&gt;BOUNDARY.md&lt;/code&gt; are rendered from the records." data-href="/concepts/control-plane#the-regulators">
       <rect x="46" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
-      <text x="100" y="79" stroke="none" text-anchor="middle" font-size="11.5">registry (43)</text>
+      <text x="100" y="79" stroke="none" text-anchor="middle" font-size="11.5">registry (53)</text>
     </g>
     <g class="gl fig-hot" tabindex="0" role="button" data-term="fig-identity-seed" aria-label="Identity seed" data-label="Identity seed" data-def="The &lt;code&gt;IDENTITY&lt;/code&gt;, &lt;code&gt;INVARIANTS&lt;/code&gt;, &lt;code&gt;GLOSSARY&lt;/code&gt; and &lt;code&gt;BOUNDARIES&lt;/code&gt; files an instance starts from. Copied into &lt;code&gt;regulator/identity/&lt;/code&gt; at init and write-protected from then on." data-href="/concepts/identity">
       <rect x="162" y="58" width="108" height="34" rx="3" fill="var(--vp-c-bg-soft)" stroke-width="1.2"/>
