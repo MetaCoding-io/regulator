@@ -254,12 +254,29 @@ committed reports in the hand-written pages and refuses a wrong one, which works
 reference pages are done (`definition.md`, `host-checks.md`, `instance.md`, `tools.md`)
 and the changelog has its entry for #60, without a migration bullet.
 
-Left: the concept pages and guides of §4 (`control-plane.md`, `definition-and-instance.md`,
+**Progress (2026-11-17, later).** The rest of the list is done. The concept pages and
+guides of §4 carry the landed work (`control-plane.md`, `definition-and-instance.md`,
 the three descriptions of `doctor`, `OPERATING.md`'s `watch`, the control-room guide's
-map, `ARCHITECTURE.md`); item 8, the glossary rows and the twelve pathology rows; and of
-item 9, the schema test for the reference tables, the "not yet" convention and the
-website's check. The website has no check on a pull request at all, so its counts are
-held only by whoever edits it.
+map, `ARCHITECTURE.md`). Item 8: the glossary has rows for the twenty-two terms it
+lacked, and every active regulator is named by a pathology row (seven joined existing
+rows, four rows are new), so `regulator check` no longer warns. Item 9, as three checks:
+
+- `docs-reference.test.ts` holds `docs/reference/definition.md` against the schemas:
+  every property a definition schema declares must be named in its section. It found
+  thirty-odd fields the page did not name, which the page now does.
+- `docs-facts.test.ts` gained the "not yet" rule in the form the repository already
+  uses: a sentence that cites a debt row as owed is refused once the ledger has struck
+  the row. It found four stale citations in registry cards and the catalog; one of them
+  (`work-contract-gate`, citing row 20) was hiding a gap no open row covered, now DEBT
+  row 52.
+- The website has its check: the docs build publishes `facts.json`, and
+  `scripts/check-facts.mjs` in the website repository, run by a workflow on every pull
+  request, compares the pages' numbers with it.
+
+What these do not hold: a count worded in a way no rule recognises; a "not yet" that
+cites no debt row; a field a page describes that a schema no longer has; and anything on
+the website beyond the counts and the version. A page can still be wrong in prose, and
+the next audit of this kind is still worth doing.
 
 The reviewers' full findings, with a file and line for each, are the source for every
 row above; a finding not *verified* here is re-checked before its page is changed.
