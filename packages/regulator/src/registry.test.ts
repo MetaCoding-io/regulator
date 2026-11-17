@@ -180,7 +180,11 @@ test("the viability case (#57) is rendered from the records and the pathology ro
   assert.match(rendered, /\| `closeout-gate` \| [^|]+ \| not stated \| none \|/);
   // The residual uncertainty is the catalog's "not absorbed" column, and the uncatalogued records are named.
   for (const row of registry.pathologies.filter((r) => r.notAbsorbed)) assert.ok(rendered.includes(`| **${row.name}** (`), `${row.id} is in the residual uncertainty`);
-  assert.match(rendered, /active regulators absorb a failure class no pathology row names[^\n]*`advice-context` \(`uninformed-unit`\)/);
+  // Every active record is named by a row in the committed catalog, so the case lists none; with the rows that name one
+  // record taken away, the case names that record and its failure class.
+  assert.doesNotMatch(rendered, /absorb(s)? a failure class no pathology row names/);
+  const withoutAdviceContext = registry.pathologies.filter((row) => !row.absorbedBy.regulators.some(({ id }) => id === "reg.identity.advice-context.v1"));
+  assert.match(renderViabilityMarkdown(registry.records, { ...options, pathologies: withoutAdviceContext }), /active regulators? absorbs? a failure class no pathology row names[^\n]*`advice-context` \(`uninformed-unit`\)/);
   assert.match(rendered, /A gate with no stated limitation does not pass `regulator check`/);
 });
 
@@ -191,8 +195,7 @@ test("the pathology catalog (#57) is a source file whose rows name active record
   const { PATHOLOGY_SECTIONS } = await import("@metacoding.io/regulator-protocol");
   const registry = await checkRegistry(registryDir, labRoot);
   assert.deepEqual(registry.problems, []);
-  assert.equal(registry.warnings.length, 1, "one warning: the active records no row names, in one line");
-  assert.match(registry.warnings[0]!.message, /^\d+ active regulator\(s\) absorb a failure class no pathology row names: reg\./);
+  assert.deepEqual(registry.warnings, [], "every active record is named by a row of the committed catalog");
   for (const row of registry.pathologies) for (const { id } of row.absorbedBy.regulators) assert.equal(registry.records.find((r) => r.id === id)?.status, "active", `${row.id} names ${id}`);
   assert.equal(new Set(registry.pathologies.map((r) => r.id)).size, registry.pathologies.length, "row ids are unique");
 
@@ -210,6 +213,12 @@ test("the pathology catalog (#57) is a source file whose rows name active record
     "pathologies.json: row `names-nothing` names `reg.audit.no-such-gate.v1`, which is not a registry record",
     `pathologies.json: duplicate row id \`${first.id}\``,
   ]);
+  // A catalog that names only some active records is a warning, in one line, naming the rest.
+  await writeFile(path.join(dir, "pathologies.json"), JSON.stringify({ rows: [first] }));
+  const partial = await checkRegistry(dir, labRoot, { verifyFiles: false });
+  assert.deepEqual(partial.problems, []);
+  assert.equal(partial.warnings.length, 1, "one warning: the active records no row names, in one line");
+  assert.match(partial.warnings[0]!.message, /^\d+ active regulator\(s\) absorb a failure class no pathology row names: reg\./);
   await writeFile(path.join(dir, "pathologies.json"), JSON.stringify({ rows: [first, { id: "Bad Id", section: "structural", name: "x", absorbedBy: first.absorbedBy }] }));
   assert.deepEqual((await checkRegistry(dir, labRoot, { verifyFiles: false })).problems.map((p) => p.message), ["does not match the pathology row schema (row 2, `Bad Id`)"]);
   await writeFile(path.join(dir, "pathologies.json"), "{nope");
