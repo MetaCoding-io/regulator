@@ -70,7 +70,7 @@ A unit type and the profile it runs under are named separately on purpose, and t
 names do not line up one to one. In the shipped workload, `implement` and `integrate`
 both run under the `implement` profile. `plan`, `verify` and `close` run under
 `research`, which is read-only. The `research` unit type runs under `intelligence`,
-which is `research` plus `report_intelligence`. The two names describe different
+which is `research` plus `report_intelligence` and `ask_human`. The two names describe different
 things: the profile is the grant, while the unit type is the kind of work and the
 checks that judge it, so several kinds of work can share one grant.
 
@@ -112,8 +112,8 @@ no entry here (`tools[]`, above).
 
 The shipped profiles are `implement`, `research`, `intelligence`, `bookkeeper`,
 `manager` and `auditor`. `implement` may write and edit under `src/` and `test/`, and
-its `bash` is not gated by path. `research` and `auditor` are read-only, and
-`intelligence` is read-only plus `report_intelligence`; all three may propose, since a
+its `bash` is not gated by path. `research` and `auditor` are read-only. `intelligence` adds `report_intelligence`, a
+record, and `ask_human`, whose effect is irreversible, so it is not read-only by effect; all three may propose, since a
 `propose_policy_change` record is admitted as read-only by effect. `bookkeeper` and `auditor` are the profiles for
 the ledger, and `bookkeeper` guards `write` and `edit` under `payments/pending/`;
 `manager` is the portfolio's, with no grant of its own: `trades/pending/` is outside its
@@ -151,7 +151,7 @@ before the move; the rendered section is byte-identical.
 
 ## Budget and model policy
 
-`policies/default.json`, and `finance.json` beside it, set the ceilings per attempt, the
+`policies/default.json`, with `finance.json` and `portfolio.json` beside it, set the ceilings per attempt, the
 attempts per unit, and the models each unit type may use.
 
 | Field | Type | Meaning |
@@ -324,7 +324,7 @@ against scripted behaviours, or live, through the host.
 | `fixture` | the fixture directory, relative to the definition |
 | `tasks[]` | contract files, run in order in one instance per repetition |
 | `arms[]` | each arm has a `name`, a `description`, the `extensions[]` the dispatcher loads for a live run, the `checks[]` the implement unit type runs under this arm (names, or names with options, as in the workload), and `identity`, which says whether the identity is seeded. An ablation arm also names the record it `ablates` and the `switch`: `none`, or one of `check:`, `extension:`, `loop:`, `policy:` and `tool:` followed by a target |
-| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the fifteen built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
+| `repetitions`, `metrics[]`, `baseline` | how many runs each arm gets, the metrics the report summarizes, and the arm the others are compared against. A metric is one of the twenty-eight built-ins or a name a workload declares (`workload:<name>/<metric>`, above); a declared name the definition does not carry fails the check. An entry is the name alone or `{ "name", "optimise": true }`, and at most one declared metric may be marked: it is the one an optimiser could select on, every other is reported only, and a built-in may not be marked. The metrics are pre-registered, so the interpretation of the result is a person's |
 
 The harness can throw a `check` or `extension` switch without a code change. A `loop`,
 `policy` or `tool` switch on a record means the opposite: an ablation of that regulator

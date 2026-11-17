@@ -79,28 +79,32 @@ runner, outside the session and outside the host.
 ## Which regulators live where
 
 The registry records where each regulator is implemented, and the split follows the
-seam. Of the active regulators, 22 are implemented in the control plane and 21 in the
+seam. Of the 51 active regulators, 28 are implemented in the control plane and 23 in the
 host's session.
 
-The 22 in the control plane are the contract gate, the closeout gate and every host
+The 28 in the control plane are the contract gate, the closeout gate and every host
 check, the obligation router and the progression veto, the recovery router,
-reintegration and the pre-merge trial, the S5 decision path and identity promotion,
-delivery and the outbox watcher, disposition authority, the definition check, the eval
-harness, the span projection, and the instance manifest. These run the same under any
-host, and under none.
+reintegration and the pre-merge trial, the command runner, sensor intake and prediction
+resolution, the unit lifecycle, the S5 decision path, the advice decision path and
+promotion, delivery and the outbox watcher, disposition authority, the definition check
+and the definition writers, the regulator lifecycle, the eval harness, the span
+projection, `doctor`, and the instance manifest. These run the same under any host, and
+under none.
 
-The 21 in the host's session are the lease gate and the thrash detector, the profile
-grant, the report gate and the evidence preflight, the budget guard, the model router
-and compaction, the failure observer and the effect journal, the write gate, the bash
-watch, the credential canary watch, proposal intake and the trust rule, identity in
-context, the behavioral canary and the memory store, intelligence intake, the
-interaction contract and the pause gate.
+The 23 in the host's session are the lease gate and the thrash detector, the profile
+grant, declared tools, the report gate and the evidence preflight, the budget guard,
+the model router and compaction, the failure observer and the effect journal, the write
+gate (with the bash watch, which has no record of its own), the credential canary
+watch, proposal intake and the trust rule, identity, advice and the contract's advice
+section in context, the behavioral canary and the memory store, intelligence intake,
+the interaction contract and the pause gate.
 
 The second group exists only where a host implements it. A dispatcher that runs no
 session, such as the scripted units the drift suite and the household-ledger example use
-in CI, exercises the whole first group and none of the second. That is why the eval
-reports say `scripted:` in their fingerprint: the stamp records that no session-side
-regulator was in play for those runs.
+in CI, exercises the whole first group and none of the second. That is why seven of the
+eight committed eval reports say `scripted:` in their fingerprint: the stamp records
+that no session-side regulator was in play for those runs. The eighth, the first live
+report, ran every unit as a session through the Pi host.
 
 ## The Pi host
 
@@ -142,8 +146,9 @@ report records the version it ran under. The same extensions are declared under
   regulators it enforces. What exists is the
   [enforcement boundary](/reference/boundary), which describes the Pi host's gates.
 - The session-side gates are only exercised live. Scripted runs cover the control
-  plane. The dispatcher itself and every host-side gate are covered by their own tests
-  and by live drills, and not by the committed eval reports.
+  plane. The dispatcher itself and every host-side gate are covered by their own tests,
+  by live drills, and by the one committed live report; the seven scripted reports say
+  nothing about them.
 - A unit that runs a program needs no host, and no host sees it. A unit type whose
   work is deterministic declares a `command` runner, and the loop runs the program
   itself through the same dispatcher seam — lease, worktree, wall-clock budget, the

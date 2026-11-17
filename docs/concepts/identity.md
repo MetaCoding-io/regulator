@@ -72,13 +72,13 @@ The layers do not all cover the same paths. The write gate and the bash watch ac
 fixed set inside the session, while `identity-untouched` acts on what the manifest
 declares as well:
 
-| Path | Write gate and bash watch | `identity-untouched` at closeout |
+| Path | In the session | `identity-untouched` at closeout |
 | --- | --- | --- |
-| `regulator/identity/` | yes | yes |
-| `regulator/advice/` | yes | yes |
-| committed S5 artifacts under `vsm/` | yes | not unless the manifest lists them |
-| `vendor/`, when the project has one | yes | yes |
-| further prefixes the [instance manifest](/reference/instance#the-manifest) declares as protected | no | yes |
+| `regulator/identity/` | write gate and bash watch | yes |
+| `regulator/advice/` | write gate and bash watch | yes |
+| the six committed S5 files under `vsm/` | write gate only; a shell change there is neither undone nor recorded | not unless the manifest lists them |
+| `vendor/`, and `flake.nix`, `flake.lock`, `devenv.nix`, `devenv.lock` and `devenv.yaml`, when the project has them | write gate and bash watch; a contract may exempt the five environment files by name | yes, with the same exemption |
+| further prefixes the [instance manifest](/reference/instance#the-manifest) declares as protected | neither | yes |
 
 A manifest-declared protected prefix is still out of reach of `write` and `edit` when it
 lies outside the profile's writable prefixes, which is the usual case. Inside the
@@ -158,7 +158,7 @@ seen, and the number of consecutive replies without it that count. The identity 
 renders the rule as a prompt section of its own, outside the identity's character limit,
 and reads every assistant reply for the marker. A reply that begins with it is a hit. A
 reply with no text, tool calls only, is not a reply. A run of misses is recorded as an
-advisory `audit-finding` of class `context-degradation`, from the host to S3, and the
+advisory `audit-finding` whose `invariant` is `context-degradation`, from the host to S3, and the
 session's status line says how long the silence is. The shipped `default` policy declares
 `[{unit}]` with two misses.
 

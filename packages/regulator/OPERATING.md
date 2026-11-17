@@ -308,7 +308,7 @@ Apply the model to the harness itself:
 
 - **Identity (S5):** this repository's `vsm/` for regulator; the lab's `identity/` for the
   definition. Changed by proposal and a person's decision, never by a unit.
-- **Policy:** the four policy files; a change is a pull request with `pnpm check`
+- **Policy:** the policy files, of five kinds (budgets and routes, recovery, routing, interaction, intelligence); a change is a pull request with `pnpm check`
   green on both Node versions.
 - **Audit (S3\*):** `pnpm check`, `regulator check`, the drift suite's committed
   reports, and the review dates every registry record carries.

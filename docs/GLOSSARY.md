@@ -24,12 +24,12 @@ teaches learners to build themselves.
 | Term | In a harness | Where it lives |
 | --- | --- | --- |
 | **S1 (Operations)** | The units that do the work and touch the environment. They are specialized by capability profile, never by persona. | GSD `execute-task`, and regulator's S1 capability profiles. |
-| **S2 (Coordination)** | Damping between operations: isolation, leases, sequencing, anti-oscillation and reintegration. It is mechanism, with no coordinator persona. | GSD worktrees and leases, and regulator's S2 gap analysis. See [Coordination](concepts/coordination.md). |
+| **S2 (Coordination)** | Damping between operations: isolation, leases, sequencing, anti-oscillation and reintegration. It is mechanism, with no coordinator persona. | GSD worktrees and leases, and regulator's leases, reintegration and thrash detector. See [Coordination](concepts/coordination.md). |
 | **S3 (Control)** | Operational control, which covers planning, dispatch, budgets, recovery, and the authoritative work state. | The GSD lifecycle kernel and auto orchestration, and regulator's work contracts. |
 | **S3\* (Audit)** | Independent verification that does not depend on the executor's self-report. | GSD's verification evidence and technical verdict; regulator's audit finding and deterministic gates. |
 | **S4 (Intelligence)** | Environment- and future-facing observation. It produces advice, and what it produces is never policy. | GSD research milestones, and regulator's `intelligence` channel. See [Intelligence and memory](concepts/intelligence-and-memory.md). |
 | **S5 (Identity / Policy)** | What the system is: purpose, invariants, domain model and policy. It is durable and version-controlled, it is never trapped in a context window, and it is not an agent. | An instance's `regulator/identity/` (the files `IDENTITY.md`, `INVARIANTS.md`, `GLOSSARY.md` and `BOUNDARIES.md`), seeded from the definition. This repository's own identity is `vsm/`. See [Protecting identity](concepts/identity.md). |
-| **Separation of duty** | The function that did the work cannot be the function that certifies it. | regulator's independence domains in the functional projection. |
+| **Separation of duty** | The function that did the work cannot be the function that certifies it. | The closeout gate: the host runs the checks and derives the verdict, and a unit's report satisfies nothing (INV-003). See [Contracts](concepts/contracts.md). |
 
 ## 3. Channels and authority
 
@@ -56,7 +56,7 @@ teaches learners to build themselves.
 | --- | --- | --- |
 | **Mechanism hierarchy** | Type → deterministic gate → typed tool → model judgment → prompt. It is an ordering by reliability under adversarial pressure. | The regulator prime directive. |
 | **Gate** | A deterministic check that can block. | The `tool_call` preflight and the closeout gate. |
-| **Capability profile** | A typed binding of tools, context, writable paths, model and thinking level for a kind of work. | `packages/protocol/src/profiles.ts`, and `packages/regulator/profiles/*.json`, one file per kind of work, named by the workload's unit types. GSD phases are the comparison: they are routing keys, and they grant nothing. See [Coordination](concepts/coordination.md). |
+| **Capability profile** | A typed grant of tools by declared effect, writable paths, consent grants and a thinking level for a kind of work. The model is not the profile's: routes are in the budget policy. | `packages/protocol/src/profiles.ts`, and `packages/regulator/profiles/*.json`, one file per kind of work, named by the workload's unit types. GSD phases are the comparison: they are routing keys, and they grant nothing. See [Coordination](concepts/coordination.md). |
 | **Unit** | The smallest dispatched, executable workflow step. It has one contract, one worktree, and one or more attempts. | The orchestrator's unit record (`packages/protocol/src/execution.ts`), and a workload's unit types (`plan`, `implement`, …). GSD's units (`plan-slice`, `execute-task`) are the comparison. |
 | **Phase** | A coarse routing bucket for model and reasoning selection. A phase is not a unit. | GSD's `research`, `planning`, `execution`, `validation`, `uat` and so on. |
 | **Work contract** | What S3 authorizes a unit to decide. Each decision in it is FIXED, DELEGATED or UNRESOLVED. | `WorkContract` in `packages/protocol/src/contracts.ts`, with the design record archived as `docs/archive/2026-09/OPERATIONAL-WORK-CONTRACT.md`. See [Work contracts and reports](concepts/contracts.md). |

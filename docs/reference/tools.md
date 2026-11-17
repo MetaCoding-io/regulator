@@ -13,11 +13,11 @@ not name is never offered to the model at all, so there is nothing for a gate to
 | Tool | Effect | Granted by (shipped profiles) | Records |
 | --- | --- | --- | --- |
 | [`read_conventions`](#read_conventions) | read-only | every profile | nothing |
-| [`run_tests`](#run_tests-and-run_checks) | runs project code | `implement`, `bookkeeper` | a provenance entry in the session |
+| [`run_tests`](#run_tests-and-run_checks) | runs project code | `implement`, `bookkeeper`, `manager` | a provenance entry in the session |
 | [`run_checks`](#run_tests-and-run_checks) | read-only | every profile | a provenance entry in the session |
 | [`report_result`](#report_result) | writes the execution store | every contracted session (see the note) | the result report |
-| [`ask_human`](#ask_human) | irreversible: it spends a person's attention | `implement`, `intelligence`, `bookkeeper` | an `interaction` obligation |
-| [`notify_owner`](#notify_owner) | irreversible: it sends a message | `implement`, `bookkeeper` | the effect journal, the outbox |
+| [`ask_human`](#ask_human) | irreversible: it spends a person's attention | `implement`, `intelligence`, `bookkeeper`, `manager` | an `interaction` obligation |
+| [`notify_owner`](#notify_owner) | irreversible: it sends a message | `implement`, `bookkeeper`, `manager` | the effect journal, the outbox |
 | [`remember`](#remember) | writes the memory store | `implement`, `bookkeeper`, `manager` | a memory entry |
 | [`report_intelligence`](#report_intelligence) | writes the regulatory log | `intelligence` | an `intelligence-signal` |
 | [`propose_policy_change`](#propose_policy_change) | writes the regulatory log | every shipped profile | a `policy-proposal` |
