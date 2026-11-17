@@ -53,12 +53,16 @@ test("identity: invariants are parsed from their headings with their statements;
   assert.deepEqual(glossaryOnly.cut, ["GLOSSARY.md"], "a cut of three characters names the last file only");
 });
 
-test("authority references resolve or fail: an invariant the identity declares, a regulator the registry declares, a person, an obligation the instance holds; free text fixes nothing", () => {
-  const context = { invariants: ["INV-001", "INV-002"], regulators: ["reg.authority.vendor-write-gate.v1"], obligations: ["0b1ig-1234"] };
+test("authority references resolve or fail: an invariant the identity declares, a regulator the registry declares, a person the interaction policy names, an obligation the instance holds; free text fixes nothing", () => {
+  const context = { invariants: ["INV-001", "INV-002"], regulators: ["reg.authority.vendor-write-gate.v1"], obligations: ["0b1ig-1234"], people: ["alice", "bob"] };
   const check = (authorityRef: string) => checkAuthorityRefs([{ id: "f", authorityRef }], context).map((p) => p.message);
   assert.deepEqual(check("INV-001"), []);
   assert.deepEqual(check("reg.authority.vendor-write-gate.v1"), []);
-  assert.deepEqual(check("human:alice (S3 planning)"), []);
+  assert.deepEqual(check("human:alice (S3 planning)"), [], "the name is what follows human:, and a note may follow it");
+  assert.deepEqual(check("human:bob"), []);
+  assert.match(check("human:dana")[0] ?? "", /cites human:dana, whom the interaction policy does not name \(it names alice, bob\)/);
+  assert.match(check("human:alice-the-second (planning)")[0] ?? "", /cites human:alice-the-second, whom/, "a name is matched whole, not by prefix");
+  assert.deepEqual(checkAuthorityRefs([{ id: "f", authorityRef: "human:dana" }], { invariants: [], regulators: [] }), [], "without the policy's people, a person reference is accepted by form");
   assert.deepEqual(check("obligation:0b1ig"), [], "a unique prefix of an obligation the instance holds");
   assert.match(check("INV-009")[0] ?? "", /cites INV-009, which the identity does not declare \(it declares INV-001, INV-002\)/);
   assert.match(check("reg.control.nope.v1")[0] ?? "", /which the registry does not declare/);

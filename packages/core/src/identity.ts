@@ -173,6 +173,8 @@ export interface AuthorityContext {
   regulators: readonly string[];
   /** Obligation ids the instance holds, when known; `undefined` accepts any obligation reference by form. */
   obligations?: readonly string[];
+  /** The names the interaction policy lists under `people[]`, when known; `undefined` accepts any person reference by form. */
+  people?: readonly string[];
 }
 
 export interface AuthorityProblem {
@@ -185,7 +187,12 @@ const FORMS = "an invariant (INV-nnn), a regulator (reg.…), a person (human:<n
 /**
  * Every fixed decision cites the authority that fixed it, and the citation
  * must resolve: an invariant the identity declares, a regulator the registry
- * declares, a named person, or an obligation. Free text is not an authority.
+ * declares, a person the interaction policy names, or an obligation. Free text is not an authority.
+ *
+ * A person reference is `human:<name>`, optionally followed by a note (`human:alice (S3 planning)`). The name is held
+ * against the policy's people, the list every `--by` on the CLI is held against: a decision fixed by someone the
+ * instance does not know is fixed by nobody who can be asked. That the person may fix *this* decision is not checked;
+ * the policy declares who may disposition, accept a risk and act as S5, and has no field for who plans.
  */
 export function checkAuthorityRefs(fixed: ReadonlyArray<{ id: string; authorityRef: string }>, context: AuthorityContext): AuthorityProblem[] {
   const problems: AuthorityProblem[] = [];
@@ -197,7 +204,8 @@ export function checkAuthorityRefs(fixed: ReadonlyArray<{ id: string; authorityR
     } else if (/^reg\./.test(ref)) {
       if (!context.regulators.includes(ref)) problems.push({ path: where, message: `"${d.id}" cites ${ref}, which the registry does not declare` });
     } else if (/^human:\S/.test(ref)) {
-      // A named person is an authority; whether they had it is lesson 13's.
+      const name = /^human:(\S+)/.exec(ref)![1]!;
+      if (context.people && !context.people.includes(name)) problems.push({ path: where, message: `"${d.id}" cites human:${name}, whom the interaction policy does not name (it names ${context.people.join(", ") || "nobody"})` });
     } else if (/^obligation:\S/.test(ref)) {
       const id = ref.slice("obligation:".length);
       if (context.obligations && !context.obligations.some((o) => o === id || o.startsWith(id))) problems.push({ path: where, message: `"${d.id}" cites obligation ${id}, which the instance does not hold` });

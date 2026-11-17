@@ -175,10 +175,12 @@ export async function runUnit(exec: Exec, options: RunUnitOptions): Promise<RunU
   const store = new ExecutionStore(options.repo, now);
   const ledger = new ObligationLedger(options.repo, now);
   // Authority is what exists (lesson 12): a fixed decision cites an invariant the instance's identity declares, a
-  // regulator the definition declares, an obligation the instance holds, or a person. Free text fixes nothing.
+  // regulator the definition declares, an obligation the instance holds, or a person the interaction policy names.
+  // Free text fixes nothing.
   const identity = await readIdentity(path.join(options.repo, IDENTITY_RELATIVE_DIR));
   problems.push(...checkAuthorityRefs(contract.fixed, {
     invariants: identity.invariants.map((i) => i.id), regulators: options.regulators ?? [], obligations: (await ledger.obligations()).map((o) => o.id),
+    people: options.interaction.people.map((p) => p.name),
   }));
   const existing = await store.getUnit(contract.unitId);
   if (existing) {

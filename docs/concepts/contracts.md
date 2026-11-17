@@ -34,10 +34,11 @@ It must take one of four forms, and it must resolve when the unit is dispatched:
 | `INV-nnn` | an invariant the instance's identity declares |
 | `reg.<area>.<name>.v<n>` | a regulator the registry declares |
 | `obligation:<id>` | an obligation the instance holds, typically a decision someone already made |
-| `human:<name>` | a named person; the name is trusted as given |
+| `human:<name>` | a person the interaction policy names under `people[]`; a note may follow the name, as in `human:alice (planning)` |
 
 Free text is refused. "Because the architect said so" is not an authority the loop can
-check. `human:dana` at least names someone who can be asked.
+check. `human:dana` names someone who can be asked, as long as the instance knows who
+dana is: a name the interaction policy does not list is refused like free text.
 
 ### Delegations have bounds
 
@@ -200,6 +201,7 @@ the closeout gate](/reference/regulators) state their limitations. In short:
 - `runtime` criteria need a person. Apart from `export-signature`, no host mechanism
   observes runtime behaviour, so a `runtime` expectation without a content check waits
   for an acceptance.
-- A named person is not a verified authority. `human:<name>` resolves by form alone. The
-  loop does not check that the person held the authority, or that a `--by` name belongs
-  to whoever typed it (`docs/DEBT.md` row 28).
+- A named person is not a verified authority. `human:<name>` must be a name the
+  interaction policy lists, and that is all: the loop does not check that the person may
+  fix that decision, since the policy has no field for who plans, or that a `--by` name
+  belongs to whoever typed it (`docs/DEBT.md` row 28).
