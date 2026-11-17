@@ -585,6 +585,14 @@ test("identity in code (lesson 12): a fixed decision must cite an authority that
   assert.match(refused.status === "refused" ? refused.problems[1]?.message ?? "" : "", /cites INV-099, which the identity does not declare \(it declares INV-001, INV-002, INV-003, INV-004\)/);
   assert.equal(await new ExecutionStore(repo).getUnit("u1"), undefined, "nothing was claimed");
 
+  // A person is an authority only when the interaction policy names them (DEBT row 52): the list every `--by` is held against.
+  const stranger: WorkContract = { ...base, fixed: [{ id: "f-x", subject: "x", decision: "y", authorityRef: "human:dana (said so in chat)" }, { id: "f-y", subject: "x", decision: "y", authorityRef: "human:alice" }] };
+  const unknown = await runUnit(gitExec, { ...options, contract: stranger, dispatcher: async () => { throw new Error("must not dispatch"); } });
+  assert.equal(unknown.status, "refused");
+  assert.deepEqual(unknown.status === "refused" ? unknown.problems.map((p) => p.path) : [], ["fixed[0].authorityRef"], "the person the policy names is an authority; the one it does not is refused");
+  assert.match(unknown.status === "refused" ? unknown.problems[0]?.message ?? "" : "", /cites human:dana, whom the interaction policy does not name \(it names course-lab, alice, bob\)/);
+  assert.equal(await new ExecutionStore(repo).getUnit("u1"), undefined, "nothing was claimed");
+
   // The route lesson 10 could not close: edit the identity and commit in one shell command. The tree is clean; the branch is not.
   const cited: WorkContract = { ...base, fixed: [...base.fixed, { id: "f-identity", subject: "identity", decision: "untouched", authorityRef: "INV-001" }] };
   const outcome = await runUnit(gitExec, { ...options, contract: cited, dispatcher: unitThat(async (request, store) => {

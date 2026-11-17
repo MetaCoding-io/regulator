@@ -1,8 +1,11 @@
 # Are the docs keeping up? A currency audit
 
-- **Status:** open. No issue yet; §7 is the work list in the order to take it, and §2
-  holds four findings that are decisions about the product before they are edits to a page.
-  All four were decided and done on 2026-11-16; each row says how.
+- **Status:** closed (2026-11-17): every item of §7 landed, and the "Progress" paragraphs
+  there say where. The four decisions of §2 were taken and done; the stale statements of
+  §3 to §5 are corrected; and §6's checks exist, as three tests in `packages/regulator`
+  and one script in the website's repository. The gap the audit surfaced on the way,
+  DEBT row 52, is paid. The note stays as the record of what was wrong, why it drifted,
+  and what the checks do not hold.
 - **Source:** an audit on 2026-11-16 of every hand-written page against `main` at
   `a0706e7`: the docs site's guides, concepts, reference pages, examples and project
   pages; `README.md`, `AGENTS.md`, `CONTRIBUTING.md`, `OPERATING.md`, the changelog and

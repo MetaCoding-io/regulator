@@ -548,7 +548,7 @@ Enforced at `loop:runUnit` (before createUnit), `host:session_start` (contract),
 Not covered:
 
 - Checks the contract's shape and internal consistency only; it cannot tell whether the objective genuinely requires settling an unresolved decision — that shows up afterwards as an emergent decision in the report.
-- Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — but a person's name (`human:<name>`) is accepted by its form: it is not held against the interaction policy's people, as a `--by` on the CLI is, and whether that person held the authority is not checked (docs/DEBT.md row 52).
+- Authority references on fixed decisions resolve — an invariant the instance's identity declares, a regulator the registry declares, an obligation the instance holds, or a named person — and a person (`human:<name>`) is one the interaction policy names, the list a `--by` on the CLI is held against (this was docs/DEBT.md row 52, paid). That the person named may fix this decision is not checked: the policy declares who may disposition, accept a risk and act as S5, and has no field for who plans. The name is asserted, as every `--by` is, and never authenticated.
 - The contract is loaded from a file path the session was given; the lease gate, not this gate, is what keeps another session from running under it.
 
 ## Advice and judgment
