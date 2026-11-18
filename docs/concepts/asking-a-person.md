@@ -83,6 +83,8 @@ unit, because a paused unit is not a failure and the recovery policy has nothing
 until someone answers. It delivers the question to the outbox, and reminds after the
 policy's interval. And by default it keeps waiting.
 
+![A paused unit in the control room: the consent question as an open obligation owed to a person, blocking and vetoing, delivered once to the outbox, with the interaction row below it](./img/consent-paused.webp)
+
 An interaction policy that declares `waitCeilingMs` changes one thing about that wait.
 A unit paused past the ceiling is routed under the recovery policy's `timeout` cause
 (retry, retry, escalate by the shipped rules, one occurrence per routing past the

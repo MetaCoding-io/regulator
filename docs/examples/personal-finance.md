@@ -393,15 +393,17 @@ show the following.
   the audit evidence with `run_tests` bound to the revision, and the replay: contract →
   attempt → evidence → verdict → obligation → delivery → answer → attempt 2 → close.
 
-The screenshots below and on the project site are of exactly this instance after the
-scripted close. The `f1-ingest` unit was run careless, so its replay shows a refused
-first attempt and the repair, and `f5-prepare-payment` was left waiting on consent.
+The screenshots below and on the project site are of two instances after the scripted
+close, taken by [`scripts/screenshots.mjs`](https://github.com/MetaCoding-io/regulator/blob/main/scripts/screenshots.mjs).
+In the first the close ran as the contracts ask and `f5-prepare-payment` was left
+waiting on consent. In the second `f1-ingest` was run careless, so its replay shows a
+refused first attempt and the repair.
 
-![The instances view: the ledger's manifest line, six units with their verdicts and what is owed, the consent obligation with the veto marked, the interaction row and the scoped memory entry](img/instances-ledger.webp)
+![The instances view: the ledger's manifest line, five units with their verdicts and what is owed, the expired lease of the paused unit, the consent obligation with the veto marked, the interaction row and the scoped memory entries](img/instances-ledger.webp)
 
-![The unit inspector for f5-prepare-payment: the contract, the paused attempt, the consent obligation owed to a person, and the replay in time order](img/inspector-unit-f5.webp)
+![The unit inspector for f5-prepare-payment: the paused attempt, the consent obligation owed to a person with its question and its delivery, the replay in time order, and an audit section with nothing in it yet](img/inspector-unit-f5.webp)
 
-![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, attempt 2 closed on four passing checks and the pre-merge trial on the merged tree](img/inspector-unit-f1.webp)
+![The unit inspector for f1-ingest run careless: attempt 1 refused by the ledger's checks and by identity-untouched on the edited statement, the router's repair decision with its hint, the resolved audit finding, and the start of the replay](img/inspector-unit-f1.webp)
 
 ![The lifecycle view held at step 3 of f1-ingest: the attempt-failed transition lit on the figure, and the why panel with the verdict's failed criteria and the identity-untouched finding on the edited statement](img/lifecycle-f1.webp)
 

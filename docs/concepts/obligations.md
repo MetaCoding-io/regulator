@@ -180,3 +180,5 @@ obligation stays open until someone closes it.
   and decisions.
 - The control room's *Instances* view lists the same ledger, and its *Inspector* replays
   a unit's obligations in time order with everything else that happened to it.
+
+![The household ledger's obligations in the control room: one open consent question owed to a person, blocking, with the veto marked, and the interaction row that carries the question](./img/consent-paused.webp)
