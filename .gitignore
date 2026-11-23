@@ -19,3 +19,6 @@ docs/generated/
 docs/public/facts.json
 docs/.vitepress/cache/
 docs/.vitepress/dist/
+
+# The demo video's default output (scripts/demo-video.mjs)
+regulator-demo.mp4
