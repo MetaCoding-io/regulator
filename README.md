@@ -71,7 +71,7 @@ packages/
 
 docs/             the documentation site: guide/, concepts/, reference/, examples/, project/, with ARCHITECTURE.md, GLOSSARY.md, PATHOLOGIES.md and DEBT.md (what the build owes, and where it is paid); decisions/ (ADRs), research/ (notes on what comes next) and archive/ are not built into the site
 fixtures/         Example payloads for the reporting tools; the fixture projects are under packages/regulator/fixture*
-scripts/          The reporting smoke test and the release-notes scripts
+scripts/          The reporting smoke test, the release-notes scripts, and the screenshot and demo-video recorders over shared instances
 vsm/              This repository's own committed S5 artifacts
 ```
 

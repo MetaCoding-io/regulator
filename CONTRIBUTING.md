@@ -104,6 +104,9 @@ eval, not a test.
 - A change to what the control room renders retakes the screenshots:
   `pnpm build && node scripts/screenshots.mjs` (add `--website <checkout>` for the
   website's copies). It needs Playwright with a Chromium; no image is taken by hand.
+  The demo video is re-recorded the same way, from the same instances
+  (`scripts/instances.mjs`): `node scripts/demo-video.mjs --out <file.mp4>`, which also
+  needs ffmpeg. The video is not committed.
 
 ## Releasing
 
