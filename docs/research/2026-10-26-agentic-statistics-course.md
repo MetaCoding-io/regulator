@@ -334,6 +334,33 @@ carries.
 Net effect: confirmations in §3, one article in §6; nothing in §4 or §5 changes, and the
 verdict in §1 stands.
 
+## 2026-11-24 — The template's twenty-second rule
+
+Read on the fourth scheduled check. No lesson went live: 2.1 and 2.3 to 2.5 are placeholders
+a day past their 23 November date, 2.2 is eight days past its 16 November date with no new one,
+and 2.6 and 2.7 stay at 30 November. What did change is the template. Its first commit since
+the assessment (`f014007`, 18 November, "Contract: scan for missing-value codes before
+summarising") adds one line to step 1 of `instructions.md`: scan for sentinel values such as
+−99, −999, −9 or 9999 and for values outside the documented range before summarising anything,
+count them by year and by unit, and set them to missing, because "a single summary statistic
+computed with them left in is wrong, and it is wrong silently."
+
+Two things about it for the mapping. First, it is the course's own rule-making pattern seen
+live: a twenty-second rule, written after a failure, landing on `main` as the template branch
+in a commit touching nothing else, which is the `FRAMEWORK` discipline of §2 and the untyped
+`advice promote` of §3. Second, and unlike most of the twenty-one before it, this rule is not
+advice. A value outside a documented range, or equal to a sentinel the data summary names, is
+a level-2 check over the tree: the fixture's test suite reads the documented range from the
+`Data Summary` and refuses a cleaned dataset in which such a value survives, in the same way
+the ledger's suite refuses a row outside the taxonomy. It joins the text checks of §3 as the
+one check that is over the data rather than over the record, and it is the ninth drifting
+behaviour for §5: a summary statistic computed with a sentinel left in. The contract's own
+wording is the test's message.
+
+Net effect: one check added to §3's list of the workload's own checks and one refusal to §5;
+nothing in §4 changes; the verdict in §1 stands. Lesson 2.3 "Matt Pocock's Skills" and the
+`FRAMEWORK` mechanism are the two things still to read against the accept-path split.
+
 ## 8. Next step
 
 Read 1.1–1.3, research-course 5–6 and the template's `instructions.md` (about two hours).
